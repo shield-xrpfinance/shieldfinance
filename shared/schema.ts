@@ -33,6 +33,7 @@ export const transactions = pgTable("transactions", {
   rewards: decimal("rewards", { precision: 18, scale: 2 }).default("0"),
   status: text("status").notNull().default("completed"),
   txHash: text("tx_hash"),
+  network: text("network").notNull().default("mainnet"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
