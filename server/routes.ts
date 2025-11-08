@@ -158,9 +158,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Payload not found" });
       }
 
+      console.log("Xaman payload status:", {
+        uuid: req.params.uuid,
+        signed: payload.response?.signed,
+        account: payload.response?.account,
+        meta_opened: payload.meta?.opened,
+        meta_resolved: payload.meta?.resolved,
+        meta_signed: payload.meta?.signed,
+        meta_cancelled: payload.meta?.cancelled
+      });
+
+      // Xumm SDK stores signed status in meta.signed, not response.signed
+      const signed = payload.meta?.signed || false;
+      const account = payload.response?.account || null;
+
       res.json({
-        signed: payload.response?.signed || false,
-        account: payload.response?.account || null,
+        signed,
+        account,
         demo: false
       });
     } catch (error) {
