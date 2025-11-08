@@ -258,13 +258,23 @@ export default function Vaults() {
       // XRPL WalletConnect chain IDs: mainnet = xrpl:0, testnet = xrpl:1
       const chainId = isTestnet ? "xrpl:1" : "xrpl:0";
 
-      // Sign transaction with WalletConnect
+      // Sign transaction with WalletConnect (returns RPC envelope)
       const signResult = await wcProvider.request({
         method: "xrpl_signTransaction",
         params: {
           tx_json: txJson,
         },
-      }, chainId) as { tx_blob: string };
+      }, chainId) as { result: { tx_json: any } };
+
+      // Validate signed transaction
+      const signedTxJson = signResult?.result?.tx_json;
+      if (!signedTxJson || !signedTxJson.TxnSignature) {
+        throw new Error("Invalid signed transaction received from WalletConnect");
+      }
+
+      // WalletConnect returns tx_json, we need to encode it to tx_blob
+      const { encode } = await import("xrpl");
+      const tx_blob = encode(signedTxJson);
 
       // Submit signed transaction via backend
       const submitResponse = await fetch("/api/xrpl/submit", {
@@ -273,7 +283,7 @@ export default function Vaults() {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          tx_blob: signResult.tx_blob,
+          tx_blob: tx_blob,
           network: network,
         }),
       });
