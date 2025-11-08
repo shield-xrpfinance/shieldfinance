@@ -163,7 +163,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const apiKey = process.env.XUMM_API_KEY?.trim();
       const apiSecret = process.env.XUMM_API_SECRET?.trim();
 
-      if (!apiKey || !apiSecret) {
+      console.log("Xaman API Key check:", {
+        keyExists: !!apiKey,
+        keyLength: apiKey?.length || 0,
+        secretExists: !!apiSecret,
+        secretLength: apiSecret?.length || 0,
+      });
+
+      if (!apiKey || !apiSecret || apiKey.length === 0 || apiSecret.length === 0) {
+        console.warn("Xaman credentials not configured - falling back to demo mode");
         // Return demo payload
         return res.json({ 
           uuid: "demo-payload-uuid",
