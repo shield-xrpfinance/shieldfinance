@@ -1,10 +1,14 @@
 import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import type { Position, Vault } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import PortfolioTable from "@/components/PortfolioTable";
 import WithdrawModal from "@/components/WithdrawModal";
 import { TrendingUp, Coins, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
@@ -16,39 +20,54 @@ export default function Portfolio() {
   } | null>(null);
   const { toast } = useToast();
 
-  const positions = [
-    {
-      id: "pos-1",
-      vaultName: "XRP Stable Yield",
-      depositedAmount: "5,000",
-      currentValue: "5,325.50",
-      rewards: "325.50",
-      apy: "7.5",
-      depositDate: "Jan 15, 2025",
-    },
-    {
-      id: "pos-2",
-      vaultName: "XRP High Yield",
-      depositedAmount: "3,000",
-      currentValue: "3,284.00",
-      rewards: "284.00",
-      apy: "12.8",
-      depositDate: "Feb 1, 2025",
-    },
-  ];
+  const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
+    queryKey: ["/api/positions"],
+  });
 
-  const totalValue = positions.reduce(
+  const { data: vaults = [] } = useQuery<Vault[]>({
+    queryKey: ["/api/vaults"],
+  });
+
+  const getVaultById = (vaultId: string) => vaults.find((v) => v.id === vaultId);
+
+  const formattedPositions = positions.map((pos) => {
+    const vault = getVaultById(pos.vaultId);
+    const amount = parseFloat(pos.amount);
+    const rewardsEarned = amount * 0.065;
+    return {
+      id: pos.id,
+      vaultName: vault?.name || "Unknown Vault",
+      depositedAmount: amount.toLocaleString(),
+      currentValue: (amount + rewardsEarned).toLocaleString(),
+      rewards: rewardsEarned.toLocaleString(),
+      apy: vault?.apy || "0",
+      depositDate: new Date(pos.depositedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+    };
+  });
+
+  const totalValue = formattedPositions.reduce(
     (sum, pos) => sum + parseFloat(pos.currentValue.replace(/,/g, "")),
     0
   );
-  const totalRewards = positions.reduce(
+  const totalRewards = formattedPositions.reduce(
     (sum, pos) => sum + parseFloat(pos.rewards.replace(/,/g, "")),
     0
   );
-  const avgApy = positions.reduce((sum, pos) => sum + parseFloat(pos.apy), 0) / positions.length;
+  const avgApy = formattedPositions.length > 0 
+    ? formattedPositions.reduce((sum, pos) => sum + parseFloat(pos.apy), 0) / formattedPositions.length
+    : 0;
+
+  const deleteMutation = useMutation({
+    mutationFn: async (positionId: string) => {
+      await apiRequest("DELETE", `/api/positions/${positionId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+    },
+  });
 
   const handleWithdraw = (positionId: string) => {
-    const position = positions.find((p) => p.id === positionId);
+    const position = formattedPositions.find((p) => p.id === positionId);
     if (position) {
       setSelectedPosition({
         id: position.id,
@@ -61,7 +80,7 @@ export default function Portfolio() {
   };
 
   const handleClaim = (positionId: string) => {
-    const position = positions.find((p) => p.id === positionId);
+    const position = formattedPositions.find((p) => p.id === positionId);
     if (position) {
       toast({
         title: "Rewards Claimed",
@@ -70,11 +89,23 @@ export default function Portfolio() {
     }
   };
 
-  const handleConfirmWithdraw = (amount: string) => {
-    toast({
-      title: "Withdrawal Initiated",
-      description: `Processing withdrawal of ${amount} XRP from ${selectedPosition?.vaultName}`,
-    });
+  const handleConfirmWithdraw = async (amount: string) => {
+    if (!selectedPosition) return;
+    
+    try {
+      await deleteMutation.mutateAsync(selectedPosition.id);
+      toast({
+        title: "Withdrawal Successful",
+        description: `Successfully withdrew ${amount} XRP from ${selectedPosition.vaultName}`,
+      });
+      setWithdrawModalOpen(false);
+    } catch (error) {
+      toast({
+        title: "Withdrawal Failed",
+        description: "Failed to process withdrawal. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
@@ -88,47 +119,65 @@ export default function Portfolio() {
 
       <div className="grid gap-6 md:grid-cols-3">
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
             <Coins className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tabular-nums">
-              {totalValue.toLocaleString()} XRP
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              ≈ ${(totalValue * 2.45).toLocaleString()} USD
-            </p>
+            {positionsLoading ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <>
+                <div className="text-3xl font-bold font-mono tabular-nums">
+                  {totalValue.toLocaleString()} XRP
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ≈ ${(totalValue * 2.45).toLocaleString()} USD
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Rewards Earned</CardTitle>
             <Gift className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tabular-nums text-chart-2">
-              +{totalRewards.toLocaleString()} XRP
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              ≈ ${(totalRewards * 2.45).toLocaleString()} USD
-            </p>
+            {positionsLoading ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <>
+                <div className="text-3xl font-bold font-mono tabular-nums text-chart-2">
+                  +{totalRewards.toLocaleString()} XRP
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  ≈ ${(totalRewards * 2.45).toLocaleString()} USD
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Average APY</CardTitle>
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tabular-nums">
-              {avgApy.toFixed(1)}%
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across {positions.length} positions
-            </p>
+            {positionsLoading ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <>
+                <div className="text-3xl font-bold font-mono tabular-nums">
+                  {avgApy.toFixed(1)}%
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Across {formattedPositions.length} positions
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -152,11 +201,19 @@ export default function Portfolio() {
           </div>
         </div>
 
-        <PortfolioTable
-          positions={positions}
-          onWithdraw={handleWithdraw}
-          onClaim={handleClaim}
-        />
+        {positionsLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : (
+          <PortfolioTable
+            positions={formattedPositions}
+            onWithdraw={handleWithdraw}
+            onClaim={handleClaim}
+          />
+        )}
       </div>
 
       {selectedPosition && (
