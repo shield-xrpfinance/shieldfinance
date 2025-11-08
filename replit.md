@@ -5,9 +5,23 @@
 This is a full-stack DeFi application for XRP liquid staking, built as a dashboard for managing cryptocurrency vaults with yield generation. Users can connect their XRP wallets (via Xaman or WalletConnect), deposit assets into various risk-tiered vaults, track their positions and rewards, and withdraw funds. The application provides real-time APY tracking, portfolio management, transaction history, and analytics for staking positions.
 
 ## Recent Changes (November 8, 2025)
-- Created **Transactions page** (`/transactions`) with transaction history list, summary cards, and type filtering
-- Created **Analytics page** (`/analytics`) with APY charts, TVL growth visualization, vault distribution, and key protocol metrics
-- Both pages are fully accessible via sidebar navigation and rendering properly
+- **Replaced all placeholder data with real database integration:**
+  - Created `transactions` table to track all deposit/withdraw/claim activities
+  - Created `vault_metrics_daily` table for future historical analytics storage
+  - Extended storage interface with transaction and analytics query methods
+  - Created API endpoints for transactions and analytics data
+  - Updated deposit/withdraw/claim flows to automatically create transaction records
+- **Transactions page** (`/transactions`) now fetches real transaction data from database:
+  - Shows actual transaction history with types, amounts, timestamps, and tx hashes
+  - Displays calculated summary totals (deposits, withdrawals, rewards claimed)
+  - All data comes from persisted transaction records
+- **Analytics page** (`/analytics`) now displays real protocol metrics:
+  - Protocol overview calculated from actual vaults and positions
+  - APY history derived from real vault APY data
+  - TVL growth calculated from actual protocol TVL
+  - Vault distribution based on real TVL values
+  - Top performing vaults sorted by actual APY rates
+- All pages now use TanStack Query for data fetching with loading states and error handling
 
 ## User Preferences
 
