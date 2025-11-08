@@ -4,6 +4,7 @@ import type { Vault as VaultType } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import VaultCard from "@/components/VaultCard";
 import DepositModal from "@/components/DepositModal";
+import XamanSigningModal from "@/components/XamanSigningModal";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -20,6 +21,9 @@ import { useNetwork } from "@/lib/networkContext";
 
 export default function Vaults() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
+  const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
+  const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
+  const [pendingDeposit, setPendingDeposit] = useState<{ amounts: { [asset: string]: string }; vaultId: string; vaultName: string } | null>(null);
   const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; depositAssets: string[] } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("apy");
@@ -98,39 +102,105 @@ export default function Vaults() {
   const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
     if (!selectedVault || !address) return;
 
-    const assetList = Object.entries(amounts)
+    const totalAmount = Object.values(amounts)
+      .filter((amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
+      .reduce((sum, amt) => sum + parseFloat(amt.replace(/,/g, "")), 0);
+
+    // For single-asset vaults, use that asset. For multi-asset, use first asset for payment
+    const paymentAsset = selectedVault.depositAssets[0];
+    const paymentAmount = amounts[paymentAsset] || totalAmount.toString();
+
+    try {
+      // Step 1: Create Xaman payment payload
+      const payloadResponse = await fetch("/api/wallet/xaman/payment/deposit", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: paymentAmount,
+          asset: paymentAsset,
+          vaultId: selectedVault.id,
+          network: network,
+        }),
+      });
+
+      const payloadData = await payloadResponse.json();
+
+      if (!payloadData.uuid) {
+        throw new Error("Failed to create payment payload");
+      }
+
+      // Step 2: Store pending deposit and show Xaman signing modal
+      setPendingDeposit({
+        amounts,
+        vaultId: selectedVault.id,
+        vaultName: selectedVault.name,
+      });
+      setXamanPayload({
+        uuid: payloadData.uuid,
+        qrUrl: payloadData.qrUrl,
+        deepLink: payloadData.deepLink,
+      });
+      setDepositModalOpen(false);
+      setXamanSigningModalOpen(true);
+    } catch (error) {
+      console.error("Error creating payment payload:", error);
+      toast({
+        title: "Payment Failed",
+        description: "Failed to create payment request. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleXamanSuccess = async (txHash: string) => {
+    if (!pendingDeposit || !address) return;
+
+    const assetList = Object.entries(pendingDeposit.amounts)
       .filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
       .map(([asset, amt]) => `${amt} ${asset}`)
       .join(", ");
 
-    const totalAmount = Object.values(amounts)
+    const totalAmount = Object.values(pendingDeposit.amounts)
       .filter((amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
       .reduce((sum, amt) => sum + parseFloat(amt.replace(/,/g, "")), 0);
 
     const depositData = {
       walletAddress: address,
-      vaultId: selectedVault.id,
+      vaultId: pendingDeposit.vaultId,
       amount: totalAmount.toString(),
       network: network,
+      txHash: txHash, // Include real transaction hash
     };
-    
-    console.log("Frontend sending deposit data:", depositData);
 
     try {
       await depositMutation.mutateAsync(depositData);
 
       toast({
         title: "Deposit Successful",
-        description: `Successfully deposited ${assetList} to ${selectedVault.name} on ${network}`,
+        description: `Successfully deposited ${assetList} to ${pendingDeposit.vaultName} on ${network}`,
       });
+
+      // Clear pending deposit
+      setPendingDeposit(null);
+      setXamanPayload(null);
     } catch (error) {
       console.error("Deposit mutation error:", error);
       toast({
         title: "Deposit Failed",
-        description: "Failed to create position. Please try again.",
+        description: "Transaction signed but failed to create position. Please contact support.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleXamanError = (error: string) => {
+    toast({
+      title: "Signing Failed",
+      description: error,
+      variant: "destructive",
+    });
+    setPendingDeposit(null);
+    setXamanPayload(null);
   };
 
   return (
@@ -181,6 +251,18 @@ export default function Vaults() {
           onConfirm={handleConfirmDeposit}
         />
       )}
+
+      <XamanSigningModal
+        open={xamanSigningModalOpen}
+        onOpenChange={setXamanSigningModalOpen}
+        payloadUuid={xamanPayload?.uuid || null}
+        qrUrl={xamanPayload?.qrUrl || null}
+        deepLink={xamanPayload?.deepLink || null}
+        onSuccess={handleXamanSuccess}
+        onError={handleXamanError}
+        title="Sign Deposit Transaction"
+        description="Scan the QR code with your Xaman wallet to complete the deposit"
+      />
     </div>
   );
 }

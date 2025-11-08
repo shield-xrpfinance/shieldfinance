@@ -45,12 +45,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Full req.body:", JSON.stringify(req.body, null, 2));
       const network = req.body.network || "mainnet";
-      const { network: _, ...positionData } = req.body;
-      console.log("After extracting network, positionData:", JSON.stringify(positionData, null, 2));
+      const txHash = req.body.txHash; // Get transaction hash from Xaman
+      const { network: _, txHash: __, ...positionData } = req.body;
+      console.log("After extracting network and txHash, positionData:", JSON.stringify(positionData, null, 2));
       const validatedData = insertPositionSchema.parse(positionData);
       const position = await storage.createPosition(validatedData);
       
-      // Create transaction record for deposit
+      // Create transaction record for deposit with real or mock txHash
       await storage.createTransaction({
         vaultId: position.vaultId,
         positionId: position.id,
@@ -58,7 +59,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: position.amount,
         rewards: "0",
         status: "completed",
-        txHash: `deposit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        txHash: txHash || `deposit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
         network: network,
       });
       
