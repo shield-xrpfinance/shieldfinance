@@ -11,7 +11,7 @@ import { Wallet, ExternalLink, Loader2, QrCode, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
 import { QRCodeSVG } from "qrcode.react";
-import EthereumProvider from "@walletconnect/ethereum-provider";
+import UniversalProvider from "@walletconnect/universal-provider";
 
 interface ConnectWalletModalProps {
   open: boolean;
@@ -117,41 +117,68 @@ export default function ConnectWalletModal({
     setStep("walletconnect-qr");
     
     try {
-      const provider = await EthereumProvider.init({
-        projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID || "demo-project-id",
-        chains: [1],
-        showQrModal: true,
-        qrModalOptions: {
-          themeMode: "light",
+      const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
+      
+      if (!projectId || projectId === "demo-project-id") {
+        throw new Error("WalletConnect Project ID not configured");
+      }
+
+      // Initialize Universal Provider with XRPL configuration
+      const provider = await UniversalProvider.init({
+        projectId,
+        metadata: {
+          name: "XRP Liquid Staking Protocol",
+          description: "Earn yield on your XRP, RLUSD, and USDC",
+          url: window.location.origin,
+          icons: [window.location.origin + "/favicon.ico"],
         },
       });
 
       provider.on("display_uri", (uri: string) => {
+        console.log("WalletConnect URI:", uri);
         setQrCodeUrl(uri);
       });
 
-      provider.on("connect", (info: any) => {
-        const accounts = provider.accounts;
-        if (accounts && accounts.length > 0) {
-          connect(accounts[0], "walletconnect");
-          if (onConnect) {
-            onConnect(accounts[0], "walletconnect");
-          }
-          onOpenChange(false);
-          toast({
-            title: "Wallet Connected",
-            description: `Connected to ${accounts[0].slice(0, 8)}...${accounts[0].slice(-6)}`,
-          });
-          setConnecting(false);
-        }
+      // Connect to XRPL namespace
+      // XRPL uses "xrpl:mainnet" and "xrpl:testnet" chain IDs
+      await provider.connect({
+        namespaces: {
+          xrpl: {
+            methods: [
+              "xrpl_signTransaction",
+              "xrpl_submitTransaction",
+              "xrpl_getAccountInfo",
+            ],
+            chains: ["xrpl:1"], // XRPL mainnet chain ID
+            events: ["chainChanged", "accountsChanged"],
+          },
+        },
       });
 
-      provider.on("disconnect", () => {
+      // Get connected accounts
+      const accounts = provider.session?.namespaces?.xrpl?.accounts || [];
+      
+      if (accounts.length > 0) {
+        // Extract address from account format "xrpl:1:rAddress..."
+        const address = accounts[0].split(":")[2];
+        
+        connect(address, "walletconnect");
+        if (onConnect) {
+          onConnect(address, "walletconnect");
+        }
+        onOpenChange(false);
+        toast({
+          title: "Wallet Connected",
+          description: `Connected to ${address.slice(0, 8)}...${address.slice(-6)}`,
+        });
+        setConnecting(false);
+      }
+
+      provider.on("session_delete", () => {
         setStep("select");
         setConnecting(false);
       });
 
-      await provider.connect();
     } catch (error) {
       console.error("WalletConnect error:", error);
       
@@ -162,7 +189,7 @@ export default function ConnectWalletModal({
       
       toast({
         title: "Demo Mode",
-        description: "WalletConnect not configured. Using demo connection.",
+        description: "WalletConnect not configured for XRPL. Using demo connection.",
       });
 
       setTimeout(() => {

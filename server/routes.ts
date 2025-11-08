@@ -229,15 +229,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Xaman payload status:", {
         uuid: req.params.uuid,
-        signed: payload.response?.signed,
         account: payload.response?.account,
-        meta_opened: payload.meta?.opened,
         meta_resolved: payload.meta?.resolved,
         meta_signed: payload.meta?.signed,
-        meta_cancelled: payload.meta?.cancelled
+        meta_cancelled: payload.meta?.cancelled,
+        meta_expired: payload.meta?.expired
       });
 
-      // Xumm SDK stores signed status in meta.signed, not response.signed
+      // Xumm SDK stores signed status in meta.signed
       const signed = payload.meta?.signed || false;
       const account = payload.response?.account || null;
 

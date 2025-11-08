@@ -32,11 +32,11 @@ Preferred communication style: Simple, everyday language.
 ## External Dependencies
 
 ### Blockchain & Wallet Integration
-- **Xaman (XUMM)**: XRP wallet integration for transaction signing (deposits, withdrawals, claims). Uses `xumm-sdk` for payload generation and a polling mechanism for signature confirmation.
-- **WalletConnect**: Multi-wallet connection protocol using `@walletconnect/ethereum-provider` and `@walletConnect/modal`.
+- **Xaman (XUMM)**: XRP wallet integration for transaction signing (deposits, withdrawals, claims). Uses `xumm-sdk` for payload generation and a polling mechanism for signature confirmation. Requires `XUMM_API_KEY` and `XUMM_API_SECRET` environment variables to be set in Replit Secrets.
+- **WalletConnect**: XRPL-compatible wallet connection using `@walletconnect/universal-provider` configured for the `xrpl` namespace (not Ethereum). Supports XRPL mainnet (xrpl:1) and testnet chains. Requires `VITE_WALLETCONNECT_PROJECT_ID` from cloud.walletconnect.com.
 - **XRP Ledger Balance Fetching**: Real-time balance retrieval using the `xrpl` library for XRP, RLUSD, and USDC.
 - **QR Code Display**: `qrcode.react` for generating scannable QR codes.
-- **Demo Mode**: Fallback for wallet connections when API keys are not configured, providing mock functionality.
+- **Demo Mode**: Fallback for wallet connections when API keys are not configured, providing mock functionality with demo XRP addresses.
 
 ### UI & Data Visualization
 - **Recharts**: For displaying APY trends and analytics.
