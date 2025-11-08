@@ -125,7 +125,7 @@ export default function ConnectWalletModal({
         throw new Error("WalletConnect Project ID not configured");
       }
 
-      // XRPL Chain IDs: mainnet = xrpl:0, testnet = xrpl:1
+      // XRPL WalletConnect chain IDs: mainnet = xrpl:0, testnet = xrpl:1
       const chainId = isTestnet ? "xrpl:1" : "xrpl:0";
 
       // Initialize Universal Provider with XRPL configuration

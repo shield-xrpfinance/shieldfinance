@@ -248,6 +248,7 @@ export default function Vaults() {
         ],
       };
 
+      // XRPL WalletConnect chain IDs: mainnet = xrpl:0, testnet = xrpl:1
       const chainId = isTestnet ? "xrpl:1" : "xrpl:0";
 
       // Sign transaction with WalletConnect
