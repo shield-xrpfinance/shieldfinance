@@ -35,6 +35,7 @@ export class DatabaseStorage implements IStorage {
     const vaultData = [
       {
         name: "XRP Stable Yield",
+        asset: "XRP",
         apy: "7.5",
         tvl: "8200000",
         liquidity: "2100000",
@@ -43,6 +44,7 @@ export class DatabaseStorage implements IStorage {
       },
       {
         name: "RLUSD + USDC Pool",
+        asset: "RLUSD,USDC",
         apy: "12.8",
         tvl: "5400000",
         liquidity: "1300000",
@@ -51,6 +53,7 @@ export class DatabaseStorage implements IStorage {
       },
       {
         name: "XRP Maximum Returns",
+        asset: "XRP",
         apy: "18.5",
         tvl: "3100000",
         liquidity: "750000",
@@ -59,6 +62,7 @@ export class DatabaseStorage implements IStorage {
       },
       {
         name: "XRP + RLUSD Balanced",
+        asset: "XRP,RLUSD",
         apy: "9.2",
         tvl: "12500000",
         liquidity: "4200000",
@@ -67,6 +71,7 @@ export class DatabaseStorage implements IStorage {
       },
       {
         name: "Triple Asset Pool",
+        asset: "XRP,RLUSD,USDC",
         apy: "15.5",
         tvl: "6800000",
         liquidity: "1800000",
@@ -75,6 +80,7 @@ export class DatabaseStorage implements IStorage {
       },
       {
         name: "USDC Conservative",
+        asset: "USDC",
         apy: "6.3",
         tvl: "2400000",
         liquidity: "520000",

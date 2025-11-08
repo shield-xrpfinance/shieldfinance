@@ -2,10 +2,12 @@ import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card"
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Shield, ShieldAlert, ShieldCheck, Clock, Users } from "lucide-react";
+import { MultiAssetIcon } from "@/components/AssetIcon";
 
 interface VaultCardProps {
   id: string;
   name: string;
+  asset?: string;
   apy: string;
   tvl: string;
   liquidity: string;
@@ -26,6 +28,7 @@ const riskConfig = {
 export default function VaultCard({
   id,
   name,
+  asset = "XRP",
   apy,
   tvl,
   liquidity,
@@ -43,7 +46,10 @@ export default function VaultCard({
     <Card className="hover-elevate">
       <CardHeader className="space-y-0 pb-4">
         <div className="flex items-start justify-between gap-2">
-          <h3 className="text-lg font-semibold">{name}</h3>
+          <div className="flex items-center gap-3">
+            <MultiAssetIcon assets={asset} size={32} />
+            <h3 className="text-lg font-semibold">{name}</h3>
+          </div>
           <Badge variant="secondary" className="text-xs">
             {status}
           </Badge>

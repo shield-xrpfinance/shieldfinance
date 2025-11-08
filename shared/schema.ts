@@ -6,6 +6,7 @@ import { z } from "zod";
 export const vaults = pgTable("vaults", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
+  asset: text("asset").notNull().default("XRP"),
   apy: decimal("apy", { precision: 5, scale: 2 }).notNull(),
   tvl: decimal("tvl", { precision: 18, scale: 2 }).notNull(),
   liquidity: decimal("liquidity", { precision: 18, scale: 2 }).notNull(),
