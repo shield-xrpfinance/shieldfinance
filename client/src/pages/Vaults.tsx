@@ -121,6 +121,17 @@ export default function Vaults() {
     });
     setDepositModalOpen(false);
 
+    // Check if provider is set - if not, wallet may have disconnected
+    if (!provider) {
+      toast({
+        title: "Connection Lost",
+        description: "Your wallet connection has expired. Please reconnect your wallet.",
+        variant: "destructive",
+      });
+      setPendingDeposit(null);
+      return;
+    }
+
     // Route to correct signing method based on provider
     if (provider === "walletconnect") {
       await handleWalletConnectDeposit(paymentAmount, paymentAsset);
