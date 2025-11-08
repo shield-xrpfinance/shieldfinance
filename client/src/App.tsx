@@ -18,6 +18,7 @@ import Vaults from "@/pages/Vaults";
 import Portfolio from "@/pages/Portfolio";
 import Transactions from "@/pages/Transactions";
 import Analytics from "@/pages/Analytics";
+import Admin from "@/pages/Admin";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/portfolio" component={Portfolio} />
       <Route path="/transactions" component={Transactions} />
       <Route path="/analytics" component={Analytics} />
+      <Route path="/admin" component={Admin} />
       <Route component={NotFound} />
     </RouterSwitch>
   );

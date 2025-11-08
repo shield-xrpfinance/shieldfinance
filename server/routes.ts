@@ -645,6 +645,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get all withdrawal requests (admin)
+  app.get("/api/withdrawal-requests", async (req, res) => {
+    try {
+      const { status } = req.query;
+      const requests = await storage.getWithdrawalRequests(status as string);
+      res.json(requests);
+    } catch (error) {
+      console.error("Get withdrawal requests error:", error);
+      res.status(500).json({ error: "Failed to get withdrawal requests" });
+    }
+  });
+
+  // Approve withdrawal request (admin)
+  app.patch("/api/withdrawal-requests/:id/approve", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { txHash } = req.body;
+
+      if (!txHash) {
+        return res.status(400).json({ error: "Transaction hash is required" });
+      }
+
+      const updatedRequest = await storage.updateWithdrawalRequest(id, {
+        status: "approved",
+        processedAt: new Date(),
+        txHash: txHash,
+      } as any);
+
+      res.json({ success: true, request: updatedRequest });
+    } catch (error) {
+      console.error("Approve withdrawal request error:", error);
+      res.status(500).json({ error: "Failed to approve withdrawal request" });
+    }
+  });
+
+  // Reject withdrawal request (admin)
+  app.patch("/api/withdrawal-requests/:id/reject", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { reason } = req.body;
+
+      if (!reason) {
+        return res.status(400).json({ error: "Rejection reason is required" });
+      }
+
+      const updatedRequest = await storage.updateWithdrawalRequest(id, {
+        status: "rejected",
+        processedAt: new Date(),
+        rejectionReason: reason,
+      } as any);
+
+      res.json({ success: true, request: updatedRequest });
+    } catch (error) {
+      console.error("Reject withdrawal request error:", error);
+      res.status(500).json({ error: "Failed to reject withdrawal request" });
+    }
+  });
+
   // Get payment transaction result
   app.get("/api/wallet/xaman/payment/:uuid", async (req, res) => {
     try {

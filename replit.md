@@ -21,8 +21,14 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage
 - **Database**: PostgreSQL (Neon serverless) with Drizzle ORM for type-safe queries.
-- **Schema**: `vaults` (configurations), `positions` (user deposits, rewards, timestamps), `transactions` (all activities), `vault_metrics_daily` (historical analytics).
+- **Schema**: 
+  - `vaults` (vault configurations)
+  - `positions` (user deposits, rewards, timestamps)
+  - `transactions` (all deposit/withdrawal/claim activities)
+  - `vault_metrics_daily` (historical analytics)
+  - `withdrawal_requests` (pending withdrawal and claim requests requiring vault operator approval)
 - **Key Features**: UUID primary keys, decimal precision for financial data, seed data for initial setup.
+- **Withdrawal/Claim System**: Request-based approval flow where users submit withdrawal/claim requests that are reviewed and approved by vault operators through the Admin dashboard.
 
 ### System Design Choices
 - **Separation of Concerns**: `/client` (frontend), `/server` (backend), `/shared` (shared types/schemas).

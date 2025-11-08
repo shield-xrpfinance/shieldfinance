@@ -52,6 +52,7 @@ export default function Portfolio() {
     const rewards = parseFloat(pos.rewards);
     return {
       id: pos.id,
+      vaultId: pos.vaultId,
       vaultName: vault?.name || "Unknown Vault",
       asset: vault?.asset || "XRP",
       depositedAmount: amount.toLocaleString(),
@@ -125,8 +126,7 @@ export default function Portfolio() {
     }
 
     try {
-      // Step 1: Create Xaman payment payload for claim
-      const payloadResponse = await fetch("/api/wallet/xaman/payment/claim", {
+      const response = await fetch("/api/claim-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -134,34 +134,26 @@ export default function Portfolio() {
           asset: assetSymbol,
           userAddress: address,
           network: network,
+          positionId: position.id,
+          vaultId: position.vaultId,
         }),
       });
 
-      const payloadData = await payloadResponse.json();
+      const data = await response.json();
 
-      if (!payloadData.uuid) {
-        throw new Error("Failed to create claim payload");
+      if (!data.success) {
+        throw new Error(data.error || "Failed to create claim request");
       }
 
-      // Step 2: Store pending action and show Xaman signing modal
-      setPendingAction({
-        type: "claim",
-        positionId: position.id,
-        amount: rewardAmount.toString(),
-        asset: assetSymbol,
-        vaultName: position.vaultName,
+      toast({
+        title: "Claim Request Submitted",
+        description: "A vault operator will review and approve your claim request shortly.",
       });
-      setXamanPayload({
-        uuid: payloadData.uuid,
-        qrUrl: payloadData.qrUrl,
-        deepLink: payloadData.deepLink,
-      });
-      setXamanSigningModalOpen(true);
     } catch (error) {
-      console.error("Error creating claim payload:", error);
+      console.error("Error creating claim request:", error);
       toast({
         title: "Claim Failed",
-        description: "Failed to create claim request. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create claim request. Please try again.",
         variant: "destructive",
       });
     }
@@ -171,10 +163,10 @@ export default function Portfolio() {
     if (!selectedPosition || !address) return;
 
     const assetSymbol = selectedPosition.asset?.split(",")[0] || "XRP";
+    const vaultId = formattedPositions.find((p) => p.id === selectedPosition.id)?.vaultId || "";
 
     try {
-      // Step 1: Create Xaman payment payload for withdrawal
-      const payloadResponse = await fetch("/api/wallet/xaman/payment/withdraw", {
+      const response = await fetch("/api/withdrawal-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -182,35 +174,27 @@ export default function Portfolio() {
           asset: assetSymbol,
           userAddress: address,
           network: network,
+          positionId: selectedPosition.id,
+          vaultId: vaultId,
         }),
       });
 
-      const payloadData = await payloadResponse.json();
+      const data = await response.json();
 
-      if (!payloadData.uuid) {
-        throw new Error("Failed to create withdrawal payload");
+      if (!data.success) {
+        throw new Error(data.error || "Failed to create withdrawal request");
       }
 
-      // Step 2: Store pending action and show Xaman signing modal
-      setPendingAction({
-        type: "withdraw",
-        positionId: selectedPosition.id,
-        amount: amount,
-        asset: assetSymbol,
-        vaultName: selectedPosition.vaultName,
-      });
-      setXamanPayload({
-        uuid: payloadData.uuid,
-        qrUrl: payloadData.qrUrl,
-        deepLink: payloadData.deepLink,
-      });
       setWithdrawModalOpen(false);
-      setXamanSigningModalOpen(true);
+      toast({
+        title: "Withdrawal Request Submitted",
+        description: "A vault operator will review and approve your withdrawal request shortly.",
+      });
     } catch (error) {
-      console.error("Error creating withdrawal payload:", error);
+      console.error("Error creating withdrawal request:", error);
       toast({
         title: "Withdrawal Failed",
-        description: "Failed to create withdrawal request. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to create withdrawal request. Please try again.",
         variant: "destructive",
       });
     }
