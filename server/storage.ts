@@ -1,37 +1,62 @@
-import { type User, type InsertUser } from "@shared/schema";
+import { type Vault, type InsertVault, type Position, type InsertPosition } from "@shared/schema";
 import { randomUUID } from "crypto";
 
-// modify the interface with any CRUD methods
-// you might need
-
 export interface IStorage {
-  getUser(id: string): Promise<User | undefined>;
-  getUserByUsername(username: string): Promise<User | undefined>;
-  createUser(user: InsertUser): Promise<User>;
+  getVaults(): Promise<Vault[]>;
+  getVault(id: string): Promise<Vault | undefined>;
+  createVault(vault: InsertVault): Promise<Vault>;
+  
+  getPositions(): Promise<Position[]>;
+  getPosition(id: string): Promise<Position | undefined>;
+  createPosition(position: InsertPosition): Promise<Position>;
+  deletePosition(id: string): Promise<boolean>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<string, User>;
+  private vaults: Map<string, Vault>;
+  private positions: Map<string, Position>;
 
   constructor() {
-    this.users = new Map();
+    this.vaults = new Map();
+    this.positions = new Map();
   }
 
-  async getUser(id: string): Promise<User | undefined> {
-    return this.users.get(id);
+  async getVaults(): Promise<Vault[]> {
+    return Array.from(this.vaults.values());
   }
 
-  async getUserByUsername(username: string): Promise<User | undefined> {
-    return Array.from(this.users.values()).find(
-      (user) => user.username === username,
-    );
+  async getVault(id: string): Promise<Vault | undefined> {
+    return this.vaults.get(id);
   }
 
-  async createUser(insertUser: InsertUser): Promise<User> {
+  async createVault(insertVault: InsertVault): Promise<Vault> {
     const id = randomUUID();
-    const user: User = { ...insertUser, id };
-    this.users.set(id, user);
-    return user;
+    const vault: Vault = { ...insertVault, id };
+    this.vaults.set(id, vault);
+    return vault;
+  }
+
+  async getPositions(): Promise<Position[]> {
+    return Array.from(this.positions.values());
+  }
+
+  async getPosition(id: string): Promise<Position | undefined> {
+    return this.positions.get(id);
+  }
+
+  async createPosition(insertPosition: InsertPosition): Promise<Position> {
+    const id = randomUUID();
+    const position: Position = { 
+      ...insertPosition, 
+      id,
+      depositedAt: new Date(),
+    };
+    this.positions.set(id, position);
+    return position;
+  }
+
+  async deletePosition(id: string): Promise<boolean> {
+    return this.positions.delete(id);
   }
 }
 
