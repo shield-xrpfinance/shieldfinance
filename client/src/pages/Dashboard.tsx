@@ -19,15 +19,6 @@ export default function Dashboard() {
     queryKey: ["/api/vaults"],
   });
 
-  const getDepositAssets = (name: string): string[] => {
-    if (name.includes("RLUSD") && name.includes("USDC")) return ["RLUSD", "USDC"];
-    if (name.includes("XRP") && name.includes("RLUSD") && name.includes("USDC")) return ["XRP", "RLUSD", "USDC"];
-    if (name.includes("XRP") && name.includes("RLUSD")) return ["XRP", "RLUSD"];
-    if (name.includes("USDC")) return ["USDC"];
-    if (name.includes("RLUSD")) return ["RLUSD"];
-    return ["XRP"];
-  };
-
   const formatCurrency = (value: string): string => {
     const num = parseFloat(value);
     if (num >= 1000000) {
@@ -41,6 +32,7 @@ export default function Dashboard() {
   const vaults = apiVaults?.slice(0, 3).map(vault => ({
     id: vault.id,
     name: vault.name,
+    asset: vault.asset || "XRP",
     apy: vault.apy,
     tvl: formatCurrency(vault.tvl),
     liquidity: formatCurrency(vault.liquidity),
@@ -48,7 +40,7 @@ export default function Dashboard() {
     riskLevel: vault.riskLevel as "low" | "medium" | "high",
     depositors: 0,
     status: vault.status.charAt(0).toUpperCase() + vault.status.slice(1),
-    depositAssets: getDepositAssets(vault.name),
+    depositAssets: (vault.asset || "XRP").split(",").map(a => a.trim()),
   })) || [];
 
   const chartData = [

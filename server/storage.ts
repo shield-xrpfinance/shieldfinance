@@ -20,7 +20,7 @@ export interface IStorage {
   getApyHistory(days?: number): Promise<Array<{ date: string; stable: number; high: number; maximum: number }>>;
   getTvlHistory(days?: number): Promise<Array<{ date: string; value: number }>>;
   getVaultDistribution(): Promise<Array<{ name: string; percentage: number }>>;
-  getTopPerformingVaults(): Promise<Array<{ name: string; apy: string; riskLevel: string }>>;
+  getTopPerformingVaults(): Promise<Array<{ name: string; apy: string; riskLevel: string; asset: string }>>;
   
   initializeVaults(): Promise<void>;
 }
@@ -242,7 +242,7 @@ export class DatabaseStorage implements IStorage {
     ];
   }
 
-  async getTopPerformingVaults(): Promise<Array<{ name: string; apy: string; riskLevel: string }>> {
+  async getTopPerformingVaults(): Promise<Array<{ name: string; apy: string; riskLevel: string; asset: string }>> {
     const allVaults = await this.getVaults();
     return allVaults
       .sort((a, b) => parseFloat(b.apy) - parseFloat(a.apy))
@@ -251,6 +251,7 @@ export class DatabaseStorage implements IStorage {
         name: v.name,
         apy: v.apy,
         riskLevel: v.riskLevel,
+        asset: v.asset,
       }));
   }
 }

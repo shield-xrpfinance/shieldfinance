@@ -3,6 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, DollarSign, Percent, Users, Vault } from "lucide-react";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
+import { MultiAssetIcon } from "@/components/AssetIcon";
 
 interface ProtocolOverview {
   tvl: string;
@@ -32,6 +33,7 @@ interface TopVault {
   name: string;
   apy: string;
   riskLevel: string;
+  asset: string;
 }
 
 export default function Analytics() {
@@ -313,9 +315,12 @@ export default function Analytics() {
               <div className="space-y-4">
                 {topVaults.map((vault, index) => (
                   <div key={index} className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-sm">{vault.name}</div>
-                      <div className="text-xs text-muted-foreground">{getRiskTierLabel(vault.riskLevel)}</div>
+                    <div className="flex items-center gap-3">
+                      <MultiAssetIcon assets={vault.asset} size={28} />
+                      <div>
+                        <div className="font-medium text-sm">{vault.name}</div>
+                        <div className="text-xs text-muted-foreground">{getRiskTierLabel(vault.riskLevel)}</div>
+                      </div>
                     </div>
                     <div className="text-right">
                       <div className="font-mono font-bold" style={{ color: getChartColor(vault.riskLevel) }}>
