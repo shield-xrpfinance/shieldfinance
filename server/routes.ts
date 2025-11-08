@@ -43,8 +43,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new position (deposit)
   app.post("/api/positions", async (req, res) => {
     try {
-      const validatedData = insertPositionSchema.parse(req.body);
       const network = req.body.network || "mainnet";
+      const { network: _, ...positionData } = req.body;
+      const validatedData = insertPositionSchema.parse(positionData);
       const position = await storage.createPosition(validatedData);
       
       // Create transaction record for deposit
