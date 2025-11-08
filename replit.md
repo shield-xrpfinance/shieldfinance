@@ -11,6 +11,14 @@ This is a full-stack DeFi application for XRP liquid staking, built as a dashboa
   - Extended storage interface with transaction and analytics query methods
   - Created API endpoints for transactions and analytics data
   - Updated deposit/withdraw/claim flows to automatically create transaction records
+- **Added mainnet/testnet network tracking for all transactions:**
+  - Added `network` field to `transactions` table schema (defaults to "mainnet")
+  - Updated deposit, withdrawal, and claim endpoints to accept and store network parameter
+  - Frontend deposit flow (Vaults.tsx) sends network from NetworkContext to backend
+  - Frontend withdrawal flow (Portfolio.tsx) sends network from NetworkContext to backend
+  - Frontend claim flow now properly calls API endpoint with network parameter
+  - All transaction records now track which network (mainnet/testnet) they were executed on
+  - Toast notifications display network information for user confirmation
 - **Transactions page** (`/transactions`) now fetches real transaction data from database:
   - Shows actual transaction history with types, amounts, timestamps, and tx hashes
   - Displays calculated summary totals (deposits, withdrawals, rewards claimed)
