@@ -166,7 +166,8 @@ export default function ConnectWalletModal({
         // Extract address from account format "xrpl:0:rAddress..." or "xrpl:1:rAddress..."
         const address = accounts[0].split(":")[2];
         
-        connect(address, "walletconnect");
+        // Store the provider instance in the wallet context
+        connect(address, "walletconnect", provider);
         if (onConnect) {
           onConnect(address, "walletconnect");
         }

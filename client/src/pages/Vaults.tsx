@@ -31,7 +31,7 @@ export default function Vaults() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("apy");
   const { toast } = useToast();
-  const { address, provider } = useWallet();
+  const { address, provider, walletConnectProvider } = useWallet();
   const { network, isTestnet } = useNetwork();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
@@ -171,27 +171,20 @@ export default function Vaults() {
   };
 
   const handleWalletConnectDeposit = async (paymentAmount: string, paymentAsset: string) => {
-    if (!address || !selectedVault) return;
+    if (!address || !selectedVault || !walletConnectProvider) {
+      toast({
+        title: "Connection Error",
+        description: "WalletConnect session not found. Please reconnect your wallet.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     setWalletConnectSigningOpen(true);
 
     try {
-      const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
-      
-      if (!projectId || projectId === "demo-project-id") {
-        throw new Error("WalletConnect not configured");
-      }
-
-      // Initialize Universal Provider
-      const wcProvider = await UniversalProvider.init({
-        projectId,
-        metadata: {
-          name: "XRP Liquid Staking Protocol",
-          description: "Earn yield on your XRP, RLUSD, and USDC",
-          url: window.location.origin,
-          icons: [window.location.origin + "/favicon.ico"],
-        },
-      });
+      // Use the stored WalletConnect provider from the wallet context
+      const wcProvider = walletConnectProvider;
 
       // Get the destination address (vault's deposit address)
       const vaultDepositAddress = "rpC7sRSUcK6F1nPb9E5U8z8bz5ee5mFEjC";
