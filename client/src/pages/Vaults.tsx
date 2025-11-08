@@ -258,7 +258,7 @@ export default function Vaults() {
       // XRPL WalletConnect chain IDs: mainnet = xrpl:0, testnet = xrpl:1
       const chainId = isTestnet ? "xrpl:1" : "xrpl:0";
 
-      // Sign transaction with WalletConnect (returns RPC envelope)
+      // Sign transaction with WalletConnect
       const signResult = await wcProvider.request({
         method: "xrpl_signTransaction",
         params: {
@@ -266,12 +266,8 @@ export default function Vaults() {
         },
       }, chainId) as any;
 
-      console.log("WalletConnect signResult:", JSON.stringify(signResult, null, 2));
-
       // Extract signed transaction - try multiple possible response structures
-      let signedTxJson = signResult?.result?.tx_json || signResult?.tx_json || signResult;
-      
-      console.log("Extracted signedTxJson:", JSON.stringify(signedTxJson, null, 2));
+      const signedTxJson = signResult?.result?.tx_json || signResult?.tx_json || signResult;
 
       if (!signedTxJson) {
         throw new Error("No transaction data received from WalletConnect");
