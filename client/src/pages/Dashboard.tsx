@@ -99,12 +99,15 @@ export default function Dashboard() {
     const paymentAsset = selectedVault.depositAssets[0];
     const paymentAmount = amounts[paymentAsset] || totalAmount.toString();
 
-    // Store pending deposit
-    setPendingDeposit({
+    // Create deposit info object
+    const depositInfo = {
       amounts,
       vaultId: selectedVault.id,
       vaultName: selectedVault.name,
-    });
+    };
+
+    // Store pending deposit
+    setPendingDeposit(depositInfo);
     setDepositModalOpen(false);
 
     // Check if provider is set
@@ -120,7 +123,7 @@ export default function Dashboard() {
 
     // Route to correct signing method based on provider
     if (provider === "walletconnect") {
-      await handleWalletConnectDeposit(paymentAmount, paymentAsset);
+      await handleWalletConnectDeposit(paymentAmount, paymentAsset, depositInfo);
     } else {
       // Default to Xaman
       await handleXamanDeposit(paymentAmount, paymentAsset);
@@ -167,7 +170,11 @@ export default function Dashboard() {
     }
   };
 
-  const handleWalletConnectDeposit = async (paymentAmount: string, paymentAsset: string) => {
+  const handleWalletConnectDeposit = async (
+    paymentAmount: string, 
+    paymentAsset: string,
+    depositInfo: { amounts: { [asset: string]: string }; vaultId: string; vaultName: string }
+  ) => {
     if (!address || !selectedVault) {
       toast({
         title: "Connection Error",
@@ -282,7 +289,7 @@ export default function Dashboard() {
 
       // Close WalletConnect modal and call success handler
       setWalletConnectSigningOpen(false);
-      await handleXamanSuccess(txHash);
+      await handleXamanSuccess(txHash, depositInfo);
 
     } catch (error) {
       console.error("WalletConnect signing error:", error);
@@ -298,34 +305,42 @@ export default function Dashboard() {
     }
   };
 
-  const handleXamanSuccess = async (txHash: string) => {
-    if (!pendingDeposit || !address) return;
+  const handleXamanSuccess = async (
+    txHash: string, 
+    depositInfo?: { amounts: { [asset: string]: string }; vaultId: string; vaultName: string }
+  ) => {
+    // Use provided depositInfo or fall back to state (for Xaman flow compatibility)
+    const depositData = depositInfo || pendingDeposit;
+    
+    if (!depositData || !address) {
+      return;
+    }
 
-    const assetList = Object.entries(pendingDeposit.amounts)
+    const assetList = Object.entries(depositData.amounts)
       .filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
       .map(([asset, amt]) => `${amt} ${asset}`)
       .join(", ");
 
-    const totalAmount = Object.values(pendingDeposit.amounts)
+    const totalAmount = Object.values(depositData.amounts)
       .filter((amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
       .reduce((sum, amt) => sum + parseFloat(amt.replace(/,/g, "")), 0);
 
-    const depositData = {
+    const positionData = {
       walletAddress: address,
-      vaultId: pendingDeposit.vaultId,
+      vaultId: depositData.vaultId,
       amount: totalAmount.toString(),
       network: network,
       txHash: txHash,
     };
 
     try {
-      await depositMutation.mutateAsync(depositData);
+      await depositMutation.mutateAsync(positionData);
 
       // Show success dialog with CTA
       setSuccessDialogOpen(true);
       setSuccessMessage({
         title: "Deposit Successful!",
-        description: `Successfully deposited ${assetList} to ${pendingDeposit.vaultName} on ${network}`,
+        description: `Successfully deposited ${assetList} to ${depositData.vaultName} on ${network}`,
         txHash: txHash,
       });
 
