@@ -187,13 +187,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/wallet/balance/:address", async (req, res) => {
     try {
       const { address } = req.params;
+      const network = req.query.network as string || "mainnet";
       
       if (!address) {
         return res.status(400).json({ error: "Wallet address required" });
       }
 
-      // Connect to XRP Ledger (using public server)
-      const client = new Client("wss://xrplcluster.com");
+      // Select XRP Ledger server based on network
+      const xrplServer = network === "testnet" 
+        ? "wss://s.altnet.rippletest.net:51233" // Testnet
+        : "wss://xrplcluster.com"; // Mainnet
+
+      // Connect to XRP Ledger
+      const client = new Client(xrplServer);
       await client.connect();
 
       try {
@@ -217,7 +223,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           address,
           balanceXRP: balanceInXRP.toFixed(2),
           balanceUSD: balanceInUSD.toFixed(2),
-          xrpPriceUSD
+          xrpPriceUSD,
+          network
         });
       } finally {
         await client.disconnect();
@@ -232,6 +239,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           balanceXRP: "0.00",
           balanceUSD: "0.00",
           xrpPriceUSD: 2.45,
+          network: req.query.network || "mainnet",
           error: "Account not found or not activated"
         });
       }
