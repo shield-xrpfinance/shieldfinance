@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import PortfolioTable from "@/components/PortfolioTable";
 import WithdrawModal from "@/components/WithdrawModal";
+import XamanSigningModal from "@/components/XamanSigningModal";
 import { TrendingUp, Coins, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -14,6 +15,9 @@ import { useNetwork } from "@/lib/networkContext";
 
 export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+  const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
+  const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ type: "withdraw" | "claim"; positionId: string; amount: string; asset: string; vaultName: string } | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<{
     id: string;
     vaultName: string;
@@ -105,42 +109,151 @@ export default function Portfolio() {
 
   const handleClaim = async (positionId: string) => {
     const position = formattedPositions.find((p) => p.id === positionId);
-    if (position) {
-      const assetSymbol = position.asset?.split(",")[0] || "XRP";
-      try {
-        await claimMutation.mutateAsync({ positionId, network });
-        toast({
-          title: "Rewards Claimed",
-          description: `Successfully claimed ${position.rewards} ${assetSymbol} from ${position.vaultName} on ${network}`,
-        });
-      } catch (error) {
-        toast({
-          title: "Claim Failed",
-          description: "Failed to claim rewards. Please try again.",
-          variant: "destructive",
-        });
+    if (!position || !address) return;
+
+    const assetSymbol = position.asset?.split(",")[0] || "XRP";
+    const rewardAmount = parseFloat(position.rewards.replace(/,/g, ""));
+
+    if (rewardAmount <= 0) {
+      toast({
+        title: "No Rewards",
+        description: "You don't have any rewards to claim yet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      // Step 1: Create Xaman payment payload for claim
+      const payloadResponse = await fetch("/api/wallet/xaman/payment/claim", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: rewardAmount.toString(),
+          asset: assetSymbol,
+          userAddress: address,
+          network: network,
+        }),
+      });
+
+      const payloadData = await payloadResponse.json();
+
+      if (!payloadData.uuid) {
+        throw new Error("Failed to create claim payload");
       }
+
+      // Step 2: Store pending action and show Xaman signing modal
+      setPendingAction({
+        type: "claim",
+        positionId: position.id,
+        amount: rewardAmount.toString(),
+        asset: assetSymbol,
+        vaultName: position.vaultName,
+      });
+      setXamanPayload({
+        uuid: payloadData.uuid,
+        qrUrl: payloadData.qrUrl,
+        deepLink: payloadData.deepLink,
+      });
+      setXamanSigningModalOpen(true);
+    } catch (error) {
+      console.error("Error creating claim payload:", error);
+      toast({
+        title: "Claim Failed",
+        description: "Failed to create claim request. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
   const handleConfirmWithdraw = async (amount: string) => {
-    if (!selectedPosition) return;
-    
+    if (!selectedPosition || !address) return;
+
+    const assetSymbol = selectedPosition.asset?.split(",")[0] || "XRP";
+
     try {
-      const assetSymbol = selectedPosition.asset?.split(",")[0] || "XRP";
-      await deleteMutation.mutateAsync({ positionId: selectedPosition.id, network });
-      toast({
-        title: "Withdrawal Successful",
-        description: `Successfully withdrew ${amount} ${assetSymbol} from ${selectedPosition.vaultName} on ${network}`,
+      // Step 1: Create Xaman payment payload for withdrawal
+      const payloadResponse = await fetch("/api/wallet/xaman/payment/withdraw", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount: amount,
+          asset: assetSymbol,
+          userAddress: address,
+          network: network,
+        }),
+      });
+
+      const payloadData = await payloadResponse.json();
+
+      if (!payloadData.uuid) {
+        throw new Error("Failed to create withdrawal payload");
+      }
+
+      // Step 2: Store pending action and show Xaman signing modal
+      setPendingAction({
+        type: "withdraw",
+        positionId: selectedPosition.id,
+        amount: amount,
+        asset: assetSymbol,
+        vaultName: selectedPosition.vaultName,
+      });
+      setXamanPayload({
+        uuid: payloadData.uuid,
+        qrUrl: payloadData.qrUrl,
+        deepLink: payloadData.deepLink,
       });
       setWithdrawModalOpen(false);
+      setXamanSigningModalOpen(true);
     } catch (error) {
+      console.error("Error creating withdrawal payload:", error);
       toast({
         title: "Withdrawal Failed",
-        description: "Failed to process withdrawal. Please try again.",
+        description: "Failed to create withdrawal request. Please try again.",
         variant: "destructive",
       });
     }
+  };
+
+  const handleXamanSuccess = async (txHash: string) => {
+    if (!pendingAction) return;
+
+    try {
+      if (pendingAction.type === "withdraw") {
+        await deleteMutation.mutateAsync({ positionId: pendingAction.positionId, network });
+        toast({
+          title: "Withdrawal Successful",
+          description: `Successfully withdrew ${pendingAction.amount} ${pendingAction.asset} from ${pendingAction.vaultName} on ${network}`,
+        });
+      } else if (pendingAction.type === "claim") {
+        await claimMutation.mutateAsync({ positionId: pendingAction.positionId, network });
+        toast({
+          title: "Rewards Claimed",
+          description: `Successfully claimed ${pendingAction.amount} ${pendingAction.asset} from ${pendingAction.vaultName} on ${network}`,
+        });
+      }
+
+      // Clear pending action
+      setPendingAction(null);
+      setXamanPayload(null);
+    } catch (error) {
+      console.error("Transaction completion error:", error);
+      toast({
+        title: "Transaction Failed",
+        description: "Transaction signed but failed to complete. Please contact support.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleXamanError = (error: string) => {
+    toast({
+      title: "Signing Failed",
+      description: error,
+      variant: "destructive",
+    });
+    setPendingAction(null);
+    setXamanPayload(null);
   };
 
   if (!isConnected) {
@@ -294,6 +407,20 @@ export default function Portfolio() {
           onConfirm={handleConfirmWithdraw}
         />
       )}
+
+      <XamanSigningModal
+        open={xamanSigningModalOpen}
+        onOpenChange={setXamanSigningModalOpen}
+        payloadUuid={xamanPayload?.uuid || null}
+        qrUrl={xamanPayload?.qrUrl || null}
+        deepLink={xamanPayload?.deepLink || null}
+        onSuccess={handleXamanSuccess}
+        onError={handleXamanError}
+        title={pendingAction?.type === "claim" ? "Sign Reward Claim" : "Sign Withdrawal Transaction"}
+        description={pendingAction?.type === "claim" 
+          ? "Scan the QR code with your Xaman wallet to claim your rewards"
+          : "Scan the QR code with your Xaman wallet to complete the withdrawal"}
+      />
     </div>
   );
 }
