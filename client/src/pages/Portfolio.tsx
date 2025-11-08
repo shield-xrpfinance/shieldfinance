@@ -79,6 +79,16 @@ export default function Portfolio() {
     },
   });
 
+  const claimMutation = useMutation({
+    mutationFn: async ({ positionId, network }: { positionId: string; network: string }) => {
+      const res = await apiRequest("PATCH", `/api/positions/${positionId}/claim`, { network });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+    },
+  });
+
   const handleWithdraw = (positionId: string) => {
     const position = formattedPositions.find((p) => p.id === positionId);
     if (position) {
@@ -93,14 +103,23 @@ export default function Portfolio() {
     }
   };
 
-  const handleClaim = (positionId: string) => {
+  const handleClaim = async (positionId: string) => {
     const position = formattedPositions.find((p) => p.id === positionId);
     if (position) {
       const assetSymbol = position.asset?.split(",")[0] || "XRP";
-      toast({
-        title: "Rewards Claimed",
-        description: `Successfully claimed ${position.rewards} ${assetSymbol} from ${position.vaultName}`,
-      });
+      try {
+        await claimMutation.mutateAsync({ positionId, network });
+        toast({
+          title: "Rewards Claimed",
+          description: `Successfully claimed ${position.rewards} ${assetSymbol} from ${position.vaultName} on ${network}`,
+        });
+      } catch (error) {
+        toast({
+          title: "Claim Failed",
+          description: "Failed to claim rewards. Please try again.",
+          variant: "destructive",
+        });
+      }
     }
   };
 
