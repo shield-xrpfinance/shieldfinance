@@ -360,6 +360,24 @@ export default function Dashboard() {
         </p>
       </div>
 
+      {/* Temporary Preview Button */}
+      <div className="flex justify-end">
+        <Button
+          onClick={() => {
+            setSuccessMessage({
+              title: "Deposit Successful!",
+              description: "Successfully deposited 0.001 XRP to Stable Yield Vault on mainnet",
+              txHash: "E61247EA15E60643FB19CCBFA096ADEEB444575804270DAED62AE360BEAA3EE3"
+            });
+            setSuccessDialogOpen(true);
+          }}
+          variant="outline"
+          size="sm"
+        >
+          Preview Success Modal
+        </Button>
+      </div>
+
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <StatsCard
           label="Total Value Locked"
