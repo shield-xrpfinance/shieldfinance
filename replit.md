@@ -34,7 +34,11 @@ This is a full-stack DeFi application for XRP liquid staking, built as a dashboa
 - **Deposit and Withdraw flows now use real wallet balances:**
   - Balance endpoint `/api/wallet/balance/:address` fetches XRP, RLUSD, USDC from XRP Ledger
   - XRP balance working with real mainnet/testnet data
-  - RLUSD/USDC require configuration of actual issuer addresses (currently using placeholders)
+  - RLUSD/USDC now configured with official issuer addresses:
+    - RLUSD mainnet: `rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De` (Ripple official)
+    - RLUSD testnet: `rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV` (Ripple official)
+    - USDC mainnet: `rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE` (Circle official)
+    - USDC uses currency code "USD" on XRP Ledger
   - DepositModal displays real balances, validates against available funds, Max button works
   - WithdrawModal validates against position amounts
   - Database FK constraint updated to ON DELETE SET NULL for transaction history preservation

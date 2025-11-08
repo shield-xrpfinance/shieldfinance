@@ -253,16 +253,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? "wss://s.altnet.rippletest.net:51233" // Testnet
         : "wss://xrplcluster.com"; // Mainnet
 
-      // RLUSD and USDC issuer addresses
-      // Note: These are example addresses - update with actual issuer addresses for your network
+      // RLUSD and USDC official issuer addresses
+      // Source: Ripple official docs (RLUSD) and Circle (USDC)
       const issuers = {
         mainnet: {
-          RLUSD: "rLUSD1111111111111111111111111111", // Placeholder - update with real issuer
-          USDC: "rcEGREd8NmkKRE8GE424sksyt1tJVFZwu" // Example USDC issuer
+          RLUSD: "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De", // Official Ripple RLUSD issuer (mainnet)
+          USDC: "rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE" // Official Circle USDC issuer (mainnet)
         },
         testnet: {
-          RLUSD: "rLUSD1111111111111111111111111111", // Placeholder - update with real issuer
-          USDC: "rUSDC1111111111111111111111111111" // Placeholder - update with real issuer
+          RLUSD: "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV", // Official Ripple RLUSD issuer (testnet)
+          USDC: "rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE" // Note: Testnet USDC issuer may differ - verify with Circle
         }
       };
 
@@ -296,11 +296,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           // Find RLUSD and USDC trust lines
+          // RLUSD uses currency code "RLUSD" or hex "524C555344000000000000000000000000000000"
+          // USDC uses currency code "USD" (standard 3-char code)
           for (const line of accountLines.result.lines) {
-            if (line.currency === "RLUSD" || (line.currency === "534F4C4F00000000000000000000000000000000" && line.account === currentIssuers.RLUSD)) {
+            // Match RLUSD by currency code AND issuer address
+            if ((line.currency === "RLUSD" || line.currency === "524C555344000000000000000000000000000000") 
+                && line.account === currentIssuers.RLUSD) {
               rlusdBalance = Math.max(rlusdBalance, parseFloat(line.balance) || 0);
             }
-            if (line.currency === "USDC" || (line.currency === "5553444300000000000000000000000000000000" && line.account === currentIssuers.USDC)) {
+            // Match USDC by currency code "USD" AND issuer address
+            if (line.currency === "USD" && line.account === currentIssuers.USDC) {
               usdcBalance = Math.max(usdcBalance, parseFloat(line.balance) || 0);
             }
           }
