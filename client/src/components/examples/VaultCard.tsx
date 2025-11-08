@@ -13,11 +13,12 @@ export default function VaultCardExample() {
         riskLevel="low"
         depositors={1245}
         status="Active"
+        depositAssets={["XRP"]}
         onDeposit={(id) => console.log("Deposit to", id)}
       />
       <VaultCard
         id="vault-2"
-        name="XRP High Yield"
+        name="RLUSD + USDC Pool"
         apy="12.8"
         tvl="$5.4M"
         liquidity="$1.3M"
@@ -25,18 +26,20 @@ export default function VaultCardExample() {
         riskLevel="medium"
         depositors={892}
         status="Active"
+        depositAssets={["RLUSD", "USDC"]}
         onDeposit={(id) => console.log("Deposit to", id)}
       />
       <VaultCard
         id="vault-3"
-        name="XRP Maximum Returns"
-        apy="18.5"
+        name="Triple Asset Pool"
+        apy="15.5"
         tvl="$3.1M"
         liquidity="$750K"
-        lockPeriod={180}
-        riskLevel="high"
+        lockPeriod={60}
+        riskLevel="medium"
         depositors={423}
         status="Active"
+        depositAssets={["XRP", "RLUSD", "USDC"]}
         onDeposit={(id) => console.log("Deposit to", id)}
       />
     </div>

@@ -8,7 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Dashboard() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
-  const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string } | null>(null);
+  const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; depositAssets: string[] } | null>(null);
   const { toast } = useToast();
 
   const vaults = [
@@ -22,10 +22,11 @@ export default function Dashboard() {
       riskLevel: "low" as const,
       depositors: 1245,
       status: "Active",
+      depositAssets: ["XRP"],
     },
     {
       id: "vault-2",
-      name: "XRP High Yield",
+      name: "RLUSD + USDC Pool",
       apy: "12.8",
       tvl: "$5.4M",
       liquidity: "$1.3M",
@@ -33,6 +34,7 @@ export default function Dashboard() {
       riskLevel: "medium" as const,
       depositors: 892,
       status: "Active",
+      depositAssets: ["RLUSD", "USDC"],
     },
     {
       id: "vault-3",
@@ -44,6 +46,7 @@ export default function Dashboard() {
       riskLevel: "high" as const,
       depositors: 423,
       status: "Active",
+      depositAssets: ["XRP"],
     },
   ];
 
@@ -59,15 +62,25 @@ export default function Dashboard() {
   const handleDeposit = (vaultId: string) => {
     const vault = vaults.find((v) => v.id === vaultId);
     if (vault) {
-      setSelectedVault({ id: vault.id, name: vault.name, apy: vault.apy });
+      setSelectedVault({ 
+        id: vault.id, 
+        name: vault.name, 
+        apy: vault.apy,
+        depositAssets: vault.depositAssets || ["XRP"],
+      });
       setDepositModalOpen(true);
     }
   };
 
-  const handleConfirmDeposit = (amount: string) => {
+  const handleConfirmDeposit = (amounts: { [asset: string]: string }) => {
+    const assetList = Object.entries(amounts)
+      .filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
+      .map(([asset, amt]) => `${amt} ${asset}`)
+      .join(", ");
+    
     toast({
       title: "Deposit Successful",
-      description: `Successfully deposited ${amount} XRP to ${selectedVault?.name}`,
+      description: `Successfully deposited ${assetList} to ${selectedVault?.name}`,
     });
   };
 
@@ -122,6 +135,7 @@ export default function Dashboard() {
           onOpenChange={setDepositModalOpen}
           vaultName={selectedVault.name}
           vaultApy={selectedVault.apy}
+          depositAssets={selectedVault.depositAssets}
           onConfirm={handleConfirmDeposit}
         />
       )}

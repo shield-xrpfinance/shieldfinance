@@ -18,7 +18,8 @@ interface DepositModalProps {
   onOpenChange: (open: boolean) => void;
   vaultName: string;
   vaultApy: string;
-  onConfirm: (amount: string) => void;
+  depositAssets?: string[];
+  onConfirm: (amounts: { [asset: string]: string }) => void;
 }
 
 export default function DepositModal({
@@ -26,23 +27,35 @@ export default function DepositModal({
   onOpenChange,
   vaultName,
   vaultApy,
+  depositAssets = ["XRP"],
   onConfirm,
 }: DepositModalProps) {
-  const [amount, setAmount] = useState("");
+  const [amounts, setAmounts] = useState<{ [key: string]: string }>({});
   const [step, setStep] = useState<1 | 2>(1);
-  const availableBalance = "10,000";
   const gasEstimate = "0.00012";
 
-  const projectedEarnings = amount
-    ? (parseFloat(amount.replace(/,/g, "")) * parseFloat(vaultApy) / 100).toFixed(2)
+  const availableBalances: { [key: string]: string } = {
+    XRP: "10,000",
+    RLUSD: "5,000",
+    USDC: "8,000",
+  };
+
+  const totalValue = Object.entries(amounts).reduce((sum, [asset, amount]) => {
+    if (!amount) return sum;
+    const val = parseFloat(amount.replace(/,/g, ""));
+    return sum + val;
+  }, 0);
+
+  const projectedEarnings = totalValue
+    ? (totalValue * parseFloat(vaultApy) / 100).toFixed(2)
     : "0";
 
   const handleContinue = () => {
-    if (step === 1 && amount) {
+    if (step === 1 && Object.keys(amounts).length > 0) {
       setStep(2);
     } else if (step === 2) {
-      onConfirm(amount);
-      setAmount("");
+      onConfirm(amounts);
+      setAmounts({});
       setStep(1);
       onOpenChange(false);
     }
@@ -53,6 +66,14 @@ export default function DepositModal({
       setStep(1);
     }
   };
+
+  const setAssetAmount = (asset: string, value: string) => {
+    setAmounts((prev) => ({ ...prev, [asset]: value }));
+  };
+
+  const hasValidAmount = Object.values(amounts).some(
+    (amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0
+  );
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -78,42 +99,48 @@ export default function DepositModal({
 
           {step === 1 && (
             <div className="space-y-4">
-              <div>
-                <Label htmlFor="amount">Amount</Label>
-                <div className="relative mt-2">
-                  <Input
-                    id="amount"
-                    type="text"
-                    placeholder="0.00"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="pr-20 text-lg font-mono"
-                    data-testid="input-deposit-amount"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
-                    XRP
-                  </span>
+              {depositAssets.map((asset) => (
+                <div key={asset}>
+                  <Label htmlFor={`amount-${asset}`}>{asset} Amount</Label>
+                  <div className="relative mt-2">
+                    <Input
+                      id={`amount-${asset}`}
+                      type="text"
+                      placeholder="0.00"
+                      value={amounts[asset] || ""}
+                      onChange={(e) => setAssetAmount(asset, e.target.value)}
+                      className="pr-20 text-lg font-mono"
+                      data-testid={`input-deposit-amount-${asset}`}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                      {asset}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-xs text-muted-foreground">
+                      Available: {availableBalances[asset] || "0"} {asset}
+                    </p>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 text-xs"
+                      onClick={() => setAssetAmount(asset, availableBalances[asset] || "0")}
+                      data-testid={`button-max-${asset}`}
+                    >
+                      Max
+                    </Button>
+                  </div>
                 </div>
-                <div className="flex items-center justify-between mt-2">
-                  <p className="text-xs text-muted-foreground">
-                    Available: {availableBalance} XRP
-                  </p>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto p-0 text-xs"
-                    onClick={() => setAmount(availableBalance)}
-                    data-testid="button-max"
-                  >
-                    Max
-                  </Button>
-                </div>
-              </div>
+              ))}
 
               <div className="space-y-2 p-4 rounded-md bg-muted/50">
                 <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Total Value</span>
+                  <span className="font-semibold font-mono">{totalValue.toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Projected Annual Earnings</span>
-                  <span className="font-semibold font-mono">{projectedEarnings} XRP</span>
+                  <span className="font-semibold font-mono">{projectedEarnings}</span>
                 </div>
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Est. Gas Fee</span>
@@ -126,22 +153,28 @@ export default function DepositModal({
           {step === 2 && (
             <div className="space-y-4">
               <div className="space-y-3 p-4 rounded-md border">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Deposit Amount</span>
-                  <span className="text-lg font-semibold font-mono">{amount} XRP</span>
+                {Object.entries(amounts).filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0).map(([asset, amount]) => (
+                  <div key={asset} className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">{asset} Amount</span>
+                    <span className="font-semibold font-mono">{amount} {asset}</span>
+                  </div>
+                ))}
+                <div className="flex items-center justify-between pt-2 border-t">
+                  <span className="text-sm text-muted-foreground">Total Value</span>
+                  <span className="font-semibold font-mono">{totalValue.toFixed(2)}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Annual Earnings</span>
-                  <span className="font-medium font-mono text-chart-2">+{projectedEarnings} XRP</span>
+                  <span className="font-medium font-mono text-chart-2">+{projectedEarnings}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Gas Fee</span>
                   <span className="font-mono text-sm">{gasEstimate} XRP</span>
                 </div>
                 <div className="pt-3 border-t flex items-center justify-between">
-                  <span className="font-medium">Total</span>
+                  <span className="font-medium">Total Cost</span>
                   <span className="text-lg font-bold font-mono">
-                    {(parseFloat(amount.replace(/,/g, "")) + parseFloat(gasEstimate)).toFixed(5)} XRP
+                    {(totalValue + parseFloat(gasEstimate)).toFixed(5)}
                   </span>
                 </div>
               </div>
@@ -157,7 +190,7 @@ export default function DepositModal({
           )}
           <Button
             onClick={handleContinue}
-            disabled={!amount || parseFloat(amount.replace(/,/g, "")) <= 0}
+            disabled={!hasValidAmount}
             className="flex-1"
             data-testid="button-continue"
           >

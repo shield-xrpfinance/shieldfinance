@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 
 export default function Vaults() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
-  const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string } | null>(null);
+  const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; depositAssets: string[] } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("apy");
   const { toast } = useToast();
@@ -30,10 +30,11 @@ export default function Vaults() {
       riskLevel: "low" as const,
       depositors: 1245,
       status: "Active",
+      depositAssets: ["XRP"],
     },
     {
       id: "vault-2",
-      name: "XRP High Yield",
+      name: "RLUSD + USDC Pool",
       apy: "12.8",
       tvl: "$5.4M",
       liquidity: "$1.3M",
@@ -41,6 +42,7 @@ export default function Vaults() {
       riskLevel: "medium" as const,
       depositors: 892,
       status: "Active",
+      depositAssets: ["RLUSD", "USDC"],
     },
     {
       id: "vault-3",
@@ -52,39 +54,43 @@ export default function Vaults() {
       riskLevel: "high" as const,
       depositors: 423,
       status: "Active",
+      depositAssets: ["XRP"],
     },
     {
       id: "vault-4",
-      name: "XRP Conservative",
-      apy: "5.2",
+      name: "XRP + RLUSD Balanced",
+      apy: "9.2",
       tvl: "$12.5M",
       liquidity: "$4.2M",
       lockPeriod: 14,
       riskLevel: "low" as const,
       depositors: 2341,
       status: "Active",
+      depositAssets: ["XRP", "RLUSD"],
     },
     {
       id: "vault-5",
-      name: "XRP Balanced Growth",
-      apy: "10.5",
+      name: "Triple Asset Pool",
+      apy: "15.5",
       tvl: "$6.8M",
       liquidity: "$1.8M",
       lockPeriod: 60,
       riskLevel: "medium" as const,
       depositors: 1156,
       status: "Active",
+      depositAssets: ["XRP", "RLUSD", "USDC"],
     },
     {
       id: "vault-6",
-      name: "XRP Aggressive",
-      apy: "22.3",
+      name: "USDC Conservative",
+      apy: "6.3",
       tvl: "$2.4M",
       liquidity: "$520K",
-      lockPeriod: 365,
-      riskLevel: "high" as const,
-      depositors: 234,
+      lockPeriod: 7,
+      riskLevel: "low" as const,
+      depositors: 1834,
       status: "Active",
+      depositAssets: ["USDC"],
     },
   ];
 
@@ -106,15 +112,25 @@ export default function Vaults() {
   const handleDeposit = (vaultId: string) => {
     const vault = allVaults.find((v) => v.id === vaultId);
     if (vault) {
-      setSelectedVault({ id: vault.id, name: vault.name, apy: vault.apy });
+      setSelectedVault({ 
+        id: vault.id, 
+        name: vault.name, 
+        apy: vault.apy,
+        depositAssets: vault.depositAssets || ["XRP"],
+      });
       setDepositModalOpen(true);
     }
   };
 
-  const handleConfirmDeposit = (amount: string) => {
+  const handleConfirmDeposit = (amounts: { [asset: string]: string }) => {
+    const assetList = Object.entries(amounts)
+      .filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
+      .map(([asset, amt]) => `${amt} ${asset}`)
+      .join(", ");
+    
     toast({
       title: "Deposit Successful",
-      description: `Successfully deposited ${amount} XRP to ${selectedVault?.name}`,
+      description: `Successfully deposited ${assetList} to ${selectedVault?.name}`,
     });
   };
 
@@ -162,6 +178,7 @@ export default function Vaults() {
           onOpenChange={setDepositModalOpen}
           vaultName={selectedVault.name}
           vaultApy={selectedVault.apy}
+          depositAssets={selectedVault.depositAssets}
           onConfirm={handleConfirmDeposit}
         />
       )}

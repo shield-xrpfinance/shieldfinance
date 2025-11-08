@@ -7,13 +7,14 @@ export default function DepositModalExample() {
 
   return (
     <div className="p-6">
-      <Button onClick={() => setOpen(true)}>Open Deposit Modal</Button>
+      <Button onClick={() => setOpen(true)}>Open Deposit Modal (Dual Asset)</Button>
       <DepositModal
         open={open}
         onOpenChange={setOpen}
-        vaultName="XRP Stable Yield"
-        vaultApy="7.5"
-        onConfirm={(amount) => console.log("Deposited:", amount)}
+        vaultName="RLUSD + USDC Pool"
+        vaultApy="12.8"
+        depositAssets={["RLUSD", "USDC"]}
+        onConfirm={(amounts) => console.log("Deposited:", amounts)}
       />
     </div>
   );

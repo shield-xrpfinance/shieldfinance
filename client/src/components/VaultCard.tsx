@@ -13,6 +13,7 @@ interface VaultCardProps {
   riskLevel: "low" | "medium" | "high";
   depositors: number;
   status: string;
+  depositAssets?: string[];
   onDeposit: (id: string) => void;
 }
 
@@ -32,6 +33,7 @@ export default function VaultCard({
   riskLevel,
   depositors,
   status,
+  depositAssets = ["XRP"],
   onDeposit,
 }: VaultCardProps) {
   const risk = riskConfig[riskLevel];
@@ -46,6 +48,18 @@ export default function VaultCard({
             {status}
           </Badge>
         </div>
+        {depositAssets.length > 1 && (
+          <div className="flex items-center gap-1 mt-2">
+            <span className="text-xs text-muted-foreground">Accepts:</span>
+            <div className="flex gap-1">
+              {depositAssets.map((asset) => (
+                <Badge key={asset} variant="outline" className="text-xs">
+                  {asset}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        )}
       </CardHeader>
       <CardContent className="space-y-6">
         <div className="text-center py-4">
@@ -84,7 +98,9 @@ export default function VaultCard({
           onClick={() => onDeposit(id)}
           data-testid={`button-deposit-${id}`}
         >
-          Deposit XRP
+          {depositAssets.length > 1 
+            ? `Deposit ${depositAssets.join(" + ")}` 
+            : `Deposit ${depositAssets[0]}`}
         </Button>
         <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
           <Users className="h-3.5 w-3.5" />
