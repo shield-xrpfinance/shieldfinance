@@ -13,10 +13,12 @@ import {
 import { LayoutDashboard, Vault, Wallet, History, BarChart3, Coins, Loader2, HelpCircle, ArrowRight, BookOpen } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
+import { useNetwork } from "@/lib/networkContext";
 import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import { AssetIcon } from "@/components/AssetIcon";
 import { SiX, SiLinkedin, SiDiscord } from "react-icons/si";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 
 const menuItems = [
   {
@@ -50,6 +52,7 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { isConnected } = useWallet();
   const { balance, isLoading } = useWalletBalance();
+  const { network, isTestnet, toggleNetwork } = useNetwork();
 
   return (
     <Sidebar>
@@ -65,6 +68,22 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
+        <SidebarGroup>
+          <SidebarGroupContent>
+            <div className="flex items-center justify-center gap-2 bg-muted px-3 py-2 rounded-md mx-2" data-testid="network-toggle">
+              <span className="text-xs font-medium text-muted-foreground">Mainnet</span>
+              <Switch
+                checked={isTestnet}
+                onCheckedChange={toggleNetwork}
+                data-testid="switch-network-toggle"
+              />
+              <span className={`text-xs font-medium ${isTestnet ? 'text-orange-500' : 'text-muted-foreground'}`}>
+                Testnet
+              </span>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>

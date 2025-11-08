@@ -8,10 +8,9 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
-import { NetworkProvider, useNetwork } from "@/lib/networkContext";
+import { NetworkProvider } from "@/lib/networkContext";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { Button } from "@/components/ui/button";
-import { Switch } from "@/components/ui/switch";
 import { Wallet, LogOut, Loader2 } from "lucide-react";
 import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import Dashboard from "@/pages/Dashboard";
@@ -37,24 +36,12 @@ function Router() {
 function Header() {
   const { address, isConnected, disconnect } = useWallet();
   const { balance, isLoading } = useWalletBalance();
-  const { network, isTestnet, toggleNetwork } = useNetwork();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   return (
     <header className="flex items-center justify-between gap-4 p-4 border-b">
       <SidebarTrigger data-testid="button-sidebar-toggle" />
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-md" data-testid="network-toggle">
-          <span className="text-xs font-medium text-muted-foreground">Mainnet</span>
-          <Switch
-            checked={isTestnet}
-            onCheckedChange={toggleNetwork}
-            data-testid="switch-network-toggle"
-          />
-          <span className={`text-xs font-medium ${isTestnet ? 'text-orange-500' : 'text-muted-foreground'}`}>
-            Testnet
-          </span>
-        </div>
         {isConnected && address ? (
           <div className="flex items-center gap-2">
             {isLoading ? (
