@@ -162,9 +162,13 @@ export default function ConnectWalletModal({
       // Get connected accounts
       const accounts = provider.session?.namespaces?.xrpl?.accounts || [];
       
+      console.log("WalletConnect connection complete. Accounts:", accounts);
+      
       if (accounts.length > 0) {
         // Extract address from account format "xrpl:0:rAddress..." or "xrpl:1:rAddress..."
         const address = accounts[0].split(":")[2];
+        
+        console.log("Storing WalletConnect provider for address:", address);
         
         // Store the provider instance in the wallet context
         connect(address, "walletconnect", provider);
@@ -175,6 +179,14 @@ export default function ConnectWalletModal({
         toast({
           title: "Wallet Connected",
           description: `Connected to ${address.slice(0, 8)}...${address.slice(-6)} on ${isTestnet ? 'Testnet' : 'Mainnet'}`,
+        });
+        setConnecting(false);
+      } else {
+        console.error("No accounts found in WalletConnect session");
+        toast({
+          title: "Connection Failed",
+          description: "No accounts found. Please try again.",
+          variant: "destructive",
         });
         setConnecting(false);
       }
