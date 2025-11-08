@@ -22,6 +22,15 @@ This is a full-stack DeFi application for XRP liquid staking, built as a dashboa
   - Vault distribution based on real TVL values
   - Top performing vaults sorted by actual APY rates
 - All pages now use TanStack Query for data fetching with loading states and error handling
+- **Portfolio page now uses real wallet data:**
+  - Added `walletAddress` field to positions table for wallet-based filtering
+  - Positions are now scoped to specific wallet addresses
+  - Portfolio displays only positions belonging to the connected wallet
+  - Removed hardcoded reward calculation (amount * 0.065)
+  - Now uses real `rewards` field from database (starts at 0)
+  - Shows "Connect Your Wallet" prompt when wallet is not connected
+  - Deposit flow automatically saves wallet address with new positions
+  - Each wallet sees only their own staking positions and rewards
 
 ## User Preferences
 
