@@ -16,6 +16,7 @@ import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/lib/walletContext";
+import { useNetwork } from "@/lib/networkContext";
 
 export default function Vaults() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -24,6 +25,7 @@ export default function Vaults() {
   const [sortBy, setSortBy] = useState("apy");
   const { toast } = useToast();
   const { address } = useWallet();
+  const { network } = useNetwork();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
     queryKey: ["/api/vaults"],
@@ -83,7 +85,7 @@ export default function Vaults() {
   };
 
   const depositMutation = useMutation({
-    mutationFn: async (data: { walletAddress: string; vaultId: string; amount: string }) => {
+    mutationFn: async (data: { walletAddress: string; vaultId: string; amount: string; network: string }) => {
       const res = await apiRequest("POST", "/api/positions", data);
       return await res.json();
     },
@@ -109,11 +111,12 @@ export default function Vaults() {
         walletAddress: address,
         vaultId: selectedVault.id,
         amount: totalAmount.toString(),
+        network: network,
       });
 
       toast({
         title: "Deposit Successful",
-        description: `Successfully deposited ${assetList} to ${selectedVault.name}`,
+        description: `Successfully deposited ${assetList} to ${selectedVault.name} on ${network}`,
       });
     } catch (error) {
       toast({

@@ -10,6 +10,7 @@ import { TrendingUp, Coins, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/lib/walletContext";
+import { useNetwork } from "@/lib/networkContext";
 
 export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
@@ -22,6 +23,7 @@ export default function Portfolio() {
   } | null>(null);
   const { toast } = useToast();
   const { isConnected, address } = useWallet();
+  const { network } = useNetwork();
 
   const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
     queryKey: ["/api/positions", address],
@@ -69,8 +71,8 @@ export default function Portfolio() {
     : 0;
 
   const deleteMutation = useMutation({
-    mutationFn: async (positionId: string) => {
-      await apiRequest("DELETE", `/api/positions/${positionId}`);
+    mutationFn: async ({ positionId, network }: { positionId: string; network: string }) => {
+      await apiRequest("DELETE", `/api/positions/${positionId}?network=${network}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
@@ -107,10 +109,10 @@ export default function Portfolio() {
     
     try {
       const assetSymbol = selectedPosition.asset?.split(",")[0] || "XRP";
-      await deleteMutation.mutateAsync(selectedPosition.id);
+      await deleteMutation.mutateAsync({ positionId: selectedPosition.id, network });
       toast({
         title: "Withdrawal Successful",
-        description: `Successfully withdrew ${amount} ${assetSymbol} from ${selectedPosition.vaultName}`,
+        description: `Successfully withdrew ${amount} ${assetSymbol} from ${selectedPosition.vaultName} on ${network}`,
       });
       setWithdrawModalOpen(false);
     } catch (error) {
