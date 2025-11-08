@@ -106,19 +106,24 @@ export default function Vaults() {
       .filter((amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
       .reduce((sum, amt) => sum + parseFloat(amt.replace(/,/g, "")), 0);
 
+    const depositData = {
+      walletAddress: address,
+      vaultId: selectedVault.id,
+      amount: totalAmount.toString(),
+      network: network,
+    };
+    
+    console.log("Frontend sending deposit data:", depositData);
+
     try {
-      await depositMutation.mutateAsync({
-        walletAddress: address,
-        vaultId: selectedVault.id,
-        amount: totalAmount.toString(),
-        network: network,
-      });
+      await depositMutation.mutateAsync(depositData);
 
       toast({
         title: "Deposit Successful",
         description: `Successfully deposited ${assetList} to ${selectedVault.name} on ${network}`,
       });
     } catch (error) {
+      console.error("Deposit mutation error:", error);
       toast({
         title: "Deposit Failed",
         description: "Failed to create position. Please try again.",
