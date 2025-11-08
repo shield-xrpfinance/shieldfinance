@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Wallet, ExternalLink, Loader2, QrCode, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
+import { useNetwork } from "@/lib/networkContext";
 import { QRCodeSVG } from "qrcode.react";
 import UniversalProvider from "@walletconnect/universal-provider";
 
@@ -33,6 +34,7 @@ export default function ConnectWalletModal({
   const [xamanDeepLink, setXamanDeepLink] = useState<string>("");
   const { toast } = useToast();
   const { connect } = useWallet();
+  const { isTestnet } = useNetwork();
 
   useEffect(() => {
     if (!open) {
@@ -123,6 +125,9 @@ export default function ConnectWalletModal({
         throw new Error("WalletConnect Project ID not configured");
       }
 
+      // XRPL Chain IDs: mainnet = xrpl:0, testnet = xrpl:1
+      const chainId = isTestnet ? "xrpl:1" : "xrpl:0";
+
       // Initialize Universal Provider with XRPL configuration
       const provider = await UniversalProvider.init({
         projectId,
@@ -139,8 +144,7 @@ export default function ConnectWalletModal({
         setQrCodeUrl(uri);
       });
 
-      // Connect to XRPL namespace
-      // XRPL uses "xrpl:mainnet" and "xrpl:testnet" chain IDs
+      // Connect to XRPL namespace with the correct chain ID based on network
       await provider.connect({
         namespaces: {
           xrpl: {
@@ -149,7 +153,7 @@ export default function ConnectWalletModal({
               "xrpl_submitTransaction",
               "xrpl_getAccountInfo",
             ],
-            chains: ["xrpl:1"], // XRPL mainnet chain ID
+            chains: [chainId],
             events: ["chainChanged", "accountsChanged"],
           },
         },
@@ -159,7 +163,7 @@ export default function ConnectWalletModal({
       const accounts = provider.session?.namespaces?.xrpl?.accounts || [];
       
       if (accounts.length > 0) {
-        // Extract address from account format "xrpl:1:rAddress..."
+        // Extract address from account format "xrpl:0:rAddress..." or "xrpl:1:rAddress..."
         const address = accounts[0].split(":")[2];
         
         connect(address, "walletconnect");
@@ -169,7 +173,7 @@ export default function ConnectWalletModal({
         onOpenChange(false);
         toast({
           title: "Wallet Connected",
-          description: `Connected to ${address.slice(0, 8)}...${address.slice(-6)}`,
+          description: `Connected to ${address.slice(0, 8)}...${address.slice(-6)} on ${isTestnet ? 'Testnet' : 'Mainnet'}`,
         });
         setConnecting(false);
       }
