@@ -15,6 +15,7 @@ import {
 import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWallet } from "@/lib/walletContext";
 
 export default function Vaults() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -22,6 +23,7 @@ export default function Vaults() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("apy");
   const { toast } = useToast();
+  const { address } = useWallet();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
     queryKey: ["/api/vaults"],
@@ -89,7 +91,7 @@ export default function Vaults() {
   };
 
   const depositMutation = useMutation({
-    mutationFn: async (data: { vaultId: string; amount: string }) => {
+    mutationFn: async (data: { walletAddress: string; vaultId: string; amount: string }) => {
       const res = await apiRequest("POST", "/api/positions", data);
       return await res.json();
     },
@@ -99,7 +101,7 @@ export default function Vaults() {
   });
 
   const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
-    if (!selectedVault) return;
+    if (!selectedVault || !address) return;
 
     const assetList = Object.entries(amounts)
       .filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
@@ -112,6 +114,7 @@ export default function Vaults() {
 
     try {
       await depositMutation.mutateAsync({
+        walletAddress: address,
         vaultId: selectedVault.id,
         amount: totalAmount.toString(),
       });

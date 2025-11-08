@@ -20,10 +20,17 @@ export default function Portfolio() {
     rewards: string;
   } | null>(null);
   const { toast } = useToast();
-  const { isConnected } = useWallet();
+  const { isConnected, address } = useWallet();
 
   const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
-    queryKey: ["/api/positions"],
+    queryKey: ["/api/positions", address],
+    queryFn: async () => {
+      if (!address) return [];
+      const response = await fetch(`/api/positions?walletAddress=${encodeURIComponent(address)}`);
+      if (!response.ok) throw new Error('Failed to fetch positions');
+      return response.json();
+    },
+    enabled: !!address,
   });
 
   const { data: vaults = [] } = useQuery<Vault[]>({
@@ -35,13 +42,13 @@ export default function Portfolio() {
   const formattedPositions = positions.map((pos) => {
     const vault = getVaultById(pos.vaultId);
     const amount = parseFloat(pos.amount);
-    const rewardsEarned = amount * 0.065;
+    const rewards = parseFloat(pos.rewards);
     return {
       id: pos.id,
       vaultName: vault?.name || "Unknown Vault",
       depositedAmount: amount.toLocaleString(),
-      currentValue: (amount + rewardsEarned).toLocaleString(),
-      rewards: rewardsEarned.toLocaleString(),
+      currentValue: (amount + rewards).toLocaleString(),
+      rewards: rewards.toLocaleString(),
       apy: vault?.apy || "0",
       depositDate: new Date(pos.depositedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     };
@@ -109,6 +116,30 @@ export default function Portfolio() {
       });
     }
   };
+
+  if (!isConnected) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight mb-2">Portfolio</h1>
+          <p className="text-muted-foreground">
+            Track your staking positions and rewards
+          </p>
+        </div>
+        <Card className="p-12">
+          <div className="text-center space-y-4">
+            <Coins className="h-16 w-16 text-muted-foreground mx-auto" />
+            <div>
+              <h3 className="text-xl font-semibold mb-2">Connect Your Wallet</h3>
+              <p className="text-muted-foreground">
+                Please connect your wallet to view your portfolio and staking positions
+              </p>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">

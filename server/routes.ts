@@ -29,10 +29,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get all positions
-  app.get("/api/positions", async (_req, res) => {
+  // Get all positions (optionally filtered by wallet address)
+  app.get("/api/positions", async (req, res) => {
     try {
-      const positions = await storage.getPositions();
+      const walletAddress = req.query.walletAddress as string | undefined;
+      const positions = await storage.getPositions(walletAddress);
       res.json(positions);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch positions" });

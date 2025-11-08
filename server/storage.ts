@@ -7,7 +7,7 @@ export interface IStorage {
   getVault(id: string): Promise<Vault | undefined>;
   createVault(vault: InsertVault): Promise<Vault>;
   
-  getPositions(): Promise<Position[]>;
+  getPositions(walletAddress?: string): Promise<Position[]>;
   getPosition(id: string): Promise<Position | undefined>;
   createPosition(position: InsertPosition): Promise<Position>;
   deletePosition(id: string): Promise<boolean>;
@@ -100,7 +100,10 @@ export class DatabaseStorage implements IStorage {
     return vault;
   }
 
-  async getPositions(): Promise<Position[]> {
+  async getPositions(walletAddress?: string): Promise<Position[]> {
+    if (walletAddress) {
+      return await db.select().from(positions).where(eq(positions.walletAddress, walletAddress));
+    }
     return await db.select().from(positions);
   }
 

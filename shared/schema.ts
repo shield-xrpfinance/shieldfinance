@@ -16,6 +16,7 @@ export const vaults = pgTable("vaults", {
 
 export const positions = pgTable("positions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: text("wallet_address").notNull(),
   vaultId: varchar("vault_id").notNull().references(() => vaults.id),
   amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
   rewards: decimal("rewards", { precision: 18, scale: 2 }).notNull().default("0"),
