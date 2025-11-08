@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, ExternalLink, CheckCircle2, XCircle } from "lucide-react";
-import { QRCodeSVG } from "qrcode.react";
 
 interface XamanSigningModalProps {
   open: boolean;
@@ -111,7 +110,7 @@ export default function XamanSigningModal({
           {status === "waiting" && qrUrl && qrUrl !== "demo" && (
             <>
               <div className="p-4 bg-white rounded-lg">
-                <QRCodeSVG value={qrUrl} size={200} />
+                <img src={qrUrl} alt="Xaman QR Code" className="w-[200px] h-[200px]" />
               </div>
               
               {deepLink && (
