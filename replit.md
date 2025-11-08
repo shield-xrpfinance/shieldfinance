@@ -43,6 +43,18 @@ This is a full-stack DeFi application for XRP liquid staking, built as a dashboa
   - WithdrawModal validates against position amounts
   - Database FK constraint updated to ON DELETE SET NULL for transaction history preservation
   - Withdrawal endpoint fixed to avoid FK violations
+- **Asset icon integration across entire application:**
+  - Created reusable `AssetIcon` and `MultiAssetIcon` components for displaying asset logos
+  - Added `asset` field to vaults database schema (stores "XRP", "RLUSD", "USDC", or comma-separated multi-asset)
+  - Updated seed data with asset field for all 6 vaults
+  - VaultCard now displays asset icons next to vault names
+  - PortfolioTable shows asset icons and dynamic asset symbols (no hardcoded "XRP")
+  - DepositModal displays asset icons and dynamic titles ("Deposit XRP" or "Deposit XRP + RLUSD + USDC")
+  - WithdrawModal shows asset icons and uses correct asset symbols throughout all fields
+  - AppSidebar displays XRP icon next to wallet balance
+  - Toast notifications use correct asset symbols for claims/withdrawals
+  - Multi-asset vaults show overlapping asset icons for visual clarity
+  - Asset logos stored in `attached_assets/` folder (xrp.png, rlusd-icon.png, usdc-icon.png)
 
 ## User Preferences
 
