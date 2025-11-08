@@ -75,8 +75,9 @@ export default function Portfolio() {
     : 0;
 
   const deleteMutation = useMutation({
-    mutationFn: async ({ positionId, network }: { positionId: string; network: string }) => {
-      await apiRequest("DELETE", `/api/positions/${positionId}?network=${network}`);
+    mutationFn: async ({ positionId, network, txHash }: { positionId: string; network: string; txHash?: string }) => {
+      const res = await apiRequest("POST", `/api/positions/${positionId}/withdraw`, { network, txHash });
+      return await res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
@@ -84,8 +85,8 @@ export default function Portfolio() {
   });
 
   const claimMutation = useMutation({
-    mutationFn: async ({ positionId, network }: { positionId: string; network: string }) => {
-      const res = await apiRequest("PATCH", `/api/positions/${positionId}/claim`, { network });
+    mutationFn: async ({ positionId, network, txHash }: { positionId: string; network: string; txHash?: string }) => {
+      const res = await apiRequest("PATCH", `/api/positions/${positionId}/claim`, { network, txHash });
       return await res.json();
     },
     onSuccess: () => {
@@ -220,13 +221,13 @@ export default function Portfolio() {
 
     try {
       if (pendingAction.type === "withdraw") {
-        await deleteMutation.mutateAsync({ positionId: pendingAction.positionId, network });
+        await deleteMutation.mutateAsync({ positionId: pendingAction.positionId, network, txHash });
         toast({
           title: "Withdrawal Successful",
           description: `Successfully withdrew ${pendingAction.amount} ${pendingAction.asset} from ${pendingAction.vaultName} on ${network}`,
         });
       } else if (pendingAction.type === "claim") {
-        await claimMutation.mutateAsync({ positionId: pendingAction.positionId, network });
+        await claimMutation.mutateAsync({ positionId: pendingAction.positionId, network, txHash });
         toast({
           title: "Rewards Claimed",
           description: `Successfully claimed ${pendingAction.amount} ${pendingAction.asset} from ${pendingAction.vaultName} on ${network}`,

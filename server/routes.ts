@@ -74,10 +74,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Delete position (withdraw)
-  app.delete("/api/positions/:id", async (req, res) => {
+  // Withdraw position (changed from DELETE to POST to accept transaction hash in body)
+  app.post("/api/positions/:id/withdraw", async (req, res) => {
     try {
-      const network = req.query.network as string || "mainnet";
+      const network = req.body.network || "mainnet";
+      const txHash = req.body.txHash; // Get transaction hash from Xaman
       const position = await storage.getPosition(req.params.id);
       if (!position) {
         return res.status(404).json({ error: "Position not found" });
@@ -97,7 +98,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Position not found" });
       }
       
-      // THEN create transaction record for withdrawal (position_id is nullable)
+      // THEN create transaction record for withdrawal (position_id is nullable) with real or mock txHash
       await storage.createTransaction({
         vaultId: positionData.vaultId,
         positionId: null,
@@ -105,17 +106,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: positionData.amount,
         rewards: positionData.rewards,
         status: "completed",
-        txHash: `withdraw-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        txHash: txHash || `withdraw-${Date.now()}-${Math.random().toString(36).substring(7)}`,
         network: network,
       });
       
       res.json({ success: true });
     } catch (error) {
-      console.error("DELETE /api/positions/:id error:", error);
+      console.error("POST /api/positions/:id/withdraw error:", error);
       if (error instanceof Error) {
-        res.status(500).json({ error: `Failed to delete position: ${error.message}` });
+        res.status(500).json({ error: `Failed to withdraw position: ${error.message}` });
       } else {
-        res.status(500).json({ error: "Failed to delete position" });
+        res.status(500).json({ error: "Failed to withdraw position" });
       }
     }
   });
@@ -124,6 +125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/positions/:id/claim", async (req, res) => {
     try {
       const network = req.body.network || "mainnet";
+      const txHash = req.body.txHash; // Get transaction hash from Xaman
       const position = await storage.getPosition(req.params.id);
       if (!position) {
         return res.status(404).json({ error: "Position not found" });
@@ -131,7 +133,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const claimedRewards = position.rewards;
       
-      // Create transaction record for claim
+      // Create transaction record for claim with real or mock txHash
       await storage.createTransaction({
         vaultId: position.vaultId,
         positionId: position.id,
@@ -139,7 +141,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         amount: "0",
         rewards: claimedRewards,
         status: "completed",
-        txHash: `claim-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        txHash: txHash || `claim-${Date.now()}-${Math.random().toString(36).substring(7)}`,
         network: network,
       });
       
