@@ -760,41 +760,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (isSequenceError && txHash) {
           console.log("Detected sequence error - checking if wallet auto-submitted...");
-          console.log("Waiting 2 seconds for transaction to validate on ledger...");
           
-          // Wait a bit for transaction to be validated on ledger
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          // Poll XRPL to check if transaction succeeded (wallet may have auto-submitted)
+          const maxRetries = 5;
+          const retryDelay = 1500; // 1.5 seconds between retries
           
-          // Wallet might have auto-submitted - verify transaction on XRPL
-          try {
-            const txResponse = await client.request({
-              command: 'tx',
-              transaction: txHash as string,
-            }) as any;
+          for (let attempt = 1; attempt <= maxRetries; attempt++) {
+            console.log(`Attempt ${attempt}/${maxRetries}: Checking transaction on ledger...`);
+            
+            try {
+              const txResponse = await client.request({
+                command: 'tx',
+                transaction: txHash as string,
+              }) as any;
 
-            console.log("Full XRPL response:", JSON.stringify(txResponse, null, 2));
-            console.log("XRPL transaction lookup result:", txResponse?.result?.meta?.TransactionResult);
-            console.log("XRPL validated:", txResponse?.result?.validated);
+              const validated = txResponse?.result?.validated;
+              const txResult = txResponse?.result?.meta?.TransactionResult;
+              
+              console.log(`  Validated: ${validated}, Result: ${txResult}`);
 
-            // Check if transaction succeeded on XRPL
-            if (txResponse?.result?.meta?.TransactionResult === "tesSUCCESS" && 
-                txResponse?.result?.validated) {
-              console.log("✅ Transaction succeeded via wallet auto-submit!");
-              return res.json({
-                success: true,
-                txHash: txHash as string,
-                result: txResponse.result,
-                walletAutoSubmitted: true
-              });
-            } else {
-              console.log("Transaction found but not successful or not validated yet");
+              // Check if transaction succeeded on XRPL
+              if (txResult === "tesSUCCESS" && validated) {
+                console.log("✅ Transaction succeeded via wallet auto-submit!");
+                return res.json({
+                  success: true,
+                  txHash: txHash as string,
+                  result: txResponse.result,
+                  walletAutoSubmitted: true
+                });
+              }
+              
+              // If validated but failed, stop retrying
+              if (validated && txResult !== "tesSUCCESS") {
+                console.log(`Transaction validated but failed with result: ${txResult}`);
+                break;
+              }
+              
+              // Not validated yet, wait and retry
+              if (attempt < maxRetries) {
+                console.log(`  Not validated yet, waiting ${retryDelay}ms...`);
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+              }
+            } catch (txError: any) {
+              console.log(`  Transaction not found on ledger (attempt ${attempt})`);
+              if (attempt < maxRetries) {
+                await new Promise(resolve => setTimeout(resolve, retryDelay));
+              }
             }
-          } catch (txError: any) {
-            console.log("Transaction lookup error:", txError);
-            console.log("Error message:", txError.message);
-            console.log("Error data:", txError.data);
-            // Transaction not found on ledger yet - return original error
           }
+          
+          console.log("Transaction not found or not validated after all retries");
         }
 
         // Transaction failed (including tec* codes or malformed responses)
