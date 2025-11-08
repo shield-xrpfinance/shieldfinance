@@ -1,5 +1,6 @@
-import { type Vault, type InsertVault, type Position, type InsertPosition } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { type Vault, type InsertVault, type Position, type InsertPosition, vaults, positions } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   getVaults(): Promise<Vault[]>;
@@ -10,19 +11,17 @@ export interface IStorage {
   getPosition(id: string): Promise<Position | undefined>;
   createPosition(position: InsertPosition): Promise<Position>;
   deletePosition(id: string): Promise<boolean>;
+  
+  initializeVaults(): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private vaults: Map<string, Vault>;
-  private positions: Map<string, Position>;
+export class DatabaseStorage implements IStorage {
+  async initializeVaults(): Promise<void> {
+    const existingVaults = await db.select().from(vaults);
+    if (existingVaults.length > 0) {
+      return;
+    }
 
-  constructor() {
-    this.vaults = new Map();
-    this.positions = new Map();
-    this.initializeVaults();
-  }
-
-  private initializeVaults() {
     const vaultData = [
       {
         name: "XRP Stable Yield",
@@ -31,7 +30,6 @@ export class MemStorage implements IStorage {
         liquidity: "2100000",
         lockPeriod: 30,
         riskLevel: "low",
-        status: "active",
       },
       {
         name: "RLUSD + USDC Pool",
@@ -40,7 +38,6 @@ export class MemStorage implements IStorage {
         liquidity: "1300000",
         lockPeriod: 90,
         riskLevel: "medium",
-        status: "active",
       },
       {
         name: "XRP Maximum Returns",
@@ -49,7 +46,6 @@ export class MemStorage implements IStorage {
         liquidity: "750000",
         lockPeriod: 180,
         riskLevel: "high",
-        status: "active",
       },
       {
         name: "XRP + RLUSD Balanced",
@@ -58,7 +54,6 @@ export class MemStorage implements IStorage {
         liquidity: "4200000",
         lockPeriod: 14,
         riskLevel: "low",
-        status: "active",
       },
       {
         name: "Triple Asset Pool",
@@ -67,7 +62,6 @@ export class MemStorage implements IStorage {
         liquidity: "1800000",
         lockPeriod: 60,
         riskLevel: "medium",
-        status: "active",
       },
       {
         name: "USDC Conservative",
@@ -76,54 +70,44 @@ export class MemStorage implements IStorage {
         liquidity: "520000",
         lockPeriod: 7,
         riskLevel: "low",
-        status: "active",
       },
     ];
 
-    vaultData.forEach((data) => {
-      const id = randomUUID();
-      this.vaults.set(id, { ...data, id, status: data.status });
-    });
+    await db.insert(vaults).values(vaultData);
   }
 
   async getVaults(): Promise<Vault[]> {
-    return Array.from(this.vaults.values());
+    return await db.select().from(vaults);
   }
 
   async getVault(id: string): Promise<Vault | undefined> {
-    return this.vaults.get(id);
+    const [vault] = await db.select().from(vaults).where(eq(vaults.id, id));
+    return vault || undefined;
   }
 
   async createVault(insertVault: InsertVault): Promise<Vault> {
-    const id = randomUUID();
-    const vault: Vault = { ...insertVault, id };
-    this.vaults.set(id, vault);
+    const [vault] = await db.insert(vaults).values(insertVault).returning();
     return vault;
   }
 
   async getPositions(): Promise<Position[]> {
-    return Array.from(this.positions.values());
+    return await db.select().from(positions);
   }
 
   async getPosition(id: string): Promise<Position | undefined> {
-    return this.positions.get(id);
+    const [position] = await db.select().from(positions).where(eq(positions.id, id));
+    return position || undefined;
   }
 
   async createPosition(insertPosition: InsertPosition): Promise<Position> {
-    const id = randomUUID();
-    const position: Position = { 
-      ...insertPosition,
-      rewards: insertPosition.rewards || "0",
-      id,
-      depositedAt: new Date(),
-    };
-    this.positions.set(id, position);
+    const [position] = await db.insert(positions).values(insertPosition).returning();
     return position;
   }
 
   async deletePosition(id: string): Promise<boolean> {
-    return this.positions.delete(id);
+    const result = await db.delete(positions).where(eq(positions.id, id));
+    return result.rowCount !== null && result.rowCount > 0;
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();

@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import type { Vault as VaultType } from "@shared/schema";
 import VaultCard from "@/components/VaultCard";
 import DepositModal from "@/components/DepositModal";
 import { Input } from "@/components/ui/input";
@@ -11,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Search } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function Vaults() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -19,80 +22,42 @@ export default function Vaults() {
   const [sortBy, setSortBy] = useState("apy");
   const { toast } = useToast();
 
-  const allVaults = [
-    {
-      id: "vault-1",
-      name: "XRP Stable Yield",
-      apy: "7.5",
-      tvl: "$8.2M",
-      liquidity: "$2.1M",
-      lockPeriod: 30,
-      riskLevel: "low" as const,
-      depositors: 1245,
-      status: "Active",
-      depositAssets: ["XRP"],
-    },
-    {
-      id: "vault-2",
-      name: "RLUSD + USDC Pool",
-      apy: "12.8",
-      tvl: "$5.4M",
-      liquidity: "$1.3M",
-      lockPeriod: 90,
-      riskLevel: "medium" as const,
-      depositors: 892,
-      status: "Active",
-      depositAssets: ["RLUSD", "USDC"],
-    },
-    {
-      id: "vault-3",
-      name: "XRP Maximum Returns",
-      apy: "18.5",
-      tvl: "$3.1M",
-      liquidity: "$750K",
-      lockPeriod: 180,
-      riskLevel: "high" as const,
-      depositors: 423,
-      status: "Active",
-      depositAssets: ["XRP"],
-    },
-    {
-      id: "vault-4",
-      name: "XRP + RLUSD Balanced",
-      apy: "9.2",
-      tvl: "$12.5M",
-      liquidity: "$4.2M",
-      lockPeriod: 14,
-      riskLevel: "low" as const,
-      depositors: 2341,
-      status: "Active",
-      depositAssets: ["XRP", "RLUSD"],
-    },
-    {
-      id: "vault-5",
-      name: "Triple Asset Pool",
-      apy: "15.5",
-      tvl: "$6.8M",
-      liquidity: "$1.8M",
-      lockPeriod: 60,
-      riskLevel: "medium" as const,
-      depositors: 1156,
-      status: "Active",
-      depositAssets: ["XRP", "RLUSD", "USDC"],
-    },
-    {
-      id: "vault-6",
-      name: "USDC Conservative",
-      apy: "6.3",
-      tvl: "$2.4M",
-      liquidity: "$520K",
-      lockPeriod: 7,
-      riskLevel: "low" as const,
-      depositors: 1834,
-      status: "Active",
-      depositAssets: ["USDC"],
-    },
-  ];
+  const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
+    queryKey: ["/api/vaults"],
+  });
+
+  const getDepositAssets = (name: string): string[] => {
+    if (name.includes("RLUSD") && name.includes("USDC")) return ["RLUSD", "USDC"];
+    if (name.includes("XRP") && name.includes("RLUSD") && name.includes("USDC")) return ["XRP", "RLUSD", "USDC"];
+    if (name.includes("XRP") && name.includes("RLUSD")) return ["XRP", "RLUSD"];
+    if (name.includes("USDC")) return ["USDC"];
+    if (name.includes("RLUSD")) return ["RLUSD"];
+    return ["XRP"];
+  };
+
+  const formatCurrency = (value: string): string => {
+    const num = parseFloat(value);
+    if (num >= 1000000) {
+      return `$${(num / 1000000).toFixed(1)}M`;
+    } else if (num >= 1000) {
+      return `$${(num / 1000).toFixed(0)}K`;
+    }
+    return `$${num.toFixed(0)}`;
+  };
+
+  const allVaults = apiVaults?.map(vault => ({
+    id: vault.id,
+    name: vault.name,
+    apy: vault.apy,
+    tvl: formatCurrency(vault.tvl),
+    liquidity: formatCurrency(vault.liquidity),
+    lockPeriod: vault.lockPeriod,
+    riskLevel: vault.riskLevel as "low" | "medium" | "high",
+    depositors: 0,
+    status: vault.status.charAt(0).toUpperCase() + vault.status.slice(1),
+    depositAssets: getDepositAssets(vault.name),
+  })) || [];
+
 
   const filteredVaults = allVaults
     .filter((vault) =>
