@@ -17,6 +17,8 @@ import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import Dashboard from "@/pages/Dashboard";
 import Vaults from "@/pages/Vaults";
 import Portfolio from "@/pages/Portfolio";
+import Transactions from "@/pages/Transactions";
+import Analytics from "@/pages/Analytics";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -25,6 +27,8 @@ function Router() {
       <Route path="/" component={Dashboard} />
       <Route path="/vaults" component={Vaults} />
       <Route path="/portfolio" component={Portfolio} />
+      <Route path="/transactions" component={Transactions} />
+      <Route path="/analytics" component={Analytics} />
       <Route component={NotFound} />
     </RouterSwitch>
   );
