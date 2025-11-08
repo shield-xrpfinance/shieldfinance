@@ -171,10 +171,29 @@ export default function Vaults() {
   };
 
   const handleWalletConnectDeposit = async (paymentAmount: string, paymentAsset: string) => {
-    if (!address || !selectedVault || !walletConnectProvider) {
+    if (!address || !selectedVault) {
+      toast({
+        title: "Connection Error",
+        description: "Please connect your wallet first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!walletConnectProvider) {
       toast({
         title: "Connection Error",
         description: "WalletConnect session not found. Please reconnect your wallet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate that the session is still active
+    if (!walletConnectProvider.session) {
+      toast({
+        title: "Session Expired",
+        description: "Your WalletConnect session has expired. Please reconnect your wallet.",
         variant: "destructive",
       });
       return;

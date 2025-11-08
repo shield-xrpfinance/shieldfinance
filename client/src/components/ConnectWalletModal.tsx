@@ -33,7 +33,7 @@ export default function ConnectWalletModal({
   const [xamanPayloadUuid, setXamanPayloadUuid] = useState<string | null>(null);
   const [xamanDeepLink, setXamanDeepLink] = useState<string>("");
   const { toast } = useToast();
-  const { connect } = useWallet();
+  const { connect, disconnect } = useWallet();
   const { isTestnet } = useNetwork();
 
   useEffect(() => {
@@ -180,6 +180,8 @@ export default function ConnectWalletModal({
       }
 
       provider.on("session_delete", () => {
+        console.log("WalletConnect session deleted");
+        disconnect();
         setStep("select");
         setConnecting(false);
       });

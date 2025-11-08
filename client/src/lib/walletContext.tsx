@@ -24,11 +24,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const savedProvider = localStorage.getItem("walletProvider");
 
     if (savedAddress && savedProvider) {
-      // Validate provider value
-      if (savedProvider === "xaman" || savedProvider === "walletconnect") {
+      // Only auto-restore Xaman connections
+      // WalletConnect requires active session and cannot be restored from localStorage alone
+      if (savedProvider === "xaman") {
         setAddress(savedAddress);
         setProvider(savedProvider);
         console.log(`Restored wallet connection: ${savedProvider} - ${savedAddress}`);
+      } else if (savedProvider === "walletconnect") {
+        // Clear WalletConnect connection - user needs to reconnect manually
+        localStorage.removeItem("walletAddress");
+        localStorage.removeItem("walletProvider");
+        console.log("WalletConnect session expired - please reconnect");
       }
     }
     
@@ -45,7 +51,16 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     localStorage.setItem("walletProvider", walletProvider);
   };
 
-  const disconnect = () => {
+  const disconnect = async () => {
+    // If WalletConnect, disconnect the session properly
+    if (walletConnectProvider) {
+      try {
+        await walletConnectProvider.disconnect();
+      } catch (error) {
+        console.error("Error disconnecting WalletConnect:", error);
+      }
+    }
+    
     setAddress(null);
     setProvider(null);
     setWalletConnectProvider(null);
