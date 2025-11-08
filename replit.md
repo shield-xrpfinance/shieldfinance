@@ -11,7 +11,7 @@ Preferred communication style: Simple, everyday language.
 ### Frontend Architecture
 - **Frameworks**: React 18 with TypeScript, Vite, Wouter for routing, TanStack Query for server state.
 - **UI/UX**: shadcn/ui (Radix UI based), Tailwind CSS for styling, Material Design + DeFi patterns, custom CSS variables for theming, responsive layout with collapsible sidebar, 12-column grid.
-- **State Management**: React Context API for wallet, TanStack Query for server state, React hooks for local component state.
+- **State Management**: React Context API for wallet with localStorage persistence (auto-restores connection on page load/republish), TanStack Query for server state, React hooks for local component state.
 - **Typography**: Inter (UI), JetBrains Mono (monospace).
 
 ### Backend Architecture
