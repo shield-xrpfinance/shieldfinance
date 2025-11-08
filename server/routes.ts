@@ -747,11 +747,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Check if error is "sequence already used" - wallet may have auto-submitted
         const engineResult = result?.result?.engine_result || "";
+        const engineMessage = result?.result?.engine_result_message || "";
         const isSequenceError = engineResult.includes("tefPAST_SEQ") || 
                                engineResult.includes("Sequence") ||
-                               result?.result?.engine_result_message?.includes("sequence");
+                               engineMessage.toLowerCase().includes("sequence");
+
+        console.log("Transaction submission failed:");
+        console.log("  Engine result:", engineResult);
+        console.log("  Engine message:", engineMessage);
+        console.log("  Is sequence error:", isSequenceError);
+        console.log("  Transaction hash:", txHash);
 
         if (isSequenceError && txHash) {
+          console.log("Detected sequence error - checking if wallet auto-submitted...");
           // Wallet might have auto-submitted - verify transaction on XRPL
           try {
             const txResponse = await client.request({
@@ -759,9 +767,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               transaction: txHash as string,
             }) as any;
 
+            console.log("XRPL transaction lookup result:", txResponse?.result?.meta?.TransactionResult);
+            console.log("XRPL validated:", txResponse?.result?.validated);
+
             // Check if transaction succeeded on XRPL
             if (txResponse?.result?.meta?.TransactionResult === "tesSUCCESS" && 
                 txResponse?.result?.validated) {
+              console.log("✅ Transaction succeeded via wallet auto-submit!");
               return res.json({
                 success: true,
                 txHash: txHash as string,
@@ -769,7 +781,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 walletAutoSubmitted: true
               });
             }
-          } catch (txError) {
+          } catch (txError: any) {
+            console.log("Transaction not found on ledger:", txError.message);
             // Transaction not found on ledger yet - return original error
           }
         }
