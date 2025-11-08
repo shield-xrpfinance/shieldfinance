@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Coins } from "lucide-react";
+import { Coins, Wallet as WalletIcon } from "lucide-react";
+import { useWallet } from "@/lib/walletContext";
+import ConnectWalletModal from "./ConnectWalletModal";
 
 interface DepositModalProps {
   open: boolean;
@@ -32,6 +34,8 @@ export default function DepositModal({
 }: DepositModalProps) {
   const [amounts, setAmounts] = useState<{ [key: string]: string }>({});
   const [step, setStep] = useState<1 | 2>(1);
+  const [connectWalletModalOpen, setConnectWalletModalOpen] = useState(false);
+  const { address, isConnected } = useWallet();
   const gasEstimate = "0.00012";
 
   const availableBalances: { [key: string]: string } = {
@@ -97,7 +101,34 @@ export default function DepositModal({
             <Badge>{vaultApy}% APY</Badge>
           </div>
 
-          {step === 1 && (
+          {!isConnected && (
+            <div className="space-y-4 text-center py-8">
+              <div className="flex justify-center mb-4">
+                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
+                  <WalletIcon className="h-8 w-8 text-muted-foreground" />
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Connect your wallet to deposit into this vault
+              </p>
+              <Button onClick={() => {
+                onOpenChange(false);
+                setConnectWalletModalOpen(true);
+              }} data-testid="button-connect-wallet-deposit">
+                <WalletIcon className="h-4 w-4 mr-2" />
+                Connect Wallet
+              </Button>
+            </div>
+          )}
+
+          {isConnected && address && (
+            <div className="p-3 rounded-md bg-muted/50 flex items-center justify-between mb-4">
+              <span className="text-sm text-muted-foreground">Connected Wallet</span>
+              <span className="text-sm font-mono">{address.slice(0, 6)}...{address.slice(-4)}</span>
+            </div>
+          )}
+
+          {isConnected && step === 1 && (
             <div className="space-y-4">
               {depositAssets.map((asset) => (
                 <div key={asset}>
@@ -188,16 +219,22 @@ export default function DepositModal({
               Back
             </Button>
           )}
-          <Button
-            onClick={handleContinue}
-            disabled={!hasValidAmount}
-            className="flex-1"
-            data-testid="button-continue"
-          >
-            {step === 1 ? "Continue" : "Confirm Deposit"}
-          </Button>
+          {isConnected && (
+            <Button
+              onClick={handleContinue}
+              disabled={!hasValidAmount}
+              className="flex-1"
+              data-testid="button-continue"
+            >
+              {step === 1 ? "Continue" : "Confirm Deposit"}
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
+      <ConnectWalletModal
+        open={connectWalletModalOpen}
+        onOpenChange={setConnectWalletModalOpen}
+      />
     </Dialog>
   );
 }

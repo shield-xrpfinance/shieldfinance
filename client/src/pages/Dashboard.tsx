@@ -1,6 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Vault as VaultType } from "@shared/schema";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import StatsCard from "@/components/StatsCard";
 import VaultCard from "@/components/VaultCard";
 import ApyChart from "@/components/ApyChart";
@@ -72,16 +73,45 @@ export default function Dashboard() {
     }
   };
 
-  const handleConfirmDeposit = (amounts: { [asset: string]: string }) => {
+  const depositMutation = useMutation({
+    mutationFn: async (data: { vaultId: string; amount: string }) => {
+      const res = await apiRequest("POST", "/api/positions", data);
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+    },
+  });
+
+  const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
+    if (!selectedVault) return;
+
     const assetList = Object.entries(amounts)
       .filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
       .map(([asset, amt]) => `${amt} ${asset}`)
       .join(", ");
-    
-    toast({
-      title: "Deposit Successful",
-      description: `Successfully deposited ${assetList} to ${selectedVault?.name}`,
-    });
+
+    const totalAmount = Object.values(amounts)
+      .filter((amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
+      .reduce((sum, amt) => sum + parseFloat(amt.replace(/,/g, "")), 0);
+
+    try {
+      await depositMutation.mutateAsync({
+        vaultId: selectedVault.id,
+        amount: totalAmount.toString(),
+      });
+
+      toast({
+        title: "Deposit Successful",
+        description: `Successfully deposited ${assetList} to ${selectedVault.name}`,
+      });
+    } catch (error) {
+      toast({
+        title: "Deposit Failed",
+        description: "Failed to create position. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   return (
