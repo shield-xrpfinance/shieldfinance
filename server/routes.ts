@@ -75,24 +75,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Position not found" });
       }
       
-      // Create transaction record for withdrawal
-      await storage.createTransaction({
+      // Save position data before deletion
+      const positionData = {
         vaultId: position.vaultId,
         positionId: position.id,
-        type: "withdraw",
         amount: position.amount,
-        rewards: "0",
-        status: "completed",
-        txHash: `withdraw-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-      });
+        rewards: position.rewards,
+      };
       
+      // Delete position FIRST to avoid FK constraint violation
       const success = await storage.deletePosition(req.params.id);
       if (!success) {
         return res.status(404).json({ error: "Position not found" });
       }
+      
+      // THEN create transaction record for withdrawal (position_id is nullable)
+      await storage.createTransaction({
+        vaultId: positionData.vaultId,
+        positionId: null,
+        type: "withdraw",
+        amount: positionData.amount,
+        rewards: positionData.rewards,
+        status: "completed",
+        txHash: `withdraw-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      });
+      
       res.json({ success: true });
     } catch (error) {
-      res.status(500).json({ error: "Failed to delete position" });
+      console.error("DELETE /api/positions/:id error:", error);
+      if (error instanceof Error) {
+        res.status(500).json({ error: `Failed to delete position: ${error.message}` });
+      } else {
+        res.status(500).json({ error: "Failed to delete position" });
+      }
     }
   });
 
@@ -223,7 +238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get wallet balance from XRP Ledger
+  // Get wallet balance from XRP Ledger (XRP, RLUSD, USDC)
   app.get("/api/wallet/balance/:address", async (req, res) => {
     try {
       const { address } = req.params;
@@ -238,12 +253,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ? "wss://s.altnet.rippletest.net:51233" // Testnet
         : "wss://xrplcluster.com"; // Mainnet
 
+      // RLUSD and USDC issuer addresses
+      // Note: These are example addresses - update with actual issuer addresses for your network
+      const issuers = {
+        mainnet: {
+          RLUSD: "rLUSD1111111111111111111111111111", // Placeholder - update with real issuer
+          USDC: "rcEGREd8NmkKRE8GE424sksyt1tJVFZwu" // Example USDC issuer
+        },
+        testnet: {
+          RLUSD: "rLUSD1111111111111111111111111111", // Placeholder - update with real issuer
+          USDC: "rUSDC1111111111111111111111111111" // Placeholder - update with real issuer
+        }
+      };
+
+      const currentIssuers = issuers[network as keyof typeof issuers] || issuers.mainnet;
+
       // Connect to XRP Ledger
       const client = new Client(xrplServer);
       await client.connect();
 
       try {
-        // Fetch account info
+        // Fetch account info for XRP balance
         const accountInfo = await client.request({
           command: "account_info",
           account: address,
@@ -254,17 +284,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const balanceInDrops = accountInfo.result.account_data.Balance;
         const balanceInXRP = Number(balanceInDrops) / 1000000;
 
-        // Fetch current XRP price in USD (simplified - using a fixed conversion for now)
-        // In production, you'd call a price API like CoinGecko
-        const xrpPriceUSD = 2.45; // Approximate current price
-        const balanceInUSD = balanceInXRP * xrpPriceUSD;
+        // Fetch account_lines for issued currencies (RLUSD, USDC)
+        let rlusdBalance = 0;
+        let usdcBalance = 0;
+
+        try {
+          const accountLines = await client.request({
+            command: "account_lines",
+            account: address,
+            ledger_index: "validated"
+          });
+
+          // Find RLUSD and USDC trust lines
+          for (const line of accountLines.result.lines) {
+            if (line.currency === "RLUSD" || (line.currency === "534F4C4F00000000000000000000000000000000" && line.account === currentIssuers.RLUSD)) {
+              rlusdBalance = Math.max(rlusdBalance, parseFloat(line.balance) || 0);
+            }
+            if (line.currency === "USDC" || (line.currency === "5553444300000000000000000000000000000000" && line.account === currentIssuers.USDC)) {
+              usdcBalance = Math.max(usdcBalance, parseFloat(line.balance) || 0);
+            }
+          }
+        } catch (linesError) {
+          // If account_lines fails, just return 0 for issued currencies
+          console.log("No trust lines found or error fetching account_lines:", linesError);
+        }
+
+        // Fixed prices for demo (in production, fetch from price API)
+        const xrpPriceUSD = 2.45;
+        const rlusdPriceUSD = 1.00; // RLUSD is pegged to USD
+        const usdcPriceUSD = 1.00; // USDC is pegged to USD
+
+        const totalUSD = (balanceInXRP * xrpPriceUSD) + (rlusdBalance * rlusdPriceUSD) + (usdcBalance * usdcPriceUSD);
 
         res.json({
           address,
-          balanceXRP: balanceInXRP.toFixed(2),
-          balanceUSD: balanceInUSD.toFixed(2),
-          xrpPriceUSD,
-          network
+          network,
+          balances: {
+            XRP: parseFloat(balanceInXRP.toFixed(6)),
+            RLUSD: parseFloat(rlusdBalance.toFixed(6)),
+            USDC: parseFloat(usdcBalance.toFixed(6))
+          },
+          balancesFormatted: {
+            XRP: balanceInXRP.toFixed(2),
+            RLUSD: rlusdBalance.toFixed(2),
+            USDC: usdcBalance.toFixed(2)
+          },
+          prices: {
+            XRP: xrpPriceUSD,
+            RLUSD: rlusdPriceUSD,
+            USDC: usdcPriceUSD
+          },
+          totalUSD: totalUSD.toFixed(2)
         });
       } finally {
         await client.disconnect();
@@ -276,10 +346,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (error?.data?.error === "actNotFound") {
         return res.json({
           address: req.params.address,
-          balanceXRP: "0.00",
-          balanceUSD: "0.00",
-          xrpPriceUSD: 2.45,
           network: req.query.network || "mainnet",
+          balances: {
+            XRP: 0,
+            RLUSD: 0,
+            USDC: 0
+          },
+          balancesFormatted: {
+            XRP: "0.00",
+            RLUSD: "0.00",
+            USDC: "0.00"
+          },
+          prices: {
+            XRP: 2.45,
+            RLUSD: 1.00,
+            USDC: 1.00
+          },
+          totalUSD: "0.00",
           error: "Account not found or not activated"
         });
       }

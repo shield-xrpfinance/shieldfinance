@@ -152,8 +152,8 @@ export default function ConnectWalletModal({
     } catch (error) {
       console.error("WalletConnect error:", error);
       
-      // Demo mode fallback
-      const mockAddress = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb";
+      // Demo mode fallback - use XRP Ledger address format
+      const mockAddress = "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH";
       const mockUri = "wc:demo@2?relay-protocol=irn&symKey=demo";
       setQrCodeUrl(mockUri);
       

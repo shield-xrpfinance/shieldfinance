@@ -31,6 +31,14 @@ This is a full-stack DeFi application for XRP liquid staking, built as a dashboa
   - Shows "Connect Your Wallet" prompt when wallet is not connected
   - Deposit flow automatically saves wallet address with new positions
   - Each wallet sees only their own staking positions and rewards
+- **Deposit and Withdraw flows now use real wallet balances:**
+  - Balance endpoint `/api/wallet/balance/:address` fetches XRP, RLUSD, USDC from XRP Ledger
+  - XRP balance working with real mainnet/testnet data
+  - RLUSD/USDC require configuration of actual issuer addresses (currently using placeholders)
+  - DepositModal displays real balances, validates against available funds, Max button works
+  - WithdrawModal validates against position amounts
+  - Database FK constraint updated to ON DELETE SET NULL for transaction history preservation
+  - Withdrawal endpoint fixed to avoid FK violations
 
 ## User Preferences
 

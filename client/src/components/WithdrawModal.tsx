@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 interface WithdrawModalProps {
   open: boolean;
@@ -31,18 +32,40 @@ export default function WithdrawModal({
   onConfirm,
 }: WithdrawModalProps) {
   const [amount, setAmount] = useState("");
+  const { toast } = useToast();
   const gasEstimate = "0.00008";
-
-  const handleConfirm = () => {
-    onConfirm(amount);
-    setAmount("");
-    onOpenChange(false);
-  };
 
   const totalWithdrawable = (
     parseFloat(depositedAmount.replace(/,/g, "")) +
     parseFloat(rewards.replace(/,/g, ""))
   ).toFixed(2);
+
+  const handleConfirm = () => {
+    const withdrawAmount = parseFloat(amount.replace(/,/g, ""));
+    const maxWithdrawable = parseFloat(totalWithdrawable);
+
+    if (withdrawAmount > maxWithdrawable) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You can only withdraw up to ${totalWithdrawable} XRP from this position.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (withdrawAmount <= 0) {
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid withdrawal amount greater than 0.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    onConfirm(amount);
+    setAmount("");
+    onOpenChange(false);
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
