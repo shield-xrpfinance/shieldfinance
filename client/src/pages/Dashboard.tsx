@@ -7,20 +7,24 @@ import VaultCard from "@/components/VaultCard";
 import ApyChart from "@/components/ApyChart";
 import DepositModal from "@/components/DepositModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
-import { Coins, TrendingUp, Vault, Users, Loader2 } from "lucide-react";
+import { Coins, TrendingUp, Vault, Users, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
+import { Link } from "wouter";
 
 export default function Dashboard() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
   const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
   const [walletConnectSigningOpen, setWalletConnectSigningOpen] = useState(false);
+  const [successDialogOpen, setSuccessDialogOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
   const [pendingDeposit, setPendingDeposit] = useState<{ amounts: { [asset: string]: string }; vaultId: string; vaultName: string } | null>(null);
   const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; depositAssets: string[] } | null>(null);
+  const [successMessage, setSuccessMessage] = useState<{ title: string; description: string; txHash: string } | null>(null);
   const { toast } = useToast();
   const { address, provider, walletConnectProvider } = useWallet();
   const { network, isTestnet } = useNetwork();
@@ -317,9 +321,12 @@ export default function Dashboard() {
     try {
       await depositMutation.mutateAsync(depositData);
 
-      toast({
-        title: "Deposit Successful",
+      // Show success dialog with CTA
+      setSuccessDialogOpen(true);
+      setSuccessMessage({
+        title: "Deposit Successful!",
         description: `Successfully deposited ${assetList} to ${pendingDeposit.vaultName} on ${network}`,
+        txHash: txHash,
       });
 
       setPendingDeposit(null);
@@ -434,6 +441,51 @@ export default function Dashboard() {
               Waiting for wallet confirmation...
             </p>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={successDialogOpen} onOpenChange={setSuccessDialogOpen}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-deposit-success">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <div className="rounded-full bg-green-100 dark:bg-green-900/20 p-3">
+                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+            </div>
+            <DialogTitle className="text-center text-xl">
+              {successMessage?.title || "Success!"}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {successMessage?.description}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {successMessage?.txHash && (
+            <div className="py-4">
+              <p className="text-sm text-muted-foreground text-center mb-2">Transaction Hash:</p>
+              <code className="block text-xs bg-muted p-3 rounded-md break-all text-center">
+                {successMessage.txHash}
+              </code>
+            </div>
+          )}
+
+          <DialogFooter className="sm:justify-center gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setSuccessDialogOpen(false)}
+              data-testid="button-close-success"
+            >
+              Close
+            </Button>
+            <Link href="/portfolio">
+              <Button 
+                onClick={() => setSuccessDialogOpen(false)}
+                data-testid="button-view-positions"
+              >
+                View My Positions
+              </Button>
+            </Link>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

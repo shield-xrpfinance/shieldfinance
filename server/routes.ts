@@ -5,6 +5,66 @@ import { insertPositionSchema } from "@shared/schema";
 import { XummSdk } from "xumm-sdk";
 import { Client } from "xrpl";
 
+// Background verification for wallet-auto-submitted transactions
+async function verifyWalletAutoSubmittedTransaction(txHash: string, network: string) {
+  console.log(`[Background Verification] Starting for tx: ${txHash}`);
+  
+  const isTestnet = network === "testnet";
+  const xrplServer = isTestnet 
+    ? "wss://s.altnet.rippletest.net:51233"
+    : "wss://xrplcluster.com";
+
+  const client = new Client(xrplServer);
+  await client.connect();
+
+  try {
+    // Poll for up to 30 seconds
+    const maxAttempts = 15;
+    const delay = 2000;
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        const txResponse = await client.request({
+          command: 'tx',
+          transaction: txHash,
+        }) as any;
+
+        const validated = txResponse?.result?.validated;
+        const txResult = txResponse?.result?.meta?.TransactionResult;
+
+        console.log(`[Background Verification] Attempt ${attempt}: validated=${validated}, result=${txResult}`);
+
+        if (validated) {
+          if (txResult === "tesSUCCESS") {
+            console.log(`[Background Verification] ✅ Transaction ${txHash} confirmed successful!`);
+            // TODO: Update transaction status in database to "confirmed"
+            return { success: true, txHash, result: txResponse.result };
+          } else {
+            console.log(`[Background Verification] ❌ Transaction ${txHash} failed with ${txResult}`);
+            // TODO: Mark transaction as failed and rollback position
+            return { success: false, txHash, error: txResult };
+          }
+        }
+
+        // Not validated yet, wait and retry
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      } catch (err) {
+        // Transaction not found yet, continue polling
+        if (attempt < maxAttempts) {
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+      }
+    }
+
+    console.log(`[Background Verification] ⏱️ Timeout waiting for ${txHash} to validate`);
+    return { success: false, txHash, error: "Validation timeout" };
+  } finally {
+    await client.disconnect();
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get all vaults
   app.get("/api/vaults", async (_req, res) => {
@@ -762,14 +822,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log("Detected sequence error - wallet likely auto-submitted the transaction");
           console.log("Transaction hash:", txHash);
           
-          // When we get a sequence error, it means the wallet already submitted the transaction
-          // Trust the wallet and return success immediately with the transaction hash
-          // The transaction will validate on XRPL within a few seconds
+          // Launch async verification in background (don't await)
+          verifyWalletAutoSubmittedTransaction(txHash as string, network || "mainnet")
+            .catch(err => console.error("Background verification error:", err));
+          
+          // Return success immediately so user doesn't wait
+          // Frontend will create a "pending" position that gets confirmed when verification completes
           return res.json({
             success: true,
             txHash: txHash as string,
             walletAutoSubmitted: true,
-            message: "Transaction submitted by wallet"
+            pending: true,
+            message: "Transaction submitted by wallet - confirming on ledger..."
           });
         }
 
