@@ -10,7 +10,6 @@ import { Button } from "@/components/ui/button";
 import { Wallet, ExternalLink, Loader2, QrCode, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
-import Xumm from "xumm-sdk";
 import { QRCodeSVG } from "qrcode.react";
 import EthereumProvider from "@walletconnect/ethereum-provider";
 
@@ -30,7 +29,7 @@ export default function ConnectWalletModal({
   const [step, setStep] = useState<ConnectionStep>("select");
   const [connecting, setConnecting] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
-  const [xamanPayload, setXamanPayload] = useState<any>(null);
+  const [xamanPayloadUuid, setXamanPayloadUuid] = useState<string | null>(null);
   const { toast } = useToast();
   const { connect } = useWallet();
 
@@ -38,82 +37,75 @@ export default function ConnectWalletModal({
     if (!open) {
       setStep("select");
       setQrCodeUrl("");
-      setXamanPayload(null);
+      setXamanPayloadUuid(null);
       setConnecting(false);
     }
   }, [open]);
+
+  // Poll Xaman payload status
+  useEffect(() => {
+    if (!xamanPayloadUuid || step !== "xaman-qr") return;
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const response = await fetch(`/api/wallet/xaman/payload/${xamanPayloadUuid}`);
+        const data = await response.json();
+
+        if (data.signed && data.account) {
+          clearInterval(pollInterval);
+          connect(data.account, "xaman");
+          if (onConnect) {
+            onConnect(data.account, "xaman");
+          }
+          onOpenChange(false);
+          toast({
+            title: "Wallet Connected",
+            description: `Connected to ${data.account.slice(0, 8)}...${data.account.slice(-6)}`,
+          });
+          setConnecting(false);
+        }
+      } catch (error) {
+        console.error("Error polling Xaman status:", error);
+      }
+    }, 2000);
+
+    return () => clearInterval(pollInterval);
+  }, [xamanPayloadUuid, step, connect, onConnect, onOpenChange, toast]);
 
   const handleXamanConnect = async () => {
     setConnecting(true);
     setStep("xaman-qr");
     
     try {
-      const xumm = new Xumm(import.meta.env.VITE_XUMM_API_KEY || "demo-api-key");
-      
-      const payload = await xumm.payload?.create({
-        TransactionType: "SignIn",
+      const response = await fetch("/api/wallet/xaman/payload", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
       });
+      
+      const data = await response.json();
 
-      if (payload?.refs?.qr_png) {
-        setQrCodeUrl(payload.refs.qr_png);
-        setXamanPayload(payload);
-
-        const subscription = await xumm.payload?.subscribe(payload.uuid);
+      if (data.qrUrl) {
+        setQrCodeUrl(data.qrUrl);
+        setXamanPayloadUuid(data.uuid);
         
-        if (subscription?.websocket) {
-          subscription.websocket.onmessage = (message: any) => {
-            const data = JSON.parse(message.data.toString());
-            
-            if (data.signed === true && data.payload_uuidv4 === payload.uuid) {
-              xumm.payload?.get(payload.uuid).then((result: any) => {
-                if (result?.response?.account) {
-                  connect(result.response.account, "xaman");
-                  if (onConnect) {
-                    onConnect(result.response.account, "xaman");
-                  }
-                  onOpenChange(false);
-                  toast({
-                    title: "Wallet Connected",
-                    description: `Connected to ${result.response.account.slice(0, 8)}...${result.response.account.slice(-6)}`,
-                  });
-                  setConnecting(false);
-                }
-              });
-            } else if (data.signed === false) {
-              toast({
-                title: "Connection Rejected",
-                description: "You rejected the sign-in request in Xaman",
-                variant: "destructive",
-              });
-              setStep("select");
-              setConnecting(false);
-            }
-          };
+        if (data.demo) {
+          toast({
+            title: "Demo Mode",
+            description: "Xaman API keys not configured. Using demo connection.",
+          });
         }
+      } else {
+        throw new Error("No QR code URL received");
       }
     } catch (error) {
       console.error("Xaman connection error:", error);
       toast({
         title: "Connection Failed",
-        description: "Failed to connect to Xaman wallet. Using demo mode.",
+        description: "Failed to connect to Xaman wallet",
         variant: "destructive",
       });
-      
-      const mockAddress = "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH";
-      setQrCodeUrl("demo");
-      
-      setTimeout(() => {
-        connect(mockAddress, "xaman");
-        if (onConnect) {
-          onConnect(mockAddress, "xaman");
-        }
-        onOpenChange(false);
-        toast({
-          title: "Demo Wallet Connected",
-          description: `Connected to ${mockAddress.slice(0, 8)}...${mockAddress.slice(-6)}`,
-        });
-        setConnecting(false);
-      }, 2000);
+      setStep("select");
+      setConnecting(false);
     }
   };
 
@@ -159,16 +151,17 @@ export default function ConnectWalletModal({
       await provider.connect();
     } catch (error) {
       console.error("WalletConnect error:", error);
-      toast({
-        title: "Connection Failed",
-        description: "Failed to initialize WalletConnect. Using demo mode.",
-        variant: "destructive",
-      });
       
+      // Demo mode fallback
       const mockAddress = "0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb";
       const mockUri = "wc:demo@2?relay-protocol=irn&symKey=demo";
       setQrCodeUrl(mockUri);
       
+      toast({
+        title: "Demo Mode",
+        description: "WalletConnect not configured. Using demo connection.",
+      });
+
       setTimeout(() => {
         connect(mockAddress, "walletconnect");
         if (onConnect) {
@@ -188,7 +181,7 @@ export default function ConnectWalletModal({
     setStep("select");
     setQrCodeUrl("");
     setConnecting(false);
-    setXamanPayload(null);
+    setXamanPayloadUuid(null);
   };
 
   return (
