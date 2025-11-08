@@ -80,6 +80,7 @@ Preferred communication style: Simple, everyday language.
   - Backend API (`/api/wallet/xaman/payload`) creates Xaman SignIn payloads securely using `xumm-sdk`
   - Frontend displays QR codes from backend payload URLs
   - Polling mechanism (`/api/wallet/xaman/payload/:uuid`) checks for user signature confirmation
+  - Uses `payload.meta.signed` to detect successful wallet signatures
   - Requires `XUMM_API_KEY` and `XUMM_API_SECRET` backend environment variables
   - Falls back to demo mode with mock payload when credentials not configured
 - **WalletConnect** - Multi-wallet connection protocol with QR code support
@@ -87,6 +88,14 @@ Preferred communication style: Simple, everyday language.
   - Shows QR code URI for scanning with any compatible wallet
   - Requires `VITE_WALLETCONNECT_PROJECT_ID` frontend environment variable
   - Falls back to demo mode when project ID not configured
+- **XRP Ledger Balance Fetching** - Real-time wallet balance integration
+  - Backend API (`/api/wallet/balance/:address`) fetches live balances from XRP Ledger mainnet
+  - Uses `xrpl` library with `wss://xrplcluster.com` WebSocket connection
+  - Converts balance from drops to XRP (1 XRP = 1,000,000 drops)
+  - Calculates USD equivalent using XRP price (configurable, currently $2.45)
+  - Frontend hook (`useWalletBalance`) caches balance with 30-second auto-refresh
+  - Displays real balance in both header and sidebar when wallet connected
+  - Shows loading states and error handling for unfunded/invalid accounts
 - **QR Code Display** - Uses `qrcode.react` library for generating scannable QR codes
 - **Demo Mode** - When API keys are not configured, both wallets fall back to mock connections:
   - Xaman: Backend returns demo payload with uuid="demo-payload-uuid", immediately signs with mock account
