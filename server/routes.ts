@@ -601,8 +601,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const xumm = new XummSdk(apiKey, apiSecret);
       
       // Vault address sends payment back to user
+      const vaultAddress = "rpC7sRSUcK6F1nPb9E5U8z8bz5ee5mFEjC";
+      
       let paymentTx: any = {
         TransactionType: "Payment",
+        Account: vaultAddress,
         Destination: userAddress,
       };
 
@@ -677,8 +680,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const xumm = new XummSdk(apiKey, apiSecret);
       
+      // Vault address sends reward payment to user
+      const vaultAddress = "rpC7sRSUcK6F1nPb9E5U8z8bz5ee5mFEjC";
+      
       let paymentTx: any = {
         TransactionType: "Payment",
+        Account: vaultAddress,
         Destination: userAddress,
       };
 
