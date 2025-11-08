@@ -710,6 +710,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Submit signed XRPL transaction (for WalletConnect)
+  app.post("/api/xrpl/submit", async (req, res) => {
+    try {
+      const { tx_blob, network } = req.body;
+
+      if (!tx_blob) {
+        return res.status(400).json({ error: "Missing tx_blob" });
+      }
+
+      // Connect to XRPL network
+      const isTestnet = network === "testnet";
+      const xrplServer = isTestnet 
+        ? "wss://s.altnet.rippletest.net:51233"
+        : "wss://xrplcluster.com";
+
+      const client = new Client(xrplServer);
+      await client.connect();
+
+      try {
+        // Submit the signed transaction
+        const result = await client.submit(tx_blob);
+
+        // Check if submission was successful (only tesSUCCESS is truly successful)
+        // tec* codes mean transaction failed but fee was charged
+        if (result?.result?.engine_result === "tesSUCCESS") {
+          return res.json({
+            success: true,
+            txHash: result.result.tx_json?.hash,
+            result: result.result
+          });
+        } else {
+          // Transaction failed (including tec* codes or malformed responses)
+          const engineResult = result?.result?.engine_result || "unknown";
+          const errorMessage = result?.result?.engine_result_message || 
+                              result?.result?.engine_result || 
+                              "Transaction failed";
+          
+          return res.status(400).json({
+            success: false,
+            error: errorMessage,
+            engineResult: engineResult,
+            result: result?.result
+          });
+        }
+      } finally {
+        // Always disconnect, even if there's an error
+        await client.disconnect();
+      }
+    } catch (error) {
+      console.error("XRPL submit error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to submit transaction" 
+      });
+    }
+  });
+
   // Get all transactions
   app.get("/api/transactions", async (_req, res) => {
     try {

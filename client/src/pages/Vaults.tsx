@@ -266,15 +266,25 @@ export default function Vaults() {
         },
       }, chainId) as { tx_blob: string };
 
-      // Submit signed transaction
-      const submitResult = await wcProvider.request({
-        method: "xrpl_submitTransaction",
-        params: {
-          tx_blob: signResult.tx_blob,
+      // Submit signed transaction via backend
+      const submitResponse = await fetch("/api/xrpl/submit", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
         },
-      }, chainId) as { tx_json?: { hash: string }, hash?: string };
+        body: JSON.stringify({
+          tx_blob: signResult.tx_blob,
+          network: network,
+        }),
+      });
 
-      const txHash = submitResult.tx_json?.hash || submitResult.hash;
+      const submitResult = await submitResponse.json();
+
+      if (!submitResponse.ok || !submitResult.success) {
+        throw new Error(submitResult.error || "Transaction submission failed");
+      }
+
+      const txHash = submitResult.txHash;
 
       if (!txHash) {
         throw new Error("No transaction hash returned");
