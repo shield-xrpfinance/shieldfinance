@@ -103,6 +103,8 @@ export default function Vaults() {
   });
 
   const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
+    console.log("=== handleConfirmDeposit CALLED ===", { amounts, provider, address, walletConnectProvider: !!walletConnectProvider });
+    
     if (!selectedVault || !address) return;
 
     const totalAmount = Object.values(amounts)
