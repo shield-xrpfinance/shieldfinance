@@ -264,12 +264,17 @@ export default function Vaults() {
         params: {
           tx_json: txJson,
         },
-      }, chainId) as { result: { tx_json: any } };
+      }, chainId) as any;
 
-      // Validate signed transaction
-      const signedTxJson = signResult?.result?.tx_json;
-      if (!signedTxJson || !signedTxJson.TxnSignature) {
-        throw new Error("Invalid signed transaction received from WalletConnect");
+      console.log("WalletConnect signResult:", JSON.stringify(signResult, null, 2));
+
+      // Extract signed transaction - try multiple possible response structures
+      let signedTxJson = signResult?.result?.tx_json || signResult?.tx_json || signResult;
+      
+      console.log("Extracted signedTxJson:", JSON.stringify(signedTxJson, null, 2));
+
+      if (!signedTxJson) {
+        throw new Error("No transaction data received from WalletConnect");
       }
 
       // WalletConnect returns tx_json, we need to encode it to tx_blob
