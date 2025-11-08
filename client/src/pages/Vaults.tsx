@@ -193,8 +193,8 @@ export default function Vaults() {
         },
       });
 
-      // Get the destination address (vault's deposit address - for now use a placeholder)
-      const vaultDepositAddress = "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH";
+      // Get the destination address (vault's deposit address)
+      const vaultDepositAddress = "rpC7sRSUcK6F1nPb9E5U8z8bz5ee5mFEjC";
       
       // Convert amount to drops (1 XRP = 1,000,000 drops)
       const amountInDrops = Math.floor(parseFloat(paymentAmount) * 1000000).toString();

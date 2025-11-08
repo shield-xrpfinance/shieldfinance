@@ -441,10 +441,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const apiKey = process.env.XUMM_API_KEY?.trim();
       const apiSecret = process.env.XUMM_API_SECRET?.trim();
 
-      // For demo/testing, use a testnet vault address
-      const vaultAddress = network === "testnet" 
-        ? "rNaqKtKrMSwpwZSzRckPf7S96DkimjkF4H" // Testnet vault address
-        : "rNaqKtKrMSwpwZSzRckPf7S96DkimjkF4H"; // Mainnet vault address (same for now)
+      // Vault deposit address - all deposits go here
+      const vaultAddress = "rpC7sRSUcK6F1nPb9E5U8z8bz5ee5mFEjC"; // Main vault address (mainnet & testnet)
 
       if (!apiKey || !apiSecret) {
         // Return demo payload
