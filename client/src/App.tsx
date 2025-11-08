@@ -10,7 +10,8 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { Button } from "@/components/ui/button";
-import { Wallet, LogOut } from "lucide-react";
+import { Wallet, LogOut, Loader2 } from "lucide-react";
+import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import Dashboard from "@/pages/Dashboard";
 import Vaults from "@/pages/Vaults";
 import Portfolio from "@/pages/Portfolio";
@@ -29,6 +30,7 @@ function Router() {
 
 function Header() {
   const { address, isConnected, disconnect } = useWallet();
+  const { balance, isLoading } = useWalletBalance();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   return (
@@ -37,7 +39,23 @@ function Header() {
       <div className="flex items-center gap-2">
         {isConnected && address ? (
           <div className="flex items-center gap-2">
-            <div className="text-sm font-mono bg-muted px-3 py-1.5 rounded-md">
+            {isLoading ? (
+              <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-md" data-testid="header-loading-balance">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span className="text-xs text-muted-foreground">Loading...</span>
+              </div>
+            ) : balance ? (
+              <div className="flex items-center gap-3 bg-muted px-3 py-1.5 rounded-md" data-testid="header-balance-display">
+                <div className="text-sm font-mono font-bold" data-testid="text-header-balance-xrp">
+                  {Number(balance.balanceXRP).toLocaleString()} XRP
+                </div>
+                <div className="h-4 w-px bg-border" />
+                <div className="text-xs text-muted-foreground" data-testid="text-header-balance-usd">
+                  ${Number(balance.balanceUSD).toLocaleString()}
+                </div>
+              </div>
+            ) : null}
+            <div className="text-sm font-mono bg-muted px-3 py-1.5 rounded-md" data-testid="text-wallet-address">
               {address.slice(0, 6)}...{address.slice(-4)}
             </div>
             <Button

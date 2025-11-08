@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertPositionSchema } from "@shared/schema";
 import { XummSdk } from "xumm-sdk";
+import { Client } from "xrpl";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get all vaults
@@ -179,6 +180,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to get payload status" });
+    }
+  });
+
+  // Get wallet balance from XRP Ledger
+  app.get("/api/wallet/balance/:address", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      if (!address) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      // Connect to XRP Ledger (using public server)
+      const client = new Client("wss://xrplcluster.com");
+      await client.connect();
+
+      try {
+        // Fetch account info
+        const accountInfo = await client.request({
+          command: "account_info",
+          account: address,
+          ledger_index: "validated"
+        });
+
+        // XRP balance is in drops (1 XRP = 1,000,000 drops)
+        const balanceInDrops = accountInfo.result.account_data.Balance;
+        const balanceInXRP = Number(balanceInDrops) / 1000000;
+
+        // Fetch current XRP price in USD (simplified - using a fixed conversion for now)
+        // In production, you'd call a price API like CoinGecko
+        const xrpPriceUSD = 2.45; // Approximate current price
+        const balanceInUSD = balanceInXRP * xrpPriceUSD;
+
+        res.json({
+          address,
+          balanceXRP: balanceInXRP.toFixed(2),
+          balanceUSD: balanceInUSD.toFixed(2),
+          xrpPriceUSD
+        });
+      } finally {
+        await client.disconnect();
+      }
+    } catch (error: any) {
+      console.error("Balance fetch error:", error);
+      
+      // Handle account not found errors
+      if (error?.data?.error === "actNotFound") {
+        return res.json({
+          address: req.params.address,
+          balanceXRP: "0.00",
+          balanceUSD: "0.00",
+          xrpPriceUSD: 2.45,
+          error: "Account not found or not activated"
+        });
+      }
+      
+      res.status(500).json({ error: "Failed to fetch wallet balance" });
     }
   });
 
