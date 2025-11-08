@@ -9,6 +9,7 @@ import WithdrawModal from "@/components/WithdrawModal";
 import { TrendingUp, Coins, Gift } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useWallet } from "@/lib/walletContext";
 
 export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
@@ -19,6 +20,7 @@ export default function Portfolio() {
     rewards: string;
   } | null>(null);
   const { toast } = useToast();
+  const { isConnected } = useWallet();
 
   const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
     queryKey: ["/api/positions"],
@@ -189,6 +191,14 @@ export default function Portfolio() {
             <Button
               variant="outline"
               onClick={() => {
+                if (!isConnected) {
+                  toast({
+                    title: "Wallet Not Connected",
+                    description: "Please connect your wallet to claim rewards",
+                    variant: "destructive",
+                  });
+                  return;
+                }
                 toast({
                   title: "Claim All Rewards",
                   description: `Claiming ${totalRewards.toLocaleString()} XRP from all positions`,
