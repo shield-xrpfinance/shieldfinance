@@ -13,11 +13,13 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { MultiAssetIcon } from "@/components/AssetIcon";
 
 interface WithdrawModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   vaultName: string;
+  asset?: string;
   depositedAmount: string;
   rewards: string;
   onConfirm: (amount: string) => void;
@@ -27,13 +29,15 @@ export default function WithdrawModal({
   open,
   onOpenChange,
   vaultName,
+  asset = "XRP",
   depositedAmount,
   rewards,
   onConfirm,
 }: WithdrawModalProps) {
   const [amount, setAmount] = useState("");
-  const { toast } = useToast();
+  const { toast} = useToast();
   const gasEstimate = "0.00008";
+  const assetSymbol = asset.split(",")[0];
 
   const totalWithdrawable = (
     parseFloat(depositedAmount.replace(/,/g, "")) +
@@ -47,7 +51,7 @@ export default function WithdrawModal({
     if (withdrawAmount > maxWithdrawable) {
       toast({
         title: "Insufficient Balance",
-        description: `You can only withdraw up to ${totalWithdrawable} XRP from this position.`,
+        description: `You can only withdraw up to ${totalWithdrawable} ${assetSymbol} from this position.`,
         variant: "destructive",
       });
       return;
@@ -71,27 +75,30 @@ export default function WithdrawModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg" data-testid="modal-withdraw">
         <DialogHeader>
-          <DialogTitle>Withdraw XRP</DialogTitle>
+          <DialogTitle>Withdraw {assetSymbol}</DialogTitle>
           <DialogDescription>
-            Withdraw your staked XRP and accrued rewards
+            Withdraw your staked {assetSymbol} and accrued rewards
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-6 space-y-6">
           <div className="p-4 rounded-md bg-muted/50">
-            <p className="text-sm font-medium mb-3">{vaultName}</p>
+            <div className="flex items-center gap-3 mb-3">
+              <MultiAssetIcon assets={asset} size={24} />
+              <p className="text-sm font-medium">{vaultName}</p>
+            </div>
             <div className="space-y-2">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Deposited</span>
-                <span className="font-mono">{depositedAmount} XRP</span>
+                <span className="font-mono">{depositedAmount} {assetSymbol}</span>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Rewards</span>
-                <span className="font-mono text-chart-2">+{rewards} XRP</span>
+                <span className="font-mono text-chart-2">+{rewards} {assetSymbol}</span>
               </div>
               <div className="pt-2 border-t flex items-center justify-between">
                 <span className="font-medium">Total Available</span>
-                <span className="font-bold font-mono">{totalWithdrawable} XRP</span>
+                <span className="font-bold font-mono">{totalWithdrawable} {assetSymbol}</span>
               </div>
             </div>
           </div>
@@ -110,12 +117,12 @@ export default function WithdrawModal({
                   data-testid="input-withdraw-amount"
                 />
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
-                  XRP
+                  {assetSymbol}
                 </span>
               </div>
               <div className="flex items-center justify-between mt-2">
                 <p className="text-xs text-muted-foreground">
-                  Available: {totalWithdrawable} XRP
+                  Available: {totalWithdrawable} {assetSymbol}
                 </p>
                 <Button
                   variant="ghost"
@@ -142,12 +149,12 @@ export default function WithdrawModal({
             <div className="space-y-2 p-4 rounded-md bg-muted/50">
               <div className="flex items-center justify-between text-sm">
                 <span className="text-muted-foreground">Est. Gas Fee</span>
-                <span className="font-mono">{gasEstimate} XRP</span>
+                <span className="font-mono">{gasEstimate} {assetSymbol}</span>
               </div>
               <div className="pt-2 border-t flex items-center justify-between">
                 <span className="font-medium">You'll Receive</span>
                 <span className="text-lg font-bold font-mono">
-                  {amount ? (parseFloat(amount.replace(/,/g, "")) - parseFloat(gasEstimate)).toFixed(5) : "0.00"} XRP
+                  {amount ? (parseFloat(amount.replace(/,/g, "")) - parseFloat(gasEstimate)).toFixed(5) : "0.00"} {assetSymbol}
                 </span>
               </div>
             </div>

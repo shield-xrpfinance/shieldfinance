@@ -16,6 +16,7 @@ export default function Portfolio() {
   const [selectedPosition, setSelectedPosition] = useState<{
     id: string;
     vaultName: string;
+    asset: string;
     depositedAmount: string;
     rewards: string;
   } | null>(null);
@@ -46,6 +47,7 @@ export default function Portfolio() {
     return {
       id: pos.id,
       vaultName: vault?.name || "Unknown Vault",
+      asset: vault?.asset || "XRP",
       depositedAmount: amount.toLocaleString(),
       currentValue: (amount + rewards).toLocaleString(),
       rewards: rewards.toLocaleString(),
@@ -81,6 +83,7 @@ export default function Portfolio() {
       setSelectedPosition({
         id: position.id,
         vaultName: position.vaultName,
+        asset: position.asset || "XRP",
         depositedAmount: position.depositedAmount,
         rewards: position.rewards,
       });
@@ -91,9 +94,10 @@ export default function Portfolio() {
   const handleClaim = (positionId: string) => {
     const position = formattedPositions.find((p) => p.id === positionId);
     if (position) {
+      const assetSymbol = position.asset?.split(",")[0] || "XRP";
       toast({
         title: "Rewards Claimed",
-        description: `Successfully claimed ${position.rewards} XRP from ${position.vaultName}`,
+        description: `Successfully claimed ${position.rewards} ${assetSymbol} from ${position.vaultName}`,
       });
     }
   };
@@ -102,10 +106,11 @@ export default function Portfolio() {
     if (!selectedPosition) return;
     
     try {
+      const assetSymbol = selectedPosition.asset?.split(",")[0] || "XRP";
       await deleteMutation.mutateAsync(selectedPosition.id);
       toast({
         title: "Withdrawal Successful",
-        description: `Successfully withdrew ${amount} XRP from ${selectedPosition.vaultName}`,
+        description: `Successfully withdrew ${amount} ${assetSymbol} from ${selectedPosition.vaultName}`,
       });
       setWithdrawModalOpen(false);
     } catch (error) {
@@ -262,6 +267,7 @@ export default function Portfolio() {
           open={withdrawModalOpen}
           onOpenChange={setWithdrawModalOpen}
           vaultName={selectedPosition.vaultName}
+          asset={selectedPosition.asset}
           depositedAmount={selectedPosition.depositedAmount}
           rewards={selectedPosition.rewards}
           onConfirm={handleConfirmWithdraw}

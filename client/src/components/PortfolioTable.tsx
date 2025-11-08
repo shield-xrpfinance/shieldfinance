@@ -9,10 +9,12 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ArrowUpRight } from "lucide-react";
+import { MultiAssetIcon } from "@/components/AssetIcon";
 
 interface Position {
   id: string;
   vaultName: string;
+  asset?: string;
   depositedAmount: string;
   currentValue: string;
   rewards: string;
@@ -55,17 +57,20 @@ export default function PortfolioTable({
             positions.map((position) => (
               <TableRow key={position.id} data-testid={`row-position-${position.id}`}>
                 <TableCell>
-                  <div>
-                    <p className="font-medium">{position.vaultName}</p>
-                    <p className="text-xs text-muted-foreground">{position.depositDate}</p>
+                  <div className="flex items-center gap-3">
+                    <MultiAssetIcon assets={position.asset || "XRP"} size={28} />
+                    <div>
+                      <p className="font-medium">{position.vaultName}</p>
+                      <p className="text-xs text-muted-foreground">{position.depositDate}</p>
+                    </div>
                   </div>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums">
-                  {position.depositedAmount} XRP
+                  {position.depositedAmount} {position.asset?.split(",")[0] || "XRP"}
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex flex-col items-end">
-                    <span className="font-mono tabular-nums">{position.currentValue} XRP</span>
+                    <span className="font-mono tabular-nums">{position.currentValue} {position.asset?.split(",")[0] || "XRP"}</span>
                     <span className="text-xs text-chart-2 flex items-center gap-0.5">
                       <ArrowUpRight className="h-3 w-3" />
                       {(
@@ -79,7 +84,7 @@ export default function PortfolioTable({
                   </div>
                 </TableCell>
                 <TableCell className="text-right font-mono tabular-nums text-chart-2">
-                  +{position.rewards} XRP
+                  +{position.rewards} {position.asset?.split(",")[0] || "XRP"}
                 </TableCell>
                 <TableCell className="text-right">
                   <Badge variant="secondary">{position.apy}%</Badge>

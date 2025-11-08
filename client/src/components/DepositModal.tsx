@@ -16,6 +16,7 @@ import { useWallet } from "@/lib/walletContext";
 import { useWalletBalances } from "@/hooks/use-wallet-balance";
 import { useToast } from "@/hooks/use-toast";
 import ConnectWalletModal from "./ConnectWalletModal";
+import { MultiAssetIcon } from "@/components/AssetIcon";
 
 interface DepositModalProps {
   open: boolean;
@@ -101,17 +102,19 @@ export default function DepositModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg" data-testid="modal-deposit">
         <DialogHeader>
-          <DialogTitle>Deposit XRP</DialogTitle>
+          <DialogTitle>
+            Deposit {depositAssets.length > 1 ? depositAssets.join(" + ") : depositAssets[0]}
+          </DialogTitle>
           <DialogDescription>
             {step === 1
-              ? "Enter the amount of XRP you want to deposit"
+              ? `Enter the amount${depositAssets.length > 1 ? 's' : ''} you want to deposit`
               : "Review and confirm your deposit"}
           </DialogDescription>
         </DialogHeader>
 
         <div className="py-6 space-y-6">
-          <div className="flex items-center gap-2 p-4 rounded-md bg-primary/10">
-            <Coins className="h-5 w-5 text-primary" />
+          <div className="flex items-center gap-3 p-4 rounded-md bg-primary/10">
+            <MultiAssetIcon assets={depositAssets.join(",")} size={28} />
             <div className="flex-1">
               <p className="text-sm font-medium">{vaultName}</p>
               <p className="text-xs text-muted-foreground">APY: {vaultApy}%</p>

@@ -14,6 +14,7 @@ import { LayoutDashboard, Vault, Wallet, History, BarChart3, Coins, Loader2 } fr
 import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
 import { useWalletBalance } from "@/hooks/use-wallet-balance";
+import { AssetIcon } from "@/components/AssetIcon";
 
 const menuItems = [
   {
@@ -95,12 +96,17 @@ export function AppSidebar() {
             </div>
           ) : balance ? (
             <>
-              <p className="text-2xl font-bold font-mono tabular-nums" data-testid="text-balance-xrp">
-                {Number(balance.balanceXRP).toLocaleString()} XRP
-              </p>
-              <p className="text-xs text-muted-foreground" data-testid="text-balance-usd">
-                ≈ ${Number(balance.balanceUSD).toLocaleString()} USD
-              </p>
+              <div className="flex items-center gap-2">
+                <AssetIcon asset="XRP" size={24} />
+                <div>
+                  <p className="text-2xl font-bold font-mono tabular-nums" data-testid="text-balance-xrp">
+                    {Number(balance.balanceXRP).toLocaleString()} XRP
+                  </p>
+                  <p className="text-xs text-muted-foreground" data-testid="text-balance-usd">
+                    ≈ ${Number(balance.balanceUSD).toLocaleString()} USD
+                  </p>
+                </div>
+              </div>
               {balance.error && (
                 <p className="text-xs text-destructive" data-testid="text-balance-error">{balance.error}</p>
               )}
