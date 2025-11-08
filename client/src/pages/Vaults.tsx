@@ -121,6 +121,9 @@ export default function Vaults() {
     });
     setDepositModalOpen(false);
 
+    // Debug logging
+    console.log("Deposit routing - provider:", provider, "address:", address, "walletConnectProvider:", !!walletConnectProvider);
+
     // Check if provider is set - if not, wallet may have disconnected
     if (!provider) {
       toast({
@@ -134,8 +137,10 @@ export default function Vaults() {
 
     // Route to correct signing method based on provider
     if (provider === "walletconnect") {
+      console.log("Routing to WalletConnect deposit");
       await handleWalletConnectDeposit(paymentAmount, paymentAsset);
     } else {
+      console.log("Routing to Xaman deposit");
       // Default to Xaman
       await handleXamanDeposit(paymentAmount, paymentAsset);
     }
