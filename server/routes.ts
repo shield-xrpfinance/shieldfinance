@@ -719,6 +719,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Missing tx_blob" });
       }
 
+      // Compute transaction hash for verification
+      const { hashes } = await import("xrpl");
+      const txHash = hashes.hashSignedTx(tx_blob);
+
       // Connect to XRPL network
       const isTestnet = network === "testnet";
       const xrplServer = isTestnet 
@@ -733,27 +737,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const result = await client.submit(tx_blob);
 
         // Check if submission was successful (only tesSUCCESS is truly successful)
-        // tec* codes mean transaction failed but fee was charged
         if (result?.result?.engine_result === "tesSUCCESS") {
           return res.json({
             success: true,
-            txHash: result.result.tx_json?.hash,
+            txHash: result.result.tx_json?.hash || txHash,
             result: result.result
           });
-        } else {
-          // Transaction failed (including tec* codes or malformed responses)
-          const engineResult = result?.result?.engine_result || "unknown";
-          const errorMessage = result?.result?.engine_result_message || 
-                              result?.result?.engine_result || 
-                              "Transaction failed";
-          
-          return res.status(400).json({
-            success: false,
-            error: errorMessage,
-            engineResult: engineResult,
-            result: result?.result
-          });
         }
+
+        // Check if error is "sequence already used" - wallet may have auto-submitted
+        const engineResult = result?.result?.engine_result || "";
+        const isSequenceError = engineResult.includes("tefPAST_SEQ") || 
+                               engineResult.includes("Sequence") ||
+                               result?.result?.engine_result_message?.includes("sequence");
+
+        if (isSequenceError && txHash) {
+          // Wallet might have auto-submitted - verify transaction on XRPL
+          try {
+            const txResponse = await client.request({
+              command: 'tx',
+              transaction: txHash as string,
+            }) as any;
+
+            // Check if transaction succeeded on XRPL
+            if (txResponse?.result?.meta?.TransactionResult === "tesSUCCESS" && 
+                txResponse?.result?.validated) {
+              return res.json({
+                success: true,
+                txHash: txHash as string,
+                result: txResponse.result,
+                walletAutoSubmitted: true
+              });
+            }
+          } catch (txError) {
+            // Transaction not found on ledger yet - return original error
+          }
+        }
+
+        // Transaction failed (including tec* codes or malformed responses)
+        const errorMessage = result?.result?.engine_result_message || 
+                            result?.result?.engine_result || 
+                            "Transaction failed";
+        
+        return res.status(400).json({
+          success: false,
+          error: errorMessage,
+          engineResult: engineResult,
+          result: result?.result
+        });
       } finally {
         // Always disconnect, even if there's an error
         await client.disconnect();
