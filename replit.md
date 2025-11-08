@@ -2,7 +2,12 @@
 
 ## Overview
 
-This is a full-stack DeFi application for XRP liquid staking, built as a dashboard for managing cryptocurrency vaults with yield generation. Users can connect their XRP wallets (via Xaman or WalletConnect), deposit assets into various risk-tiered vaults, track their positions and rewards, and withdraw funds. The application provides real-time APY tracking, portfolio management, and transaction history for staking positions.
+This is a full-stack DeFi application for XRP liquid staking, built as a dashboard for managing cryptocurrency vaults with yield generation. Users can connect their XRP wallets (via Xaman or WalletConnect), deposit assets into various risk-tiered vaults, track their positions and rewards, and withdraw funds. The application provides real-time APY tracking, portfolio management, transaction history, and analytics for staking positions.
+
+## Recent Changes (November 8, 2025)
+- Created **Transactions page** (`/transactions`) with transaction history list, summary cards, and type filtering
+- Created **Analytics page** (`/analytics`) with APY charts, TVL growth visualization, vault distribution, and key protocol metrics
+- Both pages are fully accessible via sidebar navigation and rendering properly
 
 ## User Preferences
 
