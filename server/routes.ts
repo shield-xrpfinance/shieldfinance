@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertPositionSchema } from "@shared/schema";
-import Xumm from "xumm-sdk";
+import { XummSdk } from "xumm-sdk";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get all vaults
@@ -91,8 +91,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create Xaman payload for wallet connection
   app.post("/api/wallet/xaman/payload", async (_req, res) => {
     try {
-      const apiKey = process.env.XUMM_API_KEY;
-      const apiSecret = process.env.XUMM_API_SECRET;
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
 
       if (!apiKey || !apiSecret) {
         // Return demo payload
@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const xumm = new Xumm(apiKey, apiSecret);
+      const xumm = new XummSdk(apiKey, apiSecret);
       
       const payload = await xumm.payload?.create({
         TransactionType: "SignIn",
@@ -144,14 +144,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const apiKey = process.env.XUMM_API_KEY;
-      const apiSecret = process.env.XUMM_API_SECRET;
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
 
       if (!apiKey || !apiSecret) {
         return res.status(400).json({ error: "Xaman credentials not configured" });
       }
 
-      const xumm = new Xumm(apiKey, apiSecret);
+      const xumm = new XummSdk(apiKey, apiSecret);
       const payload = await xumm.payload?.get(req.params.uuid);
 
       if (!payload) {
