@@ -22,6 +22,28 @@ export const positions = pgTable("positions", {
   depositedAt: timestamp("deposited_at").notNull().defaultNow(),
 });
 
+export const transactions = pgTable("transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vaultId: varchar("vault_id").notNull().references(() => vaults.id),
+  positionId: varchar("position_id").references(() => positions.id),
+  type: text("type").notNull(),
+  amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
+  rewards: decimal("rewards", { precision: 18, scale: 2 }).default("0"),
+  status: text("status").notNull().default("completed"),
+  txHash: text("tx_hash"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const vaultMetricsDaily = pgTable("vault_metrics_daily", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vaultId: varchar("vault_id").notNull().references(() => vaults.id),
+  date: timestamp("date").notNull(),
+  tvl: decimal("tvl", { precision: 18, scale: 2 }).notNull(),
+  apy: decimal("apy", { precision: 5, scale: 2 }).notNull(),
+  stakers: integer("stakers").notNull(),
+  rewardsAccrued: decimal("rewards_accrued", { precision: 18, scale: 2 }).notNull(),
+});
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -31,7 +53,20 @@ export const insertPositionSchema = createInsertSchema(positions).omit({
   depositedAt: true,
 });
 
+export const insertTransactionSchema = createInsertSchema(transactions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertVaultMetricsSchema = createInsertSchema(vaultMetricsDaily).omit({
+  id: true,
+});
+
 export type InsertVault = z.infer<typeof insertVaultSchema>;
 export type Vault = typeof vaults.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
 export type Position = typeof positions.$inferSelect;
+export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
+export type Transaction = typeof transactions.$inferSelect;
+export type InsertVaultMetrics = z.infer<typeof insertVaultMetricsSchema>;
+export type VaultMetrics = typeof vaultMetricsDaily.$inferSelect;

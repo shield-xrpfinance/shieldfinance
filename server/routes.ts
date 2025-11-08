@@ -44,6 +44,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const validatedData = insertPositionSchema.parse(req.body);
       const position = await storage.createPosition(validatedData);
+      
+      // Create transaction record for deposit
+      await storage.createTransaction({
+        vaultId: position.vaultId,
+        positionId: position.id,
+        type: "deposit",
+        amount: position.amount,
+        rewards: "0",
+        status: "completed",
+        txHash: `deposit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      });
+      
       res.status(201).json(position);
     } catch (error) {
       if (error instanceof Error) {
@@ -57,6 +69,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete position (withdraw)
   app.delete("/api/positions/:id", async (req, res) => {
     try {
+      const position = await storage.getPosition(req.params.id);
+      if (!position) {
+        return res.status(404).json({ error: "Position not found" });
+      }
+      
+      // Create transaction record for withdrawal
+      await storage.createTransaction({
+        vaultId: position.vaultId,
+        positionId: position.id,
+        type: "withdraw",
+        amount: position.amount,
+        rewards: "0",
+        status: "completed",
+        txHash: `withdraw-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      });
+      
       const success = await storage.deletePosition(req.params.id);
       if (!success) {
         return res.status(404).json({ error: "Position not found" });
@@ -76,6 +104,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const claimedRewards = position.rewards;
+      
+      // Create transaction record for claim
+      await storage.createTransaction({
+        vaultId: position.vaultId,
+        positionId: position.id,
+        type: "claim",
+        amount: "0",
+        rewards: claimedRewards,
+        status: "completed",
+        txHash: `claim-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+      });
       
       // In a real implementation, we'd update the position
       // For now, just return the claimed amount
@@ -245,6 +284,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.status(500).json({ error: "Failed to fetch wallet balance" });
+    }
+  });
+
+  // Get all transactions
+  app.get("/api/transactions", async (_req, res) => {
+    try {
+      const transactions = await storage.getTransactions(50);
+      res.json(transactions);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch transactions" });
+    }
+  });
+
+  // Get transaction summary
+  app.get("/api/transactions/summary", async (_req, res) => {
+    try {
+      const summary = await storage.getTransactionSummary();
+      res.json(summary);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch transaction summary" });
+    }
+  });
+
+  // Get protocol overview analytics
+  app.get("/api/analytics/overview", async (_req, res) => {
+    try {
+      const overview = await storage.getProtocolOverview();
+      res.json(overview);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch protocol overview" });
+    }
+  });
+
+  // Get APY history
+  app.get("/api/analytics/apy", async (_req, res) => {
+    try {
+      const apyHistory = await storage.getApyHistory();
+      res.json(apyHistory);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch APY history" });
+    }
+  });
+
+  // Get TVL history
+  app.get("/api/analytics/tvl", async (_req, res) => {
+    try {
+      const tvlHistory = await storage.getTvlHistory();
+      res.json(tvlHistory);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch TVL history" });
+    }
+  });
+
+  // Get vault distribution
+  app.get("/api/analytics/distribution", async (_req, res) => {
+    try {
+      const distribution = await storage.getVaultDistribution();
+      res.json(distribution);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch vault distribution" });
+    }
+  });
+
+  // Get top performing vaults
+  app.get("/api/analytics/top-vaults", async (_req, res) => {
+    try {
+      const topVaults = await storage.getTopPerformingVaults();
+      res.json(topVaults);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch top vaults" });
     }
   });
 

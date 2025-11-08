@@ -1,65 +1,19 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ArrowDownCircle, ArrowUpCircle, Gift, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
+import type { Transaction } from "@shared/schema";
 
-interface Transaction {
-  id: string;
-  type: "deposit" | "withdraw" | "claim";
-  amount: string;
-  vault: string;
-  timestamp: Date;
-  status: "completed" | "pending";
-  txHash?: string;
+interface TransactionSummary {
+  totalDeposits: string;
+  totalWithdrawals: string;
+  totalRewards: string;
+  depositCount: number;
+  withdrawalCount: number;
+  claimCount: number;
 }
-
-const mockTransactions: Transaction[] = [
-  {
-    id: "1",
-    type: "deposit",
-    amount: "1,000",
-    vault: "Stable Yield Pool",
-    timestamp: new Date(Date.now() - 1000 * 60 * 30),
-    status: "completed",
-    txHash: "ABC123...XYZ789"
-  },
-  {
-    id: "2",
-    type: "claim",
-    amount: "45.50",
-    vault: "High Yield Vault",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2),
-    status: "completed",
-    txHash: "DEF456...UVW012"
-  },
-  {
-    id: "3",
-    type: "deposit",
-    amount: "2,500",
-    vault: "Maximum Returns",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24),
-    status: "completed",
-    txHash: "GHI789...RST345"
-  },
-  {
-    id: "4",
-    type: "withdraw",
-    amount: "500",
-    vault: "Stable Yield Pool",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2),
-    status: "completed",
-    txHash: "JKL012...OPQ678"
-  },
-  {
-    id: "5",
-    type: "claim",
-    amount: "12.25",
-    vault: "Stable Yield Pool",
-    timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 3),
-    status: "completed",
-    txHash: "MNO345...LMN901"
-  },
-];
 
 function getTransactionIcon(type: string) {
   switch (type) {
@@ -89,6 +43,14 @@ function getTransactionBadge(type: string) {
 }
 
 export default function Transactions() {
+  const { data: transactions = [], isLoading: transactionsLoading } = useQuery<Transaction[]>({
+    queryKey: ["/api/transactions"],
+  });
+
+  const { data: summary, isLoading: summaryLoading } = useQuery<TransactionSummary>({
+    queryKey: ["/api/transactions/summary"],
+  });
+
   return (
     <div className="space-y-8">
       <div>
@@ -105,12 +67,18 @@ export default function Transactions() {
             <ArrowDownCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tabular-nums" data-testid="text-total-deposits">
-              3,500 XRP
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across 2 transactions
-            </p>
+            {summaryLoading ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <>
+                <div className="text-3xl font-bold font-mono tabular-nums" data-testid="text-total-deposits">
+                  {parseFloat(summary?.totalDeposits || "0").toLocaleString()} XRP
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Across {summary?.depositCount || 0} transactions
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -120,12 +88,18 @@ export default function Transactions() {
             <ArrowUpCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tabular-nums" data-testid="text-total-withdrawals">
-              500 XRP
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across 1 transaction
-            </p>
+            {summaryLoading ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <>
+                <div className="text-3xl font-bold font-mono tabular-nums" data-testid="text-total-withdrawals">
+                  {parseFloat(summary?.totalWithdrawals || "0").toLocaleString()} XRP
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Across {summary?.withdrawalCount || 0} transactions
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
 
@@ -135,12 +109,18 @@ export default function Transactions() {
             <Gift className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tabular-nums text-chart-2" data-testid="text-total-claimed">
-              +57.75 XRP
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Across 2 transactions
-            </p>
+            {summaryLoading ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <>
+                <div className="text-3xl font-bold font-mono tabular-nums text-chart-2" data-testid="text-total-claimed">
+                  +{parseFloat(summary?.totalRewards || "0").toLocaleString()} XRP
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Across {summary?.claimCount || 0} transactions
+                </p>
+              </>
+            )}
           </CardContent>
         </Card>
       </div>
@@ -150,42 +130,54 @@ export default function Transactions() {
           <CardTitle>Recent Transactions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            {mockTransactions.map((tx) => (
-              <div
-                key={tx.id}
-                className="flex items-center justify-between gap-4 p-4 rounded-md border hover-elevate"
-                data-testid={`transaction-${tx.id}`}
-              >
-                <div className="flex items-center gap-4 flex-1">
-                  <div className="p-2 rounded-md bg-muted">
-                    {getTransactionIcon(tx.type)}
+          {transactionsLoading ? (
+            <div className="space-y-4">
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-20 w-full" />
+              ))}
+            </div>
+          ) : transactions.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              No transactions found. Start by depositing into a vault!
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {transactions.map((tx) => (
+                <div
+                  key={tx.id}
+                  className="flex items-center justify-between gap-4 p-4 rounded-md border hover-elevate"
+                  data-testid={`transaction-${tx.id}`}
+                >
+                  <div className="flex items-center gap-4 flex-1">
+                    <div className="p-2 rounded-md bg-muted">
+                      {getTransactionIcon(tx.type)}
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        {getTransactionBadge(tx.type)}
+                        <span className="text-sm text-muted-foreground">
+                          Vault ID: {tx.vaultId.substring(0, 8)}...
+                        </span>
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        {formatDistanceToNow(new Date(tx.createdAt), { addSuffix: true })}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      {getTransactionBadge(tx.type)}
-                      <span className="text-sm text-muted-foreground">
-                        {tx.vault}
-                      </span>
+                  <div className="text-right">
+                    <div className="text-lg font-mono font-bold tabular-nums" data-testid={`text-amount-${tx.id}`}>
+                      {tx.type === "withdraw" ? "-" : "+"}{parseFloat(tx.type === "claim" ? tx.rewards || "0" : tx.amount).toLocaleString()} XRP
                     </div>
-                    <div className="text-sm text-muted-foreground">
-                      {formatDistanceToNow(tx.timestamp, { addSuffix: true })}
-                    </div>
+                    {tx.txHash && (
+                      <div className="text-xs text-muted-foreground font-mono">
+                        {tx.txHash.substring(0, 20)}...
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-lg font-mono font-bold tabular-nums" data-testid={`text-amount-${tx.id}`}>
-                    {tx.type === "withdraw" ? "-" : "+"}{tx.amount} XRP
-                  </div>
-                  {tx.txHash && (
-                    <div className="text-xs text-muted-foreground font-mono">
-                      {tx.txHash}
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
