@@ -762,8 +762,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log("Detected sequence error - checking if wallet auto-submitted...");
           
           // Poll XRPL to check if transaction succeeded (wallet may have auto-submitted)
-          const maxRetries = 5;
-          const retryDelay = 1500; // 1.5 seconds between retries
+          const maxRetries = 10;
+          const retryDelay = 2000; // 2 seconds between retries (total: 20 seconds)
           
           for (let attempt = 1; attempt <= maxRetries; attempt++) {
             console.log(`Attempt ${attempt}/${maxRetries}: Checking transaction on ledger...`);
