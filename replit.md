@@ -76,9 +76,16 @@ Preferred communication style: Simple, everyday language.
 ### External Dependencies
 
 **Blockchain & Wallet Integration**
-- **Xaman (formerly XUMM)** - Primary XRP wallet integration
-- **WalletConnect** - Alternative wallet connection protocol via `@walletconnect/web3-provider`
-- Mock wallet connection in current implementation (real integration to be completed)
+- **Xaman (formerly XUMM)** - XRP wallet integration with QR code signing flow
+  - Uses `xumm-sdk` for payload creation and websocket subscription
+  - Displays QR codes for mobile app scanning
+  - Requires `VITE_XUMM_API_KEY` environment variable (falls back to demo mode if not set)
+- **WalletConnect** - Multi-wallet connection protocol with QR code support
+  - Uses `@walletconnect/ethereum-provider` and `@walletconnect/modal`
+  - Shows QR code for scanning with any compatible wallet
+  - Requires `VITE_WALLETCONNECT_PROJECT_ID` environment variable (falls back to demo mode if not set)
+- **QR Code Display** - Uses `qrcode.react` library for generating scannable QR codes
+- **Demo Mode** - When API keys are not configured, both wallets fall back to mock connections for testing
 
 **UI & Data Visualization**
 - **Recharts** - Chart library for APY historical trends and analytics
@@ -100,3 +107,15 @@ Preferred communication style: Simple, everyday language.
 - Environment variable validation (DATABASE_URL required)
 - Static file serving in production, Vite middleware in development
 - CORS and session handling built into Express middleware stack
+
+## Configuration
+
+**Required Environment Variables:**
+- `DATABASE_URL` - PostgreSQL connection string (auto-configured by Replit)
+- `SESSION_SECRET` - Session encryption key (auto-configured by Replit)
+
+**Optional Environment Variables (for production wallet connections):**
+- `VITE_XUMM_API_KEY` - Xaman (XUMM) API key from https://apps.xumm.dev/
+- `VITE_WALLETCONNECT_PROJECT_ID` - WalletConnect project ID from https://cloud.walletconnect.com/
+
+Without optional keys, wallet connections will use demo mode for testing.
