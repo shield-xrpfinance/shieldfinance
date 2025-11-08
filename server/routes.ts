@@ -44,6 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/positions", async (req, res) => {
     try {
       const validatedData = insertPositionSchema.parse(req.body);
+      const network = req.body.network || "mainnet";
       const position = await storage.createPosition(validatedData);
       
       // Create transaction record for deposit
@@ -55,6 +56,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rewards: "0",
         status: "completed",
         txHash: `deposit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        network: network,
       });
       
       res.status(201).json(position);
@@ -70,6 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Delete position (withdraw)
   app.delete("/api/positions/:id", async (req, res) => {
     try {
+      const network = req.query.network as string || "mainnet";
       const position = await storage.getPosition(req.params.id);
       if (!position) {
         return res.status(404).json({ error: "Position not found" });
@@ -98,6 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rewards: positionData.rewards,
         status: "completed",
         txHash: `withdraw-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        network: network,
       });
       
       res.json({ success: true });
@@ -114,6 +118,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Claim rewards (update position rewards to 0)
   app.patch("/api/positions/:id/claim", async (req, res) => {
     try {
+      const network = req.body.network || "mainnet";
       const position = await storage.getPosition(req.params.id);
       if (!position) {
         return res.status(404).json({ error: "Position not found" });
@@ -130,6 +135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rewards: claimedRewards,
         status: "completed",
         txHash: `claim-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        network: network,
       });
       
       // In a real implementation, we'd update the position
