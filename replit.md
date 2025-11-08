@@ -5,6 +5,33 @@
 This is a full-stack DeFi application for XRP liquid staking, built as a dashboard for managing cryptocurrency vaults with yield generation. Users can connect their XRP wallets (via Xaman or WalletConnect), deposit assets into various risk-tiered vaults, track their positions and rewards, and withdraw funds. The application provides real-time APY tracking, portfolio management, transaction history, and analytics for staking positions.
 
 ## Recent Changes (November 8, 2025)
+
+### XRPL Transaction Signing Implementation
+- **Implemented complete Xaman transaction signing for all operations:**
+  - Created backend endpoints to generate Xaman payment payloads for deposits, withdrawals, and claims
+  - Built reusable `XamanSigningModal` component with QR code display, deep linking, and polling
+  - Integrated Xaman signing into deposit flow (Vaults.tsx)
+  - Integrated Xaman signing into withdrawal and claim flows (Portfolio.tsx)
+  - All transactions now create real XRPL Payment transactions signed by users via Xaman wallet
+- **Real transaction hash persistence:**
+  - Changed withdrawal endpoint from DELETE to POST (`/api/positions/:id/withdraw`) to accept txHash in body
+  - Updated claim endpoint (PATCH) to accept txHash parameter
+  - All three endpoints (deposit, withdraw, claim) now persist real XRPL transaction hashes
+  - Transaction records in database store actual blockchain hashes for auditing and reconciliation
+- **Xaman payment payload endpoints:**
+  - POST `/api/wallet/xaman/payment/deposit` - Creates Payment transaction from user to vault
+  - POST `/api/wallet/xaman/payment/withdraw` - Creates Payment transaction from vault to user
+  - POST `/api/wallet/xaman/payment/claim` - Creates Payment transaction for reward claims
+  - All payloads include memo data for transaction identification
+  - Supports XRP, RLUSD, and USDC with proper currency codes and issuer addresses
+- **User experience improvements:**
+  - QR code modal with "Open in Xaman" deep link button
+  - Real-time signature polling with status updates (waiting → signed → error)
+  - Comprehensive error handling for timeouts and signature rejections
+  - Success/error toast notifications with transaction details
+  - Network-aware transaction creation (mainnet/testnet)
+
+### Previous Changes
 - **Replaced all placeholder data with real database integration:**
   - Created `transactions` table to track all deposit/withdraw/claim activities
   - Created `vault_metrics_daily` table for future historical analytics storage
