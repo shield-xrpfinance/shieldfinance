@@ -476,6 +476,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create Xaman payment payload for withdrawal
+  app.post("/api/wallet/xaman/payment/withdraw", async (req, res) => {
+    try {
+      const { amount, asset, userAddress, network } = req.body;
+      
+      if (!amount || !asset || !userAddress) {
+        return res.status(400).json({ error: "Missing required fields: amount, asset, userAddress" });
+      }
+
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
+
+      if (!apiKey || !apiSecret) {
+        return res.json({
+          uuid: "demo-withdraw-payload",
+          qrUrl: "demo",
+          deepLink: "",
+          demo: true
+        });
+      }
+
+      const xumm = new XummSdk(apiKey, apiSecret);
+      
+      // Vault address sends payment back to user
+      let paymentTx: any = {
+        TransactionType: "Payment",
+        Destination: userAddress,
+      };
+
+      if (asset === "XRP") {
+        const drops = Math.floor(parseFloat(amount) * 1000000).toString();
+        paymentTx.Amount = drops;
+      } else if (asset === "RLUSD") {
+        const rlusdIssuer = network === "testnet"
+          ? "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV"
+          : "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De";
+        
+        paymentTx.Amount = {
+          currency: "RLUSD",
+          value: amount,
+          issuer: rlusdIssuer
+        };
+      } else if (asset === "USDC") {
+        paymentTx.Amount = {
+          currency: "USD",
+          value: amount,
+          issuer: "rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE"
+        };
+      } else {
+        return res.status(400).json({ error: `Unsupported asset: ${asset}` });
+      }
+
+      const payload = await xumm.payload?.create({
+        ...paymentTx,
+        Memos: [{
+          Memo: {
+            MemoData: Buffer.from(`Withdrawal from vault`).toString('hex').toUpperCase()
+          }
+        }]
+      });
+
+      if (!payload) {
+        throw new Error("Failed to create Xaman withdrawal payload");
+      }
+
+      res.json({
+        uuid: payload.uuid,
+        qrUrl: payload.refs?.qr_png,
+        deepLink: payload.next?.always,
+        demo: false
+      });
+    } catch (error) {
+      console.error("Xaman withdrawal payload creation error:", error);
+      res.status(500).json({ error: "Failed to create withdrawal payment payload" });
+    }
+  });
+
+  // Create Xaman payment payload for reward claim
+  app.post("/api/wallet/xaman/payment/claim", async (req, res) => {
+    try {
+      const { amount, asset, userAddress, network } = req.body;
+      
+      if (!amount || !asset || !userAddress) {
+        return res.status(400).json({ error: "Missing required fields: amount, asset, userAddress" });
+      }
+
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
+
+      if (!apiKey || !apiSecret) {
+        return res.json({
+          uuid: "demo-claim-payload",
+          qrUrl: "demo",
+          deepLink: "",
+          demo: true
+        });
+      }
+
+      const xumm = new XummSdk(apiKey, apiSecret);
+      
+      let paymentTx: any = {
+        TransactionType: "Payment",
+        Destination: userAddress,
+      };
+
+      if (asset === "XRP") {
+        const drops = Math.floor(parseFloat(amount) * 1000000).toString();
+        paymentTx.Amount = drops;
+      } else if (asset === "RLUSD") {
+        const rlusdIssuer = network === "testnet"
+          ? "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV"
+          : "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De";
+        
+        paymentTx.Amount = {
+          currency: "RLUSD",
+          value: amount,
+          issuer: rlusdIssuer
+        };
+      } else if (asset === "USDC") {
+        paymentTx.Amount = {
+          currency: "USD",
+          value: amount,
+          issuer: "rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE"
+        };
+      } else {
+        return res.status(400).json({ error: `Unsupported asset: ${asset}` });
+      }
+
+      const payload = await xumm.payload?.create({
+        ...paymentTx,
+        Memos: [{
+          Memo: {
+            MemoData: Buffer.from(`Claim rewards`).toString('hex').toUpperCase()
+          }
+        }]
+      });
+
+      if (!payload) {
+        throw new Error("Failed to create Xaman claim payload");
+      }
+
+      res.json({
+        uuid: payload.uuid,
+        qrUrl: payload.refs?.qr_png,
+        deepLink: payload.next?.always,
+        demo: false
+      });
+    } catch (error) {
+      console.error("Xaman claim payload creation error:", error);
+      res.status(500).json({ error: "Failed to create claim payment payload" });
+    }
+  });
+
   // Get payment transaction result
   app.get("/api/wallet/xaman/payment/:uuid", async (req, res) => {
     try {
