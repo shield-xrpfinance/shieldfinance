@@ -204,6 +204,16 @@ export default function Dashboard() {
       // Convert amount to drops (1 XRP = 1,000,000 drops)
       const amountInDrops = Math.floor(parseFloat(paymentAmount) * 1000000).toString();
 
+      // Convert memo to hex (browser-compatible)
+      const memoString = JSON.stringify({
+        vaultId: selectedVault.id,
+        asset: paymentAsset,
+      });
+      const memoHex = Array.from(new TextEncoder().encode(memoString))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('')
+        .toUpperCase();
+
       // Build XRPL Payment transaction
       const txJson = {
         TransactionType: "Payment",
@@ -214,10 +224,7 @@ export default function Dashboard() {
         Memos: [
           {
             Memo: {
-              MemoData: Buffer.from(JSON.stringify({
-                vaultId: selectedVault.id,
-                asset: paymentAsset,
-              })).toString('hex').toUpperCase(),
+              MemoData: memoHex,
             },
           },
         ],
