@@ -30,6 +30,7 @@ export default function ConnectWalletModal({
   const [connecting, setConnecting] = useState(false);
   const [qrCodeUrl, setQrCodeUrl] = useState<string>("");
   const [xamanPayloadUuid, setXamanPayloadUuid] = useState<string | null>(null);
+  const [xamanDeepLink, setXamanDeepLink] = useState<string>("");
   const { toast } = useToast();
   const { connect } = useWallet();
 
@@ -38,6 +39,7 @@ export default function ConnectWalletModal({
       setStep("select");
       setQrCodeUrl("");
       setXamanPayloadUuid(null);
+      setXamanDeepLink("");
       setConnecting(false);
     }
   }, [open]);
@@ -87,6 +89,7 @@ export default function ConnectWalletModal({
       if (data.qrUrl) {
         setQrCodeUrl(data.qrUrl);
         setXamanPayloadUuid(data.uuid);
+        setXamanDeepLink(data.deepLink || "");
         
         if (data.demo) {
           toast({
@@ -182,6 +185,13 @@ export default function ConnectWalletModal({
     setQrCodeUrl("");
     setConnecting(false);
     setXamanPayloadUuid(null);
+    setXamanDeepLink("");
+  };
+
+  const handleOpenXaman = () => {
+    if (xamanDeepLink) {
+      window.open(xamanDeepLink, "_blank");
+    }
   };
 
   return (
@@ -273,11 +283,33 @@ export default function ConnectWalletModal({
                 </div>
                 <p className="text-xs text-muted-foreground max-w-xs">
                   {step === "xaman-qr" 
-                    ? "Open Xaman app on your phone and scan the QR code to sign in"
+                    ? "Scan the QR code with your Xaman app to confirm"
                     : "Scan this QR code with your wallet app to connect"}
                 </p>
               </div>
             </div>
+
+            {step === "xaman-qr" && xamanDeepLink && (
+              <div className="space-y-3">
+                <Button
+                  onClick={handleOpenXaman}
+                  className="w-full"
+                  variant="default"
+                  data-testid="button-open-xaman"
+                >
+                  Open in Xaman
+                </Button>
+                <a
+                  href="https://xumm.app/"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block text-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+                  data-testid="link-download-xaman"
+                >
+                  Download Xaman
+                </a>
+              </div>
+            )}
 
             <div className="flex gap-2">
               <Button

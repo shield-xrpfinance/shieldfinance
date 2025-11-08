@@ -53,8 +53,19 @@ This is a full-stack DeFi application for XRP liquid staking, built as a dashboa
   - WithdrawModal shows asset icons and uses correct asset symbols throughout all fields
   - AppSidebar displays XRP icon next to wallet balance
   - Toast notifications use correct asset symbols for claims/withdrawals
-  - Multi-asset vaults show overlapping asset icons for visual clarity
+  - Multi-asset vaults show overlapping asset icons for visual clarity across Dashboard, Analytics, and Vaults pages
+  - Fixed Dashboard featured vaults to use `vault.asset` field instead of name parsing
+  - Fixed Analytics top performing vaults to display multi-asset icons
+  - Updated backend `getTopPerformingVaults()` to include asset field in response
   - Asset logos stored in `attached_assets/` folder (xrp.png, rlusd-icon.png, usdc-icon.png)
+- **Enhanced Xaman wallet sign-in flow with "Open in Xaman" button:**
+  - Added "Open in Xaman" button below QR code that uses deep link to open Xaman app
+  - Deep link (`xumm.app/sign/[uuid]`) opens Xaman app if installed on mobile, or redirects to web page
+  - Added "Download Xaman" link below the button linking to https://xumm.app/
+  - Backend `/api/wallet/xaman/payload` endpoint now returns `deepLink` field from Xaman payload
+  - Frontend stores and uses deep link in `handleOpenXaman()` to open in new tab
+  - Smart deep linking: automatically opens app if installed, otherwise shows web page for scanning/copying
+  - Matches professional wallet connection UX with prominent call-to-action button
 
 ## User Preferences
 
