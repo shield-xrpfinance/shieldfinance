@@ -38,10 +38,13 @@ export default function DepositModal({
   const [amounts, setAmounts] = useState<{ [key: string]: string }>({});
   const [step, setStep] = useState<1 | 2>(1);
   const [connectWalletModalOpen, setConnectWalletModalOpen] = useState(false);
-  const { address, isConnected } = useWallet();
+  const { address, isConnected, provider } = useWallet();
   const { balances, isLoading: balancesLoading, error: balancesError, getBalance, getBalanceFormatted } = useWalletBalances();
   const { toast } = useToast();
   const gasEstimate = "0.00012";
+
+  // Debug: Log provider state when modal opens
+  console.log("DepositModal - address:", address, "provider:", provider, "isConnected:", isConnected);
 
   const availableBalances: { [key: string]: number } = {
     XRP: balances?.balances.XRP || 0,
