@@ -89,7 +89,7 @@ export default function Vaults() {
   };
 
   const depositMutation = useMutation({
-    mutationFn: async (data: { walletAddress: string; vaultId: string; amount: string; network: string }) => {
+    mutationFn: async (data: { walletAddress: string; vaultId: string; amount: string; network: string; txHash?: string }) => {
       console.log("depositMutation.mutationFn called with data:", data);
       const res = await apiRequest("POST", "/api/positions", data);
       return await res.json();
