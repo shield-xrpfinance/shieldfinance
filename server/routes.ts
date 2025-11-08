@@ -760,6 +760,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (isSequenceError && txHash) {
           console.log("Detected sequence error - checking if wallet auto-submitted...");
+          console.log("Waiting 2 seconds for transaction to validate on ledger...");
+          
+          // Wait a bit for transaction to be validated on ledger
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          
           // Wallet might have auto-submitted - verify transaction on XRPL
           try {
             const txResponse = await client.request({
@@ -767,6 +772,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               transaction: txHash as string,
             }) as any;
 
+            console.log("Full XRPL response:", JSON.stringify(txResponse, null, 2));
             console.log("XRPL transaction lookup result:", txResponse?.result?.meta?.TransactionResult);
             console.log("XRPL validated:", txResponse?.result?.validated);
 
@@ -780,9 +786,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 result: txResponse.result,
                 walletAutoSubmitted: true
               });
+            } else {
+              console.log("Transaction found but not successful or not validated yet");
             }
           } catch (txError: any) {
-            console.log("Transaction not found on ledger:", txError.message);
+            console.log("Transaction lookup error:", txError);
+            console.log("Error message:", txError.message);
+            console.log("Error data:", txError.data);
             // Transaction not found on ledger yet - return original error
           }
         }
