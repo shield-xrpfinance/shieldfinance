@@ -13,23 +13,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search } from "lucide-react";
+import { Search, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
+import UniversalProvider from "@walletconnect/universal-provider";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 export default function Vaults() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
   const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
+  const [walletConnectSigningOpen, setWalletConnectSigningOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
   const [pendingDeposit, setPendingDeposit] = useState<{ amounts: { [asset: string]: string }; vaultId: string; vaultName: string } | null>(null);
   const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; depositAssets: string[] } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("apy");
   const { toast } = useToast();
-  const { address } = useWallet();
-  const { network } = useNetwork();
+  const { address, provider } = useWallet();
+  const { network, isTestnet } = useNetwork();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
     queryKey: ["/api/vaults"],
@@ -110,8 +113,28 @@ export default function Vaults() {
     const paymentAsset = selectedVault.depositAssets[0];
     const paymentAmount = amounts[paymentAsset] || totalAmount.toString();
 
+    // Store pending deposit
+    setPendingDeposit({
+      amounts,
+      vaultId: selectedVault.id,
+      vaultName: selectedVault.name,
+    });
+    setDepositModalOpen(false);
+
+    // Route to correct signing method based on provider
+    if (provider === "walletconnect") {
+      await handleWalletConnectDeposit(paymentAmount, paymentAsset);
+    } else {
+      // Default to Xaman
+      await handleXamanDeposit(paymentAmount, paymentAsset);
+    }
+  };
+
+  const handleXamanDeposit = async (paymentAmount: string, paymentAsset: string) => {
+    if (!selectedVault) return;
+
     try {
-      // Step 1: Create Xaman payment payload
+      // Create Xaman payment payload
       const payloadResponse = await fetch("/api/wallet/xaman/payment/deposit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -129,26 +152,111 @@ export default function Vaults() {
         throw new Error("Failed to create payment payload");
       }
 
-      // Step 2: Store pending deposit and show Xaman signing modal
-      setPendingDeposit({
-        amounts,
-        vaultId: selectedVault.id,
-        vaultName: selectedVault.name,
-      });
+      // Show Xaman signing modal
       setXamanPayload({
         uuid: payloadData.uuid,
         qrUrl: payloadData.qrUrl,
         deepLink: payloadData.deepLink,
       });
-      setDepositModalOpen(false);
       setXamanSigningModalOpen(true);
     } catch (error) {
-      console.error("Error creating payment payload:", error);
+      console.error("Error creating Xaman payment payload:", error);
       toast({
         title: "Payment Failed",
         description: "Failed to create payment request. Please try again.",
         variant: "destructive",
       });
+      setPendingDeposit(null);
+    }
+  };
+
+  const handleWalletConnectDeposit = async (paymentAmount: string, paymentAsset: string) => {
+    if (!address || !selectedVault) return;
+
+    setWalletConnectSigningOpen(true);
+
+    try {
+      const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
+      
+      if (!projectId || projectId === "demo-project-id") {
+        throw new Error("WalletConnect not configured");
+      }
+
+      // Initialize Universal Provider
+      const wcProvider = await UniversalProvider.init({
+        projectId,
+        metadata: {
+          name: "XRP Liquid Staking Protocol",
+          description: "Earn yield on your XRP, RLUSD, and USDC",
+          url: window.location.origin,
+          icons: [window.location.origin + "/favicon.ico"],
+        },
+      });
+
+      // Get the destination address (vault's deposit address - for now use a placeholder)
+      const vaultDepositAddress = "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH";
+      
+      // Convert amount to drops (1 XRP = 1,000,000 drops)
+      const amountInDrops = Math.floor(parseFloat(paymentAmount) * 1000000).toString();
+
+      // Build XRPL Payment transaction
+      const txJson = {
+        TransactionType: "Payment",
+        Account: address,
+        Destination: vaultDepositAddress,
+        Amount: amountInDrops,
+        Fee: "12", // Standard fee in drops
+        Memos: [
+          {
+            Memo: {
+              MemoData: Buffer.from(JSON.stringify({
+                vaultId: selectedVault.id,
+                asset: paymentAsset,
+              })).toString('hex').toUpperCase(),
+            },
+          },
+        ],
+      };
+
+      const chainId = isTestnet ? "xrpl:1" : "xrpl:0";
+
+      // Sign transaction with WalletConnect
+      const signResult = await wcProvider.request({
+        method: "xrpl_signTransaction",
+        params: {
+          tx_json: txJson,
+        },
+      }, chainId) as { tx_blob: string };
+
+      // Submit signed transaction
+      const submitResult = await wcProvider.request({
+        method: "xrpl_submitTransaction",
+        params: {
+          tx_blob: signResult.tx_blob,
+        },
+      }, chainId) as { tx_json?: { hash: string }, hash?: string };
+
+      const txHash = submitResult.tx_json?.hash || submitResult.hash;
+
+      if (!txHash) {
+        throw new Error("No transaction hash returned");
+      }
+
+      // Close WalletConnect modal and call success handler
+      setWalletConnectSigningOpen(false);
+      await handleXamanSuccess(txHash);
+
+    } catch (error) {
+      console.error("WalletConnect signing error:", error);
+      setWalletConnectSigningOpen(false);
+      
+      toast({
+        title: "Transaction Failed",
+        description: error instanceof Error ? error.message : "Failed to sign transaction with WalletConnect",
+        variant: "destructive",
+      });
+      
+      setPendingDeposit(null);
     }
   };
 
@@ -263,6 +371,23 @@ export default function Vaults() {
         title="Sign Deposit Transaction"
         description="Scan the QR code with your Xaman wallet to complete the deposit"
       />
+
+      <Dialog open={walletConnectSigningOpen} onOpenChange={setWalletConnectSigningOpen}>
+        <DialogContent data-testid="dialog-walletconnect-signing">
+          <DialogHeader>
+            <DialogTitle>Sign Transaction with WalletConnect</DialogTitle>
+            <DialogDescription>
+              Please approve the transaction in your connected wallet
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center justify-center py-8 space-y-4">
+            <Loader2 className="h-12 w-12 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground text-center">
+              Waiting for wallet confirmation...
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

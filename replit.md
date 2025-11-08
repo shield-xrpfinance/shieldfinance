@@ -33,9 +33,10 @@ Preferred communication style: Simple, everyday language.
 
 ### Blockchain & Wallet Integration
 - **Xaman (XUMM)**: XRP wallet integration for transaction signing (deposits, withdrawals, claims). Uses `xumm-sdk` for payload generation and a polling mechanism for signature confirmation. Requires `XUMM_API_KEY` and `XUMM_API_SECRET` environment variables to be set in Replit Secrets.
-- **WalletConnect**: XRPL-compatible wallet connection using `@walletconnect/universal-provider` configured for the `xrpl` namespace (not Ethereum). Supports XRPL mainnet (xrpl:1) and testnet chains. Requires `VITE_WALLETCONNECT_PROJECT_ID` from cloud.walletconnect.com.
-- **XRP Ledger Balance Fetching**: Real-time balance retrieval using the `xrpl` library for XRP, RLUSD, and USDC.
-- **QR Code Display**: `qrcode.react` for generating scannable QR codes.
+- **WalletConnect**: XRPL-compatible wallet connection and transaction signing using `@walletconnect/universal-provider` configured for the `xrpl` namespace (not Ethereum). Supports XRPL mainnet (xrpl:0) and testnet (xrpl:1) with dynamic chain switching based on network toggle. Uses `xrpl_signTransaction` and `xrpl_submitTransaction` methods for on-chain transactions. Requires `VITE_WALLETCONNECT_PROJECT_ID` from cloud.walletconnect.com.
+- **Transaction Signing Routing**: Automatically routes to correct signing provider based on wallet connection method - Xaman users sign via Xaman modal with QR codes, WalletConnect users sign directly in their connected wallet app.
+- **XRP Ledger Balance Fetching**: Real-time balance retrieval using the `xrpl` library for XRP, RLUSD, and USDC with 30-second auto-refresh.
+- **QR Code Display**: `qrcode.react` for generating scannable QR codes for Xaman wallet interactions.
 - **Demo Mode**: Fallback for wallet connections when API keys are not configured, providing mock functionality with demo XRP addresses.
 
 ### UI & Data Visualization
