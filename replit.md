@@ -77,15 +77,21 @@ Preferred communication style: Simple, everyday language.
 
 **Blockchain & Wallet Integration**
 - **Xaman (formerly XUMM)** - XRP wallet integration with QR code signing flow
-  - Uses `xumm-sdk` for payload creation and websocket subscription
-  - Displays QR codes for mobile app scanning
-  - Requires `VITE_XUMM_API_KEY` environment variable (falls back to demo mode if not set)
+  - Backend API (`/api/wallet/xaman/payload`) creates Xaman SignIn payloads securely using `xumm-sdk`
+  - Frontend displays QR codes from backend payload URLs
+  - Polling mechanism (`/api/wallet/xaman/payload/:uuid`) checks for user signature confirmation
+  - Requires `XUMM_API_KEY` and `XUMM_API_SECRET` backend environment variables
+  - Falls back to demo mode with mock payload when credentials not configured
 - **WalletConnect** - Multi-wallet connection protocol with QR code support
-  - Uses `@walletconnect/ethereum-provider` and `@walletconnect/modal`
-  - Shows QR code for scanning with any compatible wallet
-  - Requires `VITE_WALLETCONNECT_PROJECT_ID` environment variable (falls back to demo mode if not set)
+  - Client-side integration using `@walletconnect/ethereum-provider` and `@walletconnect/modal`
+  - Shows QR code URI for scanning with any compatible wallet
+  - Requires `VITE_WALLETCONNECT_PROJECT_ID` frontend environment variable
+  - Falls back to demo mode when project ID not configured
 - **QR Code Display** - Uses `qrcode.react` library for generating scannable QR codes
-- **Demo Mode** - When API keys are not configured, both wallets fall back to mock connections for testing
+- **Demo Mode** - When API keys are not configured, both wallets fall back to mock connections:
+  - Xaman: Backend returns demo payload with uuid="demo-payload-uuid", immediately signs with mock account
+  - WalletConnect: Frontend generates mock URI and connects with demo address
+  - Allows full testing without external wallet setup
 
 **UI & Data Visualization**
 - **Recharts** - Chart library for APY historical trends and analytics
