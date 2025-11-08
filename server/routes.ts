@@ -386,6 +386,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create Xaman payment payload for deposit
+  app.post("/api/wallet/xaman/payment/deposit", async (req, res) => {
+    try {
+      const { amount, asset, vaultId, network } = req.body;
+      
+      if (!amount || !asset || !vaultId) {
+        return res.status(400).json({ error: "Missing required fields: amount, asset, vaultId" });
+      }
+
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
+
+      // For demo/testing, use a testnet vault address
+      const vaultAddress = network === "testnet" 
+        ? "rNaqKtKrMSwpwZSzRckPf7S96DkimjkF4H" // Testnet vault address
+        : "rNaqKtKrMSwpwZSzRckPf7S96DkimjkF4H"; // Mainnet vault address (same for now)
+
+      if (!apiKey || !apiSecret) {
+        // Return demo payload
+        return res.json({
+          uuid: "demo-deposit-payload",
+          qrUrl: "demo",
+          deepLink: "",
+          demo: true,
+          txHash: `deposit-demo-${Date.now()}`
+        });
+      }
+
+      const xumm = new XummSdk(apiKey, apiSecret);
+      
+      // Create payment transaction
+      let paymentTx: any = {
+        TransactionType: "Payment",
+        Destination: vaultAddress,
+      };
+
+      // Handle different asset types
+      if (asset === "XRP") {
+        // XRP payment (amount in drops: 1 XRP = 1,000,000 drops)
+        const drops = Math.floor(parseFloat(amount) * 1000000).toString();
+        paymentTx.Amount = drops;
+      } else if (asset === "RLUSD") {
+        // RLUSD issued currency payment
+        const rlusdIssuer = network === "testnet"
+          ? "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV" // RLUSD testnet issuer
+          : "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"; // RLUSD mainnet issuer
+        
+        paymentTx.Amount = {
+          currency: "RLUSD",
+          value: amount,
+          issuer: rlusdIssuer
+        };
+      } else if (asset === "USDC") {
+        // USDC issued currency payment
+        const usdcIssuer = "rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE"; // USDC mainnet issuer
+        
+        paymentTx.Amount = {
+          currency: "USD", // USDC uses "USD" as currency code on XRPL
+          value: amount,
+          issuer: usdcIssuer
+        };
+      } else {
+        return res.status(400).json({ error: `Unsupported asset: ${asset}` });
+      }
+
+      const payload = await xumm.payload?.create({
+        ...paymentTx,
+        Memos: [{
+          Memo: {
+            MemoData: Buffer.from(`Deposit to vault ${vaultId}`).toString('hex').toUpperCase()
+          }
+        }]
+      });
+
+      if (!payload) {
+        throw new Error("Failed to create Xaman payment payload");
+      }
+
+      res.json({
+        uuid: payload.uuid,
+        qrUrl: payload.refs?.qr_png,
+        deepLink: payload.next?.always,
+        demo: false
+      });
+    } catch (error) {
+      console.error("Xaman deposit payload creation error:", error);
+      res.status(500).json({ error: "Failed to create deposit payment payload" });
+    }
+  });
+
+  // Get payment transaction result
+  app.get("/api/wallet/xaman/payment/:uuid", async (req, res) => {
+    try {
+      // Handle demo mode
+      if (req.params.uuid.startsWith("demo-")) {
+        return res.json({
+          signed: true,
+          txHash: `${req.params.uuid.replace('demo-', '')}-${Date.now()}`,
+          demo: true
+        });
+      }
+
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
+
+      if (!apiKey || !apiSecret) {
+        return res.status(400).json({ error: "Xaman credentials not configured" });
+      }
+
+      const xumm = new XummSdk(apiKey, apiSecret);
+      const payload = await xumm.payload?.get(req.params.uuid);
+
+      if (!payload) {
+        return res.status(404).json({ error: "Payload not found" });
+      }
+
+      const signed = payload.meta?.signed || false;
+      const txHash = payload.response?.txid || null;
+
+      res.json({
+        signed,
+        txHash,
+        demo: false
+      });
+    } catch (error) {
+      console.error("Get payment status error:", error);
+      res.status(500).json({ error: "Failed to get payment status" });
+    }
+  });
+
   // Get all transactions
   app.get("/api/transactions", async (_req, res) => {
     try {
