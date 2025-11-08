@@ -45,6 +45,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const network = req.body.network || "mainnet";
       const { network: _, ...positionData } = req.body;
+      console.log("Position data being validated:", JSON.stringify(positionData, null, 2));
       const validatedData = insertPositionSchema.parse(positionData);
       const position = await storage.createPosition(validatedData);
       
@@ -62,6 +63,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       res.status(201).json(position);
     } catch (error) {
+      console.error("Deposit error:", error);
       if (error instanceof Error) {
         res.status(400).json({ error: error.message });
       } else {
