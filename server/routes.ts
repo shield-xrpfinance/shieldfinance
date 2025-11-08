@@ -269,6 +269,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const signed = payload.meta?.signed || false;
       const account = payload.response?.account || null;
 
+      // Auto-cleanup: Cancel payload after it's been resolved (signed, cancelled, or expired)
+      if (payload.meta?.resolved) {
+        try {
+          const cancelResult = await xumm.payload?.cancel(req.params.uuid);
+          if (cancelResult?.result?.cancelled) {
+            console.log(`Auto-cleanup: Cancelled resolved payload ${req.params.uuid}`);
+          }
+        } catch (cancelError) {
+          console.warn(`Failed to cancel payload ${req.params.uuid}:`, cancelError);
+        }
+      }
+
       res.json({
         signed,
         account,
