@@ -47,6 +47,22 @@ export const vaultMetricsDaily = pgTable("vault_metrics_daily", {
   rewardsAccrued: decimal("rewards_accrued", { precision: 18, scale: 2 }).notNull(),
 });
 
+export const withdrawalRequests = pgTable("withdrawal_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: text("wallet_address").notNull(),
+  positionId: varchar("position_id").references(() => positions.id),
+  vaultId: varchar("vault_id").notNull().references(() => vaults.id),
+  type: text("type").notNull(),
+  amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
+  asset: text("asset").notNull(),
+  status: text("status").notNull().default("pending"),
+  network: text("network").notNull().default("mainnet"),
+  requestedAt: timestamp("requested_at").notNull().defaultNow(),
+  processedAt: timestamp("processed_at"),
+  txHash: text("tx_hash"),
+  rejectionReason: text("rejection_reason"),
+});
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -65,6 +81,11 @@ export const insertVaultMetricsSchema = createInsertSchema(vaultMetricsDaily).om
   id: true,
 });
 
+export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalRequests).omit({
+  id: true,
+  requestedAt: true,
+});
+
 export type InsertVault = z.infer<typeof insertVaultSchema>;
 export type Vault = typeof vaults.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
@@ -73,3 +94,5 @@ export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertVaultMetrics = z.infer<typeof insertVaultMetricsSchema>;
 export type VaultMetrics = typeof vaultMetricsDaily.$inferSelect;
+export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
+export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;

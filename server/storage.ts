@@ -1,4 +1,4 @@
-import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, vaults, positions, transactions, vaultMetricsDaily } from "@shared/schema";
+import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
 
@@ -15,6 +15,11 @@ export interface IStorage {
   getTransactions(limit?: number): Promise<Transaction[]>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   getTransactionSummary(): Promise<{ totalDeposits: string; totalWithdrawals: string; totalRewards: string; depositCount: number; withdrawalCount: number; claimCount: number }>;
+  
+  getWithdrawalRequests(status?: string): Promise<WithdrawalRequest[]>;
+  getWithdrawalRequest(id: string): Promise<WithdrawalRequest | undefined>;
+  createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest>;
+  updateWithdrawalRequest(id: string, updates: Partial<InsertWithdrawalRequest>): Promise<WithdrawalRequest>;
   
   getProtocolOverview(): Promise<{ tvl: string; avgApy: string; activeVaults: number; totalStakers: number }>;
   getApyHistory(days?: number): Promise<Array<{ date: string; stable: number; high: number; maximum: number }>>;
@@ -253,6 +258,28 @@ export class DatabaseStorage implements IStorage {
         riskLevel: v.riskLevel,
         asset: v.asset,
       }));
+  }
+
+  async getWithdrawalRequests(status?: string): Promise<WithdrawalRequest[]> {
+    if (status) {
+      return await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.status, status)).orderBy(desc(withdrawalRequests.requestedAt));
+    }
+    return await db.select().from(withdrawalRequests).orderBy(desc(withdrawalRequests.requestedAt));
+  }
+
+  async getWithdrawalRequest(id: string): Promise<WithdrawalRequest | undefined> {
+    const [request] = await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.id, id));
+    return request || undefined;
+  }
+
+  async createWithdrawalRequest(insertRequest: InsertWithdrawalRequest): Promise<WithdrawalRequest> {
+    const [request] = await db.insert(withdrawalRequests).values(insertRequest).returning();
+    return request;
+  }
+
+  async updateWithdrawalRequest(id: string, updates: Partial<InsertWithdrawalRequest>): Promise<WithdrawalRequest> {
+    const [request] = await db.update(withdrawalRequests).set(updates).where(eq(withdrawalRequests.id, id)).returning();
+    return request;
   }
 }
 

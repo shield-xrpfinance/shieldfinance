@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPositionSchema } from "@shared/schema";
+import { insertPositionSchema, insertWithdrawalRequestSchema } from "@shared/schema";
 import { XummSdk } from "xumm-sdk";
 import { Client } from "xrpl";
 
@@ -577,163 +577,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create Xaman payment payload for withdrawal
-  app.post("/api/wallet/xaman/payment/withdraw", async (req, res) => {
+  // Create withdrawal request (vault operator approval required)
+  app.post("/api/withdrawal-requests", async (req, res) => {
     try {
-      const { amount, asset, userAddress, network } = req.body;
+      const { amount, asset, userAddress, network, positionId, vaultId } = req.body;
       
-      if (!amount || !asset || !userAddress) {
-        return res.status(400).json({ error: "Missing required fields: amount, asset, userAddress" });
+      if (!amount || !asset || !userAddress || !vaultId) {
+        return res.status(400).json({ error: "Missing required fields" });
       }
 
-      const apiKey = process.env.XUMM_API_KEY?.trim();
-      const apiSecret = process.env.XUMM_API_SECRET?.trim();
-
-      if (!apiKey || !apiSecret) {
-        return res.json({
-          uuid: "demo-withdraw-payload",
-          qrUrl: "demo",
-          deepLink: "",
-          demo: true
-        });
-      }
-
-      const xumm = new XummSdk(apiKey, apiSecret);
-      
-      // Vault address sends payment back to user
-      const vaultAddress = "rpC7sRSUcK6F1nPb9E5U8z8bz5ee5mFEjC";
-      
-      let paymentTx: any = {
-        TransactionType: "Payment",
-        Account: vaultAddress,
-        Destination: userAddress,
-      };
-
-      if (asset === "XRP") {
-        const drops = Math.floor(parseFloat(amount) * 1000000).toString();
-        paymentTx.Amount = drops;
-      } else if (asset === "RLUSD") {
-        const rlusdIssuer = network === "testnet"
-          ? "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV"
-          : "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De";
-        
-        paymentTx.Amount = {
-          currency: "RLUSD",
-          value: amount,
-          issuer: rlusdIssuer
-        };
-      } else if (asset === "USDC") {
-        paymentTx.Amount = {
-          currency: "USD",
-          value: amount,
-          issuer: "rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE"
-        };
-      } else {
-        return res.status(400).json({ error: `Unsupported asset: ${asset}` });
-      }
-
-      const payload = await xumm.payload?.create({
-        ...paymentTx,
-        Memos: [{
-          Memo: {
-            MemoData: Buffer.from(`Withdrawal from vault`).toString('hex').toUpperCase()
-          }
-        }]
+      const request = await storage.createWithdrawalRequest({
+        walletAddress: userAddress,
+        positionId: positionId || null,
+        vaultId: vaultId,
+        type: "withdrawal",
+        amount: amount,
+        asset: asset,
+        status: "pending",
+        network: network || "mainnet",
+        processedAt: null,
+        txHash: null,
+        rejectionReason: null,
       });
-
-      if (!payload) {
-        throw new Error("Failed to create Xaman withdrawal payload");
-      }
 
       res.json({
-        uuid: payload.uuid,
-        qrUrl: payload.refs?.qr_png,
-        deepLink: payload.next?.always,
-        demo: false
+        success: true,
+        requestId: request.id,
+        message: "Withdrawal request submitted. A vault operator will review and approve your request.",
       });
     } catch (error) {
-      console.error("Xaman withdrawal payload creation error:", error);
-      res.status(500).json({ error: "Failed to create withdrawal payment payload" });
+      console.error("Withdrawal request creation error:", error);
+      res.status(500).json({ error: "Failed to create withdrawal request" });
     }
   });
 
-  // Create Xaman payment payload for reward claim
-  app.post("/api/wallet/xaman/payment/claim", async (req, res) => {
+  // Create claim request (vault operator approval required)
+  app.post("/api/claim-requests", async (req, res) => {
     try {
-      const { amount, asset, userAddress, network } = req.body;
+      const { amount, asset, userAddress, network, positionId, vaultId } = req.body;
       
-      if (!amount || !asset || !userAddress) {
-        return res.status(400).json({ error: "Missing required fields: amount, asset, userAddress" });
+      if (!amount || !asset || !userAddress || !positionId || !vaultId) {
+        return res.status(400).json({ error: "Missing required fields" });
       }
 
-      const apiKey = process.env.XUMM_API_KEY?.trim();
-      const apiSecret = process.env.XUMM_API_SECRET?.trim();
-
-      if (!apiKey || !apiSecret) {
-        return res.json({
-          uuid: "demo-claim-payload",
-          qrUrl: "demo",
-          deepLink: "",
-          demo: true
-        });
-      }
-
-      const xumm = new XummSdk(apiKey, apiSecret);
-      
-      // Vault address sends reward payment to user
-      const vaultAddress = "rpC7sRSUcK6F1nPb9E5U8z8bz5ee5mFEjC";
-      
-      let paymentTx: any = {
-        TransactionType: "Payment",
-        Account: vaultAddress,
-        Destination: userAddress,
-      };
-
-      if (asset === "XRP") {
-        const drops = Math.floor(parseFloat(amount) * 1000000).toString();
-        paymentTx.Amount = drops;
-      } else if (asset === "RLUSD") {
-        const rlusdIssuer = network === "testnet"
-          ? "rQhWct2fv4Vc4KRjRgMrxa8xPN9Zx9iLKV"
-          : "rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De";
-        
-        paymentTx.Amount = {
-          currency: "RLUSD",
-          value: amount,
-          issuer: rlusdIssuer
-        };
-      } else if (asset === "USDC") {
-        paymentTx.Amount = {
-          currency: "USD",
-          value: amount,
-          issuer: "rGm7WCVp9gb4jZHWTEtGUr4dd74z2XuWhE"
-        };
-      } else {
-        return res.status(400).json({ error: `Unsupported asset: ${asset}` });
-      }
-
-      const payload = await xumm.payload?.create({
-        ...paymentTx,
-        Memos: [{
-          Memo: {
-            MemoData: Buffer.from(`Claim rewards`).toString('hex').toUpperCase()
-          }
-        }]
+      const request = await storage.createWithdrawalRequest({
+        walletAddress: userAddress,
+        positionId: positionId,
+        vaultId: vaultId,
+        type: "claim",
+        amount: amount,
+        asset: asset,
+        status: "pending",
+        network: network || "mainnet",
+        processedAt: null,
+        txHash: null,
+        rejectionReason: null,
       });
-
-      if (!payload) {
-        throw new Error("Failed to create Xaman claim payload");
-      }
 
       res.json({
-        uuid: payload.uuid,
-        qrUrl: payload.refs?.qr_png,
-        deepLink: payload.next?.always,
-        demo: false
+        success: true,
+        requestId: request.id,
+        message: "Claim request submitted. A vault operator will review and approve your request.",
       });
     } catch (error) {
-      console.error("Xaman claim payload creation error:", error);
-      res.status(500).json({ error: "Failed to create claim payment payload" });
+      console.error("Claim request creation error:", error);
+      res.status(500).json({ error: "Failed to create claim request" });
     }
   });
 
