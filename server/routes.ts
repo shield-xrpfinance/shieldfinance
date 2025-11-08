@@ -181,14 +181,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      console.log("Initializing Xaman SDK...");
       const xumm = new XummSdk(apiKey, apiSecret);
       
-      const payload = await xumm.payload?.create({
-        TransactionType: "SignIn",
+      console.log("Attempting to create Xaman payload...");
+      let payload;
+      try {
+        payload = await xumm.payload?.create({
+          TransactionType: "SignIn",
+        });
+      } catch (sdkError) {
+        console.error("Xaman SDK error:", {
+          message: sdkError instanceof Error ? sdkError.message : String(sdkError),
+          stack: sdkError instanceof Error ? sdkError.stack : undefined,
+        });
+        throw sdkError;
+      }
+
+      console.log("Xaman payload result:", {
+        payloadExists: !!payload,
+        uuid: payload?.uuid,
+        qrExists: !!payload?.refs?.qr_png,
       });
 
       if (!payload) {
-        throw new Error("Failed to create Xaman payload");
+        throw new Error("Failed to create Xaman payload - SDK returned null. This usually means invalid API credentials.");
       }
 
       res.json({
@@ -198,7 +215,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         demo: false
       });
     } catch (error) {
-      console.error("Xaman payload creation error:", error);
+      console.error("Xaman payload creation error details:", {
+        error: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+        type: typeof error,
+      });
       // Return demo payload on error
       res.json({ 
         uuid: "demo-payload-uuid",
