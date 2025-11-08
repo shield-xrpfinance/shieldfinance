@@ -43,9 +43,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create new position (deposit)
   app.post("/api/positions", async (req, res) => {
     try {
+      console.log("Full req.body:", JSON.stringify(req.body, null, 2));
       const network = req.body.network || "mainnet";
       const { network: _, ...positionData } = req.body;
-      console.log("Position data being validated:", JSON.stringify(positionData, null, 2));
+      console.log("After extracting network, positionData:", JSON.stringify(positionData, null, 2));
       const validatedData = insertPositionSchema.parse(positionData);
       const position = await storage.createPosition(validatedData);
       
