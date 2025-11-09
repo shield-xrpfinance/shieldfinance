@@ -11,9 +11,9 @@
   - Total Supply: 100,000,000 SHIELD
   - Treasury Allocation: 10,000,000 SHIELD
 
-- **StXRPVault (stXRP)**: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
+- **StXRPVault (shXRP)**: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
   - [View on Explorer](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
-  - Initial Exchange Rate: 1.0 stXRP per XRP
+  - Initial Exchange Rate: 1.0 shXRP per XRP
 
 ## Commands Summary
 
@@ -73,7 +73,7 @@ XRPL_NETWORK=testnet
 
 # Frontend (deployed addresses for Coston2 testnet)
 VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
-VITE_STXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
+VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
 ## Testnet Faucets

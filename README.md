@@ -115,7 +115,7 @@ XRPL_NETWORK=testnet
 
 # Frontend Contract Addresses (Deployed on Coston2 - November 9, 2025)
 VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
-VITE_STXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
+VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
 > **Note**: See `.env.example` for a complete list with descriptions. For detailed deployment instructions, refer to [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) and the "How to Deploy to Testnet" section below.
@@ -230,7 +230,7 @@ This section covers deploying the **smart contracts** to Flare Coston2 testnet a
 
 ### Step 1: Deploy Flare Smart Contracts - ✅ COMPLETED
 
-Deploy **ShieldToken** ($SHIELD) and **StXRPVault** (stXRP) contracts to Flare Coston2:
+Deploy **ShieldToken** ($SHIELD) and **StXRPVault** (shXRP) contracts to Flare Coston2:
 
 ```bash
 # Compile contracts
@@ -248,7 +248,7 @@ tsx scripts/deploy-direct.ts
   - Treasury Allocation: 10,000,000 SHIELD
 
 - **StXRPVault**: [`0xd8d78DA41473D28eB013e161232192ead2cc745A`](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
-  - Initial Exchange Rate: 1.0 stXRP per XRP
+  - Initial Exchange Rate: 1.0 shXRP per XRP
 
 **Deployment info saved to**: `deployments/coston2-deployment.json`
 
@@ -302,12 +302,12 @@ After deployment, update your frontend `.env` with the contract addresses:
 ```bash
 # Add these to your Replit Secrets (for Coston2 testnet)
 VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
-VITE_STXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
+VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
 ### Step 5: Configure Vault Operator - ⏳ PENDING
 
-The StXRPVault contract needs an operator to mint/burn stXRP:
+The StXRPVault contract needs an operator to mint/burn shXRP:
 
 ```bash
 # Using Hardhat console
@@ -324,10 +324,10 @@ await vault.addOperator("<OPERATOR_ADDRESS>");
    - Connect wallet to your dApp
    - Initiate deposit (triggers XRPL hook)
    - Hook locks XRP in escrow
-   - Operator mints stXRP on Flare
+   - Operator mints shXRP on Flare
 
 2. **Test Withdrawal Flow**:
-   - Request withdrawal (burns stXRP)
+   - Request withdrawal (burns shXRP)
    - Operator releases XRP from XRPL escrow
 
 ### Production Deployment
@@ -408,10 +408,10 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 - **Treasury**: 10,000,000 SHIELD (10% allocation)
 - **Features**: Burnable, Mintable (owner-controlled), Transferable ownership
 
-### StXRPVault (stXRP)
+### StXRPVault (shXRP)
 - **Type**: Liquid staking vault for XRP
-- **Symbol**: stXRP (Staked XRP)
-- **Initial Exchange Rate**: 1:1 (stXRP:XRP)
+- **Symbol**: shXRP (Shield XRP)
+- **Initial Exchange Rate**: 1:1 (shXRP:XRP)
 - **Key Features**:
   - Operator-controlled minting/burning for security
   - Reward distribution updates exchange rate
@@ -429,13 +429,13 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 ## 🔒 Security Features
 
 - **Request-Based Withdrawals**: All withdrawals require vault operator approval
-- **Operator-Controlled Minting**: Only approved operators can mint/burn stXRP tokens
+- **Operator-Controlled Minting**: Only approved operators can mint/burn shXRP tokens
 - **ReentrancyGuard Protection**: Smart contracts protected against reentrancy attacks
 - **Secure Key Management**: Environment-based secret storage
 - **Session Management**: PostgreSQL-backed sessions with secure cookies
 - **Transaction Verification**: All blockchain transactions verified on-chain
 - **XRP Address Validation**: Client and server-side validation
-- **XRPL Hash Verification**: Every stXRP mint requires valid XRPL transaction hash
+- **XRPL Hash Verification**: Every shXRP mint requires valid XRPL transaction hash
 
 ## 🌐 Network Support
 

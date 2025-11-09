@@ -12,8 +12,8 @@ All notable changes to the XRP Liquid Staking Protocol Dashboard will be documen
   - Treasury Allocation: 10,000,000 SHIELD sent to treasury
   - [View on Explorer](https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992)
 
-- **StXRPVault (stXRP)** deployed to: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
-  - Initial Exchange Rate: 1.0 stXRP per XRP
+- **StXRPVault (shXRP)** deployed to: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
+  - Initial Exchange Rate: 1.0 shXRP per XRP
   - Ready for operator configuration
   - [View on Explorer](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
 
@@ -58,7 +58,7 @@ All notable changes to the XRP Liquid Staking Protocol Dashboard will be documen
 ### Next Steps
 1. ✅ Verify contracts on Flare Coston2 block explorer
 2. ✅ Update frontend environment variables with contract addresses
-3. ⏳ Configure vault operator for minting/burning stXRP
+3. ⏳ Configure vault operator for minting/burning shXRP
 4. ⏳ Test deposit/withdrawal flows on testnet
 5. ⏳ Deploy XRPL Hooks for cross-chain functionality
 
@@ -75,7 +75,7 @@ All notable changes to the XRP Liquid Staking Protocol Dashboard will be documen
   - OpenZeppelin standards implementation
   
 - **StXRPVault.sol**: Liquid staking vault contract
-  - Mints stXRP tokens 1:1 for deposited XRP
+  - Mints shXRP tokens 1:1 for deposited XRP
   - Operator-controlled minting/burning
   - Reward distribution system with exchange rate tracking
   - ReentrancyGuard protection
@@ -135,7 +135,7 @@ FLARE_API_KEY
 XRPL_HOOK_ACCOUNT_SECRET
 XRPL_NETWORK
 VITE_SHIELD_TOKEN_ADDRESS
-VITE_STXRP_VAULT_ADDRESS
+VITE_SHXRP_VAULT_ADDRESS
 ```
 
 ### Project Structure Changes
@@ -153,7 +153,7 @@ New files:
 ```
 
 ### Security Enhancements
-- Operator-controlled minting prevents unauthorized stXRP creation
+- Operator-controlled minting prevents unauthorized shXRP creation
 - ReentrancyGuard protection against reentrancy attacks
 - Minimum deposit requirements prevent dust attacks
 - XRPL transaction hash verification for every mint operation
@@ -163,9 +163,9 @@ New files:
 The platform now supports a complete cross-chain workflow:
 1. Frontend: User deposits XRP via wallet (Xaman/WalletConnect/Web3Auth)
 2. XRPL Layer: Hook locks XRP in escrow
-3. Flare Layer: Operator mints stXRP tokens
+3. Flare Layer: Operator mints shXRP tokens
 4. Database Layer: Position tracking in PostgreSQL
-5. Withdrawal: User burns stXRP → Operator releases XRP from escrow
+5. Withdrawal: User burns shXRP → Operator releases XRP from escrow
 
 ---
 

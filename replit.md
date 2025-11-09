@@ -1,7 +1,7 @@
 # XRP Liquid Staking Protocol Dashboard
 
 ## Overview
-This project is a full-stack DeFi application designed for XRP liquid staking with integrated blockchain infrastructure. It provides a comprehensive dashboard for users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform includes smart contracts deployed on Flare Network for the $SHIELD governance token and stXRP liquid staking vault, along with XRPL Hooks for cross-chain escrow. The business vision is to make DeFi on XRP accessible and efficient, tapping into the growing market for liquid staking solutions.
+This project is a full-stack DeFi application designed for XRP liquid staking with integrated blockchain infrastructure. It provides a comprehensive dashboard for users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform includes smart contracts deployed on Flare Network for the $SHIELD governance token and shXRP liquid staking vault, along with XRPL Hooks for cross-chain escrow. The business vision is to make DeFi on XRP accessible and efficient, tapping into the growing market for liquid staking solutions.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -88,14 +88,14 @@ Preferred communication style: Simple, everyday language.
 
 #### StXRPVault.sol
 - **Type**: Liquid staking vault for XRP
-- **Symbol**: stXRP (Staked XRP)
+- **Symbol**: shXRP (Shield XRP)
 - **Features**:
-  - Mints stXRP 1:1 for deposited XRP (initially)
-  - Burns stXRP on withdrawal
+  - Mints shXRP 1:1 for deposited XRP (initially)
+  - Burns shXRP on withdrawal
   - Operator-controlled minting/burning for security
   - Reward distribution system updates exchange rate
   - Minimum deposit: 0.01 XRP equivalent
-  - Exchange rate tracking (stXRP to XRP)
+  - Exchange rate tracking (shXRP to XRP)
   - ReentrancyGuard protection
 - **Integration**: Works with XRPL Hooks for cross-chain bridge
 - **Decimals**: 18
@@ -109,8 +109,8 @@ Preferred communication style: Simple, everyday language.
 - **Workflow**:
   1. User initiates deposit → Frontend calls XRPL hook
   2. XRPL hook locks XRP in escrow → Emits event
-  3. Operator calls `mintStXRP()` on Flare → Issues stXRP to user
-  4. User requests withdrawal → Burns stXRP on Flare
+  3. Operator calls `mintStXRP()` on Flare → Issues shXRP to user
+  4. User requests withdrawal → Burns shXRP on Flare
   5. Operator releases XRP from XRPL escrow
 
 ### Deployment Scripts
@@ -133,9 +133,9 @@ Preferred communication style: Simple, everyday language.
   - Total Supply: 100,000,000 SHIELD
   - Treasury Allocation: 10,000,000 SHIELD
   
-- **StXRPVault (stXRP)**: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
+- **StXRPVault (shXRP)**: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
   - [View on Explorer](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
-  - Initial Exchange Rate: 1.0 stXRP per XRP
+  - Initial Exchange Rate: 1.0 shXRP per XRP
   - Deployed on: 2025-11-09
 
 #### deploy-hooks.sh
@@ -179,7 +179,7 @@ XRPL_NETWORK=testnet
 
 # Frontend Contract Addresses (updated post-deployment)
 VITE_SHIELD_TOKEN_ADDRESS=0x...
-VITE_STXRP_VAULT_ADDRESS=0x...
+VITE_SHXRP_VAULT_ADDRESS=0x...
 ```
 
 ### Contract Architecture
@@ -188,13 +188,13 @@ The smart contract system operates alongside the existing vault infrastructure:
 
 1. **Frontend Layer**: User deposits XRP via wallet (Xaman/WalletConnect/Web3Auth)
 2. **XRPL Layer**: Hook locks XRP in escrow on XRP Ledger
-3. **Flare Layer**: Operator mints stXRP tokens on Flare Network
+3. **Flare Layer**: Operator mints shXRP tokens on Flare Network
 4. **Database Layer**: Position and transaction tracking in PostgreSQL
-5. **Withdrawal Flow**: User burns stXRP → Operator releases XRP from escrow
+5. **Withdrawal Flow**: User burns shXRP → Operator releases XRP from escrow
 
 ### Security Features (Blockchain)
 
-- **Operator Model**: Only approved operators can mint/burn stXRP, preventing unauthorized token creation
+- **Operator Model**: Only approved operators can mint/burn shXRP, preventing unauthorized token creation
 - **ReentrancyGuard**: Protection against reentrancy attacks on vault operations
 - **Minimum Deposits**: 0.01 XRP minimum prevents dust attacks
 - **Exchange Rate Tracking**: Transparent reward distribution with on-chain verification

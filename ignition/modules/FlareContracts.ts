@@ -10,10 +10,10 @@ const FlareContractsModule = buildModule("FlareContractsModule", (m) => {
   // Deploy ShieldToken
   const shieldToken = m.contract("ShieldToken", [treasuryAddress]);
 
-  // Deploy StXRPVault
-  const stXRPVault = m.contract("StXRPVault");
+  // Deploy StXRPVault (shXRP)
+  const shXRPVault = m.contract("StXRPVault");
 
-  return { shieldToken, stXRPVault };
+  return { shieldToken, shXRPVault };
 });
 
 export default FlareContractsModule;
