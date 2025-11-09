@@ -170,6 +170,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           
           if (!escrowResult.success) {
+            // Create failed escrow record for tracking
+            await storage.createEscrow({
+              positionId: position.id,
+              vaultId: position.vaultId,
+              walletAddress: validatedData.walletAddress,
+              destinationAddress: validatedData.walletAddress,
+              amount: escrowAmount,
+              asset: "XRP",
+              status: "failed",
+              network: network,
+              createTxHash: null,
+              escrowSequence: null,
+              finishAfter: null,
+              cancelAfter: null,
+              finishTxHash: null,
+              cancelTxHash: null,
+              condition: null,
+              fulfillment: null,
+              finishedAt: null,
+              cancelledAt: null,
+            });
+            
             // Rollback: Update transaction status to failed
             await storage.createTransaction({
               vaultId: position.vaultId,
@@ -182,9 +204,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               network: network,
             });
             
+            console.error(`❌ Escrow creation failed for position ${position.id}: ${escrowResult.error}`);
+            
             return res.status(400).json({ 
-              error: "Failed to create escrow",
-              details: escrowResult.error
+              error: "Failed to create XRPL escrow. Please ensure the vault has sufficient funds and try again.",
+              details: escrowResult.error,
+              positionId: position.id
             });
           }
           
@@ -230,7 +255,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: "XRP deposit successful. Funds are held in escrow and can be withdrawn after the lock period."
           });
         } catch (escrowError) {
-          console.error("Escrow creation error during XRP deposit:", escrowError);
+          console.error("Escrow creation exception during XRP deposit:", escrowError);
+          
+          // Create failed escrow record for tracking
+          try {
+            await storage.createEscrow({
+              positionId: position.id,
+              vaultId: position.vaultId,
+              walletAddress: validatedData.walletAddress,
+              destinationAddress: validatedData.walletAddress,
+              amount: escrowAmount,
+              asset: "XRP",
+              status: "failed",
+              network: network,
+              createTxHash: null,
+              escrowSequence: null,
+              finishAfter: null,
+              cancelAfter: null,
+              finishTxHash: null,
+              cancelTxHash: null,
+              condition: null,
+              fulfillment: null,
+              finishedAt: null,
+              cancelledAt: null,
+            });
+          } catch (dbError) {
+            console.error("Failed to create failed escrow record:", dbError);
+          }
           
           // Rollback: Mark transaction as failed
           await storage.createTransaction({
@@ -1256,10 +1307,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const vaultAddress = "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY";
 
       // Finish escrow on XRPL
+      // Note: Anyone can finish an escrow after FinishAfter time (if no Condition)
+      // We use the vault account to finish since it has the credentials
       const result = await finishEscrow({
-        accountAddress: escrow.destinationAddress, // Destination can finish
-        accountSecret: vaultSecret, // But we use vault secret for testing
-        escrowOwner: vaultAddress,
+        accountAddress: vaultAddress, // Vault finishes the escrow
+        accountSecret: vaultSecret,
+        escrowOwner: vaultAddress, // Vault is the owner
         escrowSequence: escrow.escrowSequence,
         network: escrow.network,
         condition: escrow.condition || undefined,
