@@ -1,7 +1,7 @@
 # XRP Liquid Staking Protocol Dashboard
 
 ## Overview
-This project is a full-stack DeFi application designed for XRP liquid staking with integrated blockchain infrastructure. It provides a comprehensive dashboard for users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform includes smart contracts deployed on Flare Network for the $SHIELD governance token and shXRP liquid staking vault, along with XRPL Hooks for cross-chain escrow. The business vision is to make DeFi on XRP accessible and efficient, tapping into the growing market for liquid staking solutions.
+This project is a full-stack DeFi application designed for XRP liquid staking with integrated blockchain infrastructure. It provides a comprehensive dashboard for users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform includes smart contracts deployed on Flare Network for the $SHIELD governance token and shXRP liquid staking vault, along with XRPL Escrow for secure cross-chain asset locking. The business vision is to make DeFi on XRP accessible and efficient, tapping into the growing market for liquid staking solutions.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -97,21 +97,40 @@ Preferred communication style: Simple, everyday language.
   - Minimum deposit: 0.01 XRP equivalent
   - Exchange rate tracking (shXRP to XRP)
   - ReentrancyGuard protection
-- **Integration**: Works with XRPL Hooks for cross-chain bridge
+- **Integration**: Works with XRPL Escrow for secure asset locking
 - **Decimals**: 18
 - **Network**: Deployed on Flare Coston2 testnet and Flare mainnet
 
-### XRPL Hooks
-- **Hook Type**: XRP escrow hook for liquid staking
-- **Purpose**: Locks XRP in escrow and emits events for Flare bridge
-- **Language**: Rust compiled to WASM
-- **Deployment**: XRPL testnet and mainnet
-- **Workflow**:
-  1. User initiates deposit → Frontend calls XRPL hook
-  2. XRPL hook locks XRP in escrow → Emits event
-  3. Operator calls `mintShXRP()` on Flare → Issues shXRP to user
-  4. User requests withdrawal → Burns shXRP on Flare
-  5. Operator releases XRP from XRPL escrow
+### XRPL Escrow System
+The platform uses standard XRPL Escrow transactions to securely lock XRP deposits on the XRP Ledger. This provides trustless, time-locked asset custody integrated with the Flare Network smart contracts.
+
+**Architecture:**
+- **Implementation**: Standard XRPL transactions (EscrowCreate, EscrowFinish, EscrowCancel) via `xrpl` library
+- **Database Tracking**: PostgreSQL `escrows` table tracks all escrow records with status, timing, and XRPL transaction hashes
+- **Backend Logic**: `server/xrpl-escrow.ts` contains escrow transaction orchestration
+- **API Endpoints**: RESTful endpoints in `server/routes.ts` for escrow creation, finishing, cancellation, and retry operations
+
+**Deposit Workflow:**
+1. User initiates XRP deposit via wallet (Xaman/WalletConnect/Web3Auth)
+2. Backend creates XRPL EscrowCreate transaction using vault credentials
+3. Escrow locks XRP with time-based release conditions
+4. Escrow record saved to database (status: "pending", includes XRPL tx hash and sequence)
+5. User position created in database, transaction recorded
+6. Operator mints shXRP tokens on Flare Network (manual or automated)
+
+**Withdrawal Workflow:**
+1. User requests withdrawal → Burns shXRP on Flare Network
+2. Withdrawal request created in database (status: "pending")
+3. Operator approves withdrawal via Admin dashboard
+4. Backend calls EscrowFinish to release XRP from escrow
+5. Escrow status updated to "finished", XRP returned to user's wallet
+
+**Cancellation & Retry:**
+- Failed escrows can be retried or cancelled via Admin dashboard
+- EscrowCancel transactions return XRP to vault if needed
+- All escrow operations tracked with full audit trail in database
+
+**Note on XRPL Hooks:** This implementation uses standard XRPL Escrow rather than XRPL Hooks (Rust/WASM smart contracts on XRPL). Hooks could be explored in the future for more advanced programmable escrow logic, but standard escrow provides sufficient security and functionality for the current use case.
 
 ### Deployment Scripts
 
@@ -138,17 +157,6 @@ Preferred communication style: Simple, everyday language.
   - Initial Exchange Rate: 1.0 shXRP per XRP
   - Deployed on: 2025-11-09 (Shield XRP with correct contract naming)
 
-#### deploy-hooks.sh
-- **Purpose**: Deploy XRPL escrow hook to XRP Ledger
-- **Features**:
-  - Auto-installs Rust toolchain if needed
-  - Installs xrpl-hooks CLI
-  - Compiles Rust hook to WASM
-  - Deploys to XRPL testnet or mainnet
-  - Environment-driven configuration
-- **Networks**: Configurable via XRPL_NETWORK env variable
-- **Usage**: `./scripts/deploy-hooks.sh`
-
 ### Deployment Configuration
 
 #### hardhat.config.ts
@@ -173,10 +181,6 @@ FLARE_COSTON2_RPC_URL=https://coston2-api.flare.network/ext/C/rpc
 FLARE_MAINNET_RPC_URL=https://flare-api.flare.network/ext/C/rpc
 FLARE_API_KEY=your-flare-api-key-here
 
-# XRPL Hooks Deployment
-XRPL_HOOK_ACCOUNT_SECRET=your-xrpl-account-secret-here
-XRPL_NETWORK=testnet
-
 # Frontend Contract Addresses (updated post-deployment)
 VITE_SHIELD_TOKEN_ADDRESS=0x...
 VITE_SHXRP_VAULT_ADDRESS=0x...
@@ -187,10 +191,10 @@ VITE_SHXRP_VAULT_ADDRESS=0x...
 The smart contract system operates alongside the existing vault infrastructure:
 
 1. **Frontend Layer**: User deposits XRP via wallet (Xaman/WalletConnect/Web3Auth)
-2. **XRPL Layer**: Hook locks XRP in escrow on XRP Ledger
-3. **Flare Layer**: Operator mints shXRP tokens on Flare Network
-4. **Database Layer**: Position and transaction tracking in PostgreSQL
-5. **Withdrawal Flow**: User burns shXRP → Operator releases XRP from escrow
+2. **XRPL Layer**: XRPL Escrow transaction locks XRP on XRP Ledger with time-based release
+3. **Flare Layer**: Operator mints shXRP tokens on Flare Network via Shield XRP Vault contract
+4. **Database Layer**: Position, transaction, and escrow tracking in PostgreSQL
+5. **Withdrawal Flow**: User burns shXRP → Operator approves withdrawal → EscrowFinish releases XRP to user
 
 ### Security Features (Blockchain)
 
