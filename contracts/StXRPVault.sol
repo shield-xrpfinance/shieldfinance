@@ -11,21 +11,21 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * @dev Liquid staking vault for XRP on Flare Network
  * 
  * Features:
- * - Mints stXRP 1:1 for deposited XRP
- * - Burns stXRP on withdrawal
+ * - Mints shXRP 1:1 for deposited XRP
+ * - Burns shXRP on withdrawal
  * - Integrates with XRPL escrow hooks for cross-chain bridge
  * - Operator-controlled deposits/withdrawals for security
- * - Rewards distribution for stXRP holders
+ * - Rewards distribution for shXRP holders
  * 
  * Architecture:
  * 1. User initiates deposit → Frontend calls XRPL hook
  * 2. XRPL hook locks XRP in escrow → Emits event
- * 3. Operator calls mintStXRP() → Issues stXRP to user
- * 4. User requests withdrawal → Burns stXRP
+ * 3. Operator calls mintShXRP() → Issues shXRP to user
+ * 4. User requests withdrawal → Burns shXRP
  * 5. Operator releases XRP from XRPL escrow
  */
 contract StXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
-    // Mapping of approved operators who can mint/burn stXRP
+    // Mapping of approved operators who can mint/burn shXRP
     mapping(address => bool) public operators;
     
     // Minimum deposit amount (0.01 XRP equivalent)
@@ -34,14 +34,14 @@ contract StXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     // Total XRP locked in escrow on XRPL
     uint256 public totalXRPLocked;
     
-    // Exchange rate (stXRP to XRP) - starts at 1:1, can increase with rewards
+    // Exchange rate (shXRP to XRP) - starts at 1:1, can increase with rewards
     uint256 public exchangeRate = 1 ether;
     
     // Events
     event OperatorAdded(address indexed operator);
     event OperatorRemoved(address indexed operator);
-    event StXRPMinted(address indexed user, uint256 xrpAmount, uint256 stXRPAmount, string xrplTxHash);
-    event StXRPBurned(address indexed user, uint256 stXRPAmount, uint256 xrpAmount);
+    event ShXRPMinted(address indexed user, uint256 xrpAmount, uint256 shXRPAmount, string xrplTxHash);
+    event ShXRPBurned(address indexed user, uint256 shXRPAmount, uint256 xrpAmount);
     event RewardsDistributed(uint256 rewardAmount, uint256 newExchangeRate);
     event MinDepositUpdated(uint256 newMinDeposit);
     event ExchangeRateUpdated(uint256 newRate);
@@ -51,14 +51,14 @@ contract StXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
         _;
     }
     
-    constructor() ERC20("Staked XRP", "stXRP") Ownable(msg.sender) {
+    constructor() ERC20("Shield XRP", "shXRP") Ownable(msg.sender) {
         // Deployer is first operator
         operators[msg.sender] = true;
         emit OperatorAdded(msg.sender);
     }
     
     /**
-     * @dev Add an operator who can mint/burn stXRP
+     * @dev Add an operator who can mint/burn shXRP
      * @param operator Address of the operator
      */
     function addOperator(address operator) external onlyOwner {
@@ -77,12 +77,12 @@ contract StXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev Mint stXRP tokens after XRP is locked in XRPL escrow
+     * @dev Mint shXRP tokens after XRP is locked in XRPL escrow
      * @param user Address of the user who deposited XRP
      * @param xrpAmount Amount of XRP deposited (in wei/drops)
      * @param xrplTxHash XRPL transaction hash for verification
      */
-    function mintStXRP(
+    function mintShXRP(
         address user,
         uint256 xrpAmount,
         string calldata xrplTxHash
@@ -91,38 +91,38 @@ contract StXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
         require(xrpAmount >= minDeposit, "Amount below minimum deposit");
         require(bytes(xrplTxHash).length > 0, "Invalid XRPL tx hash");
         
-        // Calculate stXRP amount based on exchange rate
-        uint256 stXRPAmount = (xrpAmount * 1 ether) / exchangeRate;
+        // Calculate shXRP amount based on exchange rate
+        uint256 shXRPAmount = (xrpAmount * 1 ether) / exchangeRate;
         
         // Update total locked XRP
         totalXRPLocked += xrpAmount;
         
-        // Mint stXRP to user
-        _mint(user, stXRPAmount);
+        // Mint shXRP to user
+        _mint(user, shXRPAmount);
         
-        emit StXRPMinted(user, xrpAmount, stXRPAmount, xrplTxHash);
+        emit ShXRPMinted(user, xrpAmount, shXRPAmount, xrplTxHash);
     }
     
     /**
-     * @dev Burn stXRP and request XRP withdrawal from XRPL escrow
-     * @param stXRPAmount Amount of stXRP to burn
+     * @dev Burn shXRP and request XRP withdrawal from XRPL escrow
+     * @param shXRPAmount Amount of shXRP to burn
      * @return xrpAmount Amount of XRP to be withdrawn
      */
-    function burnStXRP(uint256 stXRPAmount) external nonReentrant returns (uint256 xrpAmount) {
-        require(stXRPAmount > 0, "Cannot burn zero amount");
-        require(balanceOf(msg.sender) >= stXRPAmount, "Insufficient stXRP balance");
+    function burnShXRP(uint256 shXRPAmount) external nonReentrant returns (uint256 xrpAmount) {
+        require(shXRPAmount > 0, "Cannot burn zero amount");
+        require(balanceOf(msg.sender) >= shXRPAmount, "Insufficient shXRP balance");
         
         // Calculate XRP amount based on exchange rate
-        xrpAmount = (stXRPAmount * exchangeRate) / 1 ether;
+        xrpAmount = (shXRPAmount * exchangeRate) / 1 ether;
         
         // Update total locked XRP
         require(totalXRPLocked >= xrpAmount, "Insufficient XRP locked");
         totalXRPLocked -= xrpAmount;
         
-        // Burn stXRP from user
-        _burn(msg.sender, stXRPAmount);
+        // Burn shXRP from user
+        _burn(msg.sender, shXRPAmount);
         
-        emit StXRPBurned(msg.sender, stXRPAmount, xrpAmount);
+        emit ShXRPBurned(msg.sender, shXRPAmount, xrpAmount);
         
         return xrpAmount;
     }
@@ -133,12 +133,12 @@ contract StXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
      */
     function distributeRewards(uint256 rewardAmount) external onlyOperator {
         require(rewardAmount > 0, "Reward amount must be positive");
-        require(totalSupply() > 0, "No stXRP minted yet");
+        require(totalSupply() > 0, "No shXRP minted yet");
         
         // Add rewards to total locked XRP
         totalXRPLocked += rewardAmount;
         
-        // Update exchange rate: (total XRP) / (total stXRP)
+        // Update exchange rate: (total XRP) / (total shXRP)
         exchangeRate = (totalXRPLocked * 1 ether) / totalSupply();
         
         emit RewardsDistributed(rewardAmount, exchangeRate);
@@ -155,7 +155,7 @@ contract StXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev Get current exchange rate (stXRP to XRP)
+     * @dev Get current exchange rate (shXRP to XRP)
      * @return Current exchange rate in wei
      */
     function getExchangeRate() external view returns (uint256) {
@@ -163,21 +163,21 @@ contract StXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev Calculate stXRP amount for given XRP amount
+     * @dev Calculate shXRP amount for given XRP amount
      * @param xrpAmount Amount of XRP
-     * @return Amount of stXRP
+     * @return Amount of shXRP
      */
-    function calculateStXRPAmount(uint256 xrpAmount) external view returns (uint256) {
+    function calculateShXRPAmount(uint256 xrpAmount) external view returns (uint256) {
         return (xrpAmount * 1 ether) / exchangeRate;
     }
     
     /**
-     * @dev Calculate XRP amount for given stXRP amount
-     * @param stXRPAmount Amount of stXRP
+     * @dev Calculate XRP amount for given shXRP amount
+     * @param shXRPAmount Amount of shXRP
      * @return Amount of XRP
      */
-    function calculateXRPAmount(uint256 stXRPAmount) external view returns (uint256) {
-        return (stXRPAmount * exchangeRate) / 1 ether;
+    function calculateXRPAmount(uint256 shXRPAmount) external view returns (uint256) {
+        return (shXRPAmount * exchangeRate) / 1 ether;
     }
     
     /**
