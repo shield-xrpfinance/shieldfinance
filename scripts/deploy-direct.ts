@@ -76,7 +76,7 @@ async function main() {
   const vaultSymbol = await stXRPVault.symbol();
   const exchangeRate = await stXRPVault.exchangeRate();
   console.log("   Vault Token:", vaultName, `(${vaultSymbol})`);
-  console.log("   Initial Exchange Rate:", ethers.formatEther(exchangeRate), "stXRP per XRP");
+  console.log("   Initial Exchange Rate:", ethers.formatEther(exchangeRate), "shXRP per XRP");
 
   // Get network info
   const network = await provider.getNetwork();
@@ -122,7 +122,7 @@ async function main() {
   console.log("\n🪙 ShieldToken ($SHIELD):");
   console.log("   Address:", shieldTokenAddress);
   console.log("   Explorer:", `https://coston2-explorer.flare.network/address/${shieldTokenAddress}`);
-  console.log("\n🏦 StXRPVault (stXRP):");
+  console.log("\n🏦 StXRPVault (shXRP):");
   console.log("   Address:", stXRPVaultAddress);
   console.log("   Explorer:", `https://coston2-explorer.flare.network/address/${stXRPVaultAddress}`);
   console.log("\n✅ Deployment complete!");
@@ -135,8 +135,8 @@ async function main() {
   console.log(`   npx hardhat verify --network coston2 ${stXRPVaultAddress}`);
   console.log("\n2. Update frontend .env with contract addresses:");
   console.log(`   VITE_SHIELD_TOKEN_ADDRESS=${shieldTokenAddress}`);
-  console.log(`   VITE_STXRP_VAULT_ADDRESS=${stXRPVaultAddress}`);
-  console.log("\n3. Configure operator for StXRPVault to mint/burn stXRP");
+  console.log(`   VITE_SHXRP_VAULT_ADDRESS=${stXRPVaultAddress}`);
+  console.log("\n3. Configure operator for StXRPVault to mint/burn shXRP");
   console.log("\n4. Deploy XRPL hooks using: npm run deploy:hooks\n");
 }
 
