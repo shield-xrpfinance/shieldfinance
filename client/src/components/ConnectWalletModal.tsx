@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,7 @@ import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { QRCodeSVG } from "qrcode.react";
 import UniversalProvider from "@walletconnect/universal-provider";
+import { WalletConnectModal } from "@walletconnect/modal";
 
 interface ConnectWalletModalProps {
   open: boolean;
@@ -20,7 +21,7 @@ interface ConnectWalletModalProps {
   onConnect?: (address: string, provider: "xaman" | "walletconnect") => void;
 }
 
-type ConnectionStep = "select" | "xaman-qr" | "walletconnect-qr";
+type ConnectionStep = "select" | "xaman-qr";
 
 export default function ConnectWalletModal({
   open,
@@ -35,6 +36,9 @@ export default function ConnectWalletModal({
   const { toast } = useToast();
   const { connect, disconnect } = useWallet();
   const { isTestnet } = useNetwork();
+  
+  const wcModalRef = useRef<WalletConnectModal | null>(null);
+  const wcProviderRef = useRef<UniversalProvider | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -116,7 +120,6 @@ export default function ConnectWalletModal({
 
   const handleWalletConnect = async () => {
     setConnecting(true);
-    setStep("walletconnect-qr");
     
     try {
       const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
@@ -128,8 +131,23 @@ export default function ConnectWalletModal({
       // XRPL WalletConnect chain IDs: mainnet = xrpl:0, testnet = xrpl:1
       const chainId = isTestnet ? "xrpl:1" : "xrpl:0";
 
-      // Initialize Universal Provider with XRPL configuration
-      const provider = await UniversalProvider.init({
+      // Check if there's an existing session - if so, disconnect it first
+      if (wcProviderRef.current?.session) {
+        console.log("Disconnecting existing WalletConnect session");
+        await wcProviderRef.current.disconnect();
+        wcProviderRef.current = null;
+        wcModalRef.current = null;
+      }
+
+      // Initialize WalletConnect Modal
+      wcModalRef.current = new WalletConnectModal({
+        projectId,
+        chains: [chainId],
+        themeMode: "light",
+      });
+
+      // Initialize Universal Provider
+      wcProviderRef.current = await UniversalProvider.init({
         projectId,
         metadata: {
           name: "XRP Liquid Staking Protocol",
@@ -139,10 +157,30 @@ export default function ConnectWalletModal({
         },
       });
 
+      const provider = wcProviderRef.current;
+
+      // Set up display_uri listener
       provider.on("display_uri", (uri: string) => {
         console.log("WalletConnect URI:", uri);
-        setQrCodeUrl(uri);
+        // Show the WalletConnect modal with all wallet options (desktop, mobile, etc.)
+        wcModalRef.current?.openModal({ 
+          uri,
+          standaloneChains: [chainId]
+        });
       });
+
+      // Set up session_delete listener
+      provider.on("session_delete", () => {
+        console.log("WalletConnect session deleted");
+        disconnect();
+        setConnecting(false);
+        // Clean up refs
+        wcProviderRef.current = null;
+        wcModalRef.current?.closeModal();
+      });
+
+      // Close our shadcn dialog - WalletConnect modal will handle the UI
+      onOpenChange(false);
 
       // Connect to XRPL namespace with the correct chain ID based on network
       await provider.connect({
@@ -158,6 +196,9 @@ export default function ConnectWalletModal({
           },
         },
       });
+
+      // Close the WalletConnect modal
+      wcModalRef.current.closeModal();
 
       // Get connected accounts
       const accounts = provider.session?.namespaces?.xrpl?.accounts || [];
@@ -175,7 +216,6 @@ export default function ConnectWalletModal({
         if (onConnect) {
           onConnect(address, "walletconnect");
         }
-        onOpenChange(false);
         toast({
           title: "Wallet Connected",
           description: `Connected to ${address.slice(0, 8)}...${address.slice(-6)} on ${isTestnet ? 'Testnet' : 'Mainnet'}`,
@@ -191,20 +231,15 @@ export default function ConnectWalletModal({
         setConnecting(false);
       }
 
-      provider.on("session_delete", () => {
-        console.log("WalletConnect session deleted");
-        disconnect();
-        setStep("select");
-        setConnecting(false);
-      });
-
     } catch (error) {
       console.error("WalletConnect error:", error);
       
+      // Clean up on error
+      wcModalRef.current?.closeModal();
+      setConnecting(false);
+      
       // Demo mode fallback - use XRP Ledger address format
       const mockAddress = "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH";
-      const mockUri = "wc:demo@2?relay-protocol=irn&symKey=demo";
-      setQrCodeUrl(mockUri);
       
       toast({
         title: "Demo Mode",
@@ -216,7 +251,6 @@ export default function ConnectWalletModal({
         if (onConnect) {
           onConnect(mockAddress, "walletconnect");
         }
-        onOpenChange(false);
         toast({
           title: "Demo Wallet Connected",
           description: `Connected to ${mockAddress.slice(0, 8)}...${mockAddress.slice(-6)}`,
@@ -246,12 +280,11 @@ export default function ConnectWalletModal({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Wallet className="h-5 w-5" />
-            {step === "select" ? "Connect Wallet" : step === "xaman-qr" ? "Xaman Connection" : "WalletConnect"}
+            {step === "select" ? "Connect Wallet" : "Xaman Connection"}
           </DialogTitle>
           <DialogDescription>
             {step === "select" && "Choose a wallet provider to connect and start earning yield"}
             {step === "xaman-qr" && "Scan the QR code with your Xaman mobile app"}
-            {step === "walletconnect-qr" && "Scan the QR code with your wallet app"}
           </DialogDescription>
         </DialogHeader>
 
@@ -305,12 +338,12 @@ export default function ConnectWalletModal({
           </div>
         )}
 
-        {(step === "xaman-qr" || step === "walletconnect-qr") && (
+        {step === "xaman-qr" && (
           <div className="space-y-4 py-4">
             <div className="flex flex-col items-center justify-center space-y-4">
               {qrCodeUrl && qrCodeUrl !== "demo" ? (
                 <div className="p-4 bg-white rounded-lg">
-                  {step === "xaman-qr" && qrCodeUrl.startsWith("http") ? (
+                  {qrCodeUrl.startsWith("http") ? (
                     <img src={qrCodeUrl} alt="Xaman QR Code" className="w-64 h-64" />
                   ) : (
                     <QRCodeSVG value={qrCodeUrl} size={256} level="H" />
@@ -328,14 +361,12 @@ export default function ConnectWalletModal({
                   <p className="text-sm font-medium">Waiting for confirmation...</p>
                 </div>
                 <p className="text-xs text-muted-foreground max-w-xs">
-                  {step === "xaman-qr" 
-                    ? "Scan the QR code with your Xaman app to confirm"
-                    : "Scan this QR code with your wallet app to connect"}
+                  Scan the QR code with your Xaman app to confirm
                 </p>
               </div>
             </div>
 
-            {step === "xaman-qr" && xamanDeepLink && (
+            {xamanDeepLink && (
               <div className="space-y-3">
                 <Button
                   onClick={handleOpenXaman}
