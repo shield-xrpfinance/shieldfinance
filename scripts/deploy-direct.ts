@@ -59,14 +59,24 @@ async function main() {
   console.log("   Total Supply:", ethers.formatEther(totalSupply), "SHIELD");
   console.log("   Treasury Allocation:", ethers.formatEther(treasuryAllocation), "SHIELD");
 
-  // Deploy Shield XRP Vault (shXRP)
-  console.log("\n2️⃣  Deploying Shield XRP Vault (shXRP)...");
+  // Deploy Shield XRP Vault (shXRP) with FXRP integration
+  console.log("\n2️⃣  Deploying Shield XRP Vault (shXRP) with FXRP yield integration...");
+  
+  // Coston2 testnet addresses
+  const fxrpToken = "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3"; // FXRP on Coston2
+  const sparkRouter = "0x4a1E5A90e9943467FAd1acea1E7F0e5e88472a1e"; // SparkDEX Router V2
+  const wflrToken = "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d"; // WFLR on Coston2
+  
+  console.log("   FXRP Token:", fxrpToken);
+  console.log("   SparkDEX Router:", sparkRouter);
+  console.log("   WFLR Token:", wflrToken);
+  
   const ShXRPVault = new ethers.ContractFactory(
     ShXRPVaultArtifact.abi,
     ShXRPVaultArtifact.bytecode,
     wallet
   );
-  const shXRPVault = await ShXRPVault.deploy();
+  const shXRPVault = await ShXRPVault.deploy(fxrpToken, sparkRouter, wflrToken);
   await shXRPVault.waitForDeployment();
   const shXRPVaultAddress = await shXRPVault.getAddress();
   console.log("✅ Shield XRP Vault deployed to:", shXRPVaultAddress);
@@ -99,6 +109,9 @@ async function main() {
         name: vaultName,
         symbol: vaultSymbol,
         exchangeRate: ethers.formatEther(exchangeRate),
+        fxrpToken: "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3",
+        sparkRouter: "0x4a1E5A90e9943467FAd1acea1E7F0e5e88472a1e",
+        wflrToken: "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d",
       },
     },
   };
@@ -132,11 +145,14 @@ async function main() {
   console.log("📋 NEXT STEPS:");
   console.log("1. Verify contracts on block explorer (optional):");
   console.log(`   npx hardhat verify --network coston2 ${shieldTokenAddress} "${treasuryAddress}"`);
-  console.log(`   npx hardhat verify --network coston2 ${shXRPVaultAddress}`);
+  console.log(`   npx hardhat verify --network coston2 ${shXRPVaultAddress} "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3" "0x4a1E5A90e9943467FAd1acea1E7F0e5e88472a1e" "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d"`);
   console.log("\n2. Update frontend .env with contract addresses:");
   console.log(`   VITE_SHIELD_TOKEN_ADDRESS=${shieldTokenAddress}`);
   console.log(`   VITE_SHXRP_VAULT_ADDRESS=${shXRPVaultAddress}`);
-  console.log("\n3. Configure operator for Shield XRP Vault to mint/burn shXRP\n");
+  console.log("\n3. Configure operator for Shield XRP Vault to mint/burn shXRP");
+  console.log("\n4. Enable FXRP yield generation:");
+  console.log(`   Call setYieldEnabled(true) on ShXRPVault contract`);
+  console.log(`   Call setLPToken() with FXRP/WFLR LP token address from SparkDEX\n`);
 }
 
 main()

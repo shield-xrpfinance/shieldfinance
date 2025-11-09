@@ -23,6 +23,16 @@ interface IUniswapV2Router02 {
         uint256 deadline
     ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity);
     
+    function removeLiquidity(
+        address tokenA,
+        address tokenB,
+        uint256 liquidity,
+        uint256 amountAMin,
+        uint256 amountBMin,
+        address to,
+        uint256 deadline
+    ) external returns (uint256 amountA, uint256 amountB);
+    
     function swapExactTokensForTokens(
         uint256 amountIn,
         uint256 amountOutMin,
@@ -101,6 +111,9 @@ contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     event RewardsCompounded(uint256 rewardAmount, uint256 newExchangeRate);
     event YieldEnabledUpdated(bool enabled);
     event LPTokenSet(address indexed lpToken);
+    event LPWithdrawn(uint256 lpAmount, uint256 fxrpReceived, uint256 wflrReceived);
+    event TokensSwapped(address indexed tokenIn, uint256 amountIn, address indexed tokenOut, uint256 amountOut);
+    event RewardsSimulated(uint256 rewardAmount, uint256 newExchangeRate);
     
     modifier onlyOperator() {
         require(operators[msg.sender] || msg.sender == owner(), "Not an operator");
@@ -345,5 +358,131 @@ contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
         require(lpToken == address(0), "LP token already set");
         lpToken = _lpToken;
         emit LPTokenSet(_lpToken);
+    }
+    
+    /**
+     * @dev Withdraw liquidity from SparkDEX LP pool
+     * @param lpAmount Amount of LP tokens to withdraw
+     * @return amountFXRP Amount of FXRP received
+     * @return amountWFLR Amount of WFLR received
+     */
+    function withdrawFromLP(uint256 lpAmount) external onlyOperator returns (uint256 amountFXRP, uint256 amountWFLR) {
+        require(lpAmount > 0, "Amount must be positive");
+        require(lpAmount <= totalLPStaked, "Insufficient LP tokens");
+        require(lpToken != address(0), "LP token not set");
+        
+        // Approve router to spend LP tokens
+        IERC20(lpToken).forceApprove(sparkRouter, lpAmount);
+        
+        // Remove liquidity from FXRP/WFLR pool
+        (amountFXRP, amountWFLR) = IUniswapV2Router02(sparkRouter).removeLiquidity(
+            address(fxrpToken),
+            wflrToken,
+            lpAmount,
+            0, // Min FXRP (for testnet, production would set proper slippage)
+            0, // Min WFLR
+            address(this),
+            block.timestamp + 300
+        );
+        
+        // Update accounting
+        totalLPStaked -= lpAmount;
+        totalFXRPInVault += amountFXRP;
+        
+        // Revoke allowance
+        IERC20(lpToken).forceApprove(sparkRouter, 0);
+        
+        emit LPWithdrawn(lpAmount, amountFXRP, amountWFLR);
+        
+        return (amountFXRP, amountWFLR);
+    }
+    
+    /**
+     * @dev Swap WFLR or other tokens to FXRP (for compounding)
+     * @param tokenIn Address of input token (e.g., WFLR, SPARK)
+     * @param amountIn Amount to swap
+     * @return amountOut Amount of FXRP received
+     */
+    function swapToFXRP(address tokenIn, uint256 amountIn) external onlyOperator returns (uint256 amountOut) {
+        require(amountIn > 0, "Amount must be positive");
+        require(tokenIn != address(fxrpToken), "Already FXRP");
+        
+        // Approve router
+        IERC20(tokenIn).forceApprove(sparkRouter, amountIn);
+        
+        // Build swap path: tokenIn -> WFLR -> FXRP (if not WFLR) or WFLR -> FXRP
+        address[] memory path;
+        if (tokenIn == wflrToken) {
+            path = new address[](2);
+            path[0] = wflrToken;
+            path[1] = address(fxrpToken);
+        } else {
+            path = new address[](3);
+            path[0] = tokenIn;
+            path[1] = wflrToken;
+            path[2] = address(fxrpToken);
+        }
+        
+        // Execute swap
+        uint256[] memory amounts = IUniswapV2Router02(sparkRouter).swapExactTokensForTokens(
+            amountIn,
+            0, // Min out (for testnet)
+            path,
+            address(this),
+            block.timestamp + 300
+        );
+        
+        amountOut = amounts[amounts.length - 1];
+        totalFXRPInVault += amountOut;
+        
+        // Revoke allowance
+        IERC20(tokenIn).forceApprove(sparkRouter, 0);
+        
+        emit TokensSwapped(tokenIn, amountIn, address(fxrpToken), amountOut);
+        
+        return amountOut;
+    }
+    
+    /**
+     * TESTNET/DEMO REWARD SIMULATION
+     * 
+     * Production Yield Strategy:
+     * - Integrate with Kinetic Markets or Enosys lending pools on Flare
+     * - Real yield sources:
+     *   1. SPARK token emissions from SparkDEX LP staking
+     *   2. Trading fees from FXRP/WFLR liquidity pool (0.3% of volume)
+     *   3. Lending interest from depositing idle FXRP into money markets
+     * 
+     * Production Flow:
+     * 1. Operator calls withdrawFromLP() to unstake LP tokens
+     * 2. Operator calls swapToFXRP() to convert WFLR/SPARK rewards to FXRP
+     * 3. FXRP rewards are bridged back to XRP (via Flare FTSO oracle pricing)
+     * 4. Exchange rate updated to reflect compounded yield
+     * 
+     * This simulateRewards() function is for testnet demonstration only.
+     */
+    
+    /**
+     * @dev Simulate reward distribution for testnet/demo purposes
+     * In production, this would be replaced by actual reward claiming
+     * @param rewardAmount Amount of simulated FXRP rewards
+     */
+    function simulateRewards(uint256 rewardAmount) external onlyOperator {
+        require(rewardAmount > 0, "Reward must be positive");
+        
+        // Transfer FXRP rewards from operator to vault
+        fxrpToken.safeTransferFrom(msg.sender, address(this), rewardAmount);
+        
+        totalFXRPInVault += rewardAmount;
+        
+        // Update exchange rate to reflect rewards (compound into shXRP value)
+        if (totalSupply() > 0) {
+            // Treat FXRP rewards as equivalent value to XRP
+            // In production, would use oracle to convert FXRP value to XRP equivalent
+            totalXRPLocked += rewardAmount;
+            exchangeRate = (totalXRPLocked * 1 ether) / totalSupply();
+        }
+        
+        emit RewardsSimulated(rewardAmount, exchangeRate);
     }
 }

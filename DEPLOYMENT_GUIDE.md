@@ -111,6 +111,146 @@ Shield XRP Vault (Flare): TBD
 4. ✅ Test withdrawal flow on testnet
 5. ✅ Audit smart contracts before mainnet
 
+## FXRP Yield Strategy
+
+### Overview
+
+The Shield XRP Vault now integrates with Flare's FXRP DeFi ecosystem to generate 5-7% APY through automated yield strategies.
+
+### How It Works
+
+1. **FXRP Integration**: Vault accepts FXRP (wrapped XRP on Flare) for yield generation
+2. **SparkDEX LP Staking**: FXRP is paired with WFLR in liquidity pools
+3. **Reward Harvesting**: Earns trading fees + SPARK token emissions
+4. **Auto-Compounding**: Rewards are swapped to FXRP and reinvested to increase shXRP exchange rate
+
+### Yield Flow
+
+```
+User Deposits XRP → XRPL Escrow → Mint shXRP
+             ↓
+Operator Stakes FXRP in SparkDEX LP (FXRP/WFLR)
+             ↓
+Earn Yield: Trading Fees + SPARK Emissions
+             ↓
+Auto-Compound (Daily): Claim → Swap to FXRP → Update Exchange Rate
+             ↓
+shXRP holders benefit from increased exchange rate
+```
+
+### Contract Addresses (Coston2 Testnet)
+
+```bash
+# ShXRPVault Dependencies
+FXRP Token: 0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3
+SparkDEX Router V2: 0x4a1E5A90e9943467FAd1acea1E7F0e5e88472a1e
+WFLR Token: 0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d
+```
+
+### Yield Functions
+
+The ShXRPVault contract provides these operator-controlled yield functions:
+
+```solidity
+// Deposit FXRP to vault for yield generation
+depositFXRP(uint256 amount)
+
+// Stake FXRP in SparkDEX LP pool (FXRP/WFLR)
+stakeInDeFi(uint256 fxrpAmount, uint256 flrAmount)
+
+// Withdraw from LP pool
+withdrawFromLP(uint256 lpAmount)
+
+// Swap tokens to FXRP (e.g., WFLR, SPARK → FXRP)
+swapToFXRP(address tokenIn, uint256 amountIn)
+
+// Claim rewards and auto-compound
+claimAndCompound()
+
+// Simulate rewards for testnet demo
+simulateRewards(uint256 rewardAmount)
+```
+
+### Automation with Gelato
+
+The `scripts/compound.ts` script can be automated using Gelato Network for daily compounding:
+
+```bash
+# Manual execution (testnet)
+tsx scripts/compound.ts
+
+# Production: Deploy to Gelato for automated daily execution
+```
+
+### Testnet vs Production
+
+**Testnet (Current):**
+- Uses `simulateRewards()` to demonstrate compounding
+- Manual operator calls for testing
+- Displays projected 5-7% APY in frontend
+
+**Production (When DeFi Protocols Launch):**
+- Integration with Kinetic Markets/Enosys lending pools
+- Real SPARK token harvesting from LP staking
+- Automated daily compounding via Gelato
+- Oracle-based FXRP/XRP value conversion
+
+### Setup Instructions
+
+1. **Deploy ShXRPVault with FXRP Integration:**
+```bash
+tsx scripts/deploy-direct.ts
+# Automatically passes FXRP, SparkRouter, WFLR addresses
+```
+
+2. **Enable Yield Generation:**
+```bash
+# Call on deployed ShXRPVault contract
+setYieldEnabled(true)
+```
+
+3. **Set LP Token Address:**
+```bash
+# After first LP stake, get FXRP/WFLR LP token address from SparkDEX
+setLPToken(0x...)
+```
+
+4. **Configure Gelato Automation (Optional):**
+```bash
+# Set OPERATOR_PRIVATE_KEY in environment
+# Deploy compound.ts script to Gelato for daily execution
+```
+
+### Yield Sources
+
+| Platform | Type | APY | Status |
+|----------|------|-----|--------|
+| **SparkDEX LP** | Liquidity Provision | 3-5% | ✅ Integrated |
+| **Kinetic Markets** | Lending | ~5% | 🚧 Coming Soon |
+| **Enosys Loans** | CDP Collateral | Variable | 🚧 Coming Soon |
+
+### Security Features
+
+- **Operator-Only Functions**: All yield operations require operator authorization
+- **SafeERC20**: Secure token transfers and approvals
+- **Separated Accounting**: FXRP yields tracked separately from XRP backing
+- **LP Token Tracking**: Full transparency of staked liquidity positions
+- **Allowance Revocation**: Router approvals revoked after each transaction
+
+### Monitoring Yield
+
+Check current vault state:
+```solidity
+// View exchange rate (increases with compounded rewards)
+vault.exchangeRate()
+
+// View total FXRP in vault
+vault.totalFXRPInVault()
+
+// View total LP tokens staked
+vault.totalLPStaked()
+```
+
 ---
 
 For detailed instructions, see **README.md** section: "How to Deploy to Testnet"

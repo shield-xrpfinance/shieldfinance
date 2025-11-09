@@ -87,7 +87,7 @@ Preferred communication style: Simple, everyday language.
 - **Network**: Deployed on Flare Coston2 testnet and Flare mainnet
 
 #### Shield XRP Vault.sol
-- **Type**: Liquid staking vault for XRP
+- **Type**: Liquid staking vault for XRP with FXRP DeFi yield integration
 - **Symbol**: shXRP (Shield XRP)
 - **Features**:
   - Mints shXRP 1:1 for deposited XRP (initially)
@@ -97,9 +97,19 @@ Preferred communication style: Simple, everyday language.
   - Minimum deposit: 0.01 XRP equivalent
   - Exchange rate tracking (shXRP to XRP)
   - ReentrancyGuard protection
-- **Integration**: Works with XRPL Escrow for secure asset locking
+  - **FXRP Yield Integration** (5-7% APY):
+    - Accepts FXRP deposits for yield generation
+    - Stakes FXRP in SparkDEX LP pools (FXRP/WFLR)
+    - Auto-compounds rewards to increase exchange rate
+    - Separate FXRP/XRP accounting to prevent corruption
+    - SafeERC20 for secure token operations
+- **Integration**: Works with XRPL Escrow for secure asset locking + SparkDEX for FXRP yields
 - **Decimals**: 18
 - **Network**: Deployed on Flare Coston2 testnet and Flare mainnet
+- **FXRP Contract Addresses**:
+  - FXRP Token (Coston2): 0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3
+  - SparkDEX Router V2: 0x4a1E5A90e9943467FAd1acea1E7F0e5e88472a1e
+  - WFLR Token (Coston2): 0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d
 
 ### XRPL Escrow System
 The platform uses standard XRPL Escrow transactions to securely lock XRP deposits on the XRP Ledger. This provides trustless, time-locked asset custody integrated with the Flare Network smart contracts.
