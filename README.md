@@ -81,7 +81,7 @@ This project enables users to:
 ## 📦 Installation
 
 ### Prerequisites
-- Node.js 18+ 
+- Node.js 22+ (required for Hardhat 3)
 - PostgreSQL database
 - Replit account (or local development environment)
 
@@ -113,9 +113,9 @@ FLARE_API_KEY=your-flare-api-key-here
 XRPL_HOOK_ACCOUNT_SECRET=your-xrpl-account-secret-here
 XRPL_NETWORK=testnet
 
-# Frontend Contract Addresses (Update after deployment)
-VITE_SHIELD_TOKEN_ADDRESS=0x...
-VITE_STXRP_VAULT_ADDRESS=0x...
+# Frontend Contract Addresses (Deployed on Coston2 - November 9, 2025)
+VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
+VITE_STXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
 > **Note**: See `.env.example` for a complete list with descriptions. For detailed deployment instructions, refer to [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) and the "How to Deploy to Testnet" section below.
@@ -228,7 +228,7 @@ This section covers deploying the **smart contracts** to Flare Coston2 testnet a
    XRPL_NETWORK=testnet
    ```
 
-### Step 1: Deploy Flare Smart Contracts
+### Step 1: Deploy Flare Smart Contracts - ✅ COMPLETED
 
 Deploy **ShieldToken** ($SHIELD) and **StXRPVault** (stXRP) contracts to Flare Coston2:
 
@@ -236,28 +236,19 @@ Deploy **ShieldToken** ($SHIELD) and **StXRPVault** (stXRP) contracts to Flare C
 # Compile contracts
 npx hardhat compile
 
-# Deploy to Coston2 testnet
-npx hardhat run scripts/deploy-flare.ts --network coston2
+# Deploy to Coston2 testnet (using direct ethers.js for Hardhat 3 compatibility)
+tsx scripts/deploy-direct.ts
 ```
 
-**Expected Output**:
-```
-🚀 Starting Flare deployment...
-📝 Deploying contracts with account: 0x...
-💰 Account balance: 100.0 FLR
+**Deployment Status**: ✅ Successfully deployed on November 9, 2025
 
-1️⃣ Deploying ShieldToken...
-✅ ShieldToken deployed to: 0x...
-   Total Supply: 100000000.0 SHIELD
-   Treasury Allocation: 10000000.0 SHIELD
+**Deployed Contracts (Coston2 Testnet)**:
+- **ShieldToken**: [`0x07F943F173a6bE5EC63a8475597d28aAA6B24992`](https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992)
+  - Total Supply: 100,000,000 SHIELD
+  - Treasury Allocation: 10,000,000 SHIELD
 
-2️⃣ Deploying StXRPVault...
-✅ StXRPVault deployed to: 0x...
-   Vault Token: Staked XRP (stXRP)
-   Initial Exchange Rate: 1.0 stXRP per XRP
-
-✅ Deployment complete!
-```
+- **StXRPVault**: [`0xd8d78DA41473D28eB013e161232192ead2cc745A`](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
+  - Initial Exchange Rate: 1.0 stXRP per XRP
 
 **Deployment info saved to**: `deployments/coston2-deployment.json`
 
@@ -266,11 +257,11 @@ npx hardhat run scripts/deploy-flare.ts --network coston2
 Verify your deployed contracts on Flare block explorer:
 
 ```bash
-# Verify ShieldToken
-npx hardhat verify --network coston2 <SHIELD_TOKEN_ADDRESS> "<TREASURY_ADDRESS>"
+# Verify ShieldToken (Coston2)
+npx hardhat verify --network coston2 0x07F943F173a6bE5EC63a8475597d28aAA6B24992 "0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d"
 
-# Verify StXRPVault
-npx hardhat verify --network coston2 <STXRP_VAULT_ADDRESS>
+# Verify StXRPVault (Coston2)
+npx hardhat verify --network coston2 0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
 ### Step 3: Deploy XRPL Hooks
@@ -304,17 +295,17 @@ chmod +x scripts/deploy-hooks.sh
 ✅ Hook deployed successfully!
 ```
 
-### Step 4: Update Frontend Configuration
+### Step 4: Update Frontend Configuration - ✅ COMPLETED
 
 After deployment, update your frontend `.env` with the contract addresses:
 
 ```bash
-# Add these to your .env file
-VITE_SHIELD_TOKEN_ADDRESS=<deployed-shield-address>
-VITE_STXRP_VAULT_ADDRESS=<deployed-vault-address>
+# Add these to your Replit Secrets (for Coston2 testnet)
+VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
+VITE_STXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
-### Step 5: Configure Vault Operator
+### Step 5: Configure Vault Operator - ⏳ PENDING
 
 The StXRPVault contract needs an operator to mint/burn stXRP:
 
@@ -323,7 +314,7 @@ The StXRPVault contract needs an operator to mint/burn stXRP:
 npx hardhat console --network coston2
 
 # Add operator address
-const vault = await ethers.getContractAt("StXRPVault", "<VAULT_ADDRESS>");
+const vault = await ethers.getContractAt("StXRPVault", "0xd8d78DA41473D28eB013e161232192ead2cc745A");
 await vault.addOperator("<OPERATOR_ADDRESS>");
 ```
 
@@ -345,7 +336,8 @@ To deploy to **mainnet** networks:
 
 ```bash
 # Flare Mainnet
-npx hardhat run scripts/deploy-flare.ts --network flare
+# First, update deploy-direct.ts to use Flare mainnet RPC
+tsx scripts/deploy-direct.ts
 
 # XRPL Mainnet (update XRPL_NETWORK=mainnet in .env)
 ./scripts/deploy-hooks.sh
@@ -493,7 +485,7 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 │   ├── ShieldToken.sol    # ERC-20 governance token
 │   └── StXRPVault.sol     # Liquid staking vault
 ├── scripts/               # Deployment scripts
-│   ├── deploy-flare.ts    # Flare network deployment
+│   ├── deploy-direct.ts   # Direct ethers.js deployment (Hardhat 3)
 │   └── deploy-hooks.sh    # XRPL hooks deployment
 ├── hooks/                 # XRPL Hooks (Rust)
 │   └── escrow_hook.rs     # XRP escrow hook
@@ -516,8 +508,7 @@ npm run db:studio    # Open Drizzle Studio (database GUI)
 
 # Smart Contract Deployment
 npx hardhat compile                                              # Compile contracts
-npx hardhat run scripts/deploy-flare.ts --network coston2        # Deploy to testnet
-npx hardhat run scripts/deploy-flare.ts --network flare          # Deploy to mainnet
+tsx scripts/deploy-direct.ts                                     # Deploy to testnet/mainnet
 ./scripts/deploy-hooks.sh                                        # Deploy XRPL hooks
 npx hardhat verify --network coston2 <ADDRESS> "<CONSTRUCTOR>"   # Verify contracts
 ```

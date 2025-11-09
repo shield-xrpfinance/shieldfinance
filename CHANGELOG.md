@@ -2,6 +2,68 @@
 
 All notable changes to the XRP Liquid Staking Protocol Dashboard will be documented in this file.
 
+## [1.1.0] - 2025-11-09
+
+### 🎉 Deployed - Smart Contracts Live on Flare Coston2 Testnet
+
+#### Successful Deployment
+- **ShieldToken ($SHIELD)** deployed to: `0x07F943F173a6bE5EC63a8475597d28aAA6B24992`
+  - Total Supply: 100,000,000 SHIELD
+  - Treasury Allocation: 10,000,000 SHIELD sent to treasury
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992)
+
+- **StXRPVault (stXRP)** deployed to: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
+  - Initial Exchange Rate: 1.0 stXRP per XRP
+  - Ready for operator configuration
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
+
+#### Deployment Details
+- **Network**: Flare Coston2 Testnet (Chain ID: 114)
+- **Deployer**: `0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D`
+- **Deployment Time**: November 9, 2025
+- **Deployment Artifacts**: Saved to `deployments/coston2-deployment.json`
+
+### Changed - Infrastructure Upgrades
+
+#### Node.js & Hardhat
+- **Upgraded Node.js**: 20.19.3 → 22.17.0 (required for Hardhat 3)
+- **Fixed Hardhat 3 Compatibility**:
+  - Installed correct toolbox: `@nomicfoundation/hardhat-toolbox-mocha-ethers@3.0.1`
+  - Updated network configuration with explicit `type` fields
+  - Added `@nomicfoundation/hardhat-ethers@4.0.3`
+- **Successfully Compiled**: 2 Solidity files with solc 0.8.20
+
+#### New Deployment Script
+- Created `scripts/deploy-direct.ts`:
+  - Uses ethers.js v6 directly (bypasses Hardhat 3 plugin complexities)
+  - More reliable deployment for Hardhat 3 projects
+  - Comprehensive deployment logging and artifact saving
+  - Automatic balance validation
+  - Block explorer link generation
+
+### Updated - Documentation
+- **DEPLOYMENT_GUIDE.md**: Updated with actual deployed contract addresses and commands
+- **README.md**: Updated environment variables with deployed addresses
+- **replit.md**: Added deployed contract section with explorer links
+- **CHANGELOG.md**: This file with complete deployment history
+
+### Dependencies Updated
+```diff
+- @nomicfoundation/hardhat-toolbox: ^6.1.0 (incompatible with Hardhat 3)
++ @nomicfoundation/hardhat-toolbox-mocha-ethers: ^3.0.1
++ @nomicfoundation/hardhat-ethers: ^4.0.3
++ ethers: ^6.x (standalone for direct deployment)
+```
+
+### Next Steps
+1. ✅ Verify contracts on Flare Coston2 block explorer
+2. ✅ Update frontend environment variables with contract addresses
+3. ⏳ Configure vault operator for minting/burning stXRP
+4. ⏳ Test deposit/withdrawal flows on testnet
+5. ⏳ Deploy XRPL Hooks for cross-chain functionality
+
+---
+
 ## [Unreleased] - 2024-11-09
 
 ### Added - Blockchain Infrastructure
