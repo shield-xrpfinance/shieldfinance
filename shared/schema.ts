@@ -63,6 +63,29 @@ export const withdrawalRequests = pgTable("withdrawal_requests", {
   rejectionReason: text("rejection_reason"),
 });
 
+export const escrows = pgTable("escrows", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  positionId: varchar("position_id").references(() => positions.id),
+  vaultId: varchar("vault_id").notNull().references(() => vaults.id),
+  walletAddress: text("wallet_address").notNull(),
+  destinationAddress: text("destination_address").notNull(),
+  amount: decimal("amount", { precision: 18, scale: 6 }).notNull(),
+  asset: text("asset").notNull().default("XRP"),
+  status: text("status").notNull().default("pending"),
+  network: text("network").notNull().default("mainnet"),
+  createTxHash: text("create_tx_hash"),
+  finishTxHash: text("finish_tx_hash"),
+  cancelTxHash: text("cancel_tx_hash"),
+  escrowSequence: integer("escrow_sequence"),
+  finishAfter: timestamp("finish_after"),
+  cancelAfter: timestamp("cancel_after"),
+  condition: text("condition"),
+  fulfillment: text("fulfillment"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  finishedAt: timestamp("finished_at"),
+  cancelledAt: timestamp("cancelled_at"),
+});
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -86,6 +109,11 @@ export const insertWithdrawalRequestSchema = createInsertSchema(withdrawalReques
   requestedAt: true,
 });
 
+export const insertEscrowSchema = createInsertSchema(escrows).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertVault = z.infer<typeof insertVaultSchema>;
 export type Vault = typeof vaults.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
@@ -96,3 +124,5 @@ export type InsertVaultMetrics = z.infer<typeof insertVaultMetricsSchema>;
 export type VaultMetrics = typeof vaultMetricsDaily.$inferSelect;
 export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSchema>;
 export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
+export type InsertEscrow = z.infer<typeof insertEscrowSchema>;
+export type Escrow = typeof escrows.$inferSelect;

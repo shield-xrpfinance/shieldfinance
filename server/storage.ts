@@ -1,4 +1,4 @@
-import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests } from "@shared/schema";
+import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
 
@@ -20,6 +20,11 @@ export interface IStorage {
   getWithdrawalRequest(id: string): Promise<WithdrawalRequest | undefined>;
   createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest>;
   updateWithdrawalRequest(id: string, updates: Partial<InsertWithdrawalRequest>): Promise<WithdrawalRequest>;
+  
+  getEscrows(walletAddress?: string, status?: string): Promise<Escrow[]>;
+  getEscrow(id: string): Promise<Escrow | undefined>;
+  createEscrow(escrow: InsertEscrow): Promise<Escrow>;
+  updateEscrow(id: string, updates: Partial<InsertEscrow>): Promise<Escrow>;
   
   getProtocolOverview(): Promise<{ tvl: string; avgApy: string; activeVaults: number; totalStakers: number }>;
   getApyHistory(days?: number): Promise<Array<{ date: string; stable: number; high: number; maximum: number }>>;
@@ -280,6 +285,39 @@ export class DatabaseStorage implements IStorage {
   async updateWithdrawalRequest(id: string, updates: Partial<InsertWithdrawalRequest>): Promise<WithdrawalRequest> {
     const [request] = await db.update(withdrawalRequests).set(updates).where(eq(withdrawalRequests.id, id)).returning();
     return request;
+  }
+
+  async getEscrows(walletAddress?: string, status?: string): Promise<Escrow[]> {
+    const conditions = [];
+    
+    if (walletAddress) {
+      conditions.push(eq(escrows.walletAddress, walletAddress));
+    }
+    
+    if (status) {
+      conditions.push(eq(escrows.status, status));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(escrows).where(and(...conditions)).orderBy(desc(escrows.createdAt));
+    }
+    
+    return await db.select().from(escrows).orderBy(desc(escrows.createdAt));
+  }
+
+  async getEscrow(id: string): Promise<Escrow | undefined> {
+    const [escrow] = await db.select().from(escrows).where(eq(escrows.id, id));
+    return escrow || undefined;
+  }
+
+  async createEscrow(insertEscrow: InsertEscrow): Promise<Escrow> {
+    const [escrow] = await db.insert(escrows).values(insertEscrow).returning();
+    return escrow;
+  }
+
+  async updateEscrow(id: string, updates: Partial<InsertEscrow>): Promise<Escrow> {
+    const [escrow] = await db.update(escrows).set(updates).where(eq(escrows.id, id)).returning();
+    return escrow;
   }
 }
 
