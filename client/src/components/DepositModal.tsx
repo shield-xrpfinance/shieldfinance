@@ -23,6 +23,7 @@ interface DepositModalProps {
   onOpenChange: (open: boolean) => void;
   vaultName: string;
   vaultApy: string;
+  vaultApyLabel?: string | null;
   depositAssets?: string[];
   onConfirm: (amounts: { [asset: string]: string }) => void;
 }
@@ -32,6 +33,7 @@ export default function DepositModal({
   onOpenChange,
   vaultName,
   vaultApy,
+  vaultApyLabel,
   depositAssets = ["XRP"],
   onConfirm,
 }: DepositModalProps) {
@@ -120,9 +122,9 @@ export default function DepositModal({
             <MultiAssetIcon assets={depositAssets.join(",")} size={28} />
             <div className="flex-1">
               <p className="text-sm font-medium">{vaultName}</p>
-              <p className="text-xs text-muted-foreground">APY: {vaultApy}%</p>
+              <p className="text-xs text-muted-foreground">APY: {vaultApyLabel || `${vaultApy}%`}</p>
             </div>
-            <Badge>{vaultApy}% APY</Badge>
+            <Badge>{vaultApyLabel || `${vaultApy}% APY`}</Badge>
           </div>
 
           {!isConnected && (

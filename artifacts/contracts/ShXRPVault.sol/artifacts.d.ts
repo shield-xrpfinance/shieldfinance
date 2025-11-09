@@ -15,7 +15,7 @@ export interface IUniswapV2Router02$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {};
   readonly inputSourceName: "project/contracts/ShXRPVault.sol";
-  readonly buildInfoId: "solc-0_8_20-80981887179af2c6b3abe50bfa07ca09d023361a";
+  readonly buildInfoId: "solc-0_8_20-32a1259098112e632825115bf94dc20afa14a938";
 };
 
 export interface ShXRPVault$Type {
@@ -29,7 +29,7 @@ export interface ShXRPVault$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {};
   readonly inputSourceName: "project/contracts/ShXRPVault.sol";
-  readonly buildInfoId: "solc-0_8_20-80981887179af2c6b3abe50bfa07ca09d023361a";
+  readonly buildInfoId: "solc-0_8_20-32a1259098112e632825115bf94dc20afa14a938";
 };
 
 import "hardhat/types/artifacts";

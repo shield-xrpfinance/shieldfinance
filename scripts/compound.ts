@@ -110,7 +110,7 @@ async function main() {
     if (exchangeRateAfter > exchangeRateBefore) {
       const rateIncrease = exchangeRateAfter - exchangeRateBefore;
       const percentageIncrease = Number(rateIncrease * 10000n / exchangeRateBefore) / 100;
-      const estimatedAPY = percentageIncrease * 365; // Daily compound * 365 days
+      const estimatedAPY = percentageIncrease * 365n; // Daily compound * 365 days
       
       console.log("\n📈 Yield Stats:");
       console.log("   Daily Yield:", percentageIncrease.toFixed(4), "%");

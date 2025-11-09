@@ -8,6 +8,7 @@ export const vaults = pgTable("vaults", {
   name: text("name").notNull(),
   asset: text("asset").notNull().default("XRP"),
   apy: decimal("apy", { precision: 5, scale: 2 }).notNull(),
+  apyLabel: text("apy_label"),
   tvl: decimal("tvl", { precision: 18, scale: 2 }).notNull(),
   liquidity: decimal("liquidity", { precision: 18, scale: 2 }).notNull(),
   lockPeriod: integer("lock_period").notNull(),

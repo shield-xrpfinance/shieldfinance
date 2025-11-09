@@ -9,6 +9,7 @@ interface VaultCardProps {
   name: string;
   asset?: string;
   apy: string;
+  apyLabel?: string | null;
   tvl: string;
   liquidity: string;
   lockPeriod: number;
@@ -35,6 +36,7 @@ export default function VaultCard({
   name,
   asset = "XRP",
   apy,
+  apyLabel,
   tvl,
   liquidity,
   lockPeriod,
@@ -111,7 +113,9 @@ export default function VaultCard({
       <CardContent className="space-y-6">
         <div className="text-center py-4">
           <p className="text-sm text-muted-foreground mb-1">Annual Percentage Yield</p>
-          <p className="text-5xl font-bold text-primary font-mono tabular-nums">{apy}%</p>
+          <p className="text-5xl font-bold text-primary font-mono tabular-nums">
+            {apyLabel || `${apy}%`}
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-4">

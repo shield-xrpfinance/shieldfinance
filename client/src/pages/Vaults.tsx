@@ -27,7 +27,7 @@ export default function Vaults() {
   const [walletConnectSigningOpen, setWalletConnectSigningOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
   const [pendingDeposit, setPendingDeposit] = useState<{ amounts: { [asset: string]: string }; vaultId: string; vaultName: string } | null>(null);
-  const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; depositAssets: string[] } | null>(null);
+  const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; apyLabel?: string | null; depositAssets: string[] } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("apy");
   const { toast } = useToast();
@@ -102,6 +102,7 @@ export default function Vaults() {
     name: vault.name,
     asset: vault.asset || "XRP",
     apy: vault.apy,
+    apyLabel: vault.apyLabel,
     tvl: formatCurrency(vault.tvl),
     liquidity: formatCurrency(vault.liquidity),
     lockPeriod: vault.lockPeriod,
@@ -139,6 +140,7 @@ export default function Vaults() {
         id: vault.id, 
         name: vault.name, 
         apy: vault.apy,
+        apyLabel: vault.apyLabel,
         depositAssets: vault.depositAssets || ["XRP"],
       });
       setDepositModalOpen(true);
@@ -468,6 +470,7 @@ export default function Vaults() {
           onOpenChange={setDepositModalOpen}
           vaultName={selectedVault.name}
           vaultApy={selectedVault.apy}
+          vaultApyLabel={selectedVault.apyLabel}
           depositAssets={selectedVault.depositAssets}
           onConfirm={handleConfirmDeposit}
         />

@@ -44,6 +44,16 @@ export class DatabaseStorage implements IStorage {
 
     const vaultData = [
       {
+        name: "Shield XRP",
+        asset: "XRP",
+        apy: "6.2",
+        apyLabel: "6.2% (Spark LP + Simulated)",
+        tvl: "1200000",
+        liquidity: "300000",
+        lockPeriod: 7,
+        riskLevel: "low",
+      },
+      {
         name: "XRP Stable Yield",
         asset: "XRP",
         apy: "7.5",
