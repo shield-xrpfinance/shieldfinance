@@ -34,13 +34,7 @@ tsx scripts/deploy-direct.ts
 tsx scripts/deploy-direct.ts
 ```
 
-### 4. Deploy XRPL Hooks
-```bash
-chmod +x scripts/deploy-hooks.sh
-./scripts/deploy-hooks.sh
-```
-
-### 5. Verify Contracts on Block Explorer
+### 4. Verify Contracts on Block Explorer
 ```bash
 # ShieldToken (Coston2 Testnet)
 npx hardhat verify --network coston2 0x07F943F173a6bE5EC63a8475597d28aAA6B24992 "0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d"
@@ -49,13 +43,10 @@ npx hardhat verify --network coston2 0x07F943F173a6bE5EC63a8475597d28aAA6B24992 
 npx hardhat verify --network coston2 0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
-### 6. Combined Testnet Deployment (Run Both)
+### 5. Combined Testnet Deployment
 ```bash
-# Step 1: Deploy Flare contracts - ✅ COMPLETED
+# Deploy Flare contracts - ✅ COMPLETED
 tsx scripts/deploy-direct.ts
-
-# Step 2: Deploy XRPL hooks (Optional)
-./scripts/deploy-hooks.sh
 ```
 
 ## Environment Variables Required
@@ -66,10 +57,6 @@ Create a `.env` file with:
 # Flare Deployment
 DEPLOYER_PRIVATE_KEY=your-private-key-here
 TREASURY_ADDRESS=your-treasury-address-here
-
-# XRPL Hooks
-XRPL_HOOK_ACCOUNT_SECRET=your-xrpl-secret-here
-XRPL_NETWORK=testnet
 
 # Frontend (deployed addresses for Coston2 testnet)
 VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
@@ -104,7 +91,6 @@ Treasury Address: 0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d
 ```
 ShieldToken (Flare): TBD
 Shield XRP Vault (Flare): TBD
-XRPL Hook Account: TBD
 ```
 
 ## Quick Troubleshooting
@@ -112,7 +98,6 @@ XRPL Hook Account: TBD
 | Error | Solution |
 |-------|----------|
 | Insufficient funds | Get testnet tokens from faucets |
-| Hook compilation failed | Install Rust: `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs \| sh` |
 | Contract verification failed | Wait 2-3 minutes for block explorer to index |
 | Private key error | Remove `0x` prefix from private key |
 | `hre.ethers is undefined` (Hardhat 3) | Use `tsx scripts/deploy-direct.ts` instead of Hardhat scripts |

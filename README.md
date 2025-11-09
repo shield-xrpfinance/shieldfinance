@@ -76,7 +76,7 @@ This project enables users to:
 - **Tooling**: 
   - Hardhat Toolbox (ethers.js v6, testing, verification)
   - Contract verification on Flare block explorers
-- **XRPL Hooks**: Rust-based hooks for cross-chain escrow
+- **XRPL Escrow System**: Standard XRPL escrow transactions (EscrowCreate, EscrowFinish, EscrowCancel)
 
 ## 📦 Installation
 
@@ -108,10 +108,6 @@ TREASURY_ADDRESS=your-treasury-address-here
 FLARE_COSTON2_RPC_URL=https://coston2-api.flare.network/ext/C/rpc
 FLARE_MAINNET_RPC_URL=https://flare-api.flare.network/ext/C/rpc
 FLARE_API_KEY=your-flare-api-key-here
-
-# XRPL Hooks Deployment (Required for XRPL hooks deployment)
-XRPL_HOOK_ACCOUNT_SECRET=your-xrpl-account-secret-here
-XRPL_NETWORK=testnet
 
 # Frontend Contract Addresses (Deployed on Coston2 - November 9, 2025)
 VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
@@ -200,7 +196,7 @@ VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 
 ## 🚀 How to Deploy to Testnet
 
-This section covers deploying the **smart contracts** to Flare Coston2 testnet and **XRPL Hooks** to XRP Ledger testnet.
+This section covers deploying the **smart contracts** to Flare Coston2 testnet.
 
 ### Prerequisites
 
@@ -222,10 +218,6 @@ This section covers deploying the **smart contracts** to Flare Coston2 testnet a
    # Flare deployment
    DEPLOYER_PRIVATE_KEY=your-private-key-here
    TREASURY_ADDRESS=your-treasury-address-here
-   
-   # XRPL hooks deployment
-   XRPL_HOOK_ACCOUNT_SECRET=your-xrpl-secret-here
-   XRPL_NETWORK=testnet
    ```
 
 ### Step 1: Deploy Flare Smart Contracts - ✅ COMPLETED
@@ -264,38 +256,7 @@ npx hardhat verify --network coston2 0x07F943F173a6bE5EC63a8475597d28aAA6B24992 
 npx hardhat verify --network coston2 0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
-### Step 3: Deploy XRPL Hooks
-
-Deploy the XRP escrow hook to XRPL testnet:
-
-```bash
-# Make script executable (if not already)
-chmod +x scripts/deploy-hooks.sh
-
-# Run deployment
-./scripts/deploy-hooks.sh
-```
-
-**What this script does**:
-1. Installs Rust and Cargo (if needed)
-2. Installs xrpl-hooks CLI
-3. Compiles the hook (Rust → WASM)
-4. Deploys to XRPL testnet
-
-**Expected Output**:
-```
-🚀 XRPL Hooks Deployment Script
-================================
-
-✅ Rust/Cargo installed
-✅ xrpl-hooks CLI installed
-🔨 Compiling hook...
-✅ Hook compiled successfully
-🚀 Deploying hook to XRPL testnet...
-✅ Hook deployed successfully!
-```
-
-### Step 4: Update Frontend Configuration - ✅ COMPLETED
+### Step 3: Update Frontend Configuration - ✅ COMPLETED
 
 After deployment, update your frontend `.env` with the contract addresses:
 
@@ -305,7 +266,7 @@ VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
 VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
-### Step 5: Configure Vault Operator - ⏳ PENDING
+### Step 4: Configure Vault Operator - ⏳ PENDING
 
 The Shield XRP Vault contract needs an operator to mint/burn shXRP:
 
@@ -318,17 +279,17 @@ const vault = await ethers.getContractAt("Shield XRP Vault", "0xd8d78DA41473D28e
 await vault.addOperator("<OPERATOR_ADDRESS>");
 ```
 
-### Step 6: Test the Integration
+### Step 5: Test the Integration
 
 1. **Test Deposit Flow**:
    - Connect wallet to your dApp
-   - Initiate deposit (triggers XRPL hook)
-   - Hook locks XRP in escrow
+   - Initiate deposit to vault address
+   - XRP is locked using XRPL escrow transactions
    - Operator mints shXRP on Flare
 
 2. **Test Withdrawal Flow**:
    - Request withdrawal (burns shXRP)
-   - Operator releases XRP from XRPL escrow
+   - Operator releases XRP from escrow using EscrowFinish
 
 ### Production Deployment
 
@@ -338,16 +299,13 @@ To deploy to **mainnet** networks:
 # Flare Mainnet
 # First, update deploy-direct.ts to use Flare mainnet RPC
 tsx scripts/deploy-direct.ts
-
-# XRPL Mainnet (update XRPL_NETWORK=mainnet in .env)
-./scripts/deploy-hooks.sh
 ```
 
 **⚠️ Important**: 
 - Use a hardware wallet or secure key management for mainnet deployments
 - Thoroughly test on testnet first
 - Audit smart contracts before mainnet deployment
-- Ensure sufficient funds for deployment (FLR for gas, XRP for hook fees)
+- Ensure sufficient funds for deployment (FLR for gas)
 
 ### Deployment File Structure
 
@@ -357,10 +315,6 @@ After deployment, you'll have:
 deployments/
 ├── coston2-deployment.json    # Testnet deployment info
 └── flare-deployment.json      # Mainnet deployment info (if deployed)
-
-hooks/
-├── escrow_hook.rs             # Hook source code
-└── target/                    # Compiled WASM
 ```
 
 ### Troubleshooting
@@ -369,10 +323,6 @@ hooks/
 - Get testnet tokens from faucets
 - Check your account balances
 
-**"Hook compilation failed"**:
-- Ensure Rust is installed: `cargo --version`
-- Check hook syntax in `hooks/escrow_hook.rs`
-
 **"Contract verification failed"**:
 - Ensure constructor arguments match deployment
 - Wait a few minutes for block explorer to index
@@ -380,8 +330,7 @@ hooks/
 ### Deployment Scripts Summary
 
 - **`npx hardhat compile`** - Compile Solidity contracts
-- **`npx hardhat run scripts/deploy-flare.ts --network coston2`** - Deploy to Flare testnet
-- **`./scripts/deploy-hooks.sh`** - Deploy XRPL hooks
+- **`tsx scripts/deploy-direct.ts`** - Deploy to Flare testnet/mainnet
 - **`npx hardhat verify`** - Verify contracts on block explorer
 
 ## 🚀 Deployment (Application)
@@ -419,10 +368,10 @@ The platform includes a complete smart contract infrastructure deployed on Flare
   - ReentrancyGuard protection
   - Event emission for transparency
 
-### XRPL Hooks
-- **Purpose**: Cross-chain escrow for XRP deposits
-- **Language**: Rust compiled to WASM
-- **Function**: Locks XRP in escrow, emits events for Flare bridge
+### XRPL Escrow System
+- **Purpose**: Secure XRP deposits using standard XRPL escrow functionality
+- **Transactions**: EscrowCreate, EscrowFinish, EscrowCancel
+- **Function**: Locks XRP in trustless escrow, releases upon operator approval
 
 **Deployment Info**: See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for testnet/mainnet deployment instructions.
 
@@ -485,10 +434,7 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 │   ├── ShieldToken.sol    # ERC-20 governance token
 │   └── Shield XRP Vault.sol     # Liquid staking vault
 ├── scripts/               # Deployment scripts
-│   ├── deploy-direct.ts   # Direct ethers.js deployment (Hardhat 3)
-│   └── deploy-hooks.sh    # XRPL hooks deployment
-├── hooks/                 # XRPL Hooks (Rust)
-│   └── escrow_hook.rs     # XRP escrow hook
+│   └── deploy-direct.ts   # Direct ethers.js deployment (Hardhat 3)
 ├── deployments/           # Deployment artifacts
 │   └── *.json             # Deployment info per network
 ├── db/                    # Database migrations
@@ -509,7 +455,6 @@ npm run db:studio    # Open Drizzle Studio (database GUI)
 # Smart Contract Deployment
 npx hardhat compile                                              # Compile contracts
 tsx scripts/deploy-direct.ts                                     # Deploy to testnet/mainnet
-./scripts/deploy-hooks.sh                                        # Deploy XRPL hooks
 npx hardhat verify --network coston2 <ADDRESS> "<CONSTRUCTOR>"   # Verify contracts
 ```
 

@@ -30,7 +30,7 @@ Complete guide to all documentation files in the XRP Liquid Staking Protocol pro
 - Frontend/backend architecture specifications
 - Data storage schemas
 - External dependencies
-- Blockchain infrastructure (smart contracts, deployment, XRPL hooks)
+- Blockchain infrastructure (smart contracts, deployment, XRPL escrow system)
 - Complete deployment configuration
 - Environment variables with examples
 - Contract architecture workflow
@@ -132,10 +132,10 @@ See **DEPLOYMENT_GUIDE.md** for quick command reference
 - **Type**: Liquid staking vault
 - **Documentation**: See README.md → "Smart Contracts" section
 
-### XRPL Hooks
-- **File**: `hooks/escrow_hook.rs`
-- **Purpose**: Cross-chain escrow
-- **Documentation**: See replit.md → "XRPL Hooks" section
+### XRPL Escrow System
+- **Type**: Standard XRPL escrow transactions (EscrowCreate, EscrowFinish, EscrowCancel)
+- **Purpose**: Secure XRP deposits and withdrawals
+- **Documentation**: See replit.md → "XRPL Escrow System" section
 
 ---
 
