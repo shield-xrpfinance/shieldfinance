@@ -59,8 +59,8 @@ async function main() {
   console.log("   Total Supply:", ethers.formatEther(totalSupply), "SHIELD");
   console.log("   Treasury Allocation:", ethers.formatEther(treasuryAllocation), "SHIELD");
 
-  // Deploy StXRPVault
-  console.log("\n2️⃣  Deploying StXRPVault...");
+  // Deploy Shield XRP Vault (shXRP)
+  console.log("\n2️⃣  Deploying Shield XRP Vault (shXRP)...");
   const StXRPVault = new ethers.ContractFactory(
     StXRPVaultArtifact.abi,
     StXRPVaultArtifact.bytecode,
@@ -69,7 +69,7 @@ async function main() {
   const stXRPVault = await StXRPVault.deploy();
   await stXRPVault.waitForDeployment();
   const stXRPVaultAddress = await stXRPVault.getAddress();
-  console.log("✅ StXRPVault deployed to:", stXRPVaultAddress);
+  console.log("✅ Shield XRP Vault deployed to:", stXRPVaultAddress);
 
   // Verify vault details
   const vaultName = await stXRPVault.name();
@@ -122,7 +122,7 @@ async function main() {
   console.log("\n🪙 ShieldToken ($SHIELD):");
   console.log("   Address:", shieldTokenAddress);
   console.log("   Explorer:", `https://coston2-explorer.flare.network/address/${shieldTokenAddress}`);
-  console.log("\n🏦 StXRPVault (shXRP):");
+  console.log("\n🏦 Shield XRP Vault (shXRP):");
   console.log("   Address:", stXRPVaultAddress);
   console.log("   Explorer:", `https://coston2-explorer.flare.network/address/${stXRPVaultAddress}`);
   console.log("\n✅ Deployment complete!");
@@ -136,7 +136,7 @@ async function main() {
   console.log("\n2. Update frontend .env with contract addresses:");
   console.log(`   VITE_SHIELD_TOKEN_ADDRESS=${shieldTokenAddress}`);
   console.log(`   VITE_SHXRP_VAULT_ADDRESS=${stXRPVaultAddress}`);
-  console.log("\n3. Configure operator for StXRPVault to mint/burn shXRP");
+  console.log("\n3. Configure operator for Shield XRP Vault to mint/burn shXRP");
   console.log("\n4. Deploy XRPL hooks using: npm run deploy:hooks\n");
 }
 

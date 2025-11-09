@@ -127,8 +127,8 @@ See **DEPLOYMENT_GUIDE.md** for quick command reference
 - **Type**: ERC-20 governance token
 - **Documentation**: See README.md → "Smart Contracts" section
 
-### StXRPVault.sol
-- **File**: `contracts/StXRPVault.sol`
+### Shield XRP Vault.sol
+- **File**: `contracts/Shield XRP Vault.sol`
 - **Type**: Liquid staking vault
 - **Documentation**: See README.md → "Smart Contracts" section
 

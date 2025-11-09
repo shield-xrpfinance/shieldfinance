@@ -12,7 +12,7 @@ All notable changes to the XRP Liquid Staking Protocol Dashboard will be documen
   - Treasury Allocation: 10,000,000 SHIELD sent to treasury
   - [View on Explorer](https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992)
 
-- **StXRPVault (shXRP)** deployed to: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
+- **Shield XRP Vault (shXRP)** deployed to: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
   - Initial Exchange Rate: 1.0 shXRP per XRP
   - Ready for operator configuration
   - [View on Explorer](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
@@ -74,7 +74,7 @@ All notable changes to the XRP Liquid Staking Protocol Dashboard will be documen
   - Burnable and mintable features
   - OpenZeppelin standards implementation
   
-- **StXRPVault.sol**: Liquid staking vault contract
+- **Shield XRP Vault.sol**: Liquid staking vault contract
   - Mints shXRP tokens 1:1 for deposited XRP
   - Operator-controlled minting/burning
   - Reward distribution system with exchange rate tracking

@@ -7,7 +7,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
- * @title StXRPVault
+ * @title Shield XRP Vault (shXRP)
  * @dev Liquid staking vault for XRP on Flare Network
  * 
  * Features:

@@ -11,7 +11,7 @@
   - Total Supply: 100,000,000 SHIELD
   - Treasury Allocation: 10,000,000 SHIELD
 
-- **StXRPVault (shXRP)**: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
+- **Shield XRP Vault (shXRP)**: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
   - [View on Explorer](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
   - Initial Exchange Rate: 1.0 shXRP per XRP
 
@@ -45,7 +45,7 @@ chmod +x scripts/deploy-hooks.sh
 # ShieldToken (Coston2 Testnet)
 npx hardhat verify --network coston2 0x07F943F173a6bE5EC63a8475597d28aAA6B24992 "0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d"
 
-# StXRPVault (Coston2 Testnet)
+# Shield XRP Vault (Coston2 Testnet)
 npx hardhat verify --network coston2 0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
@@ -94,7 +94,7 @@ VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 
 ```
 ShieldToken (Coston2): 0x07F943F173a6bE5EC63a8475597d28aAA6B24992
-StXRPVault (Coston2): 0xd8d78DA41473D28eB013e161232192ead2cc745A
+Shield XRP Vault (Coston2): 0xd8d78DA41473D28eB013e161232192ead2cc745A
 Deployer Address: 0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D
 Treasury Address: 0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d
 ```
@@ -103,7 +103,7 @@ Treasury Address: 0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d
 
 ```
 ShieldToken (Flare): TBD
-StXRPVault (Flare): TBD
+Shield XRP Vault (Flare): TBD
 XRPL Hook Account: TBD
 ```
 

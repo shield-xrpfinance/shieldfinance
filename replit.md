@@ -86,7 +86,7 @@ Preferred communication style: Simple, everyday language.
 - **Decimals**: 18
 - **Network**: Deployed on Flare Coston2 testnet and Flare mainnet
 
-#### StXRPVault.sol
+#### Shield XRP Vault.sol
 - **Type**: Liquid staking vault for XRP
 - **Symbol**: shXRP (Shield XRP)
 - **Features**:
@@ -116,7 +116,7 @@ Preferred communication style: Simple, everyday language.
 ### Deployment Scripts
 
 #### deploy-direct.ts
-- **Purpose**: Deploy ShieldToken and StXRPVault to Flare Network using direct ethers.js
+- **Purpose**: Deploy ShieldToken and Shield XRP Vault to Flare Network using direct ethers.js
 - **Features**:
   - Uses ethers.js v6 directly (bypasses Hardhat plugin issues)
   - Deploys both contracts in sequence
@@ -133,7 +133,7 @@ Preferred communication style: Simple, everyday language.
   - Total Supply: 100,000,000 SHIELD
   - Treasury Allocation: 10,000,000 SHIELD
   
-- **StXRPVault (shXRP)**: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
+- **Shield XRP Vault (shXRP)**: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
   - [View on Explorer](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
   - Initial Exchange Rate: 1.0 shXRP per XRP
   - Deployed on: 2025-11-09

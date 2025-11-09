@@ -15,7 +15,7 @@ export interface ShieldToken$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {"1076":[{"length":32,"start":439}]};
   readonly inputSourceName: "project/contracts/ShieldToken.sol";
-  readonly buildInfoId: "solc-0_8_20-f67d845ceeb3de2bf5710d09ff8b6ce0a830e3a4";
+  readonly buildInfoId: "solc-0_8_20-f0ec9656a00c10440519c8728ab47adb7e764325";
 };
 
 import "hardhat/types/artifacts";

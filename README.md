@@ -230,7 +230,7 @@ This section covers deploying the **smart contracts** to Flare Coston2 testnet a
 
 ### Step 1: Deploy Flare Smart Contracts - ✅ COMPLETED
 
-Deploy **ShieldToken** ($SHIELD) and **StXRPVault** (shXRP) contracts to Flare Coston2:
+Deploy **ShieldToken** ($SHIELD) and **Shield XRP Vault** (shXRP) contracts to Flare Coston2:
 
 ```bash
 # Compile contracts
@@ -247,7 +247,7 @@ tsx scripts/deploy-direct.ts
   - Total Supply: 100,000,000 SHIELD
   - Treasury Allocation: 10,000,000 SHIELD
 
-- **StXRPVault**: [`0xd8d78DA41473D28eB013e161232192ead2cc745A`](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
+- **Shield XRP Vault**: [`0xd8d78DA41473D28eB013e161232192ead2cc745A`](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
   - Initial Exchange Rate: 1.0 shXRP per XRP
 
 **Deployment info saved to**: `deployments/coston2-deployment.json`
@@ -260,7 +260,7 @@ Verify your deployed contracts on Flare block explorer:
 # Verify ShieldToken (Coston2)
 npx hardhat verify --network coston2 0x07F943F173a6bE5EC63a8475597d28aAA6B24992 "0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d"
 
-# Verify StXRPVault (Coston2)
+# Verify Shield XRP Vault (Coston2)
 npx hardhat verify --network coston2 0xd8d78DA41473D28eB013e161232192ead2cc745A
 ```
 
@@ -307,14 +307,14 @@ VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 
 ### Step 5: Configure Vault Operator - ⏳ PENDING
 
-The StXRPVault contract needs an operator to mint/burn shXRP:
+The Shield XRP Vault contract needs an operator to mint/burn shXRP:
 
 ```bash
 # Using Hardhat console
 npx hardhat console --network coston2
 
 # Add operator address
-const vault = await ethers.getContractAt("StXRPVault", "0xd8d78DA41473D28eB013e161232192ead2cc745A");
+const vault = await ethers.getContractAt("Shield XRP Vault", "0xd8d78DA41473D28eB013e161232192ead2cc745A");
 await vault.addOperator("<OPERATOR_ADDRESS>");
 ```
 
@@ -408,7 +408,7 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 - **Treasury**: 10,000,000 SHIELD (10% allocation)
 - **Features**: Burnable, Mintable (owner-controlled), Transferable ownership
 
-### StXRPVault (shXRP)
+### Shield XRP Vault (shXRP)
 - **Type**: Liquid staking vault for XRP
 - **Symbol**: shXRP (Shield XRP)
 - **Initial Exchange Rate**: 1:1 (shXRP:XRP)
@@ -483,7 +483,7 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 │   └── schema.ts          # Database schema definitions
 ├── contracts/             # Solidity smart contracts
 │   ├── ShieldToken.sol    # ERC-20 governance token
-│   └── StXRPVault.sol     # Liquid staking vault
+│   └── Shield XRP Vault.sol     # Liquid staking vault
 ├── scripts/               # Deployment scripts
 │   ├── deploy-direct.ts   # Direct ethers.js deployment (Hardhat 3)
 │   └── deploy-hooks.sh    # XRPL hooks deployment
