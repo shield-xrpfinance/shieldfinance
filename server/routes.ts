@@ -841,8 +841,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all withdrawal requests (admin)
   app.get("/api/withdrawal-requests", async (req, res) => {
     try {
-      const { status } = req.query;
-      const requests = await storage.getWithdrawalRequests(status as string);
+      const { status, walletAddress } = req.query;
+      const requests = await storage.getWithdrawalRequests(status as string, walletAddress as string);
       res.json(requests);
     } catch (error) {
       console.error("Get withdrawal requests error:", error);

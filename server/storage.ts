@@ -16,7 +16,7 @@ export interface IStorage {
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   getTransactionSummary(): Promise<{ totalDeposits: string; totalWithdrawals: string; totalRewards: string; depositCount: number; withdrawalCount: number; claimCount: number }>;
   
-  getWithdrawalRequests(status?: string): Promise<WithdrawalRequest[]>;
+  getWithdrawalRequests(status?: string, walletAddress?: string): Promise<WithdrawalRequest[]>;
   getWithdrawalRequest(id: string): Promise<WithdrawalRequest | undefined>;
   createWithdrawalRequest(request: InsertWithdrawalRequest): Promise<WithdrawalRequest>;
   updateWithdrawalRequest(id: string, updates: Partial<InsertWithdrawalRequest>): Promise<WithdrawalRequest>;
@@ -275,10 +275,21 @@ export class DatabaseStorage implements IStorage {
       }));
   }
 
-  async getWithdrawalRequests(status?: string): Promise<WithdrawalRequest[]> {
+  async getWithdrawalRequests(status?: string, walletAddress?: string): Promise<WithdrawalRequest[]> {
+    const conditions = [];
+    
     if (status) {
-      return await db.select().from(withdrawalRequests).where(eq(withdrawalRequests.status, status)).orderBy(desc(withdrawalRequests.requestedAt));
+      conditions.push(eq(withdrawalRequests.status, status));
     }
+    
+    if (walletAddress) {
+      conditions.push(eq(withdrawalRequests.walletAddress, walletAddress));
+    }
+    
+    if (conditions.length > 0) {
+      return await db.select().from(withdrawalRequests).where(and(...conditions)).orderBy(desc(withdrawalRequests.requestedAt));
+    }
+    
     return await db.select().from(withdrawalRequests).orderBy(desc(withdrawalRequests.requestedAt));
   }
 
