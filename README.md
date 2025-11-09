@@ -66,6 +66,18 @@ This project enables users to:
   - `@web3auth/modal` for social login
 - **Key Management**: `@noble/secp256k1` for wallet derivation
 
+### Smart Contract Development
+- **Development Framework**: Hardhat for Solidity development
+- **Smart Contract Language**: Solidity 0.8.20
+- **Libraries**: OpenZeppelin Contracts (ERC-20, Access Control, ReentrancyGuard)
+- **Networks**: 
+  - Flare Coston2 testnet (Chain ID: 114)
+  - Flare mainnet (Chain ID: 14)
+- **Tooling**: 
+  - Hardhat Toolbox (ethers.js v6, testing, verification)
+  - Contract verification on Flare block explorers
+- **XRPL Hooks**: Rust-based hooks for cross-chain escrow
+
 ## 📦 Installation
 
 ### Prerequisites
@@ -84,16 +96,29 @@ DATABASE_URL=postgresql://user:password@host:port/database
 # Session
 SESSION_SECRET=your-secure-session-secret
 
-# Xaman (XUMM)
+# Wallet Integration (Optional - falls back to demo mode if not set)
 XUMM_API_KEY=your-xumm-api-key
 XUMM_API_SECRET=your-xumm-api-secret
-
-# WalletConnect
 VITE_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id
-
-# Web3Auth
 VITE_WEB3AUTH_CLIENT_ID=your-web3auth-client-id
+
+# Blockchain Deployment (Required for smart contract deployment)
+DEPLOYER_PRIVATE_KEY=your-private-key-here
+TREASURY_ADDRESS=your-treasury-address-here
+FLARE_COSTON2_RPC_URL=https://coston2-api.flare.network/ext/C/rpc
+FLARE_MAINNET_RPC_URL=https://flare-api.flare.network/ext/C/rpc
+FLARE_API_KEY=your-flare-api-key-here
+
+# XRPL Hooks Deployment (Required for XRPL hooks deployment)
+XRPL_HOOK_ACCOUNT_SECRET=your-xrpl-account-secret-here
+XRPL_NETWORK=testnet
+
+# Frontend Contract Addresses (Update after deployment)
+VITE_SHIELD_TOKEN_ADDRESS=0x...
+VITE_STXRP_VAULT_ADDRESS=0x...
 ```
+
+> **Note**: See `.env.example` for a complete list with descriptions. For detailed deployment instructions, refer to [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) and the "How to Deploy to Testnet" section below.
 
 ### Setup Instructions
 
@@ -381,13 +406,44 @@ The web application is designed to run on Replit with automatic deployments:
    - Configure custom domain (optional)
    - SSL/TLS handled automatically
 
+## 🔐 Smart Contracts
+
+The platform includes a complete smart contract infrastructure deployed on Flare Network:
+
+### ShieldToken ($SHIELD)
+- **Type**: ERC-20 governance and utility token
+- **Total Supply**: 100,000,000 SHIELD
+- **Treasury**: 10,000,000 SHIELD (10% allocation)
+- **Features**: Burnable, Mintable (owner-controlled), Transferable ownership
+
+### StXRPVault (stXRP)
+- **Type**: Liquid staking vault for XRP
+- **Symbol**: stXRP (Staked XRP)
+- **Initial Exchange Rate**: 1:1 (stXRP:XRP)
+- **Key Features**:
+  - Operator-controlled minting/burning for security
+  - Reward distribution updates exchange rate
+  - Minimum deposit: 0.01 XRP
+  - ReentrancyGuard protection
+  - Event emission for transparency
+
+### XRPL Hooks
+- **Purpose**: Cross-chain escrow for XRP deposits
+- **Language**: Rust compiled to WASM
+- **Function**: Locks XRP in escrow, emits events for Flare bridge
+
+**Deployment Info**: See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for testnet/mainnet deployment instructions.
+
 ## 🔒 Security Features
 
 - **Request-Based Withdrawals**: All withdrawals require vault operator approval
+- **Operator-Controlled Minting**: Only approved operators can mint/burn stXRP tokens
+- **ReentrancyGuard Protection**: Smart contracts protected against reentrancy attacks
 - **Secure Key Management**: Environment-based secret storage
 - **Session Management**: PostgreSQL-backed sessions with secure cookies
 - **Transaction Verification**: All blockchain transactions verified on-chain
 - **XRP Address Validation**: Client and server-side validation
+- **XRPL Hash Verification**: Every stXRP mint requires valid XRPL transaction hash
 
 ## 🌐 Network Support
 
@@ -433,17 +489,40 @@ The web application is designed to run on Replit with automatic deployments:
 │   └── index.ts           # Server entry point
 ├── shared/                # Shared types and schemas
 │   └── schema.ts          # Database schema definitions
-└── db/                    # Database migrations
+├── contracts/             # Solidity smart contracts
+│   ├── ShieldToken.sol    # ERC-20 governance token
+│   └── StXRPVault.sol     # Liquid staking vault
+├── scripts/               # Deployment scripts
+│   ├── deploy-flare.ts    # Flare network deployment
+│   └── deploy-hooks.sh    # XRPL hooks deployment
+├── hooks/                 # XRPL Hooks (Rust)
+│   └── escrow_hook.rs     # XRP escrow hook
+├── deployments/           # Deployment artifacts
+│   └── *.json             # Deployment info per network
+├── db/                    # Database migrations
+├── hardhat.config.ts      # Hardhat configuration
+├── DEPLOYMENT_GUIDE.md    # Quick deployment reference
+└── design_guidelines.md   # UI/UX design system
 ```
 
 ### Available Scripts
 
 ```bash
+# Application
 npm run dev          # Start development server
 npm run build        # Build for production
 npm run db:push      # Push database schema changes
 npm run db:studio    # Open Drizzle Studio (database GUI)
+
+# Smart Contract Deployment
+npx hardhat compile                                              # Compile contracts
+npx hardhat run scripts/deploy-flare.ts --network coston2        # Deploy to testnet
+npx hardhat run scripts/deploy-flare.ts --network flare          # Deploy to mainnet
+./scripts/deploy-hooks.sh                                        # Deploy XRPL hooks
+npx hardhat verify --network coston2 <ADDRESS> "<CONSTRUCTOR>"   # Verify contracts
 ```
+
+For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
 ## 📊 Vault System
 
@@ -469,11 +548,23 @@ Contributions are welcome! Please follow these steps:
 
 This project is proprietary software owned by Shield Finance Inc.
 
+## 📚 Documentation
+
+- **[README.md](README.md)** - Main project documentation (this file)
+- **[replit.md](replit.md)** - Technical architecture and system design
+- **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Quick deployment command reference
+- **[design_guidelines.md](design_guidelines.md)** - UI/UX design system
+- **[.env.example](.env.example)** - Environment variables reference
+
 ## 🔗 Links
 
+- **Repository**: [github.com/shield-xrpfinance/shieldfinance](https://github.com/shield-xrpfinance/shieldfinance)
 - **Live Application**: [Coming Soon]
-- **Documentation**: See `replit.md` for technical architecture details
-- **Support**: Please check our docs or contact the development team
+- **Block Explorers**:
+  - Flare Coston2: https://coston2-explorer.flare.network
+  - Flare Mainnet: https://flare-explorer.flare.network
+  - XRPL Testnet: https://testnet.xrpl.org
+  - XRPL Mainnet: https://livenet.xrpl.org
 
 ## 👥 Team
 
