@@ -110,8 +110,7 @@ async function main() {
   console.log("\n2. Update frontend .env with contract addresses:");
   console.log(`   VITE_SHIELD_TOKEN_ADDRESS=${shieldTokenAddress}`);
   console.log(`   VITE_SHXRP_VAULT_ADDRESS=${stXRPVaultAddress}`);
-  console.log("\n3. Configure operator for Shield XRP Vault to mint/burn shXRP");
-  console.log("\n4. Deploy XRPL hooks using: npm run deploy:hooks\n");
+  console.log("\n3. Configure operator for Shield XRP Vault to mint/burn shXRP\n");
 }
 
 main()
