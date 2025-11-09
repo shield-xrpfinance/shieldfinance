@@ -4,6 +4,7 @@ import { Wallet } from "xrpl";
 import * as secp256k1 from "@noble/secp256k1";
 
 let web3auth: Web3Auth | null = null;
+let currentNetwork: string | null = null;
 
 export interface Web3AuthConfig {
   clientId: string;
@@ -11,18 +12,29 @@ export interface Web3AuthConfig {
 }
 
 export async function initWeb3Auth(config: Web3AuthConfig): Promise<Web3Auth> {
+  // IMPORTANT: Current Web3Auth Client ID is configured for testnet (sapphire_devnet)
+  // Always use testnet network regardless of app's network toggle
+  const networkToUse = WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
+  
+  // Reset if network changed or if instance doesn't exist
+  if (web3auth && currentNetwork !== networkToUse) {
+    try {
+      await web3auth.logout();
+    } catch (e) {
+      // Ignore logout errors
+    }
+    web3auth = null;
+  }
+  
   if (web3auth) {
     return web3auth;
   }
 
-  // Use correct Web3Auth network based on environment
-  const web3AuthNetwork = config.network === "testnet" 
-    ? WEB3AUTH_NETWORK.SAPPHIRE_DEVNET 
-    : WEB3AUTH_NETWORK.SAPPHIRE_MAINNET;
+  currentNetwork = networkToUse;
 
   web3auth = new Web3Auth({
     clientId: config.clientId,
-    web3AuthNetwork,
+    web3AuthNetwork: networkToUse,
     uiConfig: {
       appName: "XRP Liquid Staking Protocol",
       appUrl: window.location.origin,

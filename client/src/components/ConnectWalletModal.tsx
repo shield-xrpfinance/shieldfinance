@@ -286,10 +286,19 @@ export default function ConnectWalletModal({
         throw new Error("Web3Auth Client ID not configured");
       }
 
+      // Note: Web3Auth Client ID is currently configured for testnet
+      // Always pass "testnet" to match the Web3Auth project configuration
       await initWeb3Auth({
         clientId,
-        network: isTestnet ? "testnet" : "mainnet",
+        network: "testnet",
       });
+
+      // Close the ConnectWallet modal before opening Web3Auth modal
+      // This prevents the dialog overlay from blocking Web3Auth interactions
+      onOpenChange(false);
+      
+      // Give the dialog time to actually close before opening Web3Auth
+      await new Promise(resolve => setTimeout(resolve, 100));
 
       const result = await loginWithWeb3Auth();
 
@@ -298,7 +307,6 @@ export default function ConnectWalletModal({
         if (onConnect) {
           onConnect(result.address, "web3auth");
         }
-        onOpenChange(false);
         toast({
           title: "Wallet Connected",
           description: `Connected to ${result.address.slice(0, 8)}...${result.address.slice(-6)}`,
