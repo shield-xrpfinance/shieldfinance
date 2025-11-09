@@ -3,10 +3,10 @@ import type UniversalProvider from "@walletconnect/universal-provider";
 
 interface WalletContextType {
   address: string | null;
-  provider: "xaman" | "walletconnect" | null;
+  provider: "xaman" | "walletconnect" | "web3auth" | null;
   isConnected: boolean;
   walletConnectProvider: UniversalProvider | null;
-  connect: (address: string, provider: "xaman" | "walletconnect", wcProvider?: UniversalProvider) => void;
+  connect: (address: string, provider: "xaman" | "walletconnect" | "web3auth", wcProvider?: UniversalProvider) => void;
   disconnect: () => void;
 }
 
@@ -14,7 +14,7 @@ const WalletContext = createContext<WalletContextType | undefined>(undefined);
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
-  const [provider, setProvider] = useState<"xaman" | "walletconnect" | null>(null);
+  const [provider, setProvider] = useState<"xaman" | "walletconnect" | "web3auth" | null>(null);
   const [walletConnectProvider, setWalletConnectProvider] = useState<UniversalProvider | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
 
@@ -24,11 +24,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     const savedProvider = localStorage.getItem("walletProvider");
 
     if (savedAddress && savedProvider) {
-      // Only auto-restore Xaman connections
+      // Auto-restore Xaman and Web3Auth connections
       // WalletConnect requires active session and cannot be restored from localStorage alone
-      if (savedProvider === "xaman") {
+      if (savedProvider === "xaman" || savedProvider === "web3auth") {
         setAddress(savedAddress);
-        setProvider(savedProvider);
+        setProvider(savedProvider as "xaman" | "web3auth");
         console.log(`Restored wallet connection: ${savedProvider} - ${savedAddress}`);
       } else if (savedProvider === "walletconnect") {
         // Clear WalletConnect connection - user needs to reconnect manually
@@ -41,7 +41,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setIsInitialized(true);
   }, []);
 
-  const connect = (walletAddress: string, walletProvider: "xaman" | "walletconnect", wcProvider?: UniversalProvider) => {
+  const connect = (walletAddress: string, walletProvider: "xaman" | "walletconnect" | "web3auth", wcProvider?: UniversalProvider) => {
     setAddress(walletAddress);
     setProvider(walletProvider);
     if (wcProvider) {

@@ -1,0 +1,97 @@
+import { Web3Auth } from "@web3auth/modal";
+import { WEB3AUTH_NETWORK, WALLET_ADAPTERS } from "@web3auth/base";
+import { Wallet } from "xrpl";
+import * as elliptic from "elliptic";
+
+let web3auth: Web3Auth | null = null;
+
+export interface Web3AuthConfig {
+  clientId: string;
+  network: "mainnet" | "testnet";
+}
+
+export async function initWeb3Auth(config: Web3AuthConfig): Promise<Web3Auth> {
+  if (web3auth) {
+    return web3auth;
+  }
+
+  // Use correct Web3Auth network based on environment
+  const web3AuthNetwork = config.network === "testnet" 
+    ? WEB3AUTH_NETWORK.SAPPHIRE_DEVNET 
+    : WEB3AUTH_NETWORK.SAPPHIRE_MAINNET;
+
+  web3auth = new Web3Auth({
+    clientId: config.clientId,
+    web3AuthNetwork,
+    uiConfig: {
+      appName: "XRP Liquid Staking Protocol",
+      appUrl: window.location.origin,
+      logoLight: window.location.origin + "/favicon.ico",
+      logoDark: window.location.origin + "/favicon.ico",
+      defaultLanguage: "en",
+      mode: "light",
+      theme: {
+        primary: "#0052FF",
+      },
+      useLogoLoader: true,
+    },
+  });
+
+  await web3auth.init();
+
+  return web3auth;
+}
+
+export async function loginWithWeb3Auth(): Promise<{ address: string; privateKey: string } | null> {
+  if (!web3auth) {
+    throw new Error("Web3Auth not initialized");
+  }
+
+  const web3authProvider = await web3auth.connect();
+
+  if (!web3authProvider) {
+    return null;
+  }
+
+  // Get private key from Web3Auth (returns hex-encoded secp256k1 private key)
+  const privateKeyHex = await web3authProvider.request({
+    method: "private_key",
+  });
+
+  if (!privateKeyHex || typeof privateKeyHex !== "string") {
+    throw new Error("Failed to get private key from Web3Auth");
+  }
+
+  // Remove '0x' prefix if present
+  const cleanPrivateKey = privateKeyHex.startsWith('0x') 
+    ? privateKeyHex.slice(2) 
+    : privateKeyHex;
+
+  // Derive the public key from the private key using secp256k1
+  const ec = new elliptic.ec('secp256k1');
+  const keyPair = ec.keyFromPrivate(cleanPrivateKey, 'hex');
+  
+  // Get compressed public key (33 bytes, starts with 02 or 03) as hex string
+  const compressedPublicKey = keyPair.getPublic().encodeCompressed('hex').toUpperCase();
+  
+  // Format private key for XRPL (33 bytes with 0x00 prefix for secp256k1)
+  const formattedPrivateKey = '00' + cleanPrivateKey.toUpperCase();
+  
+  // Create the XRPL wallet instance with both keys
+  const wallet = new Wallet(compressedPublicKey, formattedPrivateKey);
+  
+  return {
+    address: wallet.address,
+    privateKey: cleanPrivateKey,
+  };
+}
+
+export async function logoutWeb3Auth(): Promise<void> {
+  if (web3auth) {
+    await web3auth.logout();
+  }
+}
+
+export function getWeb3AuthInstance(): Web3Auth | null {
+  return web3auth;
+}

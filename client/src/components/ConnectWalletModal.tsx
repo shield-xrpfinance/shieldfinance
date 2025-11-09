@@ -7,18 +7,20 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Wallet, ExternalLink, Loader2, QrCode, X } from "lucide-react";
+import { Wallet, ExternalLink, Loader2, QrCode, X, Mail } from "lucide-react";
+import { SiGoogle, SiFacebook, SiX, SiDiscord } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { QRCodeSVG } from "qrcode.react";
 import UniversalProvider from "@walletconnect/universal-provider";
 import { WalletConnectModal } from "@walletconnect/modal";
+import { initWeb3Auth, loginWithWeb3Auth } from "@/lib/web3auth";
 
 interface ConnectWalletModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConnect?: (address: string, provider: "xaman" | "walletconnect") => void;
+  onConnect?: (address: string, provider: "xaman" | "walletconnect" | "web3auth") => void;
 }
 
 type ConnectionStep = "select" | "xaman-qr";
@@ -274,6 +276,51 @@ export default function ConnectWalletModal({
     }
   };
 
+  const handleWeb3Auth = async () => {
+    setConnecting(true);
+    
+    try {
+      const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID;
+      
+      if (!clientId) {
+        throw new Error("Web3Auth Client ID not configured");
+      }
+
+      // Initialize Web3Auth
+      await initWeb3Auth({
+        clientId,
+        network: isTestnet ? "testnet" : "mainnet",
+      });
+
+      // Login with Web3Auth (shows social login modal)
+      const result = await loginWithWeb3Auth();
+
+      if (result) {
+        connect(result.address, "web3auth");
+        if (onConnect) {
+          onConnect(result.address, "web3auth");
+        }
+        onOpenChange(false);
+        toast({
+          title: "Wallet Connected",
+          description: `Connected to ${result.address.slice(0, 8)}...${result.address.slice(-6)}`,
+        });
+        setConnecting(false);
+      } else {
+        throw new Error("Login cancelled or failed");
+      }
+    } catch (error) {
+      console.error("Web3Auth error:", error);
+      setConnecting(false);
+      
+      toast({
+        title: "Connection Failed",
+        description: error instanceof Error ? error.message : "Failed to connect with Web3Auth",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" data-testid="modal-connect-wallet">
@@ -332,8 +379,38 @@ export default function ConnectWalletModal({
               </div>
             </Button>
 
+            <div className="relative flex items-center justify-center py-2">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-muted" />
+              </div>
+              <div className="relative bg-background px-3">
+                <span className="text-xs text-muted-foreground">OR</span>
+              </div>
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full justify-start h-auto py-4"
+              onClick={handleWeb3Auth}
+              disabled={connecting}
+              data-testid="button-connect-web3auth"
+            >
+              <div className="flex items-center gap-3 w-full">
+                <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center">
+                  <SiGoogle className="h-5 w-5 text-primary" />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="font-semibold">Social Login</p>
+                  <p className="text-xs text-muted-foreground">
+                    Sign in with Google, Facebook, Twitter, or Email
+                  </p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </Button>
+
             <div className="text-xs text-muted-foreground text-center border-t pt-4">
-              By connecting your wallet, you agree to our Terms of Service
+              Self-custody wallet via Web3Auth • Non-custodial
             </div>
           </div>
         )}
