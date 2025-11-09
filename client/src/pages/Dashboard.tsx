@@ -14,7 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
-import { Link } from "wouter";
+import { Link} from "wouter";
 
 export default function Dashboard() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);

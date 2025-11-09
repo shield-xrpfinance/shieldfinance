@@ -7,11 +7,13 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { TestnetBanner } from "@/components/TestnetBanner";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
-import { NetworkProvider } from "@/lib/networkContext";
+import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { Button } from "@/components/ui/button";
-import { Wallet, LogOut, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Wallet, LogOut, Loader2, Beaker } from "lucide-react";
 import { useWalletBalance } from "@/hooks/use-wallet-balance";
 import Dashboard from "@/pages/Dashboard";
 import Vaults from "@/pages/Vaults";
@@ -38,11 +40,20 @@ function Router() {
 function Header() {
   const { address, isConnected, disconnect } = useWallet();
   const { balance, isLoading } = useWalletBalance();
+  const { isTestnet, network } = useNetwork();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   return (
     <header className="flex items-center justify-between gap-4 p-4 border-b">
-      <SidebarTrigger data-testid="button-sidebar-toggle" />
+      <div className="flex items-center gap-3">
+        <SidebarTrigger data-testid="button-sidebar-toggle" />
+        {isTestnet && (
+          <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4 gap-1" data-testid="badge-testnet-status">
+            <Beaker className="h-3 w-3" />
+            {network === "testnet" ? "XRPL Testnet" : "Coston2"}
+          </Badge>
+        )}
+      </div>
       <div className="flex items-center gap-3">
         {isConnected && address ? (
           <div className="flex items-center gap-2">
@@ -114,6 +125,7 @@ function AppContent() {
                   <Header />
                   <main className="flex-1 overflow-auto p-8">
                     <div className="max-w-7xl mx-auto">
+                      <TestnetBanner />
                       <Router />
                     </div>
                   </main>
