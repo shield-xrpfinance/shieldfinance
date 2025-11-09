@@ -173,9 +173,203 @@ VITE_WEB3AUTH_CLIENT_ID=your-web3auth-client-id
 - APY trends over time
 - Analytics aggregation
 
-## 🚀 Deployment
+## 🚀 How to Deploy to Testnet
 
-The application is designed to run on Replit with automatic deployments:
+This section covers deploying the **smart contracts** to Flare Coston2 testnet and **XRPL Hooks** to XRP Ledger testnet.
+
+### Prerequisites
+
+1. **Get Testnet Funds**:
+   - **Flare Coston2**: Get free C2FLR from https://faucet.flare.network/coston2
+   - **XRPL Testnet**: Get free test XRP from https://xrpl.org/xrp-testnet-faucet.html
+
+2. **Set Up Environment Variables**:
+   ```bash
+   # Copy .env.example to .env
+   cp .env.example .env
+   
+   # Add your private keys and secrets
+   nano .env
+   ```
+
+3. **Required Environment Variables** (see `.env.example` for full list):
+   ```bash
+   # Flare deployment
+   DEPLOYER_PRIVATE_KEY=your-private-key-here
+   TREASURY_ADDRESS=your-treasury-address-here
+   
+   # XRPL hooks deployment
+   XRPL_HOOK_ACCOUNT_SECRET=your-xrpl-secret-here
+   XRPL_NETWORK=testnet
+   ```
+
+### Step 1: Deploy Flare Smart Contracts
+
+Deploy **ShieldToken** ($SHIELD) and **StXRPVault** (stXRP) contracts to Flare Coston2:
+
+```bash
+# Compile contracts
+npx hardhat compile
+
+# Deploy to Coston2 testnet
+npx hardhat run scripts/deploy-flare.ts --network coston2
+```
+
+**Expected Output**:
+```
+🚀 Starting Flare deployment...
+📝 Deploying contracts with account: 0x...
+💰 Account balance: 100.0 FLR
+
+1️⃣ Deploying ShieldToken...
+✅ ShieldToken deployed to: 0x...
+   Total Supply: 100000000.0 SHIELD
+   Treasury Allocation: 10000000.0 SHIELD
+
+2️⃣ Deploying StXRPVault...
+✅ StXRPVault deployed to: 0x...
+   Vault Token: Staked XRP (stXRP)
+   Initial Exchange Rate: 1.0 stXRP per XRP
+
+✅ Deployment complete!
+```
+
+**Deployment info saved to**: `deployments/coston2-deployment.json`
+
+### Step 2: Verify Contracts (Optional)
+
+Verify your deployed contracts on Flare block explorer:
+
+```bash
+# Verify ShieldToken
+npx hardhat verify --network coston2 <SHIELD_TOKEN_ADDRESS> "<TREASURY_ADDRESS>"
+
+# Verify StXRPVault
+npx hardhat verify --network coston2 <STXRP_VAULT_ADDRESS>
+```
+
+### Step 3: Deploy XRPL Hooks
+
+Deploy the XRP escrow hook to XRPL testnet:
+
+```bash
+# Make script executable (if not already)
+chmod +x scripts/deploy-hooks.sh
+
+# Run deployment
+./scripts/deploy-hooks.sh
+```
+
+**What this script does**:
+1. Installs Rust and Cargo (if needed)
+2. Installs xrpl-hooks CLI
+3. Compiles the hook (Rust → WASM)
+4. Deploys to XRPL testnet
+
+**Expected Output**:
+```
+🚀 XRPL Hooks Deployment Script
+================================
+
+✅ Rust/Cargo installed
+✅ xrpl-hooks CLI installed
+🔨 Compiling hook...
+✅ Hook compiled successfully
+🚀 Deploying hook to XRPL testnet...
+✅ Hook deployed successfully!
+```
+
+### Step 4: Update Frontend Configuration
+
+After deployment, update your frontend `.env` with the contract addresses:
+
+```bash
+# Add these to your .env file
+VITE_SHIELD_TOKEN_ADDRESS=<deployed-shield-address>
+VITE_STXRP_VAULT_ADDRESS=<deployed-vault-address>
+```
+
+### Step 5: Configure Vault Operator
+
+The StXRPVault contract needs an operator to mint/burn stXRP:
+
+```bash
+# Using Hardhat console
+npx hardhat console --network coston2
+
+# Add operator address
+const vault = await ethers.getContractAt("StXRPVault", "<VAULT_ADDRESS>");
+await vault.addOperator("<OPERATOR_ADDRESS>");
+```
+
+### Step 6: Test the Integration
+
+1. **Test Deposit Flow**:
+   - Connect wallet to your dApp
+   - Initiate deposit (triggers XRPL hook)
+   - Hook locks XRP in escrow
+   - Operator mints stXRP on Flare
+
+2. **Test Withdrawal Flow**:
+   - Request withdrawal (burns stXRP)
+   - Operator releases XRP from XRPL escrow
+
+### Production Deployment
+
+To deploy to **mainnet** networks:
+
+```bash
+# Flare Mainnet
+npx hardhat run scripts/deploy-flare.ts --network flare
+
+# XRPL Mainnet (update XRPL_NETWORK=mainnet in .env)
+./scripts/deploy-hooks.sh
+```
+
+**⚠️ Important**: 
+- Use a hardware wallet or secure key management for mainnet deployments
+- Thoroughly test on testnet first
+- Audit smart contracts before mainnet deployment
+- Ensure sufficient funds for deployment (FLR for gas, XRP for hook fees)
+
+### Deployment File Structure
+
+After deployment, you'll have:
+
+```
+deployments/
+├── coston2-deployment.json    # Testnet deployment info
+└── flare-deployment.json      # Mainnet deployment info (if deployed)
+
+hooks/
+├── escrow_hook.rs             # Hook source code
+└── target/                    # Compiled WASM
+```
+
+### Troubleshooting
+
+**"Insufficient funds" error**:
+- Get testnet tokens from faucets
+- Check your account balances
+
+**"Hook compilation failed"**:
+- Ensure Rust is installed: `cargo --version`
+- Check hook syntax in `hooks/escrow_hook.rs`
+
+**"Contract verification failed"**:
+- Ensure constructor arguments match deployment
+- Wait a few minutes for block explorer to index
+
+### Deployment Scripts Summary
+
+- **`npx hardhat compile`** - Compile Solidity contracts
+- **`npx hardhat run scripts/deploy-flare.ts --network coston2`** - Deploy to Flare testnet
+- **`./scripts/deploy-hooks.sh`** - Deploy XRPL hooks
+- **`npx hardhat verify`** - Verify contracts on block explorer
+
+## 🚀 Deployment (Application)
+
+The web application is designed to run on Replit with automatic deployments:
 
 1. **Push to main branch**
    ```bash
