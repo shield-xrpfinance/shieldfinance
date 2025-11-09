@@ -115,16 +115,28 @@ Preferred communication style: Simple, everyday language.
 
 ### Deployment Scripts
 
-#### deploy-flare.ts
-- **Purpose**: Deploy ShieldToken and StXRPVault to Flare Network
+#### deploy-direct.ts
+- **Purpose**: Deploy ShieldToken and StXRPVault to Flare Network using direct ethers.js
 - **Features**:
+  - Uses ethers.js v6 directly (bypasses Hardhat plugin issues)
   - Deploys both contracts in sequence
   - Saves deployment info to JSON (deployments/ directory)
   - Provides block explorer links
   - Validates deployer balance
   - Configurable treasury address
-- **Networks**: Supports both Coston2 testnet and Flare mainnet
-- **Usage**: `npx hardhat run scripts/deploy-flare.ts --network coston2`
+- **Networks**: Configured for Coston2 testnet, easily adaptable for mainnet
+- **Usage**: `tsx scripts/deploy-direct.ts`
+
+#### Deployed Contracts (Coston2 Testnet)
+- **ShieldToken ($SHIELD)**: `0x07F943F173a6bE5EC63a8475597d28aAA6B24992`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992)
+  - Total Supply: 100,000,000 SHIELD
+  - Treasury Allocation: 10,000,000 SHIELD
+  
+- **StXRPVault (stXRP)**: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
+  - Initial Exchange Rate: 1.0 stXRP per XRP
+  - Deployed on: 2025-11-09
 
 #### deploy-hooks.sh
 - **Purpose**: Deploy XRPL escrow hook to XRP Ledger

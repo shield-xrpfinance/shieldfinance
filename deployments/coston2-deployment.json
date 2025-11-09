@@ -1,0 +1,20 @@
+{
+  "network": "coston2",
+  "chainId": "114",
+  "deployer": "0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D",
+  "treasury": "0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d",
+  "timestamp": "2025-11-09T08:34:47.770Z",
+  "contracts": {
+    "ShieldToken": {
+      "address": "0x07F943F173a6bE5EC63a8475597d28aAA6B24992",
+      "totalSupply": "100000000.0",
+      "treasuryAllocation": "10000000.0"
+    },
+    "StXRPVault": {
+      "address": "0xd8d78DA41473D28eB013e161232192ead2cc745A",
+      "name": "Staked XRP",
+      "symbol": "stXRP",
+      "exchangeRate": "1.0"
+    }
+  }
+}

@@ -1,0 +1,3 @@
+.exit
+console.log("Signer address:", signer.address);
+const [signer] = await hre.ethers.getSigners();

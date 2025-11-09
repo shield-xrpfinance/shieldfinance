@@ -1,33 +1,53 @@
-import hre from "hardhat";
+import { ethers } from "ethers";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Import compiled contract ABIs
+import ShieldTokenArtifact from "../artifacts/contracts/ShieldToken.sol/ShieldToken.json" assert { type: "json" };
+import StXRPVaultArtifact from "../artifacts/contracts/StXRPVault.sol/StXRPVault.json" assert { type: "json" };
 
 async function main() {
-  console.log("🚀 Starting Flare deployment...\n");
+  console.log("🚀 Starting Flare Coston2 deployment...\n");
 
-  // Get ethers from hre
-  const { ethers } = hre;
+  // Network configuration
+  const rpcUrl = process.env.FLARE_COSTON2_RPC_URL || "https://coston2-api.flare.network/ext/C/rpc";
+  const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
+  const treasuryAddress = process.env.TREASURY_ADDRESS;
 
-  // Get deployer account
-  const [deployer] = await ethers.getSigners();
-  console.log("📝 Deploying contracts with account:", deployer.address);
+  if (!privateKey) {
+    throw new Error("DEPLOYER_PRIVATE_KEY environment variable is required");
+  }
+
+  if (!treasuryAddress) {
+    throw new Error("TREASURY_ADDRESS environment variable is required");
+  }
+
+  // Connect to network
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const wallet = new ethers.Wallet(privateKey, provider);
+
+  console.log("📝 Deploying contracts with account:", wallet.address);
   
-  const balance = await ethers.provider.getBalance(deployer.address);
-  console.log("💰 Account balance:", ethers.formatEther(balance), "FLR\n");
+  const balance = await provider.getBalance(wallet.address);
+  console.log("💰 Account balance:", ethers.formatEther(balance), "CFLR\n");
 
   if (balance === 0n) {
     console.error("❌ Error: Deployer account has zero balance!");
-    console.log("Get testnet FLR from: https://faucet.flare.network/coston2");
+    console.log("Get testnet CFLR from: https://faucet.flare.network/coston2");
     process.exit(1);
   }
 
-  // Treasury address (can be same as deployer or different)
-  const treasuryAddress = process.env.TREASURY_ADDRESS || deployer.address;
-  console.log("🏦 Treasury address:", treasuryAddress);
-
   // Deploy ShieldToken
-  console.log("\n1️⃣ Deploying ShieldToken...");
-  const ShieldToken = await ethers.getContractFactory("ShieldToken");
+  console.log("1️⃣  Deploying ShieldToken...");
+  const ShieldToken = new ethers.ContractFactory(
+    ShieldTokenArtifact.abi,
+    ShieldTokenArtifact.bytecode,
+    wallet
+  );
   const shieldToken = await ShieldToken.deploy(treasuryAddress);
   await shieldToken.waitForDeployment();
   const shieldTokenAddress = await shieldToken.getAddress();
@@ -40,8 +60,12 @@ async function main() {
   console.log("   Treasury Allocation:", ethers.formatEther(treasuryAllocation), "SHIELD");
 
   // Deploy StXRPVault
-  console.log("\n2️⃣ Deploying StXRPVault...");
-  const StXRPVault = await ethers.getContractFactory("StXRPVault");
+  console.log("\n2️⃣  Deploying StXRPVault...");
+  const StXRPVault = new ethers.ContractFactory(
+    StXRPVaultArtifact.abi,
+    StXRPVaultArtifact.bytecode,
+    wallet
+  );
   const stXRPVault = await StXRPVault.deploy();
   await stXRPVault.waitForDeployment();
   const stXRPVaultAddress = await stXRPVault.getAddress();
@@ -54,11 +78,14 @@ async function main() {
   console.log("   Vault Token:", vaultName, `(${vaultSymbol})`);
   console.log("   Initial Exchange Rate:", ethers.formatEther(exchangeRate), "stXRP per XRP");
 
+  // Get network info
+  const network = await provider.getNetwork();
+  
   // Save deployment addresses
   const deploymentInfo = {
-    network: (await ethers.provider.getNetwork()).name,
-    chainId: (await ethers.provider.getNetwork()).chainId.toString(),
-    deployer: deployer.address,
+    network: "coston2",
+    chainId: network.chainId.toString(),
+    deployer: wallet.address,
     treasury: treasuryAddress,
     timestamp: new Date().toISOString(),
     contracts: {
@@ -81,8 +108,7 @@ async function main() {
     fs.mkdirSync(deploymentsDir, { recursive: true });
   }
 
-  const networkName = (await ethers.provider.getNetwork()).name || "unknown";
-  const deploymentFile = path.join(deploymentsDir, `${networkName}-deployment.json`);
+  const deploymentFile = path.join(deploymentsDir, "coston2-deployment.json");
   fs.writeFileSync(deploymentFile, JSON.stringify(deploymentInfo, null, 2));
 
   console.log("\n💾 Deployment info saved to:", deploymentFile);
@@ -91,7 +117,7 @@ async function main() {
   console.log("\n" + "=".repeat(60));
   console.log("📊 DEPLOYMENT SUMMARY");
   console.log("=".repeat(60));
-  console.log("Network:", deploymentInfo.network);
+  console.log("Network: Flare Coston2 Testnet");
   console.log("Chain ID:", deploymentInfo.chainId);
   console.log("\n🪙 ShieldToken ($SHIELD):");
   console.log("   Address:", shieldTokenAddress);
