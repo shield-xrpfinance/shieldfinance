@@ -1,5 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import {
+  Tooltip as UITooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Info } from "lucide-react";
 import { useState } from "react";
 import {
   LineChart,
@@ -11,6 +17,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
+import { getTooltipContent } from "@/lib/tooltipCopy";
+import { useNetwork } from "@/lib/networkContext";
 
 interface ApyChartProps {
   data: Array<{
@@ -24,13 +32,24 @@ const timeRanges = ["7D", "30D", "90D", "All"] as const;
 
 export default function ApyChart({ data, vaultNames }: ApyChartProps) {
   const [selectedRange, setSelectedRange] = useState<typeof timeRanges[number]>("30D");
+  const { isTestnet } = useNetwork();
 
   const colors = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))"];
 
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between gap-4 flex-wrap space-y-0 pb-4">
-        <CardTitle>APY Historical Trends</CardTitle>
+        <div className="flex items-center gap-2">
+          <CardTitle>APY Historical Trends</CardTitle>
+          <UITooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-4 w-4 text-muted-foreground cursor-help" data-testid="icon-apy-chart-info" />
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p>{getTooltipContent("apy", isTestnet ? "simulated" : "historical")}</p>
+            </TooltipContent>
+          </UITooltip>
+        </div>
         <div className="flex items-center gap-2">
           {timeRanges.map((range) => (
             <Button

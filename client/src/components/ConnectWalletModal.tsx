@@ -7,7 +7,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Wallet, ExternalLink, Loader2, QrCode, X, Mail } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Wallet, ExternalLink, Loader2, QrCode, X, Mail, Beaker, Info } from "lucide-react";
 import { SiGoogle, SiFacebook, SiX, SiDiscord } from "react-icons/si";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
@@ -16,6 +18,7 @@ import { QRCodeSVG } from "qrcode.react";
 import UniversalProvider from "@walletconnect/universal-provider";
 import { WalletConnectModal } from "@walletconnect/modal";
 import { initWeb3Auth, loginWithWeb3Auth } from "@/lib/web3auth";
+import { getTooltipContent } from "@/lib/tooltipCopy";
 
 interface ConnectWalletModalProps {
   open: boolean;
@@ -341,6 +344,15 @@ export default function ConnectWalletModal({
           </DialogDescription>
         </DialogHeader>
 
+        {step === "select" && isTestnet && (
+          <Alert className="border-chart-4 bg-chart-4/10" data-testid="alert-demo-mode">
+            <Beaker className="h-4 w-4 text-chart-4" />
+            <AlertDescription className="text-sm">
+              <strong>Testnet Demo Mode</strong> - {getTooltipContent("demo", "wallet")}
+            </AlertDescription>
+          </Alert>
+        )}
+
         {step === "select" && (
           <div className="space-y-3 py-4">
             <Button
@@ -355,9 +367,18 @@ export default function ConnectWalletModal({
                   <Wallet className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-semibold">Xaman (XUMM)</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold">Xaman (XUMM)</p>
+                    {isTestnet && (
+                      <Badge variant="outline" className="text-xs bg-chart-4/10 text-chart-4 border-chart-4">
+                        Demo
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Connect with Xaman mobile wallet
+                    {isTestnet 
+                      ? "Testnet wallet connection - no real assets at risk"
+                      : "Connect with Xaman mobile wallet"}
                   </p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -376,9 +397,18 @@ export default function ConnectWalletModal({
                   <QrCode className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-semibold">WalletConnect</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold">WalletConnect</p>
+                    {isTestnet && (
+                      <Badge variant="outline" className="text-xs bg-chart-4/10 text-chart-4 border-chart-4">
+                        Demo
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Scan QR code with any compatible wallet
+                    {isTestnet
+                      ? "Demo mode - connects with testnet-compatible wallets"
+                      : "Scan QR code with any compatible wallet"}
                   </p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -406,9 +436,18 @@ export default function ConnectWalletModal({
                   <SiGoogle className="h-5 w-5 text-primary" />
                 </div>
                 <div className="flex-1 text-left">
-                  <p className="font-semibold">Social Login</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold">Social Login</p>
+                    {isTestnet && (
+                      <Badge variant="outline" className="text-xs bg-chart-4/10 text-chart-4 border-chart-4">
+                        Demo
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Sign in with Google, Facebook, Twitter, or Email
+                    {isTestnet
+                      ? "Demo wallet via social login - safe to test"
+                      : "Sign in with Google, Facebook, Twitter, or Email"}
                   </p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -417,6 +456,7 @@ export default function ConnectWalletModal({
 
             <div className="text-xs text-muted-foreground text-center border-t pt-4">
               Self-custody wallet via Web3Auth • Non-custodial
+              {isTestnet && " • Testnet Mode Active"}
             </div>
           </div>
         )}

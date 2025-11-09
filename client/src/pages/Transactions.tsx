@@ -1,10 +1,12 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowDownCircle, ArrowUpCircle, Gift, Clock } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
+import { TransactionStatsSkeleton, TransactionListSkeleton } from "@/components/skeletons/TransactionSkeleton";
+import { ArrowDownCircle, ArrowUpCircle, Gift, Clock, Receipt } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import type { Transaction } from "@shared/schema";
+import { useLocation } from "wouter";
 
 interface TransactionSummary {
   totalDeposits: string;
@@ -43,6 +45,8 @@ function getTransactionBadge(type: string) {
 }
 
 export default function Transactions() {
+  const [, navigate] = useLocation();
+  
   const { data: transactions = [], isLoading: transactionsLoading } = useQuery<Transaction[]>({
     queryKey: ["/api/transactions"],
   });
@@ -60,87 +64,81 @@ export default function Transactions() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      {summaryLoading ? (
+        <TransactionStatsSkeleton />
+      ) : (
+        <div className="grid gap-6 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Deposits</CardTitle>
+              <ArrowDownCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold font-mono tabular-nums" data-testid="text-total-deposits">
+                {parseFloat(summary?.totalDeposits || "0").toLocaleString()} XRP
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Across {summary?.depositCount || 0} transactions
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Withdrawals</CardTitle>
+              <ArrowUpCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold font-mono tabular-nums" data-testid="text-total-withdrawals">
+                {parseFloat(summary?.totalWithdrawals || "0").toLocaleString()} XRP
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Across {summary?.withdrawalCount || 0} transactions
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Rewards Claimed</CardTitle>
+              <Gift className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold font-mono tabular-nums text-chart-2" data-testid="text-total-claimed">
+                +{parseFloat(summary?.totalRewards || "0").toLocaleString()} XRP
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">
+                Across {summary?.claimCount || 0} transactions
+              </p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {transactionsLoading ? (
+        <TransactionListSkeleton />
+      ) : transactions.length === 0 ? (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Deposits</CardTitle>
-            <ArrowDownCircle className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {summaryLoading ? (
-              <Skeleton className="h-9 w-32" />
-            ) : (
-              <>
-                <div className="text-3xl font-bold font-mono tabular-nums" data-testid="text-total-deposits">
-                  {parseFloat(summary?.totalDeposits || "0").toLocaleString()} XRP
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Across {summary?.depositCount || 0} transactions
-                </p>
-              </>
-            )}
+          <CardContent className="pt-6">
+            <EmptyState
+              icon={Receipt}
+              title="No Transactions Yet"
+              description="Your transaction history will appear here once you start depositing into vaults, claiming rewards, or making withdrawals."
+              actionButton={{
+                label: "Browse Vaults",
+                onClick: () => navigate("/vaults"),
+                testId: "button-browse-vaults-transactions"
+              }}
+              testId="empty-state-transactions"
+            />
           </CardContent>
         </Card>
-
+      ) : (
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Withdrawals</CardTitle>
-            <ArrowUpCircle className="h-4 w-4 text-muted-foreground" />
+          <CardHeader>
+            <CardTitle>Recent Transactions</CardTitle>
           </CardHeader>
           <CardContent>
-            {summaryLoading ? (
-              <Skeleton className="h-9 w-32" />
-            ) : (
-              <>
-                <div className="text-3xl font-bold font-mono tabular-nums" data-testid="text-total-withdrawals">
-                  {parseFloat(summary?.totalWithdrawals || "0").toLocaleString()} XRP
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Across {summary?.withdrawalCount || 0} transactions
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Rewards Claimed</CardTitle>
-            <Gift className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {summaryLoading ? (
-              <Skeleton className="h-9 w-32" />
-            ) : (
-              <>
-                <div className="text-3xl font-bold font-mono tabular-nums text-chart-2" data-testid="text-total-claimed">
-                  +{parseFloat(summary?.totalRewards || "0").toLocaleString()} XRP
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Across {summary?.claimCount || 0} transactions
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {transactionsLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-20 w-full" />
-              ))}
-            </div>
-          ) : transactions.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              No transactions found. Start by depositing into a vault!
-            </div>
-          ) : (
             <div className="space-y-4">
               {transactions.map((tx) => (
                 <div
@@ -177,9 +175,9 @@ export default function Transactions() {
                 </div>
               ))}
             </div>
-          )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

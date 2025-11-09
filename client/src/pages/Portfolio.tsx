@@ -8,11 +8,13 @@ import PortfolioTable from "@/components/PortfolioTable";
 import PendingRequestsTable from "@/components/PendingRequestsTable";
 import WithdrawModal from "@/components/WithdrawModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
-import { TrendingUp, Coins, Gift, Clock } from "lucide-react";
+import EmptyState from "@/components/EmptyState";
+import { PortfolioStatsSkeleton, PortfolioTableSkeleton, PendingRequestsSkeleton } from "@/components/skeletons/PortfolioSkeleton";
+import { TrendingUp, Coins, Gift, Clock, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
+import { useLocation } from "wouter";
 
 export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
@@ -29,6 +31,7 @@ export default function Portfolio() {
   const { toast } = useToast();
   const { isConnected, address } = useWallet();
   const { network } = useNetwork();
+  const [, navigate] = useLocation();
 
   const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
     queryKey: ["/api/positions", address],
@@ -441,11 +444,19 @@ export default function Portfolio() {
         </div>
 
         {positionsLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
+          <PortfolioTableSkeleton />
+        ) : formattedPositions.length === 0 ? (
+          <EmptyState
+            icon={Package}
+            title="No Active Positions"
+            description="You haven't staked any assets yet. Head to the Vaults page to start earning yield on your XRP, RLUSD, and USDC."
+            actionButton={{
+              label: "Browse Vaults",
+              onClick: () => navigate("/vaults"),
+              testId: "button-browse-vaults"
+            }}
+            testId="empty-state-positions"
+          />
         ) : (
           <PortfolioTable
             positions={formattedPositions}
