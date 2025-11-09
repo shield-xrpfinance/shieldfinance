@@ -264,7 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               vaultId: position.vaultId,
               walletAddress: validatedData.walletAddress,
               destinationAddress: validatedData.walletAddress,
-              amount: escrowAmount,
+              amount: validatedData.amount,
               asset: "XRP",
               status: "failed",
               network: network,
@@ -1254,7 +1254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         network: network,
         finishAfterSeconds: 60, // Can finish after 1 minute
         cancelAfterSeconds: 86400, // Can cancel after 24 hours
-        condition: validatedData.condition,
+        condition: validatedData.condition || undefined,
       });
 
       if (!result.success) {

@@ -5,9 +5,10 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import PortfolioTable from "@/components/PortfolioTable";
+import PendingRequestsTable from "@/components/PendingRequestsTable";
 import WithdrawModal from "@/components/WithdrawModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
-import { TrendingUp, Coins, Gift } from "lucide-react";
+import { TrendingUp, Coins, Gift, Clock } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/lib/walletContext";
@@ -53,6 +54,34 @@ export default function Portfolio() {
       return response.json();
     },
     enabled: !!address,
+  });
+
+  interface WithdrawalRequest {
+    id: string;
+    walletAddress: string;
+    vaultId: string;
+    positionId: string | null;
+    type: string;
+    amount: string;
+    asset: string;
+    status: string;
+    network: string;
+    requestedAt: string;
+    processedAt: string | null;
+    txHash: string | null;
+    rejectionReason: string | null;
+  }
+
+  const { data: withdrawalRequests = [] } = useQuery<WithdrawalRequest[]>({
+    queryKey: ["/api/withdrawal-requests", address],
+    queryFn: async () => {
+      if (!address) return [];
+      const response = await fetch(`/api/withdrawal-requests?walletAddress=${encodeURIComponent(address)}`);
+      if (!response.ok) throw new Error('Failed to fetch withdrawal requests');
+      return response.json();
+    },
+    enabled: !!address,
+    refetchInterval: 5000, // Refresh every 5 seconds to show status updates
   });
 
   const getVaultById = (vaultId: string) => vaults.find((v) => v.id === vaultId);
@@ -197,6 +226,10 @@ export default function Portfolio() {
       }
 
       setWithdrawModalOpen(false);
+      
+      // Invalidate withdrawal requests cache to show the new request immediately
+      queryClient.invalidateQueries({ queryKey: ["/api/withdrawal-requests"] });
+      
       toast({
         title: "Withdrawal Request Submitted",
         description: "A vault operator will review and approve your withdrawal request shortly.",
@@ -276,6 +309,15 @@ export default function Portfolio() {
     );
   }
 
+  // Create vault names map for PendingRequestsTable
+  const vaultNames = vaults.reduce((acc, vault) => {
+    acc[vault.id] = vault.name;
+    return acc;
+  }, {} as Record<string, string>);
+
+  // Count pending requests
+  const pendingRequestsCount = withdrawalRequests.filter(r => r.status === "pending").length;
+
   return (
     <div className="space-y-8">
       <div>
@@ -285,7 +327,7 @@ export default function Portfolio() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
@@ -348,6 +390,27 @@ export default function Portfolio() {
             )}
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {positionsLoading ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <>
+                <div className="text-3xl font-bold font-mono tabular-nums text-chart-4">
+                  {pendingRequestsCount}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Awaiting approval
+                </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </div>
 
       <div className="space-y-4">
@@ -390,6 +453,28 @@ export default function Portfolio() {
             network={network}
             onWithdraw={handleWithdraw}
             onClaim={handleClaim}
+          />
+        )}
+      </div>
+
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="text-2xl font-semibold">Pending Requests</h2>
+          <p className="text-sm text-muted-foreground">
+            Track your withdrawal and claim requests
+          </p>
+        </div>
+
+        {positionsLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : (
+          <PendingRequestsTable
+            requests={withdrawalRequests}
+            vaultNames={vaultNames}
+            network={network}
           />
         )}
       </div>
