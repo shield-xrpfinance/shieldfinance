@@ -15,7 +15,7 @@ import { useNetwork } from "@/lib/networkContext";
 import { QRCodeSVG } from "qrcode.react";
 import UniversalProvider from "@walletconnect/universal-provider";
 import { WalletConnectModal } from "@walletconnect/modal";
-import { initWeb3Auth, loginWithWeb3Auth } from "@/lib/web3auth";
+// import { initWeb3Auth, loginWithWeb3Auth } from "@/lib/web3auth"; // Disabled: requires vite-plugin-node-polyfills
 
 interface ConnectWalletModalProps {
   open: boolean;
@@ -277,6 +277,15 @@ export default function ConnectWalletModal({
   };
 
   const handleWeb3Auth = async () => {
+    toast({
+      title: "Social Login Coming Soon",
+      description: "Web3Auth social login requires additional browser polyfills. Use Xaman or WalletConnect for now.",
+    });
+    return;
+    
+    // Web3Auth integration code (requires vite-plugin-node-polyfills)
+    // Uncomment once polyfills are configured
+    /*
     setConnecting(true);
     
     try {
@@ -286,13 +295,11 @@ export default function ConnectWalletModal({
         throw new Error("Web3Auth Client ID not configured");
       }
 
-      // Initialize Web3Auth
       await initWeb3Auth({
         clientId,
         network: isTestnet ? "testnet" : "mainnet",
       });
 
-      // Login with Web3Auth (shows social login modal)
       const result = await loginWithWeb3Auth();
 
       if (result) {
@@ -319,6 +326,7 @@ export default function ConnectWalletModal({
         variant: "destructive",
       });
     }
+    */
   };
 
   return (

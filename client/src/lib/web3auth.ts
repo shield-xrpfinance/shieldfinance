@@ -1,7 +1,7 @@
 import { Web3Auth } from "@web3auth/modal";
 import { WEB3AUTH_NETWORK, WALLET_ADAPTERS } from "@web3auth/base";
 import { Wallet } from "xrpl";
-import * as elliptic from "elliptic";
+import * as secp256k1 from "@noble/secp256k1";
 
 let web3auth: Web3Auth | null = null;
 
@@ -67,12 +67,14 @@ export async function loginWithWeb3Auth(): Promise<{ address: string; privateKey
     ? privateKeyHex.slice(2) 
     : privateKeyHex;
 
-  // Derive the public key from the private key using secp256k1
-  const ec = new elliptic.ec('secp256k1');
-  const keyPair = ec.keyFromPrivate(cleanPrivateKey, 'hex');
+  // Derive the public key from the private key using @noble/secp256k1 (browser-native, no Buffer required)
+  const publicKeyBytes = secp256k1.getPublicKey(cleanPrivateKey, true); // true = compressed format
   
-  // Get compressed public key (33 bytes, starts with 02 or 03) as hex string
-  const compressedPublicKey = keyPair.getPublic().encodeCompressed('hex').toUpperCase();
+  // Convert Uint8Array to hex string and uppercase
+  const compressedPublicKey = Array.from(publicKeyBytes)
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase();
   
   // Format private key for XRPL (33 bytes with 0x00 prefix for secp256k1)
   const formattedPrivateKey = '00' + cleanPrivateKey.toUpperCase();
