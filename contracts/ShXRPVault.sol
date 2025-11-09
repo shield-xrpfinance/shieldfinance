@@ -24,7 +24,7 @@ import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
  * 4. User requests withdrawal → Burns shXRP
  * 5. Operator releases XRP from XRPL escrow
  */
-contract StXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
+contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     // Mapping of approved operators who can mint/burn shXRP
     mapping(address => bool) public operators;
     
