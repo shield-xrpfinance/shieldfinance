@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -52,6 +53,8 @@ interface IUniswapV2Router02 {
  * 5. Operator releases XRP from XRPL escrow
  */
 contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
+    
     // Mapping of approved operators who can mint/burn shXRP
     mapping(address => bool) public operators;
     
@@ -64,11 +67,25 @@ contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     // Exchange rate (shXRP to XRP) - starts at 1:1, can increase with rewards
     uint256 public exchangeRate = 1 ether;
     
-    // FXRP DeFi Integration
+    /**
+     * FXRP DeFi Integration
+     * 
+     * IMPORTANT ACCOUNTING SEPARATION:
+     * - totalXRPLocked: XRP locked on XRPL via escrow (backs shXRP 1:1)
+     * - totalFXRPInVault: FXRP held directly in contract (not in LP)
+     * - totalLPStaked: LP tokens from FXRP/WFLR pool
+     * 
+     * FXRP yields are tracked separately from XRP backing to prevent
+     * corrupting the exchange rate. FXRP rewards increase totalFXRPInVault
+     * but do NOT inflate totalXRPLocked unless explicitly bridged back to XRP.
+     */
     IERC20 public fxrpToken;
     address public sparkRouter;
     address public wflrToken;
     uint256 public totalFXRPDeposited;
+    uint256 public totalFXRPInVault;  // FXRP held directly (not in LP)
+    address public lpToken;            // FXRP/WFLR LP token address
+    uint256 public totalLPStaked;      // LP tokens staked
     bool public yieldEnabled;
     
     // Events
@@ -80,9 +97,10 @@ contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     event MinDepositUpdated(uint256 newMinDeposit);
     event ExchangeRateUpdated(uint256 newRate);
     event FXRPDeposited(address indexed operator, uint256 amount);
-    event FXRPStaked(uint256 fxrpAmount, uint256 flrAmount);
+    event FXRPStaked(uint256 fxrpAmount, uint256 flrAmount, uint256 lpTokens);
     event RewardsCompounded(uint256 rewardAmount, uint256 newExchangeRate);
     event YieldEnabledUpdated(bool enabled);
+    event LPTokenSet(address indexed lpToken);
     
     modifier onlyOperator() {
         require(operators[msg.sender] || msg.sender == owner(), "Not an operator");
@@ -245,7 +263,8 @@ contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
      */
     function depositFXRP(uint256 amount) external onlyOperator {
         require(amount > 0, "Amount must be positive");
-        require(fxrpToken.transferFrom(msg.sender, address(this), amount), "Transfer failed");
+        fxrpToken.safeTransferFrom(msg.sender, address(this), amount);
+        totalFXRPInVault += amount;
         totalFXRPDeposited += amount;
         emit FXRPDeposited(msg.sender, amount);
     }
@@ -258,44 +277,55 @@ contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     function stakeInDeFi(uint256 fxrpAmount, uint256 flrAmount) external onlyOperator {
         require(yieldEnabled, "Yield not enabled");
         require(fxrpAmount > 0 && flrAmount > 0, "Amounts must be positive");
+        require(fxrpToken.balanceOf(address(this)) >= fxrpAmount, "Insufficient FXRP");
         
-        // Approve SparkRouter to spend FXRP and WFLR
-        fxrpToken.approve(sparkRouter, fxrpAmount);
-        IERC20(wflrToken).approve(sparkRouter, flrAmount);
+        // Use SafeERC20 for approvals
+        fxrpToken.forceApprove(sparkRouter, fxrpAmount);
+        IERC20(wflrToken).forceApprove(sparkRouter, flrAmount);
         
-        // Add liquidity to FXRP/WFLR pool on SparkDEX
-        IUniswapV2Router02(sparkRouter).addLiquidity(
+        // Add liquidity and capture LP tokens
+        (uint256 amountA, uint256 amountB, uint256 liquidity) = IUniswapV2Router02(sparkRouter).addLiquidity(
             address(fxrpToken),
             wflrToken,
             fxrpAmount,
             flrAmount,
-            (fxrpAmount * 95) / 100, // 5% slippage tolerance
+            (fxrpAmount * 95) / 100,
             (flrAmount * 95) / 100,
             address(this),
-            block.timestamp + 300 // 5 min deadline
+            block.timestamp + 300
         );
         
-        emit FXRPStaked(fxrpAmount, flrAmount);
+        // Track LP tokens received
+        totalLPStaked += liquidity;
+        totalFXRPInVault -= amountA; // FXRP is now in LP, not in vault directly
+        
+        // Revoke allowances
+        fxrpToken.forceApprove(sparkRouter, 0);
+        IERC20(wflrToken).forceApprove(sparkRouter, 0);
+        
+        emit FXRPStaked(amountA, amountB, liquidity);
     }
     
     /**
-     * @dev Claim rewards and auto-compound into shXRP
-     * This is called by Gelato automation daily
+     * @dev Simplified auto-compound for FXRP strategy
+     * In production: Would claim SPARK tokens, swap to FXRP, and reinvest
+     * For now: Treats FXRP yields as rewards WITHOUT inflating XRP accounting
      */
     function claimAndCompound() external onlyOperator {
-        // For now, simulate claiming trading fees from LP
-        // In production, would claim SPARK tokens and swap to FXRP
+        uint256 currentFXRP = fxrpToken.balanceOf(address(this));
         
-        uint256 fxrpBalance = fxrpToken.balanceOf(address(this));
-        if (fxrpBalance > totalFXRPDeposited) {
-            uint256 rewards = fxrpBalance - totalFXRPDeposited;
+        // Check if we have FXRP rewards (more than we deposited and not staked in LP)
+        if (currentFXRP > totalFXRPInVault) {
+            uint256 fxrpRewards = currentFXRP - totalFXRPInVault;
             
-            // Distribute rewards to increase exchange rate
-            if (rewards > 0 && totalSupply() > 0) {
-                totalXRPLocked += rewards; // Treat FXRP rewards as XRP value
-                exchangeRate = (totalXRPLocked * 1 ether) / totalSupply();
-                emit RewardsCompounded(rewards, exchangeRate);
-            }
+            // IMPORTANT: Only update totalFXRPInVault, NOT totalXRPLocked
+            // This keeps FXRP accounting separate from XRP accounting
+            totalFXRPInVault += fxrpRewards;
+            
+            // Alternative: Could convert to XRP exchange rate IF we have a verified FXRP->XRP bridge
+            // For now, just track FXRP rewards separately
+            
+            emit RewardsCompounded(fxrpRewards, exchangeRate);
         }
     }
     
@@ -305,5 +335,15 @@ contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     function setYieldEnabled(bool enabled) external onlyOwner {
         yieldEnabled = enabled;
         emit YieldEnabledUpdated(enabled);
+    }
+    
+    /**
+     * @dev Set LP token address (one-time setup)
+     */
+    function setLPToken(address _lpToken) external onlyOwner {
+        require(_lpToken != address(0), "Invalid LP token");
+        require(lpToken == address(0), "LP token already set");
+        lpToken = _lpToken;
+        emit LPTokenSet(_lpToken);
     }
 }
