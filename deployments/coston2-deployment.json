@@ -3,15 +3,15 @@
   "chainId": "114",
   "deployer": "0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D",
   "treasury": "0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d",
-  "timestamp": "2025-11-09T09:57:49.039Z",
+  "timestamp": "2025-11-09T10:07:24.999Z",
   "contracts": {
     "ShieldToken": {
-      "address": "0x59fF3b7Ae628beEFFAe980F30240ec4e84448209",
+      "address": "0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308",
       "totalSupply": "100000000.0",
       "treasuryAllocation": "10000000.0"
     },
-    "StXRPVault": {
-      "address": "0xcf1789b5f5E6278067A814577611d629657f98bD",
+    "ShXRPVault": {
+      "address": "0x7571b6E696621D757E2d019CC54e14C65B9896d4",
       "name": "Shield XRP",
       "symbol": "shXRP",
       "exchangeRate": "1.0"

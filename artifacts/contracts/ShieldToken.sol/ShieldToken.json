@@ -528,7 +528,7 @@
   "linkReferences": {},
   "deployedLinkReferences": {},
   "immutableReferences": {
-    "1076": [
+    "1483": [
       {
         "length": 32,
         "start": 439
@@ -536,5 +536,5 @@
     ]
   },
   "inputSourceName": "project/contracts/ShieldToken.sol",
-  "buildInfoId": "solc-0_8_20-f0ec9656a00c10440519c8728ab47adb7e764325"
+  "buildInfoId": "solc-0_8_20-4e64d750cc96835a1ce216ee36bb94762bce73a5"
 }

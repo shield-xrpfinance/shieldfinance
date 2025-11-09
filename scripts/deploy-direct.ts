@@ -8,7 +8,7 @@ const __dirname = path.dirname(__filename);
 
 // Import compiled contract ABIs
 import ShieldTokenArtifact from "../artifacts/contracts/ShieldToken.sol/ShieldToken.json" assert { type: "json" };
-import StXRPVaultArtifact from "../artifacts/contracts/StXRPVault.sol/StXRPVault.json" assert { type: "json" };
+import ShXRPVaultArtifact from "../artifacts/contracts/ShXRPVault.sol/ShXRPVault.json" assert { type: "json" };
 
 async function main() {
   console.log("🚀 Starting Flare Coston2 deployment...\n");
@@ -61,20 +61,20 @@ async function main() {
 
   // Deploy Shield XRP Vault (shXRP)
   console.log("\n2️⃣  Deploying Shield XRP Vault (shXRP)...");
-  const StXRPVault = new ethers.ContractFactory(
-    StXRPVaultArtifact.abi,
-    StXRPVaultArtifact.bytecode,
+  const ShXRPVault = new ethers.ContractFactory(
+    ShXRPVaultArtifact.abi,
+    ShXRPVaultArtifact.bytecode,
     wallet
   );
-  const stXRPVault = await StXRPVault.deploy();
-  await stXRPVault.waitForDeployment();
-  const stXRPVaultAddress = await stXRPVault.getAddress();
-  console.log("✅ Shield XRP Vault deployed to:", stXRPVaultAddress);
+  const shXRPVault = await ShXRPVault.deploy();
+  await shXRPVault.waitForDeployment();
+  const shXRPVaultAddress = await shXRPVault.getAddress();
+  console.log("✅ Shield XRP Vault deployed to:", shXRPVaultAddress);
 
   // Verify vault details
-  const vaultName = await stXRPVault.name();
-  const vaultSymbol = await stXRPVault.symbol();
-  const exchangeRate = await stXRPVault.exchangeRate();
+  const vaultName = await shXRPVault.name();
+  const vaultSymbol = await shXRPVault.symbol();
+  const exchangeRate = await shXRPVault.exchangeRate();
   console.log("   Vault Token:", vaultName, `(${vaultSymbol})`);
   console.log("   Initial Exchange Rate:", ethers.formatEther(exchangeRate), "shXRP per XRP");
 
@@ -94,8 +94,8 @@ async function main() {
         totalSupply: ethers.formatEther(totalSupply),
         treasuryAllocation: ethers.formatEther(treasuryAllocation),
       },
-      StXRPVault: {
-        address: stXRPVaultAddress,
+      ShXRPVault: {
+        address: shXRPVaultAddress,
         name: vaultName,
         symbol: vaultSymbol,
         exchangeRate: ethers.formatEther(exchangeRate),
@@ -123,8 +123,8 @@ async function main() {
   console.log("   Address:", shieldTokenAddress);
   console.log("   Explorer:", `https://coston2-explorer.flare.network/address/${shieldTokenAddress}`);
   console.log("\n🏦 Shield XRP Vault (shXRP):");
-  console.log("   Address:", stXRPVaultAddress);
-  console.log("   Explorer:", `https://coston2-explorer.flare.network/address/${stXRPVaultAddress}`);
+  console.log("   Address:", shXRPVaultAddress);
+  console.log("   Explorer:", `https://coston2-explorer.flare.network/address/${shXRPVaultAddress}`);
   console.log("\n✅ Deployment complete!");
   console.log("=".repeat(60) + "\n");
 
@@ -132,10 +132,10 @@ async function main() {
   console.log("📋 NEXT STEPS:");
   console.log("1. Verify contracts on block explorer (optional):");
   console.log(`   npx hardhat verify --network coston2 ${shieldTokenAddress} "${treasuryAddress}"`);
-  console.log(`   npx hardhat verify --network coston2 ${stXRPVaultAddress}`);
+  console.log(`   npx hardhat verify --network coston2 ${shXRPVaultAddress}`);
   console.log("\n2. Update frontend .env with contract addresses:");
   console.log(`   VITE_SHIELD_TOKEN_ADDRESS=${shieldTokenAddress}`);
-  console.log(`   VITE_SHXRP_VAULT_ADDRESS=${stXRPVaultAddress}`);
+  console.log(`   VITE_SHXRP_VAULT_ADDRESS=${shXRPVaultAddress}`);
   console.log("\n3. Configure operator for Shield XRP Vault to mint/burn shXRP");
   console.log("\n4. Deploy XRPL hooks using: npm run deploy:hooks\n");
 }

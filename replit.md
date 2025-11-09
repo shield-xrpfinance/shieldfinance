@@ -128,15 +128,15 @@ Preferred communication style: Simple, everyday language.
 - **Usage**: `tsx scripts/deploy-direct.ts`
 
 #### Deployed Contracts (Coston2 Testnet)
-- **ShieldToken ($SHIELD)**: `0x59fF3b7Ae628beEFFAe980F30240ec4e84448209`
-  - [View on Explorer](https://coston2-explorer.flare.network/address/0x59fF3b7Ae628beEFFAe980F30240ec4e84448209)
+- **ShieldToken ($SHIELD)**: `0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308)
   - Total Supply: 100,000,000 SHIELD
   - Treasury Allocation: 10,000,000 SHIELD
   
-- **Shield XRP Vault (shXRP)**: `0xcf1789b5f5E6278067A814577611d629657f98bD`
-  - [View on Explorer](https://coston2-explorer.flare.network/address/0xcf1789b5f5E6278067A814577611d629657f98bD)
+- **Shield XRP Vault (shXRP)**: `0x7571b6E696621D757E2d019CC54e14C65B9896d4`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0x7571b6E696621D757E2d019CC54e14C65B9896d4)
   - Initial Exchange Rate: 1.0 shXRP per XRP
-  - Deployed on: 2025-11-09 (Shield XRP branding)
+  - Deployed on: 2025-11-09 (Shield XRP with correct contract naming)
 
 #### deploy-hooks.sh
 - **Purpose**: Deploy XRPL escrow hook to XRP Ledger
