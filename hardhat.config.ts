@@ -1,5 +1,5 @@
 import type { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 
 // Environment variables are already loaded by the application
 const config: HardhatUserConfig = {
@@ -15,6 +15,7 @@ const config: HardhatUserConfig = {
   networks: {
     // Flare Coston2 Testnet
     coston2: {
+      type: "http" as const,
       url: process.env.FLARE_COSTON2_RPC_URL || "https://coston2-api.flare.network/ext/C/rpc",
       chainId: 114,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
@@ -22,6 +23,7 @@ const config: HardhatUserConfig = {
     },
     // Flare Mainnet
     flare: {
+      type: "http" as const,
       url: process.env.FLARE_MAINNET_RPC_URL || "https://flare-api.flare.network/ext/C/rpc",
       chainId: 14,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
@@ -29,6 +31,7 @@ const config: HardhatUserConfig = {
     },
     // Local Hardhat network for testing
     hardhat: {
+      type: "edr-simulated" as const,
       chainId: 31337,
     },
   },
