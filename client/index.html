@@ -12,6 +12,15 @@
   </head>
   <body>
     <div id="root"></div>
+    <!-- Web3Auth polyfills - must load before main app -->
+    <script type="module">
+      import { Buffer } from 'buffer';
+      import process from 'process';
+      
+      window.Buffer = Buffer;
+      window.process = process;
+      window.global = window;
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
