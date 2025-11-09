@@ -41,7 +41,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import type { Escrow } from "@shared/schema";
+import type { Escrow, Vault } from "@shared/schema";
 
 interface WithdrawalRequest {
   id: string;
@@ -66,6 +66,8 @@ export default function Admin() {
   const [selectedEscrow, setSelectedEscrow] = useState<Escrow | null>(null);
   const [escrowDetailOpen, setEscrowDetailOpen] = useState(false);
   const [escrowStatusFilter, setEscrowStatusFilter] = useState<string>("all");
+  const [escrowVaultFilter, setEscrowVaultFilter] = useState<string>("all");
+  const [escrowWalletSearch, setEscrowWalletSearch] = useState<string>("");
   const { toast } = useToast();
 
   const { data: requests = [], isLoading } = useQuery<WithdrawalRequest[]>({
@@ -145,7 +147,11 @@ export default function Admin() {
 
   const { data: escrows = [], isLoading: escrowsLoading } = useQuery<Escrow[]>({
     queryKey: ["/api/escrows"],
-    refetchInterval: 5000,
+    refetchInterval: 30000,
+  });
+
+  const { data: vaults = [] } = useQuery<Vault[]>({
+    queryKey: ["/api/vaults"],
   });
 
   const finishEscrowMutation = useMutation({
@@ -214,13 +220,22 @@ export default function Admin() {
   const pendingRequests = requests.filter((r) => r.status === "pending");
   const processedRequests = requests.filter((r) => r.status !== "pending");
 
-  const filteredEscrows = escrowStatusFilter === "all" 
-    ? escrows 
-    : escrows.filter(e => e.status === escrowStatusFilter);
+  const filteredEscrows = escrows.filter((e) => {
+    const statusMatch = escrowStatusFilter === "all" || e.status === escrowStatusFilter;
+    const vaultMatch = escrowVaultFilter === "all" || e.vaultId === escrowVaultFilter;
+    const walletMatch = escrowWalletSearch === "" || 
+      e.walletAddress.toLowerCase().includes(escrowWalletSearch.toLowerCase());
+    return statusMatch && vaultMatch && walletMatch;
+  });
 
   const pendingEscrows = escrows.filter(e => e.status === "pending");
   const finishedEscrows = escrows.filter(e => e.status === "finished");
   const cancelledEscrows = escrows.filter(e => e.status === "cancelled");
+
+  const getVaultName = (vaultId: string) => {
+    const vault = vaults.find(v => v.id === vaultId);
+    return vault?.name || "Unknown Vault";
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -462,19 +477,60 @@ export default function Admin() {
             </div>
 
             {/* Escrow Filters */}
-            <div className="flex justify-between items-center">
+            <div className="flex flex-wrap gap-4 items-center">
               <Select value={escrowStatusFilter} onValueChange={setEscrowStatusFilter}>
-                <SelectTrigger className="w-[200px]" data-testid="select-escrow-status">
+                <SelectTrigger className="w-[180px]" data-testid="select-escrow-status">
                   <SelectValue placeholder="Filter by status" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">All Escrows</SelectItem>
+                  <SelectItem value="all">All Statuses</SelectItem>
                   <SelectItem value="pending">Pending</SelectItem>
                   <SelectItem value="finished">Finished</SelectItem>
                   <SelectItem value="cancelled">Cancelled</SelectItem>
                   <SelectItem value="failed">Failed</SelectItem>
                 </SelectContent>
               </Select>
+
+              <Select value={escrowVaultFilter} onValueChange={setEscrowVaultFilter}>
+                <SelectTrigger className="w-[180px]" data-testid="select-escrow-vault">
+                  <SelectValue placeholder="Filter by vault" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Vaults</SelectItem>
+                  {vaults.map((vault) => (
+                    <SelectItem key={vault.id} value={vault.id}>
+                      {vault.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Input
+                placeholder="Search by wallet address..."
+                value={escrowWalletSearch}
+                onChange={(e) => setEscrowWalletSearch(e.target.value)}
+                className="w-[280px]"
+                data-testid="input-escrow-wallet-search"
+              />
+
+              {(escrowStatusFilter !== "all" || escrowVaultFilter !== "all" || escrowWalletSearch !== "") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEscrowStatusFilter("all");
+                    setEscrowVaultFilter("all");
+                    setEscrowWalletSearch("");
+                  }}
+                  data-testid="button-clear-escrow-filters"
+                >
+                  Clear Filters
+                </Button>
+              )}
+
+              <div className="ml-auto text-sm text-muted-foreground">
+                Showing {filteredEscrows.length} of {escrows.length} escrows
+              </div>
             </div>
 
             {/* Escrows Table */}
@@ -500,22 +556,41 @@ export default function Admin() {
                         <TableHead>Wallet</TableHead>
                         <TableHead>Amount</TableHead>
                         <TableHead>Asset</TableHead>
+                        <TableHead>Vault</TableHead>
+                        <TableHead>Network</TableHead>
                         <TableHead>Created</TableHead>
-                        <TableHead>Release Time</TableHead>
+                        <TableHead>Finish After</TableHead>
                         <TableHead>Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredEscrows.map((escrow) => (
-                        <TableRow key={escrow.id}>
+                        <TableRow key={escrow.id} data-testid={`row-escrow-${escrow.id}`}>
                           <TableCell>{getEscrowStatusBadge(escrow.status)}</TableCell>
                           <TableCell className="font-mono text-sm">
-                            {escrow.walletAddress.slice(0, 8)}...{escrow.walletAddress.slice(-6)}
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <span className="cursor-help">
+                                  {escrow.walletAddress.slice(0, 8)}...{escrow.walletAddress.slice(-6)}
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p className="font-mono text-xs">{escrow.walletAddress}</p>
+                              </TooltipContent>
+                            </Tooltip>
                           </TableCell>
                           <TableCell className="font-mono">{parseFloat(escrow.amount).toFixed(6)}</TableCell>
                           <TableCell>{escrow.asset}</TableCell>
-                          <TableCell>{new Date(escrow.createdAt).toLocaleString()}</TableCell>
                           <TableCell>
+                            <Badge variant="outline" data-testid={`text-vault-${escrow.id}`}>
+                              {getVaultName(escrow.vaultId)}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="capitalize">{escrow.network}</TableCell>
+                          <TableCell className="text-sm">
+                            {new Date(escrow.createdAt).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-sm">
                             {escrow.finishAfter ? new Date(escrow.finishAfter).toLocaleString() : "N/A"}
                           </TableCell>
                           <TableCell className="space-x-2">

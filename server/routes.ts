@@ -133,38 +133,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 2. Create pending position
       const position = await storage.createPosition(validatedData);
       
-      // 3. Create transaction record with "initiated" status
-      const transaction = await storage.createTransaction({
-        vaultId: position.vaultId,
-        positionId: position.id,
-        type: "deposit",
-        amount: position.amount,
-        rewards: "0",
-        status: "initiated",
-        txHash: txHash || `deposit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-        network: network,
-      });
+      // 3. Check if this is an XRP vault (only create escrows for XRP deposits)
+      const vaultAssets = vault.asset.split(",").map(a => a.trim());
+      const isXRPVault = vaultAssets.includes("XRP");
       
-      try {
-        // 4. Create escrow using vault credentials
-        const vaultSecret = "sEd7kzvj3erqU5675pPkk5o4LwXVNGW";
-        const vaultAddress = "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY";
-        
-        // Use 6-decimal precision for XRP amounts
-        const escrowAmount = depositAmount.toFixed(6);
-        
-        const escrowResult = await createEscrow({
-          sourceAddress: vaultAddress,
-          sourceSecret: vaultSecret,
-          destinationAddress: validatedData.walletAddress,
-          amount: escrowAmount,
+      if (isXRPVault) {
+        // XRP Vault: Create escrow to lock funds
+        // 3a. Create transaction record with "initiated" status
+        const transaction = await storage.createTransaction({
+          vaultId: position.vaultId,
+          positionId: position.id,
+          type: "deposit",
+          amount: position.amount,
+          rewards: "0",
+          status: "initiated",
+          txHash: txHash || `deposit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
           network: network,
-          finishAfterSeconds: 60, // Can finish after 1 minute
-          cancelAfterSeconds: 86400 * 7, // Can cancel after 7 days
         });
         
-        if (!escrowResult.success) {
-          // Rollback: Update transaction status to failed
+        try {
+          // 4. Create escrow using vault credentials
+          const vaultSecret = "sEd7kzvj3erqU5675pPkk5o4LwXVNGW";
+          const vaultAddress = "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY";
+          
+          // Use 6-decimal precision for XRP amounts
+          const escrowAmount = depositAmount.toFixed(6);
+          
+          const escrowResult = await createEscrow({
+            sourceAddress: vaultAddress,
+            sourceSecret: vaultSecret,
+            destinationAddress: validatedData.walletAddress,
+            amount: escrowAmount,
+            network: network,
+            finishAfterSeconds: 60, // Can finish after 1 minute
+            cancelAfterSeconds: 86400, // Can cancel after 24 hours
+          });
+          
+          if (!escrowResult.success) {
+            // Rollback: Update transaction status to failed
+            await storage.createTransaction({
+              vaultId: position.vaultId,
+              positionId: position.id,
+              type: "deposit",
+              amount: position.amount,
+              rewards: "0",
+              status: "failed",
+              txHash: txHash || `deposit-failed-${Date.now()}`,
+              network: network,
+            });
+            
+            return res.status(400).json({ 
+              error: "Failed to create escrow",
+              details: escrowResult.error
+            });
+          }
+          
+          // 5. Store escrow record with status "pending"
+          const escrow = await storage.createEscrow({
+            positionId: position.id,
+            vaultId: position.vaultId,
+            walletAddress: validatedData.walletAddress,
+            destinationAddress: validatedData.walletAddress,
+            amount: escrowAmount,
+            asset: "XRP",
+            status: "pending",
+            network: network,
+            createTxHash: escrowResult.txHash,
+            escrowSequence: escrowResult.escrowSequence,
+            finishAfter: new Date(Date.now() + 60000), // 1 minute from now
+            cancelAfter: new Date(Date.now() + 86400000), // 24 hours from now
+            finishTxHash: null,
+            cancelTxHash: null,
+            condition: null,
+            fulfillment: null,
+            finishedAt: null,
+            cancelledAt: null,
+          });
+          
+          // 6. Update transaction to "pending_settlement"
+          await storage.createTransaction({
+            vaultId: position.vaultId,
+            positionId: position.id,
+            type: "deposit",
+            amount: position.amount,
+            rewards: "0",
+            status: "pending_settlement",
+            txHash: escrowResult.txHash || txHash,
+            network: network,
+          });
+          
+          console.log(`✅ XRP deposit with escrow created successfully. Position: ${position.id}, Escrow: ${escrow.id}`);
+          
+          res.status(201).json({ 
+            position, 
+            escrow,
+            message: "XRP deposit successful. Funds are held in escrow and can be withdrawn after the lock period."
+          });
+        } catch (escrowError) {
+          console.error("Escrow creation error during XRP deposit:", escrowError);
+          
+          // Rollback: Mark transaction as failed
           await storage.createTransaction({
             vaultId: position.vaultId,
             positionId: position.id,
@@ -176,69 +244,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
             network: network,
           });
           
-          return res.status(400).json({ 
-            error: "Failed to create escrow",
-            details: escrowResult.error
-          });
+          throw escrowError;
         }
+      } else {
+        // Non-XRP Vault (RLUSD/USDC): No escrow needed, mark as completed
+        console.log(`💰 Non-XRP deposit (${vault.asset}) - skipping escrow creation`);
         
-        // 5. Store escrow record with status "pending"
-        const escrow = await storage.createEscrow({
-          positionId: position.id,
-          vaultId: position.vaultId,
-          walletAddress: validatedData.walletAddress,
-          destinationAddress: validatedData.walletAddress,
-          amount: escrowAmount,
-          asset: vault.asset.split(",")[0] || "XRP",
-          status: "pending",
-          network: network,
-          createTxHash: escrowResult.txHash,
-          escrowSequence: escrowResult.escrowSequence,
-          finishAfter: new Date(Date.now() + 60000), // 1 minute from now
-          cancelAfter: new Date(Date.now() + 86400000 * 7), // 7 days from now
-          finishTxHash: null,
-          cancelTxHash: null,
-          condition: null,
-          fulfillment: null,
-          finishedAt: null,
-          cancelledAt: null,
-        });
-        
-        // 6. Update transaction to "pending_settlement"
         await storage.createTransaction({
           vaultId: position.vaultId,
           positionId: position.id,
           type: "deposit",
           amount: position.amount,
           rewards: "0",
-          status: "pending_settlement",
-          txHash: escrowResult.txHash || txHash,
+          status: "completed",
+          txHash: txHash || `deposit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
           network: network,
         });
-        
-        console.log(`✅ Deposit with escrow created successfully. Position: ${position.id}, Escrow: ${escrow.id}`);
         
         res.status(201).json({ 
-          position, 
-          escrow,
-          message: "Deposit successful. Funds are held in escrow and can be withdrawn after the lock period."
+          position,
+          message: `${vault.asset} deposit successful.`
         });
-      } catch (escrowError) {
-        console.error("Escrow creation error during deposit:", escrowError);
-        
-        // Rollback: Mark transaction as failed
-        await storage.createTransaction({
-          vaultId: position.vaultId,
-          positionId: position.id,
-          type: "deposit",
-          amount: position.amount,
-          rewards: "0",
-          status: "failed",
-          txHash: txHash || `deposit-failed-${Date.now()}`,
-          network: network,
-        });
-        
-        throw escrowError;
       }
     } catch (error) {
       console.error("Deposit error:", error);
@@ -788,14 +814,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: "Withdrawal request not found" });
       }
 
-      // 1. Find escrow associated with this withdrawal's position
+      // 1. Find escrow associated with this withdrawal's position (only for XRP withdrawals)
       let escrow = null;
-      if (request.positionId) {
-        const escrows = await storage.getEscrows();
-        escrow = escrows.find(e => e.positionId === request.positionId && e.status === "pending");
+      const isXRPWithdrawal = request.asset === "XRP";
+      
+      if (isXRPWithdrawal && request.positionId) {
+        const escrows = await storage.getEscrows(undefined, "pending");
+        escrow = escrows.find(e => 
+          e.positionId === request.positionId && 
+          e.status === "pending" &&
+          e.asset === "XRP"
+        );
+        
+        if (!escrow) {
+          console.log(`⚠️ No pending XRP escrow found for withdrawal ${id} (position: ${request.positionId}). This might be an old deposit or non-escrow withdrawal.`);
+        }
       }
 
-      // 2. If escrow exists, finish it
+      // 2. If escrow exists for XRP withdrawal, finish it
       if (escrow && escrow.escrowSequence) {
         try {
           const vaultSecret = "sEd7kzvj3erqU5675pPkk5o4LwXVNGW";
@@ -821,13 +857,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
             });
             console.log(`✅ Escrow ${escrow.id} finished successfully for withdrawal ${id}`);
           } else {
+            // Escrow finishing failed - update withdrawal request to failed status
+            const errorMessage = `Failed to release escrow: ${finishResult.error}`;
             console.error(`❌ Failed to finish escrow ${escrow.id}:`, finishResult.error);
-            // Don't fail the whole request - log error and continue
-            // Admin can retry escrow finish manually
+            
+            await storage.updateWithdrawalRequest(id, {
+              status: "failed",
+              processedAt: new Date(),
+              rejectionReason: errorMessage,
+            } as any);
+            
+            return res.status(400).json({ 
+              error: errorMessage,
+              escrowId: escrow.id
+            });
           }
         } catch (escrowError) {
+          // Escrow finishing error - update withdrawal request to failed status
+          const errorMessage = `Error finishing escrow: ${escrowError instanceof Error ? escrowError.message : 'Unknown error'}`;
           console.error("Error finishing escrow during withdrawal approval:", escrowError);
-          // Don't fail the whole request - continue with approval
+          
+          await storage.updateWithdrawalRequest(id, {
+            status: "failed",
+            processedAt: new Date(),
+            rejectionReason: errorMessage,
+          } as any);
+          
+          return res.status(500).json({ 
+            error: errorMessage,
+            escrowId: escrow?.id
+          });
         }
       }
 

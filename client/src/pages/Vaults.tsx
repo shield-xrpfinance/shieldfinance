@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Vault as VaultType } from "@shared/schema";
+import type { Vault as VaultType, Escrow } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import VaultCard from "@/components/VaultCard";
 import DepositModal from "@/components/DepositModal";
@@ -38,6 +38,17 @@ export default function Vaults() {
     queryKey: ["/api/vaults"],
   });
 
+  const { data: escrows = [] } = useQuery<Escrow[]>({
+    queryKey: ["/api/escrows", address],
+    queryFn: async () => {
+      if (!address) return [];
+      const response = await fetch(`/api/escrows?walletAddress=${encodeURIComponent(address)}`);
+      if (!response.ok) throw new Error('Failed to fetch escrows');
+      return response.json();
+    },
+    enabled: !!address,
+  });
+
   const formatCurrency = (value: string): string => {
     const num = parseFloat(value);
     if (num >= 1000000) {
@@ -47,6 +58,44 @@ export default function Vaults() {
     }
     return `$${num.toFixed(0)}`;
   };
+
+  const vaultEscrowStats = useMemo(() => {
+    const stats: Record<string, { 
+      pendingCount: number; 
+      finishedCount: number; 
+      cancelledCount: number; 
+      failedCount: number; 
+      totalAmount: number 
+    }> = {};
+    
+    escrows.forEach((escrow) => {
+      if (escrow.vaultId) {
+        if (!stats[escrow.vaultId]) {
+          stats[escrow.vaultId] = { 
+            pendingCount: 0, 
+            finishedCount: 0, 
+            cancelledCount: 0, 
+            failedCount: 0, 
+            totalAmount: 0 
+          };
+        }
+        
+        if (escrow.status === "pending") {
+          stats[escrow.vaultId].pendingCount += 1;
+        } else if (escrow.status === "finished") {
+          stats[escrow.vaultId].finishedCount += 1;
+        } else if (escrow.status === "cancelled") {
+          stats[escrow.vaultId].cancelledCount += 1;
+        } else if (escrow.status === "failed") {
+          stats[escrow.vaultId].failedCount += 1;
+        }
+        
+        stats[escrow.vaultId].totalAmount += parseFloat(escrow.amount);
+      }
+    });
+    
+    return stats;
+  }, [escrows]);
 
   const allVaults = apiVaults?.map(vault => ({
     id: vault.id,
@@ -60,6 +109,11 @@ export default function Vaults() {
     depositors: 0,
     status: vault.status.charAt(0).toUpperCase() + vault.status.slice(1),
     depositAssets: (vault.asset || "XRP").split(",").map(a => a.trim()),
+    pendingEscrowCount: vaultEscrowStats[vault.id]?.pendingCount || 0,
+    finishedEscrowCount: vaultEscrowStats[vault.id]?.finishedCount || 0,
+    cancelledEscrowCount: vaultEscrowStats[vault.id]?.cancelledCount || 0,
+    failedEscrowCount: vaultEscrowStats[vault.id]?.failedCount || 0,
+    totalEscrowAmount: vaultEscrowStats[vault.id]?.totalAmount.toString() || "0",
   })) || [];
 
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Position, Vault } from "@shared/schema";
+import type { Position, Vault, Escrow } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -42,6 +42,17 @@ export default function Portfolio() {
 
   const { data: vaults = [] } = useQuery<Vault[]>({
     queryKey: ["/api/vaults"],
+  });
+
+  const { data: escrows = [] } = useQuery<Escrow[]>({
+    queryKey: ["/api/escrows", address],
+    queryFn: async () => {
+      if (!address) return [];
+      const response = await fetch(`/api/escrows?walletAddress=${encodeURIComponent(address)}`);
+      if (!response.ok) throw new Error('Failed to fetch escrows');
+      return response.json();
+    },
+    enabled: !!address,
   });
 
   const getVaultById = (vaultId: string) => vaults.find((v) => v.id === vaultId);
@@ -375,6 +386,8 @@ export default function Portfolio() {
         ) : (
           <PortfolioTable
             positions={formattedPositions}
+            escrows={escrows}
+            network={network}
             onWithdraw={handleWithdraw}
             onClaim={handleClaim}
           />
@@ -389,6 +402,8 @@ export default function Portfolio() {
           asset={selectedPosition.asset}
           depositedAmount={selectedPosition.depositedAmount}
           rewards={selectedPosition.rewards}
+          escrow={escrows.find((e) => e.positionId === selectedPosition.id)}
+          network={network}
           onConfirm={handleConfirmWithdraw}
         />
       )}

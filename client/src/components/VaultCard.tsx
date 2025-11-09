@@ -1,7 +1,7 @@
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Shield, ShieldAlert, ShieldCheck, Clock, Users } from "lucide-react";
+import { Shield, ShieldAlert, ShieldCheck, Clock, Users, Lock } from "lucide-react";
 import { MultiAssetIcon } from "@/components/AssetIcon";
 
 interface VaultCardProps {
@@ -16,6 +16,11 @@ interface VaultCardProps {
   depositors: number;
   status: string;
   depositAssets?: string[];
+  pendingEscrowCount?: number;
+  finishedEscrowCount?: number;
+  cancelledEscrowCount?: number;
+  failedEscrowCount?: number;
+  totalEscrowAmount?: string;
   onDeposit: (id: string) => void;
 }
 
@@ -37,10 +42,17 @@ export default function VaultCard({
   depositors,
   status,
   depositAssets = ["XRP"],
+  pendingEscrowCount = 0,
+  finishedEscrowCount = 0,
+  cancelledEscrowCount = 0,
+  failedEscrowCount = 0,
+  totalEscrowAmount,
   onDeposit,
 }: VaultCardProps) {
   const risk = riskConfig[riskLevel];
   const RiskIcon = risk.icon;
+  const isXRPVault = depositAssets.includes("XRP");
+  const totalEscrowCount = pendingEscrowCount + finishedEscrowCount + cancelledEscrowCount + failedEscrowCount;
 
   return (
     <Card className="hover-elevate">
@@ -63,6 +75,35 @@ export default function VaultCard({
                   {asset}
                 </Badge>
               ))}
+            </div>
+          </div>
+        )}
+        {isXRPVault && totalEscrowCount > 0 && (
+          <div className="flex items-center gap-2 mt-3 p-2 rounded-md bg-muted/50">
+            <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="flex-1">
+              <p className="text-xs font-medium">
+                {totalEscrowCount} Total Escrow{totalEscrowCount > 1 ? 's' : ''}
+              </p>
+              <div className="flex gap-2 mt-1 text-xs">
+                {pendingEscrowCount > 0 && (
+                  <span className="text-chart-4">{pendingEscrowCount} Pending</span>
+                )}
+                {finishedEscrowCount > 0 && (
+                  <span className="text-chart-2">{finishedEscrowCount} Finished</span>
+                )}
+                {cancelledEscrowCount > 0 && (
+                  <span className="text-muted-foreground">{cancelledEscrowCount} Cancelled</span>
+                )}
+                {failedEscrowCount > 0 && (
+                  <span className="text-destructive">{failedEscrowCount} Failed</span>
+                )}
+              </div>
+              {totalEscrowAmount && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {parseFloat(totalEscrowAmount).toFixed(2)} XRP total
+                </p>
+              )}
             </div>
           </div>
         )}
