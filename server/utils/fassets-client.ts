@@ -28,35 +28,61 @@ export interface CollateralReservation {
 
 export class FAssetsClient {
   private config: FAssetsConfig;
-  private assetManagerAddress: string;
+  private assetManagerAddress: string | null = null;
 
   constructor(config: FAssetsConfig) {
     this.config = config;
-    
-    // Get AssetManager address from environment
-    const envKey = config.network === "mainnet"
-      ? "FASSETS_ASSET_MANAGER_MAINNET"
-      : "FASSETS_ASSET_MANAGER_COSTON2";
-    
-    this.assetManagerAddress = process.env[envKey] || "";
-    
-    if (!this.assetManagerAddress || this.assetManagerAddress === "0x...") {
-      throw new Error(
-        `AssetManager address not configured for ${config.network}. ` +
-        `Set ${envKey} environment variable to the correct contract address. ` +
-        `Get address from Flare Contract Registry: https://dev.flare.network/network/guides/flare-contracts-registry`
-      );
-    }
-    
-    console.log(`FAssetsClient initialized for ${config.network}`);
-    console.log(`  AssetManager: ${this.assetManagerAddress}`);
+    console.log(`FAssetsClient initializing for ${config.network}...`);
   }
 
-  private getAssetManager(): ethers.Contract {
+  /**
+   * Get AssetManager address from Flare Contract Registry
+   * The Contract Registry dynamically provides deployed contract addresses
+   */
+  private async getAssetManagerAddress(): Promise<string> {
+    if (this.assetManagerAddress) {
+      return this.assetManagerAddress;
+    }
+
+    try {
+      // Flare Contract Registry address (same on all networks)
+      const CONTRACT_REGISTRY_ADDRESS = "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019";
+      
+      // Contract Registry ABI (minimal)
+      const registryABI = [
+        "function getContractAddressByName(string memory _name) external view returns (address)"
+      ];
+
+      const registry = new ethers.Contract(
+        CONTRACT_REGISTRY_ADDRESS,
+        registryABI,
+        this.config.flareClient.provider
+      );
+
+      // Get AssetManager address for FXRP
+      const address = await registry.getContractAddressByName("AssetManager");
+      this.assetManagerAddress = address;
+      
+      console.log(`✅ Retrieved AssetManager from Contract Registry`);
+      console.log(`   Network: ${this.config.network}`);
+      console.log(`   AssetManager: ${address}`);
+      
+      return address;
+    } catch (error) {
+      console.error("Failed to get AssetManager from Contract Registry:", error);
+      throw new Error(
+        `Failed to retrieve AssetManager address from Flare Contract Registry for ${this.config.network}. ` +
+        `Ensure you're connected to the correct network and the Contract Registry is accessible.`
+      );
+    }
+  }
+
+  private async getAssetManager(): Promise<ethers.Contract> {
+    const assetManagerAddress = await this.getAssetManagerAddress();
     const AssetManagerABI = require("@flarenetwork/flare-periphery-contracts/artifacts/contracts/fasset/interfaces/IAssetManager.sol/IAssetManager.json");
     
     const contract = new ethers.Contract(
-      this.assetManagerAddress,
+      assetManagerAddress,
       AssetManagerABI.abi,
       this.config.flareClient.signer || this.config.flareClient.provider
     );
@@ -65,7 +91,7 @@ export class FAssetsClient {
   }
 
   async findBestAgent(lotsRequired: number): Promise<AgentInfo | null> {
-    const assetManager = this.getAssetManager();
+    const assetManager = await this.getAssetManager();
     
     const { _agents: agents } = await assetManager.getAvailableAgentsDetailedList(0, 100);
     
@@ -99,7 +125,7 @@ export class FAssetsClient {
   async reserveCollateral(
     lotsToMint: number
   ): Promise<CollateralReservation> {
-    const assetManager = this.getAssetManager();
+    const assetManager = await this.getAssetManager();
     
     const agent = await this.findBestAgent(lotsToMint);
     if (!agent) {
@@ -143,7 +169,7 @@ export class FAssetsClient {
     proof: any,
     reservationId: bigint
   ): Promise<string> {
-    const assetManager = this.getAssetManager();
+    const assetManager = await this.getAssetManager();
     
     const tx = await assetManager.executeMinting(proof, reservationId);
     const receipt = await tx.wait();
@@ -153,7 +179,7 @@ export class FAssetsClient {
   }
 
   async calculateLots(xrpAmount: string): Promise<number> {
-    const assetManager = this.getAssetManager();
+    const assetManager = await this.getAssetManager();
     const lotSize = await assetManager.lotSize();
     const decimals = await assetManager.assetMintingDecimals();
     
@@ -164,7 +190,7 @@ export class FAssetsClient {
   }
 
   async getAssetDecimals(): Promise<number> {
-    const assetManager = this.getAssetManager();
+    const assetManager = await this.getAssetManager();
     return Number(await assetManager.assetMintingDecimals());
   }
 
