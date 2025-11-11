@@ -147,36 +147,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         demoMode,
       });
 
-      // Initiate bridge (reserves collateral, returns agent address in production)
-      try {
-        await bridgeService.initiateBridge(bridge.id);
-        
-        // Fetch updated bridge
-        const updatedBridge = await storage.getBridgeById(bridge.id);
-        
-        if (!updatedBridge) {
-          throw new Error("Bridge not found after initiation");
-        }
-
-        // Return bridge info
-        res.json({
-          success: true,
-          bridgeId: bridge.id,
-          agentAddress: updatedBridge.agentUnderlyingAddress,
-          amount: updatedBridge.xrpAmount,
-          status: updatedBridge.status,
-          message: updatedBridge.status === 'completed' 
-            ? "Bridge completed successfully (demo mode)" 
-            : "Please send XRP to the agent address to complete the bridge",
-          demo: bridgeService.demoMode,
-        });
-      } catch (error) {
-        // Handle bridge initiation error
+      // Initiate bridge in background (don't wait for completion)
+      // This allows the modal to open immediately and show real-time progress
+      bridgeService.initiateBridge(bridge.id).catch(async (error) => {
+        // Handle errors in background
+        console.error("Background bridge error:", error);
         await storage.updateBridgeStatus(bridge.id, 'failed', {
           errorMessage: error instanceof Error ? error.message : "Unknown error",
         });
-        throw error;
-      }
+      });
+
+      // Return bridge info immediately so modal can open and poll status
+      res.json({
+        success: true,
+        bridgeId: bridge.id,
+        amount: bridge.xrpAmount,
+        status: bridge.status, // Will be 'pending' initially
+        message: "Bridge initiated. Watch the progress in the modal.",
+        demo: bridgeService.demoMode,
+      });
     } catch (error) {
       console.error("Deposit error:", error);
       if (error instanceof Error) {
