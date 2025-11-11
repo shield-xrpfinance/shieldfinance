@@ -31,6 +31,8 @@ export interface IStorage {
   getBridgeById(id: string): Promise<SelectXrpToFxrpBridge | undefined>;
   getBridgeByRequestId(requestId: string): Promise<SelectXrpToFxrpBridge | undefined>;
   getBridgesByWallet(walletAddress: string): Promise<SelectXrpToFxrpBridge[]>;
+  getBridgeByAgentAddress(agentAddress: string): Promise<SelectXrpToFxrpBridge | undefined>;
+  getPendingBridges(): Promise<SelectXrpToFxrpBridge[]>;
   updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
   
   createFirelightPosition(position: InsertFirelightPosition): Promise<SelectFirelightPosition>;
@@ -375,6 +377,20 @@ export class DatabaseStorage implements IStorage {
   async getBridgesByWallet(walletAddress: string): Promise<SelectXrpToFxrpBridge[]> {
     return db.query.xrpToFxrpBridges.findMany({
       where: eq(xrpToFxrpBridges.walletAddress, walletAddress),
+      orderBy: desc(xrpToFxrpBridges.createdAt),
+    });
+  }
+
+  async getBridgeByAgentAddress(agentAddress: string): Promise<SelectXrpToFxrpBridge | undefined> {
+    return db.query.xrpToFxrpBridges.findFirst({
+      where: eq(xrpToFxrpBridges.agentUnderlyingAddress, agentAddress),
+      orderBy: desc(xrpToFxrpBridges.createdAt),
+    });
+  }
+
+  async getPendingBridges(): Promise<SelectXrpToFxrpBridge[]> {
+    return db.query.xrpToFxrpBridges.findMany({
+      where: eq(xrpToFxrpBridges.status, "awaiting_payment"),
       orderBy: desc(xrpToFxrpBridges.createdAt),
     });
   }

@@ -3,9 +3,9 @@ import type { IStorage } from "../storage";
 
 export interface XRPLDepositListenerConfig {
   network: "testnet" | "mainnet";
-  vaultAddress: string;
+  vaultAddress?: string;
   storage: IStorage;
-  onDeposit: (deposit: DetectedDeposit) => Promise<void>;
+  onDeposit?: (deposit: DetectedDeposit) => Promise<void>;
   onAgentPayment?: (payment: AgentPayment) => Promise<void>;
 }
 
@@ -29,6 +29,7 @@ export class XRPLDepositListener {
   private config: XRPLDepositListenerConfig;
   private isRunning: boolean = false;
   private monitoredAgentAddresses: Set<string> = new Set();
+  private agentPaymentHandlerSet: boolean = false;
 
   constructor(config: XRPLDepositListenerConfig) {
     this.config = config;
@@ -40,6 +41,19 @@ export class XRPLDepositListener {
     this.client = new Client(server);
   }
 
+  /**
+   * Register agent payment handler after construction (two-phase initialization).
+   * This allows creating the listener without callbacks that reference not-yet-created services.
+   */
+  setAgentPaymentHandler(handler: (payment: AgentPayment) => Promise<void>): void {
+    if (this.agentPaymentHandlerSet) {
+      throw new Error("Agent payment handler already set. Cannot set handler multiple times.");
+    }
+    this.config.onAgentPayment = handler;
+    this.agentPaymentHandlerSet = true;
+    console.log("✅ Agent payment handler registered with XRPL listener");
+  }
+
   async start() {
     if (this.isRunning) {
       console.log("XRPL listener already running");
@@ -49,13 +63,15 @@ export class XRPLDepositListener {
     await this.client.connect();
     this.isRunning = true;
 
-    console.log(`🎧 XRPL Deposit Listener started for ${this.config.vaultAddress}`);
+    console.log(`🎧 XRPL Deposit Listener started${this.config.vaultAddress ? ` for ${this.config.vaultAddress}` : ''}`);
 
-    // Subscribe to account transactions
-    await this.client.request({
-      command: "subscribe",
-      accounts: [this.config.vaultAddress],
-    });
+    // Subscribe to account transactions (if vault address provided)
+    if (this.config.vaultAddress) {
+      await this.client.request({
+        command: "subscribe",
+        accounts: [this.config.vaultAddress],
+      });
+    }
 
     // Listen for transactions
     this.client.on("transaction", async (tx: any) => {
@@ -109,7 +125,7 @@ export class XRPLDepositListener {
     if (typeof tx.transaction.Amount !== "string") return;
 
     const destination = tx.transaction.Destination;
-    const isVaultPayment = destination === this.config.vaultAddress;
+    const isVaultPayment = this.config.vaultAddress && destination === this.config.vaultAddress;
     const isAgentPayment = this.monitoredAgentAddresses.has(destination);
 
     if (!isVaultPayment && !isAgentPayment) return;
@@ -117,7 +133,7 @@ export class XRPLDepositListener {
     const amount = (parseInt(tx.transaction.Amount) / 1_000_000).toString();
     const memo = this.extractMemo(tx.transaction.Memos);
 
-    if (isVaultPayment) {
+    if (isVaultPayment && this.config.onDeposit) {
       const deposit: DetectedDeposit = {
         walletAddress: tx.transaction.Account,
         amount: amount,

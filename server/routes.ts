@@ -5,8 +5,8 @@ import { insertPositionSchema, insertWithdrawalRequestSchema, insertEscrowSchema
 import { XummSdk } from "xumm-sdk";
 import { Client } from "xrpl";
 import { createEscrow, finishEscrow, cancelEscrow } from "./xrpl-escrow";
-import { BridgeService } from "./services/BridgeService";
-import { FlareClient } from "./utils/flare-client";
+import type { BridgeService } from "./services/BridgeService";
+import type { FlareClient } from "./utils/flare-client";
 
 // Background verification for wallet-auto-submitted transactions
 async function verifyWalletAutoSubmittedTransaction(txHash: string, network: string) {
@@ -68,7 +68,10 @@ async function verifyWalletAutoSubmittedTransaction(txHash: string, network: str
   }
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
+export async function registerRoutes(
+  app: Express,
+  bridgeService: BridgeService
+): Promise<Server> {
   // Get all vaults
   app.get("/api/vaults", async (_req, res) => {
     try {
@@ -136,20 +139,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'pending',
       });
 
-      // Initialize bridge service
-      const demoMode = process.env.DEMO_MODE !== "false"; // Default to true unless explicitly set to false
-      const flareClient = new FlareClient({ 
-        network: network || 'coston2',
-        privateKey: process.env.OPERATOR_PRIVATE_KEY // Add private key for signing transactions
-      });
-      const bridgeService = new BridgeService({
-        network: network === 'mainnet' ? 'mainnet' : 'coston2',
-        storage,
-        flareClient,
-        operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY || '',
-        demoMode,
-      });
-
+      // Initiate bridge using shared bridge service (with xrplListener)
+      // This ensures agent addresses are registered for payment detection
       // Initiate bridge in background (don't wait for completion)
       // This allows the modal to open immediately and show real-time progress
       bridgeService.initiateBridge(bridge.id).catch(async (error) => {
@@ -1561,6 +1552,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(bridge);
     } catch (error) {
       res.status(500).json({ error: "Failed to create bridge request" });
+    }
+  });
+
+  // Admin endpoint: Manually complete minting with XRPL transaction hash
+  app.post("/api/bridges/:bridgeId/complete-minting", async (req, res) => {
+    try {
+      const { bridgeId } = req.params;
+      const { xrplTxHash } = req.body;
+      
+      if (!xrplTxHash) {
+        return res.status(400).json({ error: "Missing required field: xrplTxHash" });
+      }
+
+      // Get bridge to verify it exists and is in correct state
+      const bridge = await storage.getBridgeById(bridgeId);
+      if (!bridge) {
+        return res.status(404).json({ error: "Bridge not found" });
+      }
+
+      if (bridge.status === "completed") {
+        return res.status(400).json({ error: "Bridge already completed" });
+      }
+
+      if (bridge.status !== "awaiting_payment") {
+        return res.status(400).json({ 
+          error: `Bridge must be in awaiting_payment status. Current status: ${bridge.status}` 
+        });
+      }
+
+      // Use shared bridge service (with xrplListener) for minting completion
+      // Execute minting with proof
+      await bridgeService.executeMintingWithProof(bridgeId, xrplTxHash);
+      
+      const updatedBridge = await storage.getBridgeById(bridgeId);
+      res.json({ 
+        success: true, 
+        message: "Minting completed successfully",
+        bridge: updatedBridge
+      });
+    } catch (error) {
+      console.error("Complete minting error:", error);
+      res.status(500).json({ 
+        error: "Failed to complete minting",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
     }
   });
 

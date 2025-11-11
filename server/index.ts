@@ -63,17 +63,8 @@ app.use((req, res, next) => {
     privateKey: process.env.OPERATOR_PRIVATE_KEY, // For operator txs
   });
 
-  // Initialize services
+  // Initialize services (note: bridgeService needs xrplListener, so we create it after listener is initialized)
   const demoMode = process.env.DEMO_MODE !== "false"; // Default to true unless explicitly set to false
-  const bridgeService = new BridgeService({
-    network: "coston2",
-    storage,
-    flareClient,
-    operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY || "",
-    demoMode,
-  });
-
-  console.log(`🌉 BridgeService initialized (${bridgeService.demoMode ? 'DEMO MODE' : 'PRODUCTION MODE'})`);
 
   const vaultService = new VaultService({
     storage,
@@ -93,6 +84,98 @@ app.use((req, res, next) => {
     minCompoundAmount: "1.0", // Minimum 1 FXRP before compounding
   });
 
+  // Two-phase initialization to eliminate temporal dead zone
+  // Phase 1: Create services without circular dependencies
+  
+  // Create XRPL listener without callbacks
+  const xrplListener = new XRPLDepositListener({
+    network: "testnet",
+    vaultAddress: "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY", // Optional vault monitoring
+    storage,
+    onDeposit: async (deposit) => {
+      // Handle direct vault deposits if needed
+      console.log(`📥 Direct vault deposit detected: ${deposit.amount} XRP from ${deposit.walletAddress}`);
+    },
+  });
+  
+  // Create bridge service without listener reference
+  const bridgeService = new BridgeService({
+    network: "coston2",
+    storage,
+    flareClient,
+    operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY || "",
+    demoMode,
+  });
+
+  console.log(`🌉 BridgeService initialized (${bridgeService.demoMode ? 'DEMO MODE' : 'PRODUCTION MODE'})`);
+
+  // Phase 2: Wire up the circular dependencies
+  
+  // Register listener with bridge service (for agent address registration)
+  bridgeService.setXrplListener(xrplListener);
+  
+  // Register agent payment handler with listener (now that bridgeService exists)
+  xrplListener.setAgentPaymentHandler(async (payment) => {
+    console.log(`🔗 FAssets agent payment detected: ${payment.amount} XRP to ${payment.agentAddress}`);
+    console.log(`   TX: ${payment.txHash}`);
+    
+    try {
+      // Find the bridge waiting for this agent payment
+      const bridge = await storage.getBridgeByAgentAddress(payment.agentAddress);
+      
+      if (!bridge) {
+        console.log(`⚠️  No bridge found for agent ${payment.agentAddress}`);
+        return;
+      }
+      
+      if (bridge.status !== "awaiting_payment") {
+        console.log(`⚠️  Bridge ${bridge.id} not in awaiting_payment state (current: ${bridge.status})`);
+        return;
+      }
+      
+      console.log(`✅ Matched payment to bridge ${bridge.id}`);
+      console.log(`   Executing minting with proof...`);
+      
+      // Execute minting with the detected transaction
+      await bridgeService.executeMintingWithProof(bridge.id, payment.txHash);
+      
+      console.log(`🎉 Bridge ${bridge.id} completed successfully!`);
+    } catch (error) {
+      console.error(`❌ Error completing bridge for agent ${payment.agentAddress}:`, error);
+    }
+  });
+  
+  // Start listener last (after all wiring is complete)
+  await xrplListener.start();
+
+  // Re-register pending bridges with XRPL listener (for restart recovery)
+  if (!demoMode) {
+    const pendingBridges = await storage.getPendingBridges();
+    console.log(`🔄 Found ${pendingBridges.length} pending bridge(s) to monitor`);
+    
+    let successCount = 0;
+    let failureCount = 0;
+    
+    for (const bridge of pendingBridges) {
+      if (bridge.agentUnderlyingAddress) {
+        try {
+          await xrplListener.addAgentAddress(bridge.agentUnderlyingAddress);
+          console.log(`   ✅ Re-monitoring agent: ${bridge.agentUnderlyingAddress} (Bridge: ${bridge.id})`);
+          successCount++;
+        } catch (error) {
+          console.error(`   ❌ Failed to re-monitor agent ${bridge.agentUnderlyingAddress} (Bridge: ${bridge.id}):`, error);
+          failureCount++;
+        }
+      }
+    }
+    
+    console.log(`📊 Reconciliation complete: ${successCount} successful, ${failureCount} failed`);
+    if (failureCount > 0) {
+      console.warn(`⚠️  Warning: ${failureCount} pending bridge(s) not monitored. Manual intervention may be required.`);
+    }
+  }
+
+  // Initialize deposit service (needs bridgeService)
   const depositService = new DepositService({
     storage,
     bridgeService,
@@ -100,23 +183,13 @@ app.use((req, res, next) => {
     yieldService,
   });
 
-  // Start XRPL deposit listener (optional, can be started via API)
-  // const xrplListener = new XRPLDepositListener({
-  //   network: "testnet",
-  //   vaultAddress: "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY",
-  //   storage,
-  //   onDeposit: async (deposit) => {
-  //     await depositService.processDeposit(deposit, "default-vault-id");
-  //   },
-  // });
-  // await xrplListener.start();
-
   // Start compounding service (runs every hour)
   // compoundingService.start(60);
 
   log("✅ All services initialized");
   
-  const server = await registerRoutes(app);
+  // Pass shared services to routes (ensures agent addresses are registered with listener)
+  const server = await registerRoutes(app, bridgeService);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

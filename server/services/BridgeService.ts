@@ -3,6 +3,7 @@ import { FAssetsClient } from "../utils/fassets-client";
 import { generateFDCProof } from "../utils/fdc-proof";
 import type { IStorage } from "../storage";
 import type { SelectXrpToFxrpBridge } from "../../shared/schema";
+import type { XRPLDepositListener } from "../listeners/XRPLDepositListener";
 
 export interface BridgeServiceConfig {
   network: "mainnet" | "coston2";
@@ -29,6 +30,8 @@ export class BridgeService {
   private config: BridgeServiceConfig;
   private _demoMode: boolean;
   private fassetsClient: FAssetsClient | null;
+  private xrplListener: XRPLDepositListener | null = null;
+  private xrplListenerSet: boolean = false;
 
   constructor(config: BridgeServiceConfig) {
     this.config = config;
@@ -49,6 +52,19 @@ export class BridgeService {
 
   get demoMode(): boolean {
     return this._demoMode;
+  }
+
+  /**
+   * Set XRPL listener for agent address registration (two-phase initialization).
+   * This method should only be used for registering agent addresses with the listener.
+   */
+  setXrplListener(listener: XRPLDepositListener): void {
+    if (this.xrplListenerSet) {
+      throw new Error("XRPL listener already set. Cannot set listener multiple times.");
+    }
+    this.xrplListener = listener;
+    this.xrplListenerSet = true;
+    console.log("✅ XRPL listener registered with BridgeService");
   }
 
   /**
@@ -169,6 +185,12 @@ export class BridgeService {
         collateralReservationFeePaid: "0",
         lastUnderlyingBlock: reservation.lastUnderlyingBlock.toString(),
       });
+      
+      // Register agent address with XRPL listener for payment detection
+      if (this.xrplListener) {
+        await this.xrplListener.addAgentAddress(reservation.agentUnderlyingAddress);
+        console.log(`🔔 XRPL listener now monitoring agent: ${reservation.agentUnderlyingAddress}`);
+      }
       
       console.log(`✅ Collateral reserved with agent: ${reservation.agentVault}`);
       console.log(`   Payment address: ${reservation.agentUnderlyingAddress}`);
