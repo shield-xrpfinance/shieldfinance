@@ -3,136 +3,87 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
- * @dev IUniswapV2Router02 interface for SparkDEX interactions
- */
-interface IUniswapV2Router02 {
-    function addLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 amountADesired,
-        uint256 amountBDesired,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountA, uint256 amountB, uint256 liquidity);
-    
-    function removeLiquidity(
-        address tokenA,
-        address tokenB,
-        uint256 liquidity,
-        uint256 amountAMin,
-        uint256 amountBMin,
-        address to,
-        uint256 deadline
-    ) external returns (uint256 amountA, uint256 amountB);
-    
-    function swapExactTokensForTokens(
-        uint256 amountIn,
-        uint256 amountOutMin,
-        address[] calldata path,
-        address to,
-        uint256 deadline
-    ) external returns (uint256[] memory amounts);
-}
-
-/**
  * @title Shield XRP Vault (shXRP)
- * @dev Liquid staking vault for XRP on Flare Network with FXRP DeFi yield integration
- * 
- * Features:
- * - Mints shXRP 1:1 for deposited XRP
- * - Burns shXRP on withdrawal
- * - Integrates with XRPL escrow hooks for cross-chain bridge
- * - Operator-controlled deposits/withdrawals for security
- * - Rewards distribution for shXRP holders
- * - FXRP DeFi yield integration with SparkDEX liquidity pools
- * - Auto-compounding 5-7% APY through LP staking
+ * @dev ERC-4626 compliant tokenized vault for XRP on Flare Network
  * 
  * Architecture:
- * 1. User initiates deposit → Frontend calls XRPL hook
- * 2. XRPL hook locks XRP in escrow → Emits event
- * 3. Operator calls mintShXRP() → Issues shXRP to user
- * 4. User requests withdrawal → Burns shXRP
- * 5. Operator releases XRP from XRPL escrow
+ * - Asset: FXRP (FAssets-wrapped XRP on Flare Network)
+ * - Shares: shXRP (liquid staking token, ERC-20 compliant)
+ * - Standard: ERC-4626 (Tokenized Vault Standard)
+ * 
+ * Features:
+ * - Deposit FXRP → Receive shXRP shares (automatic exchange rate)
+ * - Redeem shXRP → Receive FXRP (proportional to vault performance)
+ * - Operator-controlled for bridging coordination
+ * - Firelight.finance integration for DeFi yield strategies
+ * - ReentrancyGuard for deposit/withdrawal security
+ * 
+ * Flow:
+ * 1. User mints FXRP via FAssets bridge (XRP → FXRP on Flare)
+ * 2. User approves FXRP spending for this vault
+ * 3. User calls deposit() with FXRP amount → Receives shXRP shares
+ * 4. Vault deploys FXRP to Firelight for yield (4-7% APY)
+ * 5. shXRP value increases as Firelight generates returns
+ * 6. User calls withdraw() with shXRP → Receives FXRP + accrued yield
+ * 
+ * ERC-4626 Benefits:
+ * - Standard interface for all DeFi integrations
+ * - Automatic share price calculation (no manual exchange rate)
+ * - Compatible with lending protocols, DEXs, aggregators
+ * - Transparent vault accounting via totalAssets()
+ * 
+ * Integration Notes:
+ * - FXRP: See docs/FLARE_FASSETS_INTEGRATION.md
+ * - Firelight: See docs/FIRELIGHT_INTEGRATION.md
+ * - Operators coordinate bridging between XRPL and Flare
  */
-contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
-    using SafeERC20 for IERC20;
+contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
     
-    // Mapping of approved operators who can mint/burn shXRP
+    // Mapping of approved operators who can manage Firelight deposits
     mapping(address => bool) public operators;
     
-    // Minimum deposit amount (0.01 XRP equivalent)
+    // Minimum deposit amount (0.01 FXRP)
     uint256 public minDeposit = 0.01 ether;
     
-    // Total XRP locked in escrow on XRPL
-    uint256 public totalXRPLocked;
-    
-    // Exchange rate (shXRP to XRP) - starts at 1:1, can increase with rewards
-    uint256 public exchangeRate = 1 ether;
-    
-    /**
-     * FXRP DeFi Integration
-     * 
-     * IMPORTANT ACCOUNTING SEPARATION:
-     * - totalXRPLocked: XRP locked on XRPL via escrow (backs shXRP 1:1)
-     * - totalFXRPInVault: FXRP held directly in contract (not in LP)
-     * - totalLPStaked: LP tokens from FXRP/WFLR pool
-     * 
-     * FXRP yields are tracked separately from XRP backing to prevent
-     * corrupting the exchange rate. FXRP rewards increase totalFXRPInVault
-     * but do NOT inflate totalXRPLocked unless explicitly bridged back to XRP.
-     */
-    IERC20 public fxrpToken;
-    address public sparkRouter;
-    address public wflrToken;
-    uint256 public totalFXRPDeposited;
-    uint256 public totalFXRPInVault;  // FXRP held directly (not in LP)
-    address public lpToken;            // FXRP/WFLR LP token address
-    uint256 public totalLPStaked;      // LP tokens staked
-    bool public yieldEnabled;
+    // Firelight.finance Integration
+    // Firelight provides institutional-grade liquid staking for FXRP
+    address public firelightVault;           // Firelight Launch Vault (ERC-4626)
+    uint256 public totalStXRPDeposited;      // stXRP balance from Firelight deposits
     
     // Events
     event OperatorAdded(address indexed operator);
     event OperatorRemoved(address indexed operator);
-    event ShXRPMinted(address indexed user, uint256 xrpAmount, uint256 shXRPAmount, string xrplTxHash);
-    event ShXRPBurned(address indexed user, uint256 shXRPAmount, uint256 xrpAmount);
-    event RewardsDistributed(uint256 rewardAmount, uint256 newExchangeRate);
     event MinDepositUpdated(uint256 newMinDeposit);
-    event ExchangeRateUpdated(uint256 newRate);
-    event FXRPDeposited(address indexed operator, uint256 amount);
-    event FXRPStaked(uint256 fxrpAmount, uint256 flrAmount, uint256 lpTokens);
-    event RewardsCompounded(uint256 rewardAmount, uint256 newExchangeRate);
-    event YieldEnabledUpdated(bool enabled);
-    event LPTokenSet(address indexed lpToken);
-    event LPWithdrawn(uint256 lpAmount, uint256 fxrpReceived, uint256 wflrReceived);
-    event TokensSwapped(address indexed tokenIn, uint256 amountIn, address indexed tokenOut, uint256 amountOut);
-    event RewardsSimulated(uint256 rewardAmount, uint256 newExchangeRate);
+    event FirelightVaultSet(address indexed firelightVault);
+    event FirelightDeposit(uint256 fxrpAmount, uint256 stXRPReceived);
+    event FirelightWithdraw(uint256 stXRPAmount, uint256 fxrpReceived);
     
     modifier onlyOperator() {
-        require(operators[msg.sender] || msg.sender == owner(), "Not an operator");
+        require(operators[msg.sender] || msg.sender == owner(), "Not authorized");
         _;
     }
     
+    /**
+     * @dev Constructor
+     * @param _fxrpToken Address of FXRP token (FAssets-wrapped XRP)
+     * @param _name Name of the share token (e.g., "Shield XRP")
+     * @param _symbol Symbol of the share token (e.g., "shXRP")
+     * 
+     * Example deployment:
+     * FXRP Mainnet: 0xAd552A648C74D49E10027AB8a618A3ad4901c5bE
+     * FXRP Coston2: 0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3
+     */
     constructor(
-        address _fxrpToken,
-        address _sparkRouter,
-        address _wflrToken
-    ) ERC20("Shield XRP", "shXRP") Ownable(msg.sender) {
-        require(_fxrpToken != address(0), "Invalid FXRP token address");
-        require(_sparkRouter != address(0), "Invalid SparkRouter address");
-        require(_wflrToken != address(0), "Invalid WFLR token address");
-        
-        fxrpToken = IERC20(_fxrpToken);
-        sparkRouter = _sparkRouter;
-        wflrToken = _wflrToken;
-        yieldEnabled = false;
+        IERC20 _fxrpToken,
+        string memory _name,
+        string memory _symbol
+    ) ERC4626(_fxrpToken) ERC20(_name, _symbol) Ownable(msg.sender) {
+        require(address(_fxrpToken) != address(0), "Invalid FXRP token address");
         
         // Deployer is first operator
         operators[msg.sender] = true;
@@ -140,7 +91,155 @@ contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev Add an operator who can mint/burn shXRP
+     * @dev Calculate total assets under management
+     * 
+     * ERC-4626 Required Function
+     * This drives the share price calculation:
+     * Share Price = totalAssets() / totalSupply()
+     * 
+     * Assets Include:
+     * 1. FXRP held directly in this vault
+     * 2. FXRP deployed to Firelight (valued via stXRP position)
+     * 
+     * As Firelight generates yield, totalAssets() increases,
+     * automatically increasing the value of shXRP shares.
+     * 
+     * @return Total FXRP-equivalent assets in the vault
+     */
+    function totalAssets() public view virtual override returns (uint256) {
+        // FXRP held directly in vault (idle, not deployed)
+        uint256 vaultBalance = IERC20(asset()).balanceOf(address(this));
+        
+        // TODO: Add Firelight stXRP position value
+        // Future implementation:
+        // if (firelightVault != address(0) && totalStXRPDeposited > 0) {
+        //     IFirelightVault firelight = IFirelightVault(firelightVault);
+        //     uint256 stXRPValue = firelight.convertToAssets(totalStXRPDeposited);
+        //     return vaultBalance + stXRPValue;
+        // }
+        
+        // For now, return only direct FXRP balance
+        // Once Firelight integration is active, this will include stXRP value
+        return vaultBalance;
+    }
+    
+    /**
+     * @dev Deposit FXRP and receive shXRP shares
+     * 
+     * Overrides ERC-4626 deposit to add:
+     * - Minimum deposit enforcement
+     * - Reentrancy protection
+     * 
+     * Standard ERC-4626 Flow:
+     * 1. User approves FXRP spending: fxrp.approve(vault, amount)
+     * 2. User calls deposit(amount, receiver)
+     * 3. Vault transfers FXRP from user
+     * 4. Vault mints shXRP shares to receiver
+     * 
+     * Share Calculation (automatic):
+     * shares = (assets * totalSupply()) / totalAssets()
+     * 
+     * @param assets Amount of FXRP to deposit
+     * @param receiver Address to receive shXRP shares
+     * @return shares Amount of shXRP shares minted
+     */
+    function deposit(uint256 assets, address receiver) 
+        public 
+        virtual 
+        override 
+        nonReentrant 
+        returns (uint256) 
+    {
+        require(assets >= minDeposit, "Below minimum deposit");
+        return super.deposit(assets, receiver);
+    }
+    
+    /**
+     * @dev Mint exact amount of shXRP shares
+     * 
+     * Overrides ERC-4626 mint to add:
+     * - Minimum deposit enforcement (via asset preview)
+     * - Reentrancy protection
+     * 
+     * Use Case:
+     * When user wants exact number of shares, not exact FXRP amount
+     * 
+     * @param shares Amount of shXRP shares to mint
+     * @param receiver Address to receive shXRP shares
+     * @return assets Amount of FXRP deposited
+     */
+    function mint(uint256 shares, address receiver) 
+        public 
+        virtual 
+        override 
+        nonReentrant 
+        returns (uint256) 
+    {
+        uint256 assets = previewMint(shares);
+        require(assets >= minDeposit, "Below minimum deposit");
+        return super.mint(shares, receiver);
+    }
+    
+    /**
+     * @dev Withdraw FXRP by burning shXRP shares
+     * 
+     * Adds reentrancy protection to standard ERC-4626 withdraw
+     * 
+     * Standard ERC-4626 Flow:
+     * 1. User calls withdraw(assets, receiver, owner)
+     * 2. Vault burns shXRP from owner
+     * 3. Vault transfers FXRP to receiver
+     * 
+     * @param assets Amount of FXRP to withdraw
+     * @param receiver Address to receive FXRP
+     * @param owner Address whose shXRP will be burned
+     * @return shares Amount of shXRP burned
+     */
+    function withdraw(uint256 assets, address receiver, address owner)
+        public
+        virtual
+        override
+        nonReentrant
+        returns (uint256)
+    {
+        return super.withdraw(assets, receiver, owner);
+    }
+    
+    /**
+     * @dev Redeem shXRP shares for FXRP
+     * 
+     * Adds reentrancy protection to standard ERC-4626 redeem
+     * 
+     * Use Case:
+     * When user wants to burn exact number of shares
+     * 
+     * @param shares Amount of shXRP to redeem
+     * @param receiver Address to receive FXRP
+     * @param owner Address whose shXRP will be burned
+     * @return assets Amount of FXRP withdrawn
+     */
+    function redeem(uint256 shares, address receiver, address owner)
+        public
+        virtual
+        override
+        nonReentrant
+        returns (uint256)
+    {
+        return super.redeem(shares, receiver, owner);
+    }
+    
+    // ========================================
+    // OPERATOR MANAGEMENT
+    // ========================================
+    
+    /**
+     * @dev Add an operator who can manage Firelight deposits
+     * 
+     * Operators coordinate:
+     * - Deploying idle FXRP to Firelight for yield
+     * - Withdrawing from Firelight when users redeem
+     * - Rebalancing between vault and Firelight
+     * 
      * @param operator Address of the operator
      */
     function addOperator(address operator) external onlyOwner {
@@ -158,77 +257,15 @@ contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
         emit OperatorRemoved(operator);
     }
     
-    /**
-     * @dev Mint shXRP tokens after XRP is locked in XRPL escrow
-     * @param user Address of the user who deposited XRP
-     * @param xrpAmount Amount of XRP deposited (in wei/drops)
-     * @param xrplTxHash XRPL transaction hash for verification
-     */
-    function mintShXRP(
-        address user,
-        uint256 xrpAmount,
-        string calldata xrplTxHash
-    ) external onlyOperator nonReentrant {
-        require(user != address(0), "Invalid user address");
-        require(xrpAmount >= minDeposit, "Amount below minimum deposit");
-        require(bytes(xrplTxHash).length > 0, "Invalid XRPL tx hash");
-        
-        // Calculate shXRP amount based on exchange rate
-        uint256 shXRPAmount = (xrpAmount * 1 ether) / exchangeRate;
-        
-        // Update total locked XRP
-        totalXRPLocked += xrpAmount;
-        
-        // Mint shXRP to user
-        _mint(user, shXRPAmount);
-        
-        emit ShXRPMinted(user, xrpAmount, shXRPAmount, xrplTxHash);
-    }
-    
-    /**
-     * @dev Burn shXRP and request XRP withdrawal from XRPL escrow
-     * @param shXRPAmount Amount of shXRP to burn
-     * @return xrpAmount Amount of XRP to be withdrawn
-     */
-    function burnShXRP(uint256 shXRPAmount) external nonReentrant returns (uint256 xrpAmount) {
-        require(shXRPAmount > 0, "Cannot burn zero amount");
-        require(balanceOf(msg.sender) >= shXRPAmount, "Insufficient shXRP balance");
-        
-        // Calculate XRP amount based on exchange rate
-        xrpAmount = (shXRPAmount * exchangeRate) / 1 ether;
-        
-        // Update total locked XRP
-        require(totalXRPLocked >= xrpAmount, "Insufficient XRP locked");
-        totalXRPLocked -= xrpAmount;
-        
-        // Burn shXRP from user
-        _burn(msg.sender, shXRPAmount);
-        
-        emit ShXRPBurned(msg.sender, shXRPAmount, xrpAmount);
-        
-        return xrpAmount;
-    }
-    
-    /**
-     * @dev Distribute rewards and update exchange rate
-     * @param rewardAmount Amount of XRP rewards to distribute
-     */
-    function distributeRewards(uint256 rewardAmount) external onlyOperator {
-        require(rewardAmount > 0, "Reward amount must be positive");
-        require(totalSupply() > 0, "No shXRP minted yet");
-        
-        // Add rewards to total locked XRP
-        totalXRPLocked += rewardAmount;
-        
-        // Update exchange rate: (total XRP) / (total shXRP)
-        exchangeRate = (totalXRPLocked * 1 ether) / totalSupply();
-        
-        emit RewardsDistributed(rewardAmount, exchangeRate);
-    }
+    // ========================================
+    // ADMIN FUNCTIONS
+    // ========================================
     
     /**
      * @dev Update minimum deposit amount
-     * @param newMinDeposit New minimum deposit (in wei)
+     * @param newMinDeposit New minimum deposit (in wei, 18 decimals)
+     * 
+     * Example: 0.01 FXRP = 10000000000000000 (0.01 * 10^18)
      */
     function setMinDeposit(uint256 newMinDeposit) external onlyOwner {
         require(newMinDeposit > 0, "Min deposit must be positive");
@@ -237,252 +274,168 @@ contract ShXRPVault is ERC20, ERC20Burnable, Ownable, ReentrancyGuard {
     }
     
     /**
-     * @dev Get current exchange rate (shXRP to XRP)
-     * @return Current exchange rate in wei
-     */
-    function getExchangeRate() external view returns (uint256) {
-        return exchangeRate;
-    }
-    
-    /**
-     * @dev Calculate shXRP amount for given XRP amount
-     * @param xrpAmount Amount of XRP
-     * @return Amount of shXRP
-     */
-    function calculateShXRPAmount(uint256 xrpAmount) external view returns (uint256) {
-        return (xrpAmount * 1 ether) / exchangeRate;
-    }
-    
-    /**
-     * @dev Calculate XRP amount for given shXRP amount
-     * @param shXRPAmount Amount of shXRP
-     * @return Amount of XRP
-     */
-    function calculateXRPAmount(uint256 shXRPAmount) external view returns (uint256) {
-        return (shXRPAmount * exchangeRate) / 1 ether;
-    }
-    
-    /**
-     * @dev Returns the number of decimals used
-     * @return uint8 Number of decimals (18)
-     */
-    function decimals() public pure override returns (uint8) {
-        return 18;
-    }
-    
-    /**
-     * @dev Deposit FXRP to earn yield (operator only for now)
-     * @param amount Amount of FXRP to deposit
-     */
-    function depositFXRP(uint256 amount) external onlyOperator {
-        require(amount > 0, "Amount must be positive");
-        fxrpToken.safeTransferFrom(msg.sender, address(this), amount);
-        totalFXRPInVault += amount;
-        totalFXRPDeposited += amount;
-        emit FXRPDeposited(msg.sender, amount);
-    }
-    
-    /**
-     * @dev Stake FXRP in SparkDEX LP (FXRP/FLR pool)
-     * @param fxrpAmount Amount of FXRP to add to liquidity
-     * @param flrAmount Amount of FLR to add to liquidity
-     */
-    function stakeInDeFi(uint256 fxrpAmount, uint256 flrAmount) external onlyOperator {
-        require(yieldEnabled, "Yield not enabled");
-        require(fxrpAmount > 0 && flrAmount > 0, "Amounts must be positive");
-        require(fxrpToken.balanceOf(address(this)) >= fxrpAmount, "Insufficient FXRP");
-        
-        // Use SafeERC20 for approvals
-        fxrpToken.forceApprove(sparkRouter, fxrpAmount);
-        IERC20(wflrToken).forceApprove(sparkRouter, flrAmount);
-        
-        // Add liquidity and capture LP tokens
-        (uint256 amountA, uint256 amountB, uint256 liquidity) = IUniswapV2Router02(sparkRouter).addLiquidity(
-            address(fxrpToken),
-            wflrToken,
-            fxrpAmount,
-            flrAmount,
-            (fxrpAmount * 95) / 100,
-            (flrAmount * 95) / 100,
-            address(this),
-            block.timestamp + 300
-        );
-        
-        // Track LP tokens received
-        totalLPStaked += liquidity;
-        totalFXRPInVault -= amountA; // FXRP is now in LP, not in vault directly
-        
-        // Revoke allowances
-        fxrpToken.forceApprove(sparkRouter, 0);
-        IERC20(wflrToken).forceApprove(sparkRouter, 0);
-        
-        emit FXRPStaked(amountA, amountB, liquidity);
-    }
-    
-    /**
-     * @dev Simplified auto-compound for FXRP strategy
-     * In production: Would claim SPARK tokens, swap to FXRP, and reinvest
-     * For now: Treats FXRP yields as rewards WITHOUT inflating XRP accounting
-     */
-    function claimAndCompound() external onlyOperator {
-        uint256 currentFXRP = fxrpToken.balanceOf(address(this));
-        
-        // Check if we have FXRP rewards (more than we deposited and not staked in LP)
-        if (currentFXRP > totalFXRPInVault) {
-            uint256 fxrpRewards = currentFXRP - totalFXRPInVault;
-            
-            // IMPORTANT: Only update totalFXRPInVault, NOT totalXRPLocked
-            // This keeps FXRP accounting separate from XRP accounting
-            totalFXRPInVault += fxrpRewards;
-            
-            // Alternative: Could convert to XRP exchange rate IF we have a verified FXRP->XRP bridge
-            // For now, just track FXRP rewards separately
-            
-            emit RewardsCompounded(fxrpRewards, exchangeRate);
-        }
-    }
-    
-    /**
-     * @dev Enable/disable yield generation
-     */
-    function setYieldEnabled(bool enabled) external onlyOwner {
-        yieldEnabled = enabled;
-        emit YieldEnabledUpdated(enabled);
-    }
-    
-    /**
-     * @dev Set LP token address (one-time setup)
-     */
-    function setLPToken(address _lpToken) external onlyOwner {
-        require(_lpToken != address(0), "Invalid LP token");
-        require(lpToken == address(0), "LP token already set");
-        lpToken = _lpToken;
-        emit LPTokenSet(_lpToken);
-    }
-    
-    /**
-     * @dev Withdraw liquidity from SparkDEX LP pool
-     * @param lpAmount Amount of LP tokens to withdraw
-     * @return amountFXRP Amount of FXRP received
-     * @return amountWFLR Amount of WFLR received
-     */
-    function withdrawFromLP(uint256 lpAmount) external onlyOperator returns (uint256 amountFXRP, uint256 amountWFLR) {
-        require(lpAmount > 0, "Amount must be positive");
-        require(lpAmount <= totalLPStaked, "Insufficient LP tokens");
-        require(lpToken != address(0), "LP token not set");
-        
-        // Approve router to spend LP tokens
-        IERC20(lpToken).forceApprove(sparkRouter, lpAmount);
-        
-        // Remove liquidity from FXRP/WFLR pool
-        (amountFXRP, amountWFLR) = IUniswapV2Router02(sparkRouter).removeLiquidity(
-            address(fxrpToken),
-            wflrToken,
-            lpAmount,
-            0, // Min FXRP (for testnet, production would set proper slippage)
-            0, // Min WFLR
-            address(this),
-            block.timestamp + 300
-        );
-        
-        // Update accounting
-        totalLPStaked -= lpAmount;
-        totalFXRPInVault += amountFXRP;
-        
-        // Revoke allowance
-        IERC20(lpToken).forceApprove(sparkRouter, 0);
-        
-        emit LPWithdrawn(lpAmount, amountFXRP, amountWFLR);
-        
-        return (amountFXRP, amountWFLR);
-    }
-    
-    /**
-     * @dev Swap WFLR or other tokens to FXRP (for compounding)
-     * @param tokenIn Address of input token (e.g., WFLR, SPARK)
-     * @param amountIn Amount to swap
-     * @return amountOut Amount of FXRP received
-     */
-    function swapToFXRP(address tokenIn, uint256 amountIn) external onlyOperator returns (uint256 amountOut) {
-        require(amountIn > 0, "Amount must be positive");
-        require(tokenIn != address(fxrpToken), "Already FXRP");
-        
-        // Approve router
-        IERC20(tokenIn).forceApprove(sparkRouter, amountIn);
-        
-        // Build swap path: tokenIn -> WFLR -> FXRP (if not WFLR) or WFLR -> FXRP
-        address[] memory path;
-        if (tokenIn == wflrToken) {
-            path = new address[](2);
-            path[0] = wflrToken;
-            path[1] = address(fxrpToken);
-        } else {
-            path = new address[](3);
-            path[0] = tokenIn;
-            path[1] = wflrToken;
-            path[2] = address(fxrpToken);
-        }
-        
-        // Execute swap
-        uint256[] memory amounts = IUniswapV2Router02(sparkRouter).swapExactTokensForTokens(
-            amountIn,
-            0, // Min out (for testnet)
-            path,
-            address(this),
-            block.timestamp + 300
-        );
-        
-        amountOut = amounts[amounts.length - 1];
-        totalFXRPInVault += amountOut;
-        
-        // Revoke allowance
-        IERC20(tokenIn).forceApprove(sparkRouter, 0);
-        
-        emit TokensSwapped(tokenIn, amountIn, address(fxrpToken), amountOut);
-        
-        return amountOut;
-    }
-    
-    /**
-     * TESTNET/DEMO REWARD SIMULATION
+     * @dev Set Firelight vault address for yield integration
      * 
-     * Production Yield Strategy:
-     * - Integrate with Kinetic Markets or Enosys lending pools on Flare
-     * - Real yield sources:
-     *   1. SPARK token emissions from SparkDEX LP staking
-     *   2. Trading fees from FXRP/WFLR liquidity pool (0.3% of volume)
-     *   3. Lending interest from depositing idle FXRP into money markets
+     * Firelight Launch Vault (ERC-4626):
+     * - Accepts FXRP deposits
+     * - Returns stXRP shares
+     * - Generates 4-7% APY from institutional staking
      * 
-     * Production Flow:
-     * 1. Operator calls withdrawFromLP() to unstake LP tokens
-     * 2. Operator calls swapToFXRP() to convert WFLR/SPARK rewards to FXRP
-     * 3. FXRP rewards are bridged back to XRP (via Flare FTSO oracle pricing)
-     * 4. Exchange rate updated to reflect compounded yield
+     * Integration Flow:
+     * 1. Set firelightVault address (this function)
+     * 2. Operator calls depositToFirelight() to deploy idle FXRP
+     * 3. Firelight generates yield on staked FXRP
+     * 4. totalAssets() includes stXRP value (increases shXRP price)
      * 
-     * This simulateRewards() function is for testnet demonstration only.
+     * @param _firelightVault Address of Firelight Launch Vault
+     * 
+     * See docs/FIRELIGHT_INTEGRATION.md for contract addresses
+     */
+    function setFirelightVault(address _firelightVault) external onlyOwner {
+        require(_firelightVault != address(0), "Invalid Firelight vault");
+        firelightVault = _firelightVault;
+        emit FirelightVaultSet(_firelightVault);
+    }
+    
+    // ========================================
+    // FIRELIGHT INTEGRATION (FUTURE)
+    // ========================================
+    
+    /**
+     * @dev Deploy idle FXRP to Firelight for yield generation
+     * 
+     * TODO: Implement when Firelight contracts are deployed
+     * 
+     * Implementation Plan:
+     * 1. Check FXRP balance in vault
+     * 2. Approve Firelight vault to spend FXRP
+     * 3. Call Firelight.deposit(amount, address(this))
+     * 4. Receive stXRP shares
+     * 5. Track stXRP balance in totalStXRPDeposited
+     * 6. Update totalAssets() to include stXRP value
+     * 
+     * @param amount Amount of FXRP to deposit to Firelight
+     * 
+     * Example:
+     * function depositToFirelight(uint256 amount) external onlyOperator {
+     *     require(firelightVault != address(0), "Firelight not configured");
+     *     require(amount > 0, "Amount must be positive");
+     *     
+     *     IERC20 fxrp = IERC20(asset());
+     *     require(fxrp.balanceOf(address(this)) >= amount, "Insufficient FXRP");
+     *     
+     *     // Approve and deposit to Firelight
+     *     fxrp.approve(firelightVault, amount);
+     *     uint256 stXRPReceived = IFirelightVault(firelightVault).deposit(amount, address(this));
+     *     
+     *     // Track stXRP position
+     *     totalStXRPDeposited += stXRPReceived;
+     *     
+     *     emit FirelightDeposit(amount, stXRPReceived);
+     * }
      */
     
     /**
-     * @dev Simulate reward distribution for testnet/demo purposes
-     * In production, this would be replaced by actual reward claiming
-     * @param rewardAmount Amount of simulated FXRP rewards
+     * @dev Withdraw FXRP from Firelight when users redeem
+     * 
+     * TODO: Implement when Firelight contracts are deployed
+     * 
+     * Implementation Plan:
+     * 1. Calculate stXRP amount to redeem
+     * 2. Call Firelight.redeem(stXRPAmount, address(this), address(this))
+     * 3. Receive FXRP (includes accrued yield)
+     * 4. Update totalStXRPDeposited
+     * 5. FXRP now available for user withdrawals
+     * 
+     * @param stXRPAmount Amount of stXRP to redeem from Firelight
+     * 
+     * Example:
+     * function withdrawFromFirelight(uint256 stXRPAmount) external onlyOperator {
+     *     require(firelightVault != address(0), "Firelight not configured");
+     *     require(stXRPAmount > 0, "Amount must be positive");
+     *     require(totalStXRPDeposited >= stXRPAmount, "Insufficient stXRP");
+     *     
+     *     // Redeem from Firelight
+     *     uint256 fxrpReceived = IFirelightVault(firelightVault).redeem(
+     *         stXRPAmount,
+     *         address(this),
+     *         address(this)
+     *     );
+     *     
+     *     // Update stXRP tracking
+     *     totalStXRPDeposited -= stXRPAmount;
+     *     
+     *     emit FirelightWithdraw(stXRPAmount, fxrpReceived);
+     * }
      */
-    function simulateRewards(uint256 rewardAmount) external onlyOperator {
-        require(rewardAmount > 0, "Reward must be positive");
-        
-        // Transfer FXRP rewards from operator to vault
-        fxrpToken.safeTransferFrom(msg.sender, address(this), rewardAmount);
-        
-        totalFXRPInVault += rewardAmount;
-        
-        // Update exchange rate to reflect rewards (compound into shXRP value)
-        if (totalSupply() > 0) {
-            // Treat FXRP rewards as equivalent value to XRP
-            // In production, would use oracle to convert FXRP value to XRP equivalent
-            totalXRPLocked += rewardAmount;
-            exchangeRate = (totalXRPLocked * 1 ether) / totalSupply();
-        }
-        
-        emit RewardsSimulated(rewardAmount, exchangeRate);
-    }
+    
+    // ========================================
+    // VIEW FUNCTIONS
+    // ========================================
+    
+    /**
+     * @dev Get the underlying asset (FXRP token address)
+     * 
+     * Inherited from ERC4626, but documented for clarity
+     * 
+     * @return Address of FXRP token
+     */
+    // function asset() public view override returns (address)
+    // Already implemented in ERC4626
+    
+    /**
+     * @dev Preview how many shares will be minted for asset amount
+     * 
+     * Inherited from ERC4626
+     * Formula: shares = (assets * totalSupply()) / totalAssets()
+     * 
+     * @param assets Amount of FXRP to deposit
+     * @return shares Amount of shXRP that will be minted
+     */
+    // function previewDeposit(uint256 assets) public view override returns (uint256)
+    // Already implemented in ERC4626
+    
+    /**
+     * @dev Preview how many assets are needed for share amount
+     * 
+     * Inherited from ERC4626
+     * Formula: assets = (shares * totalAssets()) / totalSupply()
+     * 
+     * @param shares Amount of shXRP to mint
+     * @return assets Amount of FXRP needed
+     */
+    // function previewMint(uint256 shares) public view override returns (uint256)
+    // Already implemented in ERC4626
+    
+    /**
+     * @dev Preview how many shares will be burned for asset withdrawal
+     * 
+     * Inherited from ERC4626
+     * 
+     * @param assets Amount of FXRP to withdraw
+     * @return shares Amount of shXRP that will be burned
+     */
+    // function previewWithdraw(uint256 assets) public view override returns (uint256)
+    // Already implemented in ERC4626
+    
+    /**
+     * @dev Preview how many assets will be received for share redemption
+     * 
+     * Inherited from ERC4626
+     * 
+     * @param shares Amount of shXRP to redeem
+     * @return assets Amount of FXRP that will be received
+     */
+    // function previewRedeem(uint256 shares) public view override returns (uint256)
+    // Already implemented in ERC4626
+    
+    /**
+     * @dev Returns the number of decimals (18, matches FXRP)
+     * 
+     * Inherited from ERC20
+     * 
+     * @return uint8 Number of decimals
+     */
+    // function decimals() public view override returns (uint8)
+    // Already implemented in ERC20
 }
