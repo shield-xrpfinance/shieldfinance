@@ -87,6 +87,67 @@ export const escrows = pgTable("escrows", {
   cancelledAt: timestamp("cancelled_at"),
 });
 
+export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestId: text("request_id").notNull().unique(),
+  walletAddress: text("wallet_address").notNull(),
+  vaultId: varchar("vault_id").notNull().references(() => vaults.id),
+  positionId: varchar("position_id").references(() => positions.id),
+  
+  xrpAmount: decimal("xrp_amount", { precision: 18, scale: 6 }).notNull(),
+  fxrpExpected: decimal("fxrp_expected", { precision: 18, scale: 6 }).notNull(),
+  fxrpReceived: decimal("fxrp_received", { precision: 18, scale: 6 }),
+  
+  status: text("status").notNull().default("pending"),
+  
+  xrplTxHash: text("xrpl_tx_hash"),
+  flareTxHash: text("flare_tx_hash"),
+  vaultMintTxHash: text("vault_mint_tx_hash"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  xrplConfirmedAt: timestamp("xrpl_confirmed_at"),
+  bridgeStartedAt: timestamp("bridge_started_at"),
+  fxrpReceivedAt: timestamp("fxrp_received_at"),
+  completedAt: timestamp("completed_at"),
+  
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").notNull().default(0),
+});
+
+export const firelightPositions = pgTable("firelight_positions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vaultId: varchar("vault_id").notNull().references(() => vaults.id),
+  
+  fxrpDeposited: decimal("fxrp_deposited", { precision: 18, scale: 6 }).notNull(),
+  stxrpReceived: decimal("stxrp_received", { precision: 18, scale: 6 }).notNull(),
+  currentStxrpBalance: decimal("current_stxrp_balance", { precision: 18, scale: 6 }).notNull(),
+  
+  yieldAccrued: decimal("yield_accrued", { precision: 18, scale: 6 }).notNull().default("0"),
+  lastYieldUpdate: timestamp("last_yield_update").notNull().defaultNow(),
+  
+  depositedAt: timestamp("deposited_at").notNull().defaultNow(),
+  lastCompoundedAt: timestamp("last_compounded_at"),
+  
+  depositTxHash: text("deposit_tx_hash"),
+});
+
+export const compoundingRuns = pgTable("compounding_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  vaultId: varchar("vault_id").notNull().references(() => vaults.id),
+  firelightPositionId: varchar("firelight_position_id").references(() => firelightPositions.id),
+  
+  yieldAmount: decimal("yield_amount", { precision: 18, scale: 6 }).notNull(),
+  previousStxrpBalance: decimal("previous_stxrp_balance", { precision: 18, scale: 6 }).notNull(),
+  newStxrpBalance: decimal("new_stxrp_balance", { precision: 18, scale: 6 }).notNull(),
+  
+  status: text("status").notNull().default("pending"),
+  txHash: text("tx_hash"),
+  errorMessage: text("error_message"),
+  
+  startedAt: timestamp("started_at").notNull().defaultNow(),
+  completedAt: timestamp("completed_at"),
+});
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -115,6 +176,22 @@ export const insertEscrowSchema = createInsertSchema(escrows).omit({
   createdAt: true,
 });
 
+export const insertXrpToFxrpBridgeSchema = createInsertSchema(xrpToFxrpBridges).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFirelightPositionSchema = createInsertSchema(firelightPositions).omit({
+  id: true,
+  depositedAt: true,
+  lastYieldUpdate: true,
+});
+
+export const insertCompoundingRunSchema = createInsertSchema(compoundingRuns).omit({
+  id: true,
+  startedAt: true,
+});
+
 export type InsertVault = z.infer<typeof insertVaultSchema>;
 export type Vault = typeof vaults.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
@@ -127,3 +204,9 @@ export type InsertWithdrawalRequest = z.infer<typeof insertWithdrawalRequestSche
 export type WithdrawalRequest = typeof withdrawalRequests.$inferSelect;
 export type InsertEscrow = z.infer<typeof insertEscrowSchema>;
 export type Escrow = typeof escrows.$inferSelect;
+export type InsertXrpToFxrpBridge = z.infer<typeof insertXrpToFxrpBridgeSchema>;
+export type SelectXrpToFxrpBridge = typeof xrpToFxrpBridges.$inferSelect;
+export type InsertFirelightPosition = z.infer<typeof insertFirelightPositionSchema>;
+export type SelectFirelightPosition = typeof firelightPositions.$inferSelect;
+export type InsertCompoundingRun = z.infer<typeof insertCompoundingRunSchema>;
+export type SelectCompoundingRun = typeof compoundingRuns.$inferSelect;

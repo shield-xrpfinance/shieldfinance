@@ -7,6 +7,10 @@ import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
+interface IFirelightVault {
+    function convertToAssets(uint256 shares) external view returns (uint256);
+}
+
 /**
  * @title Shield XRP Vault (shXRP)
  * @dev ERC-4626 compliant tokenized vault for XRP on Flare Network
@@ -107,19 +111,20 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
      * @return Total FXRP-equivalent assets in the vault
      */
     function totalAssets() public view virtual override returns (uint256) {
-        // FXRP held directly in vault (idle, not deployed)
+        // FXRP held directly in vault
         uint256 vaultBalance = IERC20(asset()).balanceOf(address(this));
         
-        // TODO: Add Firelight stXRP position value
-        // Future implementation:
-        // if (firelightVault != address(0) && totalStXRPDeposited > 0) {
-        //     IFirelightVault firelight = IFirelightVault(firelightVault);
-        //     uint256 stXRPValue = firelight.convertToAssets(totalStXRPDeposited);
-        //     return vaultBalance + stXRPValue;
-        // }
+        // Add Firelight stXRP position value (if Firelight vault is set)
+        if (firelightVault != address(0) && totalStXRPDeposited > 0) {
+            // stXRP is ERC-4626, so we can get asset value directly
+            try IFirelightVault(firelightVault).convertToAssets(totalStXRPDeposited) returns (uint256 firelightValue) {
+                vaultBalance += firelightValue;
+            } catch {
+                // If conversion fails, use 1:1 ratio as fallback
+                vaultBalance += totalStXRPDeposited;
+            }
+        }
         
-        // For now, return only direct FXRP balance
-        // Once Firelight integration is active, this will include stXRP value
         return vaultBalance;
     }
     

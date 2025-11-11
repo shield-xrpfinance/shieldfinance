@@ -1420,6 +1420,61 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bridge status tracking
+  app.get("/api/bridges/:walletAddress", async (req, res) => {
+    try {
+      const bridges = await storage.getBridgesByWallet(req.params.walletAddress);
+      res.json(bridges);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch bridges" });
+    }
+  });
+
+  app.get("/api/bridges/request/:requestId", async (req, res) => {
+    try {
+      const bridge = await storage.getBridgeByRequestId(req.params.requestId);
+      if (!bridge) {
+        return res.status(404).json({ error: "Bridge not found" });
+      }
+      res.json(bridge);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch bridge" });
+    }
+  });
+
+  // Manual bridge trigger (for testing)
+  app.post("/api/bridges/process", async (req, res) => {
+    try {
+      const { walletAddress, vaultId, xrpAmount, xrplTxHash } = req.body;
+      
+      // Create bridge request
+      const requestId = `bridge-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const bridge = await storage.createBridge({
+        requestId,
+        walletAddress,
+        vaultId,
+        positionId: null,
+        xrpAmount,
+        fxrpExpected: xrpAmount,
+        fxrpReceived: null,
+        status: "pending",
+        xrplTxHash,
+        flareTxHash: null,
+        vaultMintTxHash: null,
+        xrplConfirmedAt: new Date(),
+        bridgeStartedAt: null,
+        fxrpReceivedAt: null,
+        completedAt: null,
+        errorMessage: null,
+        retryCount: 0,
+      });
+      
+      res.json(bridge);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to create bridge request" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

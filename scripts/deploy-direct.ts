@@ -1,163 +1,137 @@
 import { ethers } from "ethers";
-import * as fs from "fs";
-import * as path from "path";
-import { fileURLToPath } from "url";
+import fs from "fs";
+import path from "path";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// Import compiled contract ABIs
-import ShieldTokenArtifact from "../artifacts/contracts/ShieldToken.sol/ShieldToken.json" assert { type: "json" };
-import ShXRPVaultArtifact from "../artifacts/contracts/ShXRPVault.sol/ShXRPVault.json" assert { type: "json" };
+import ShXRPVaultArtifact from "../artifacts/contracts/ShXRPVault.sol/ShXRPVault.json";
+import VaultControllerArtifact from "../artifacts/contracts/VaultController.sol/VaultController.json";
 
 async function main() {
-  console.log("🚀 Starting Flare Coston2 deployment...\n");
-
-  // Network configuration
-  const rpcUrl = process.env.FLARE_COSTON2_RPC_URL || "https://coston2-api.flare.network/ext/C/rpc";
+  const network = process.env.DEPLOY_NETWORK || "coston2";
   const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
   const treasuryAddress = process.env.TREASURY_ADDRESS;
 
   if (!privateKey) {
-    throw new Error("DEPLOYER_PRIVATE_KEY environment variable is required");
+    throw new Error("DEPLOYER_PRIVATE_KEY not set in environment");
   }
 
-  if (!treasuryAddress) {
-    throw new Error("TREASURY_ADDRESS environment variable is required");
+  console.log(`\n🚀 Deploying to ${network}...\n`);
+
+  const networks: Record<string, { rpc: string; chainId: number; explorer: string }> = {
+    coston2: {
+      rpc: "https://coston2-api.flare.network/ext/C/rpc",
+      chainId: 114,
+      explorer: "https://coston2-explorer.flare.network",
+    },
+    flare: {
+      rpc: "https://flare-api.flare.network/ext/C/rpc",
+      chainId: 14,
+      explorer: "https://flare-explorer.flare.network",
+    },
+  };
+
+  const networkConfig = networks[network];
+  if (!networkConfig) {
+    throw new Error(`Unknown network: ${network}`);
   }
 
-  // Connect to network
-  const provider = new ethers.JsonRpcProvider(rpcUrl);
+  const provider = new ethers.JsonRpcProvider(networkConfig.rpc);
   const wallet = new ethers.Wallet(privateKey, provider);
 
-  console.log("📝 Deploying contracts with account:", wallet.address);
-  
+  console.log(`Deployer address: ${wallet.address}`);
   const balance = await provider.getBalance(wallet.address);
-  console.log("💰 Account balance:", ethers.formatEther(balance), "CFLR\n");
+  console.log(`Deployer balance: ${ethers.formatEther(balance)} FLR\n`);
 
   if (balance === 0n) {
-    console.error("❌ Error: Deployer account has zero balance!");
-    console.log("Get testnet CFLR from: https://faucet.flare.network/coston2");
-    process.exit(1);
+    throw new Error("Deployer has no balance. Please fund the account.");
   }
 
-  // Deploy ShieldToken
-  console.log("1️⃣  Deploying ShieldToken...");
-  const ShieldToken = new ethers.ContractFactory(
-    ShieldTokenArtifact.abi,
-    ShieldTokenArtifact.bytecode,
+  const fxrpAddress = network === "flare" 
+    ? "0xAf7278D382323A865734f93B687b300005B8b60E" 
+    : "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3";
+
+  console.log(`Using FXRP token: ${fxrpAddress}\n`);
+
+  console.log("📋 Deploying VaultController...");
+  const VaultController = new ethers.ContractFactory(
+    VaultControllerArtifact.abi,
+    VaultControllerArtifact.bytecode,
     wallet
   );
-  const shieldToken = await ShieldToken.deploy(treasuryAddress);
-  await shieldToken.waitForDeployment();
-  const shieldTokenAddress = await shieldToken.getAddress();
-  console.log("✅ ShieldToken deployed to:", shieldTokenAddress);
+  const vaultController = await VaultController.deploy();
+  await vaultController.waitForDeployment();
+  const vaultControllerAddress = await vaultController.getAddress();
+  console.log(`✅ VaultController deployed: ${vaultControllerAddress}`);
+  console.log(`   View: ${networkConfig.explorer}/address/${vaultControllerAddress}\n`);
 
-  // Verify token details
-  const totalSupply = await shieldToken.TOTAL_SUPPLY();
-  const treasuryAllocation = await shieldToken.TREASURY_ALLOCATION();
-  console.log("   Total Supply:", ethers.formatEther(totalSupply), "SHIELD");
-  console.log("   Treasury Allocation:", ethers.formatEther(treasuryAllocation), "SHIELD");
-
-  // Deploy Shield XRP Vault (shXRP) with FXRP integration
-  console.log("\n2️⃣  Deploying Shield XRP Vault (shXRP) with FXRP yield integration...");
-  
-  // Coston2 testnet addresses
-  const fxrpToken = "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3"; // FXRP on Coston2
-  const sparkRouter = "0x4a1E5A90e9943467FAd1acea1E7F0e5e88472a1e"; // SparkDEX Router V2
-  const wflrToken = "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d"; // WFLR on Coston2
-  
-  console.log("   FXRP Token:", fxrpToken);
-  console.log("   SparkDEX Router:", sparkRouter);
-  console.log("   WFLR Token:", wflrToken);
-  
+  console.log("🏦 Deploying ShXRPVault...");
   const ShXRPVault = new ethers.ContractFactory(
     ShXRPVaultArtifact.abi,
     ShXRPVaultArtifact.bytecode,
     wallet
   );
-  const shXRPVault = await ShXRPVault.deploy(fxrpToken, sparkRouter, wflrToken);
-  await shXRPVault.waitForDeployment();
-  const shXRPVaultAddress = await shXRPVault.getAddress();
-  console.log("✅ Shield XRP Vault deployed to:", shXRPVaultAddress);
+  const shxrpVault = await ShXRPVault.deploy(
+    fxrpAddress,
+    "Shield XRP",
+    "shXRP"
+  );
+  await shxrpVault.waitForDeployment();
+  const shxrpVaultAddress = await shxrpVault.getAddress();
+  console.log(`✅ ShXRPVault deployed: ${shxrpVaultAddress}`);
+  console.log(`   View: ${networkConfig.explorer}/address/${shxrpVaultAddress}\n`);
 
-  // Verify vault details
-  const vaultName = await shXRPVault.name();
-  const vaultSymbol = await shXRPVault.symbol();
-  const exchangeRate = await shXRPVault.exchangeRate();
-  console.log("   Vault Token:", vaultName, `(${vaultSymbol})`);
-  console.log("   Initial Exchange Rate:", ethers.formatEther(exchangeRate), "shXRP per XRP");
+  console.log("🔗 Registering vault in controller...");
+  const registerTx = await vaultController.registerVault(shxrpVaultAddress);
+  await registerTx.wait();
+  console.log("✅ Vault registered in VaultController\n");
 
-  // Get network info
-  const network = await provider.getNetwork();
-  
-  // Save deployment addresses
   const deploymentInfo = {
-    network: "coston2",
-    chainId: network.chainId.toString(),
-    deployer: wallet.address,
-    treasury: treasuryAddress,
+    network,
+    chainId: networkConfig.chainId,
     timestamp: new Date().toISOString(),
+    deployer: wallet.address,
     contracts: {
-      ShieldToken: {
-        address: shieldTokenAddress,
-        totalSupply: ethers.formatEther(totalSupply),
-        treasuryAllocation: ethers.formatEther(treasuryAllocation),
+      VaultController: {
+        address: vaultControllerAddress,
+        explorerUrl: `${networkConfig.explorer}/address/${vaultControllerAddress}`,
       },
       ShXRPVault: {
-        address: shXRPVaultAddress,
-        name: vaultName,
-        symbol: vaultSymbol,
-        exchangeRate: ethers.formatEther(exchangeRate),
-        fxrpToken: "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3",
-        sparkRouter: "0x4a1E5A90e9943467FAd1acea1E7F0e5e88472a1e",
-        wflrToken: "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d",
+        address: shxrpVaultAddress,
+        explorerUrl: `${networkConfig.explorer}/address/${shxrpVaultAddress}`,
+      },
+      FXRP: {
+        address: fxrpAddress,
+        explorerUrl: `${networkConfig.explorer}/address/${fxrpAddress}`,
       },
     },
   };
 
-  const deploymentsDir = path.join(__dirname, "../deployments");
+  const deploymentsDir = path.join(__dirname, "..", "deployments");
   if (!fs.existsSync(deploymentsDir)) {
     fs.mkdirSync(deploymentsDir, { recursive: true });
   }
 
-  const deploymentFile = path.join(deploymentsDir, "coston2-deployment.json");
-  fs.writeFileSync(deploymentFile, JSON.stringify(deploymentInfo, null, 2));
+  const filename = `${network}-${Date.now()}.json`;
+  const filepath = path.join(deploymentsDir, filename);
+  fs.writeFileSync(filepath, JSON.stringify(deploymentInfo, null, 2));
 
-  console.log("\n💾 Deployment info saved to:", deploymentFile);
-
-  // Print summary
-  console.log("\n" + "=".repeat(60));
-  console.log("📊 DEPLOYMENT SUMMARY");
-  console.log("=".repeat(60));
-  console.log("Network: Flare Coston2 Testnet");
-  console.log("Chain ID:", deploymentInfo.chainId);
-  console.log("\n🪙 ShieldToken ($SHIELD):");
-  console.log("   Address:", shieldTokenAddress);
-  console.log("   Explorer:", `https://coston2-explorer.flare.network/address/${shieldTokenAddress}`);
-  console.log("\n🏦 Shield XRP Vault (shXRP):");
-  console.log("   Address:", shXRPVaultAddress);
-  console.log("   Explorer:", `https://coston2-explorer.flare.network/address/${shXRPVaultAddress}`);
-  console.log("\n✅ Deployment complete!");
-  console.log("=".repeat(60) + "\n");
-
-  // Next steps
-  console.log("📋 NEXT STEPS:");
-  console.log("1. Verify contracts on block explorer (optional):");
-  console.log(`   npx hardhat verify --network coston2 ${shieldTokenAddress} "${treasuryAddress}"`);
-  console.log(`   npx hardhat verify --network coston2 ${shXRPVaultAddress} "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3" "0x4a1E5A90e9943467FAd1acea1E7F0e5e88472a1e" "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d"`);
-  console.log("\n2. Update frontend .env with contract addresses:");
-  console.log(`   VITE_SHIELD_TOKEN_ADDRESS=${shieldTokenAddress}`);
-  console.log(`   VITE_SHXRP_VAULT_ADDRESS=${shXRPVaultAddress}`);
-  console.log("\n3. Configure operator for Shield XRP Vault to mint/burn shXRP");
-  console.log("\n4. Enable FXRP yield generation:");
-  console.log(`   Call setYieldEnabled(true) on ShXRPVault contract`);
-  console.log(`   Call setLPToken() with FXRP/WFLR LP token address from SparkDEX\n`);
+  console.log(`\n📝 Deployment info saved to: ${filepath}\n`);
+  console.log("═".repeat(60));
+  console.log("✅ DEPLOYMENT COMPLETE");
+  console.log("═".repeat(60));
+  console.log(`\nVaultController: ${vaultControllerAddress}`);
+  console.log(`ShXRPVault:      ${shxrpVaultAddress}`);
+  console.log(`FXRP Token:      ${fxrpAddress}`);
+  console.log("\nNext steps:");
+  console.log("1. Update .env with contract addresses");
+  console.log("2. Fund VaultController with FXRP for operations");
+  console.log("3. Test deposit flow on testnet");
+  console.log("4. Configure Firelight vault address");
+  console.log("═".repeat(60) + "\n");
 }
 
 main()
   .then(() => process.exit(0))
   .catch((error) => {
-    console.error("❌ Deployment failed:", error);
+    console.error(error);
     process.exit(1);
   });

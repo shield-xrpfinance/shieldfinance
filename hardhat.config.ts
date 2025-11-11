@@ -33,6 +33,10 @@ const config: HardhatUserConfig = {
     hardhat: {
       type: "edr-simulated" as const,
       chainId: 31337,
+      forking: {
+        url: process.env.FLARE_MAINNET_RPC_URL || "https://flare-api.flare.network/ext/C/rpc",
+        enabled: process.env.FORK_MAINNET === "true",
+      },
     },
   },
   paths: {

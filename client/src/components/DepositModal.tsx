@@ -112,7 +112,9 @@ export default function DepositModal({
           </DialogTitle>
           <DialogDescription>
             {step === 1
-              ? `Enter the amount${depositAssets.length > 1 ? 's' : ''} you want to deposit`
+              ? depositAssets.includes("XRP")
+                ? "Deposit XRP to receive shXRP shares. Your deposit will be automatically bridged to FXRP and deposited into the vault."
+                : `Enter the amount${depositAssets.length > 1 ? 's' : ''} you want to deposit`
               : "Review and confirm your deposit"}
           </DialogDescription>
         </DialogHeader>

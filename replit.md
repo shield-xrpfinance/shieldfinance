@@ -1,7 +1,7 @@
 # XRP Liquid Staking Protocol Dashboard
 
 ## Overview
-This project is a full-stack DeFi application designed for XRP liquid staking with integrated blockchain infrastructure. It provides a comprehensive dashboard for users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform includes smart contracts deployed on Flare Network for the $SHIELD governance token and shXRP liquid staking vault, along with XRPL Escrow for secure cross-chain asset locking. The business vision is to make DeFi on XRP accessible and efficient, tapping into the growing market for liquid staking solutions.
+This project is a full-stack DeFi application for XRP liquid staking with integrated blockchain infrastructure. It provides a dashboard for users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform utilizes smart contracts on Flare Network for its $SHIELD governance token and shXRP liquid staking vault, alongside XRPL Escrow for secure cross-chain asset locking. The business vision aims to make DeFi on XRP accessible and efficient, leveraging the growing market for liquid staking solutions.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,208 +9,76 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### Frontend Architecture
-- **Frameworks**: React 18 with TypeScript, Vite, Wouter for routing, TanStack Query for server state.
-- **UI/UX**: shadcn/ui (Radix UI based), Tailwind CSS for styling, Material Design + DeFi patterns, custom CSS variables for theming, responsive layout with collapsible sidebar, 12-column grid.
-- **State Management**: React Context API for wallet with localStorage persistence (auto-restores connection on page load/republish), TanStack Query for server state, React hooks for local component state.
-- **Typography**: Inter (UI), JetBrains Mono (monospace).
+- **Frameworks**: React 18 (TypeScript, Vite, Wouter, TanStack Query).
+- **UI/UX**: shadcn/ui (Radix UI based), Tailwind CSS, Material Design patterns, responsive layout, custom theming, Inter and JetBrains Mono fonts.
+- **State Management**: React Context API (wallet persistence), TanStack Query (server state), React hooks (local component state).
 
 ### Backend Architecture
-- **Server**: Express.js with Node.js and TypeScript, RESTful API.
-- **API Endpoints**: CRUD operations for vaults and user positions, including dedicated endpoints for deposits, withdrawals, and claims.
-- **Data Validation**: Zod schemas, drizzle-zod for database schema validation.
+- **Server**: Express.js (Node.js, TypeScript), RESTful API for vault/user position management (CRUD, deposits, withdrawals, claims).
+- **Data Validation**: Zod schemas, drizzle-zod.
 
 ### Data Storage
-- **Database**: PostgreSQL (Neon serverless) with Drizzle ORM for type-safe queries.
-- **Schema**: 
-  - `vaults` (vault configurations)
-  - `positions` (user deposits, rewards, timestamps)
-  - `transactions` (all deposit/withdrawal/claim activities)
-  - `vault_metrics_daily` (historical analytics)
-  - `withdrawal_requests` (pending withdrawal and claim requests requiring vault operator approval)
-- **Key Features**: UUID primary keys, decimal precision for financial data, seed data for initial setup.
-- **Withdrawal/Claim System**: Request-based approval flow where users submit withdrawal/claim requests that are reviewed and approved by vault operators through the Admin dashboard.
+- **Database**: PostgreSQL (Neon serverless) with Drizzle ORM.
+- **Schema**: `vaults`, `positions`, `transactions`, `vault_metrics_daily`, `withdrawal_requests`.
+- **Key Features**: UUID primary keys, decimal precision, seed data, request-based withdrawal/claim approval by vault operators.
 
 ### System Design Choices
 - **Separation of Concerns**: `/client` (frontend), `/server` (backend), `/shared` (shared types/schemas).
-- **Environment Variables**: Validation for `DATABASE_URL` and `SESSION_SECRET`.
-- **CORS and Session Handling**: Integrated into Express middleware.
+- **Environment Variables**: Validated `DATABASE_URL`, `SESSION_SECRET`.
+- **CORS and Session Handling**: Express middleware.
+
+### Smart Contract Development
+- **Hardhat**: Ethereum development environment for Solidity contracts.
+- **OpenZeppelin Contracts**: Secure ERC-20 and access control implementations.
+- **Solidity**: Version 0.8.20.
+- **Flare Network Integration**: Coston2 testnet (Chain ID: 114) and Flare mainnet (Chain ID: 14).
+
+### Blockchain Infrastructure
+
+#### Smart Contracts (Flare Network)
+- **ShXRPVault.sol**: ERC-4626 tokenized vault for liquid staking (shXRP), uses FXRP as asset, integrates Firelight for yield generation, reentrancy guard. Deployed on Flare Coston2/mainnet.
+- **VaultController.sol**: Orchestration contract with role-based access control (OPERATOR_ROLE, COMPOUNDER_ROLE), vault registration, bridge request tracking, compounding execution. Deployed on Flare Coston2/mainnet.
+
+### Backend Services Architecture
+- **Core Services**: DepositService, BridgeService, VaultService, YieldService, CompoundingService.
+- **Utilities & Listeners**: FlareClient (ethers.js wrapper), XRPLDepositListener (WebSocket).
+- **Database Schema (Extended)**: `xrp_to_fxrp_bridges`, `firelight_positions`, `compounding_runs`.
+- **Demo Mode**: BridgeService supports configurable demo mode (default: true for Coston2) that simulates XRP→FXRP bridging for end-to-end testing without FAssets SDK. Transactions marked with "DEMO-" prefix. Production mode (demoMode: false) requires real FAssets SDK integration.
+
+### Security Features (Blockchain)
+- **ERC-4626 Standard**: Industry-standard vault interface.
+- **Role-Based Access Control**: OpenZeppelin AccessControl.
+- **ReentrancyGuard**: Protection against reentrancy attacks.
+- **Minimum Deposits**: Prevents dust attacks.
+- **Transparent Accounting**: Event emission for all operations.
 
 ## External Dependencies
 
 ### Blockchain & Wallet Integration
-- **Xaman (XUMM)**: XRP wallet integration for transaction signing (deposits, withdrawals, claims). Uses `xumm-sdk` for payload generation and a polling mechanism for signature confirmation. Includes automatic payload cleanup to prevent hitting the 61 payload limit. Requires `XUMM_API_KEY` and `XUMM_API_SECRET` environment variables to be set in Replit Secrets.
-- **WalletConnect**: XRPL-compatible wallet connection and transaction signing using `@walletconnect/universal-provider` configured for the `xrpl` namespace (not Ethereum). Supports XRPL mainnet (xrpl:0) and testnet (xrpl:1) with dynamic chain switching based on network toggle. Uses `xrpl_signTransaction` for signing which returns `{ tx_json }` or `{ result: { tx_json }}`. Frontend encodes signed tx_json to tx_blob using `xrpl.encode()`, then submits via backend endpoint `/api/xrpl/submit`. Backend handles wallet auto-submission: if sequence error occurs (wallet already submitted), queries XRPL to verify transaction success using `hashes.hashSignedTx()` for hash computation. Returns success if transaction validated with tesSUCCESS. Requires `VITE_WALLETCONNECT_PROJECT_ID` from cloud.walletconnect.com.
-- **Web3Auth (Social Login)**: ✅ Fully functional. Web3Auth enables social login (Google, Facebook, Twitter, Discord, Email) for XRP wallet creation. Implementation uses `@web3auth/modal` v10.x with browser-native `@noble/secp256k1` for XRPL wallet derivation from Web3Auth's secp256k1 private keys. Uses HTML-based polyfills for Buffer and process (loaded in `client/index.html`) following Web3Auth's official documentation. **Configuration**: Always uses sapphire_devnet (testnet) network as the current Client ID is configured for testnet on Web3Auth dashboard. Requires `VITE_WEB3AUTH_CLIENT_ID` from dashboard.web3auth.io (configured in Secrets). To support mainnet, create a separate Web3Auth project for sapphire_mainnet and configure different Client IDs.
-- **Transaction Signing Routing**: Automatically routes to correct signing provider based on wallet connection method - Xaman users sign via Xaman modal with QR codes, WalletConnect users sign directly in their connected wallet app.
-- **XRP Ledger Balance Fetching**: Real-time balance retrieval using the `xrpl` library for XRP, RLUSD, and USDC with 30-second auto-refresh.
-- **QR Code Display**: `qrcode.react` for generating scannable QR codes for Xaman wallet interactions.
-- **Demo Mode**: Fallback for wallet connections when API keys are not configured, providing mock functionality with demo XRP addresses.
+- **Xaman (XUMM)**: XRP wallet integration (`xumm-sdk`) for transaction signing, payload management, requires `XUMM_API_KEY`, `XUMM_API_SECRET`.
+- **WalletConnect**: XRPL-compatible wallet connection using `@walletconnect/universal-provider` for `xrpl` namespace, supports XRPL mainnet/testnet, dynamic chain switching, requires `VITE_WALLETCONNECT_PROJECT_ID`.
+- **Web3Auth (Social Login)**: Enables social login (`@web3auth/modal`) for XRP wallet creation, uses `@noble/secp256k1` for key derivation, polyfills for Buffer/process, requires `VITE_WEB3AUTH_CLIENT_ID`.
+- **Transaction Signing Routing**: Automatically routes to Xaman or WalletConnect based on connection method.
+- **XRP Ledger Balance Fetching**: Real-time balance retrieval for XRP, RLUSD, USDC using `xrpl` library.
+- **QR Code Display**: `qrcode.react` for Xaman interactions.
+- **Demo Mode**: Fallback for unconfigured API keys.
 
 ### UI & Data Visualization
 - **Recharts**: For displaying APY trends and analytics.
 - **Radix UI**: Headless UI component primitives.
 - **Lucide React**: Icon library.
 
-### Smart Contract Development
-- **Hardhat**: Ethereum development environment for compiling, testing, and deploying Solidity contracts.
-- **OpenZeppelin Contracts**: Secure, audited implementations of ERC-20 and access control standards.
-- **Solidity 0.8.20**: Smart contract language with built-in overflow protection.
-- **Flare Network Integration**: 
-  - Coston2 testnet (Chain ID: 114) for testing
-  - Flare mainnet (Chain ID: 14) for production
-  - Block explorer integration for contract verification
-
 ### Development & Deployment
 - **Replit-specific plugins**: Runtime error overlay, cartographer, dev banner.
 - **Drizzle Kit**: For database migrations.
 - **esbuild**: For production server bundling.
 - **connect-pg-simple**: For PostgreSQL session store.
-- **Hardhat Toolbox**: Comprehensive development tools including ethers.js v6, contract verification, and testing utilities.
+- **Hardhat Toolbox**: Development tools for smart contracts.
 
 ### Fonts
 - Google Fonts CDN: Inter, DM Sans, Fira Code, Geist Mono, Architects Daughter.
 
-## Blockchain Infrastructure
-
-### Smart Contracts (Flare Network)
-
-#### ShieldToken.sol
-- **Type**: ERC-20 governance and utility token
-- **Symbol**: SHIELD
-- **Total Supply**: 100,000,000 SHIELD
-- **Features**:
-  - Treasury Allocation: 10,000,000 SHIELD (10%)
-  - Burnable by token holders
-  - Mintable by owner (for controlled emissions)
-  - Ownership transferable to DAO governance
-- **Decimals**: 18
-- **Network**: Deployed on Flare Coston2 testnet and Flare mainnet
-
-#### Shield XRP Vault.sol
-- **Type**: Liquid staking vault for XRP with FXRP DeFi yield integration
-- **Symbol**: shXRP (Shield XRP)
-- **Features**:
-  - Mints shXRP 1:1 for deposited XRP (initially)
-  - Burns shXRP on withdrawal
-  - Operator-controlled minting/burning for security
-  - Reward distribution system updates exchange rate
-  - Minimum deposit: 0.01 XRP equivalent
-  - Exchange rate tracking (shXRP to XRP)
-  - ReentrancyGuard protection
-  - **FXRP Yield Integration** (5-7% APY):
-    - Accepts FXRP deposits for yield generation
-    - Stakes FXRP in SparkDEX LP pools (FXRP/WFLR)
-    - Auto-compounds rewards to increase exchange rate
-    - Separate FXRP/XRP accounting to prevent corruption
-    - SafeERC20 for secure token operations
-- **Integration**: Works with XRPL Escrow for secure asset locking + SparkDEX for FXRP yields
-- **Decimals**: 18
-- **Network**: Deployed on Flare Coston2 testnet and Flare mainnet
-- **FXRP Contract Addresses**:
-  - FXRP Token (Coston2): 0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3
-  - SparkDEX Router V2: 0x4a1E5A90e9943467FAd1acea1E7F0e5e88472a1e
-  - WFLR Token (Coston2): 0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d
-
-### XRPL Escrow System
-The platform uses standard XRPL Escrow transactions to securely lock XRP deposits on the XRP Ledger. This provides trustless, time-locked asset custody integrated with the Flare Network smart contracts.
-
-**Architecture:**
-- **Implementation**: Standard XRPL transactions (EscrowCreate, EscrowFinish, EscrowCancel) via `xrpl` library
-- **Database Tracking**: PostgreSQL `escrows` table tracks all escrow records with status, timing, and XRPL transaction hashes
-- **Backend Logic**: `server/xrpl-escrow.ts` contains escrow transaction orchestration
-- **API Endpoints**: RESTful endpoints in `server/routes.ts` for escrow creation, finishing, cancellation, and retry operations
-
-**Deposit Workflow:**
-1. User initiates XRP deposit via wallet (Xaman/WalletConnect/Web3Auth)
-2. Backend creates XRPL EscrowCreate transaction using vault credentials
-3. Escrow locks XRP with time-based release conditions
-4. Escrow record saved to database (status: "pending", includes XRPL tx hash and sequence)
-5. User position created in database, transaction recorded
-6. Operator mints shXRP tokens on Flare Network (manual or automated)
-
-**Withdrawal Workflow:**
-1. User requests withdrawal → Burns shXRP on Flare Network
-2. Withdrawal request created in database (status: "pending")
-3. Operator approves withdrawal via Admin dashboard
-4. Backend calls EscrowFinish to release XRP from escrow
-5. Escrow status updated to "finished", XRP returned to user's wallet
-
-**Cancellation & Retry:**
-- Failed escrows can be retried or cancelled via Admin dashboard
-- EscrowCancel transactions return XRP to vault if needed
-- All escrow operations tracked with full audit trail in database
-
-**Note on XRPL Hooks:** This implementation uses standard XRPL Escrow rather than XRPL Hooks (Rust/WASM smart contracts on XRPL). Hooks could be explored in the future for more advanced programmable escrow logic, but standard escrow provides sufficient security and functionality for the current use case.
-
-### Deployment Scripts
-
-#### deploy-direct.ts
-- **Purpose**: Deploy ShieldToken and Shield XRP Vault to Flare Network using direct ethers.js
-- **Features**:
-  - Uses ethers.js v6 directly (bypasses Hardhat plugin issues)
-  - Deploys both contracts in sequence
-  - Saves deployment info to JSON (deployments/ directory)
-  - Provides block explorer links
-  - Validates deployer balance
-  - Configurable treasury address
-- **Networks**: Configured for Coston2 testnet, easily adaptable for mainnet
-- **Usage**: `tsx scripts/deploy-direct.ts`
-
-#### Deployed Contracts (Coston2 Testnet)
-- **ShieldToken ($SHIELD)**: `0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308`
-  - [View on Explorer](https://coston2-explorer.flare.network/address/0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308)
-  - Total Supply: 100,000,000 SHIELD
-  - Treasury Allocation: 10,000,000 SHIELD
-  
-- **Shield XRP Vault (shXRP)**: `0x7571b6E696621D757E2d019CC54e14C65B9896d4`
-  - [View on Explorer](https://coston2-explorer.flare.network/address/0x7571b6E696621D757E2d019CC54e14C65B9896d4)
-  - Initial Exchange Rate: 1.0 shXRP per XRP
-  - Deployed on: 2025-11-09 (Shield XRP with correct contract naming)
-
-### Deployment Configuration
-
-#### hardhat.config.ts
-- **Solidity Version**: 0.8.20 with optimizer enabled (200 runs)
-- **Networks**:
-  - Coston2 (testnet): Chain ID 114, RPC: https://coston2-api.flare.network/ext/C/rpc
-  - Flare (mainnet): Chain ID 14, RPC: https://flare-api.flare.network/ext/C/rpc
-  - Local Hardhat network: Chain ID 31337
-- **Gas Configuration**: 25 gwei for both networks
-- **Verification**: Custom chain configuration for Flare block explorers
-- **Environment Variables**: DEPLOYER_PRIVATE_KEY, TREASURY_ADDRESS, FLARE_API_KEY
-
-### Environment Variables (Blockchain)
-
-Required for smart contract deployment:
-
-```bash
-# Flare Network Deployment
-DEPLOYER_PRIVATE_KEY=your-private-key-here
-TREASURY_ADDRESS=your-treasury-address-here
-FLARE_COSTON2_RPC_URL=https://coston2-api.flare.network/ext/C/rpc
-FLARE_MAINNET_RPC_URL=https://flare-api.flare.network/ext/C/rpc
-FLARE_API_KEY=your-flare-api-key-here
-
-# Frontend Contract Addresses (updated post-deployment)
-VITE_SHIELD_TOKEN_ADDRESS=0x...
-VITE_SHXRP_VAULT_ADDRESS=0x...
-```
-
-### Contract Architecture
-
-The smart contract system operates alongside the existing vault infrastructure:
-
-1. **Frontend Layer**: User deposits XRP via wallet (Xaman/WalletConnect/Web3Auth)
-2. **XRPL Layer**: XRPL Escrow transaction locks XRP on XRP Ledger with time-based release
-3. **Flare Layer**: Operator mints shXRP tokens on Flare Network via Shield XRP Vault contract
-4. **Database Layer**: Position, transaction, and escrow tracking in PostgreSQL
-5. **Withdrawal Flow**: User burns shXRP → Operator approves withdrawal → EscrowFinish releases XRP to user
-
-### Security Features (Blockchain)
-
-- **Operator Model**: Only approved operators can mint/burn shXRP, preventing unauthorized token creation
-- **ReentrancyGuard**: Protection against reentrancy attacks on vault operations
-- **Minimum Deposits**: 0.01 XRP minimum prevents dust attacks
-- **Exchange Rate Tracking**: Transparent reward distribution with on-chain verification
-- **Event Emission**: All mint/burn operations emit events for transparency and indexing
-- **XRPL Hash Verification**: Every mint operation requires XRPL transaction hash for verification
+### Blockchain Protocols
+- **FAssets Integration**: For bridging XRP to FXRP on Flare Network.
+  - FXRP Contract Addresses: Mainnet (0xAf7278D382323A865734f93B687b300005B8b60E), Coston2 (0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3).
+- **Firelight.finance Integration**: For generating yield on FXRP deposits.

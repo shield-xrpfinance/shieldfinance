@@ -1,9 +1,10 @@
-import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows } from "@shared/schema";
+import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, firelightPositions, compoundingRuns } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
 
 export interface IStorage {
   getVaults(): Promise<Vault[]>;
+  getAllVaults(): Promise<Vault[]>;
   getVault(id: string): Promise<Vault | undefined>;
   createVault(vault: InsertVault): Promise<Vault>;
   
@@ -25,6 +26,19 @@ export interface IStorage {
   getEscrow(id: string): Promise<Escrow | undefined>;
   createEscrow(escrow: InsertEscrow): Promise<Escrow>;
   updateEscrow(id: string, updates: Partial<InsertEscrow>): Promise<Escrow>;
+  
+  createBridge(bridge: InsertXrpToFxrpBridge): Promise<SelectXrpToFxrpBridge>;
+  getBridgeById(id: string): Promise<SelectXrpToFxrpBridge | undefined>;
+  getBridgeByRequestId(requestId: string): Promise<SelectXrpToFxrpBridge | undefined>;
+  getBridgesByWallet(walletAddress: string): Promise<SelectXrpToFxrpBridge[]>;
+  updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
+  
+  createFirelightPosition(position: InsertFirelightPosition): Promise<SelectFirelightPosition>;
+  getFirelightPositionByVault(vaultId: string): Promise<SelectFirelightPosition | undefined>;
+  updateFirelightYield(id: string, yieldAmount: string, newBalance: string): Promise<void>;
+  
+  createCompoundingRun(run: InsertCompoundingRun): Promise<SelectCompoundingRun>;
+  completeCompoundingRun(id: string, txHash: string, newBalance: string): Promise<void>;
   
   getProtocolOverview(): Promise<{ tvl: string; avgApy: string; activeVaults: number; totalStakers: number }>;
   getApyHistory(days?: number): Promise<Array<{ date: string; stable: number; high: number; maximum: number }>>;
@@ -114,6 +128,10 @@ export class DatabaseStorage implements IStorage {
 
   async getVaults(): Promise<Vault[]> {
     return await db.select().from(vaults);
+  }
+
+  async getAllVaults() {
+    return db.query.vaults.findMany();
   }
 
   async getVault(id: string): Promise<Vault | undefined> {
@@ -339,6 +357,67 @@ export class DatabaseStorage implements IStorage {
   async updateEscrow(id: string, updates: Partial<InsertEscrow>): Promise<Escrow> {
     const [escrow] = await db.update(escrows).set(updates).where(eq(escrows.id, id)).returning();
     return escrow;
+  }
+
+  async createBridge(bridge: InsertXrpToFxrpBridge): Promise<SelectXrpToFxrpBridge> {
+    const [created] = await db.insert(xrpToFxrpBridges).values(bridge).returning();
+    return created;
+  }
+
+  async getBridgeById(id: string): Promise<SelectXrpToFxrpBridge | undefined> {
+    return db.query.xrpToFxrpBridges.findFirst({ where: eq(xrpToFxrpBridges.id, id) });
+  }
+
+  async getBridgeByRequestId(requestId: string): Promise<SelectXrpToFxrpBridge | undefined> {
+    return db.query.xrpToFxrpBridges.findFirst({ where: eq(xrpToFxrpBridges.requestId, requestId) });
+  }
+
+  async getBridgesByWallet(walletAddress: string): Promise<SelectXrpToFxrpBridge[]> {
+    return db.query.xrpToFxrpBridges.findMany({
+      where: eq(xrpToFxrpBridges.walletAddress, walletAddress),
+      orderBy: desc(xrpToFxrpBridges.createdAt),
+    });
+  }
+
+  async updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void> {
+    await db.update(xrpToFxrpBridges)
+      .set({ status, ...updates, completedAt: status === 'completed' ? new Date() : undefined })
+      .where(eq(xrpToFxrpBridges.id, id));
+  }
+
+  async createFirelightPosition(position: InsertFirelightPosition): Promise<SelectFirelightPosition> {
+    const [created] = await db.insert(firelightPositions).values(position).returning();
+    return created;
+  }
+
+  async getFirelightPositionByVault(vaultId: string): Promise<SelectFirelightPosition | undefined> {
+    return db.query.firelightPositions.findFirst({ where: eq(firelightPositions.vaultId, vaultId) });
+  }
+
+  async updateFirelightYield(id: string, yieldAmount: string, newBalance: string): Promise<void> {
+    await db.update(firelightPositions)
+      .set({
+        yieldAccrued: yieldAmount,
+        currentStxrpBalance: newBalance,
+        lastYieldUpdate: new Date(),
+      })
+      .where(eq(firelightPositions.id, id));
+  }
+
+  async createCompoundingRun(run: InsertCompoundingRun): Promise<SelectCompoundingRun> {
+    const [created] = await db.insert(compoundingRuns).values(run).returning();
+    return created;
+  }
+
+  async completeCompoundingRun(id: string, txHash: string, newBalance: string): Promise<void> {
+    await db.update(compoundingRuns)
+      .set({
+        status: 'completed',
+        txHash,
+        newStxrpBalance: newBalance,
+        completedAt: new Date(),
+      })
+      .where(eq(compoundingRuns.id, id));
   }
 }
 

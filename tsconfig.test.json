@@ -1,0 +1,17 @@
+{
+  "include": ["test/**/*", "types/**/*"],
+  "exclude": ["node_modules"],
+  "compilerOptions": {
+    "incremental": false,
+    "noEmit": true,
+    "module": "commonjs",
+    "target": "es2020",
+    "strict": false,
+    "lib": ["es2020"],
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "types": ["node"]
+  }
+}
