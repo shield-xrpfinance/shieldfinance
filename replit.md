@@ -43,7 +43,7 @@ Preferred communication style: Simple, everyday language.
 - **Core Services**: DepositService, BridgeService, VaultService, YieldService, CompoundingService.
 - **Utilities & Listeners**: FlareClient (ethers.js wrapper), XRPLDepositListener (WebSocket).
 - **Database Schema (Extended)**: `xrp_to_fxrp_bridges`, `firelight_positions`, `compounding_runs`.
-- **Demo Mode**: BridgeService supports configurable demo mode (default: true for Coston2) that simulates XRP→FXRP bridging for end-to-end testing without FAssets SDK. Transactions marked with "DEMO-" prefix. Production mode (demoMode: false) requires real FAssets SDK integration.
+- **Production Mode**: ACTIVE (Nov 2024) - BridgeService configured with DEMO_MODE=false, using real FAssets SDK integration with automatic Contract Registry address resolution. Transactions execute real on-chain FAssets minting operations.
 
 ### Security Features (Blockchain)
 - **ERC-4626 Standard**: Industry-standard vault interface.

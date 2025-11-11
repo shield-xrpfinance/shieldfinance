@@ -60,7 +60,7 @@ app.use((req, res, next) => {
   // Initialize Flare Network client
   const flareClient = new FlareClient({
     network: "coston2", // Use testnet for now
-    privateKey: process.env.DEPLOYER_PRIVATE_KEY, // Optional: for operator txs
+    privateKey: process.env.OPERATOR_PRIVATE_KEY, // For operator txs
   });
 
   // Initialize services
@@ -69,7 +69,7 @@ app.use((req, res, next) => {
     network: "coston2",
     storage,
     flareClient,
-    operatorPrivateKey: process.env.DEPLOYER_PRIVATE_KEY || "",
+    operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY || "",
     demoMode,
   });
 
