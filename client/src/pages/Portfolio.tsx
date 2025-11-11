@@ -4,6 +4,7 @@ import type { Position, Vault, Escrow } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import PortfolioTable from "@/components/PortfolioTable";
 import PendingRequestsTable from "@/components/PendingRequestsTable";
 import WithdrawModal from "@/components/WithdrawModal";

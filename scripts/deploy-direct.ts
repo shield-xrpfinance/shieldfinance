@@ -1,9 +1,14 @@
 import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
 import ShXRPVaultArtifact from "../artifacts/contracts/ShXRPVault.sol/ShXRPVault.json";
 import VaultControllerArtifact from "../artifacts/contracts/VaultController.sol/VaultController.json";
+
+// ESM equivalent of __dirname
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function main() {
   const network = process.env.DEPLOY_NETWORK || "coston2";
