@@ -5,6 +5,8 @@ import { insertPositionSchema, insertWithdrawalRequestSchema, insertEscrowSchema
 import { XummSdk } from "xumm-sdk";
 import { Client } from "xrpl";
 import { createEscrow, finishEscrow, cancelEscrow } from "./xrpl-escrow";
+import { BridgeService } from "./services/BridgeService";
+import { FlareClient } from "./utils/flare-client";
 
 // Background verification for wallet-auto-submitted transactions
 async function verifyWalletAutoSubmittedTransaction(txHash: string, network: string) {
@@ -87,6 +89,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(vault);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch vault" });
+    }
+  });
+
+  // Get bridge by ID (for polling bridge status)
+  app.get("/api/bridges/:id", async (req, res) => {
+    try {
+      const bridge = await storage.getBridgeById(req.params.id);
+      if (!bridge) {
+        return res.status(404).json({ error: "Bridge not found" });
+      }
+      res.json(bridge);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch bridge status" });
+    }
+  });
+
+  // Create deposit via FAssets bridge
+  app.post("/api/deposits", async (req, res) => {
+    try {
+      const { walletAddress, vaultId, amount, network } = req.body;
+      
+      if (!walletAddress || !vaultId || !amount) {
+        return res.status(400).json({ error: "Missing required fields: walletAddress, vaultId, amount" });
+      }
+
+      // Get vault to check if it's an XRP vault
+      const vault = await storage.getVault(vaultId);
+      if (!vault) {
+        return res.status(404).json({ error: "Vault not found" });
+      }
+
+      const vaultAssets = vault.asset.split(",").map(a => a.trim());
+      const isXRPVault = vaultAssets.includes("XRP");
+
+      if (!isXRPVault) {
+        return res.status(400).json({ error: "This endpoint is only for XRP deposits. Use POST /api/positions for other assets." });
+      }
+
+      // Create bridge record
+      const bridge = await storage.createBridge({
+        vaultId,
+        walletAddress,
+        xrpAmount: amount,
+        fxrpExpected: amount, // 1:1 for now
+        status: 'pending',
+        network: network || 'coston2',
+      });
+
+      // Initialize bridge service
+      const flareClient = new FlareClient({ network: network || 'coston2' });
+      const bridgeService = new BridgeService({
+        network: network === 'mainnet' ? 'mainnet' : 'coston2',
+        storage,
+        flareClient,
+        operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY || '',
+        demoMode: true, // Default to demo mode for now
+      });
+
+      // Initiate bridge (reserves collateral, returns agent address in production)
+      try {
+        await bridgeService.initiateBridge(bridge.id);
+        
+        // Fetch updated bridge
+        const updatedBridge = await storage.getBridgeById(bridge.id);
+        
+        if (!updatedBridge) {
+          throw new Error("Bridge not found after initiation");
+        }
+
+        // Return bridge info
+        res.json({
+          success: true,
+          bridgeId: bridge.id,
+          agentAddress: updatedBridge.agentUnderlyingAddress,
+          amount: updatedBridge.xrpAmount,
+          status: updatedBridge.status,
+          message: updatedBridge.status === 'completed' 
+            ? "Bridge completed successfully (demo mode)" 
+            : "Please send XRP to the agent address to complete the bridge",
+          demo: bridgeService.demoMode,
+        });
+      } catch (error) {
+        // Handle bridge initiation error
+        await storage.updateBridgeStatus(bridge.id, 'failed', {
+          errorMessage: error instanceof Error ? error.message : "Unknown error",
+        });
+        throw error;
+      }
+    } catch (error) {
+      console.error("Deposit error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to create deposit" });
+      }
     }
   });
 

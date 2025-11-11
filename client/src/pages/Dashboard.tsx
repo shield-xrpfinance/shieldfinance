@@ -6,6 +6,7 @@ import StatsCard from "@/components/StatsCard";
 import VaultCard from "@/components/VaultCard";
 import ApyChart from "@/components/ApyChart";
 import DepositModal from "@/components/DepositModal";
+import BridgeStatusModal from "@/components/BridgeStatusModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import { Coins, TrendingUp, Vault, Users, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -18,6 +19,8 @@ import { Link} from "wouter";
 
 export default function Dashboard() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
+  const [bridgeStatusModalOpen, setBridgeStatusModalOpen] = useState(false);
+  const [bridgeInfo, setBridgeInfo] = useState<{ bridgeId: string; vaultName: string; amount: string } | null>(null);
   const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
   const [walletConnectSigningOpen, setWalletConnectSigningOpen] = useState(false);
   const [successDialogOpen, setSuccessDialogOpen] = useState(false);
@@ -99,36 +102,81 @@ export default function Dashboard() {
       .reduce((sum, amt) => sum + parseFloat(amt.replace(/,/g, "")), 0);
 
     const paymentAsset = selectedVault.depositAssets[0];
-    const paymentAmount = amounts[paymentAsset] || totalAmount.toString();
 
-    // Create deposit info object
-    const depositInfo = {
-      amounts,
-      vaultId: selectedVault.id,
-      vaultName: selectedVault.name,
-    };
+    // Check if this is an XRP deposit
+    const isXRPDeposit = selectedVault.depositAssets.includes("XRP");
 
-    // Store pending deposit
-    setPendingDeposit(depositInfo);
-    setDepositModalOpen(false);
+    if (isXRPDeposit) {
+      // Use bridge flow for XRP deposits
+      try {
+        setDepositModalOpen(false);
+        
+        const response = await fetch("/api/deposits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            walletAddress: address,
+            vaultId: selectedVault.id,
+            amount: totalAmount.toString(),
+            network: network,
+          }),
+        });
 
-    // Check if provider is set
-    if (!provider) {
-      toast({
-        title: "Connection Lost",
-        description: "Your wallet connection has expired. Please reconnect your wallet.",
-        variant: "destructive",
-      });
-      setPendingDeposit(null);
-      return;
-    }
+        const data = await response.json();
 
-    // Route to correct signing method based on provider
-    if (provider === "walletconnect") {
-      await handleWalletConnectDeposit(paymentAmount, paymentAsset, depositInfo);
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to create deposit");
+        }
+
+        // Show bridge status modal
+        setBridgeInfo({
+          bridgeId: data.bridgeId,
+          vaultName: selectedVault.name,
+          amount: totalAmount.toString(),
+        });
+        setBridgeStatusModalOpen(true);
+
+        toast({
+          title: "Bridge Initiated",
+          description: data.demo 
+            ? "Demo bridge created successfully" 
+            : "Bridge created. Follow the instructions to complete your deposit.",
+        });
+      } catch (error) {
+        console.error("Bridge creation error:", error);
+        toast({
+          title: "Deposit Failed",
+          description: error instanceof Error ? error.message : "Failed to create bridge",
+          variant: "destructive",
+        });
+      }
     } else {
-      // Default to Xaman
-      await handleXamanDeposit(paymentAmount, paymentAsset);
+      // Use existing flow for non-XRP deposits
+      const paymentAmount = amounts[paymentAsset] || totalAmount.toString();
+      const depositInfo = {
+        amounts,
+        vaultId: selectedVault.id,
+        vaultName: selectedVault.name,
+      };
+
+      setPendingDeposit(depositInfo);
+      setDepositModalOpen(false);
+
+      if (!provider) {
+        toast({
+          title: "Connection Lost",
+          description: "Your wallet connection has expired. Please reconnect your wallet.",
+          variant: "destructive",
+        });
+        setPendingDeposit(null);
+        return;
+      }
+
+      if (provider === "walletconnect") {
+        await handleWalletConnectDeposit(paymentAmount, paymentAsset, depositInfo);
+      } else {
+        await handleXamanDeposit(paymentAmount, paymentAsset);
+      }
     }
   };
 
@@ -430,6 +478,16 @@ export default function Dashboard() {
           vaultApyLabel={selectedVault.apyLabel}
           depositAssets={selectedVault.depositAssets}
           onConfirm={handleConfirmDeposit}
+        />
+      )}
+
+      {bridgeInfo && (
+        <BridgeStatusModal
+          open={bridgeStatusModalOpen}
+          onOpenChange={setBridgeStatusModalOpen}
+          bridgeId={bridgeInfo.bridgeId}
+          vaultName={bridgeInfo.vaultName}
+          amount={bridgeInfo.amount}
         />
       )}
 

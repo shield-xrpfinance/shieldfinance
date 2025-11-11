@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Coins, Wallet as WalletIcon, Loader2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Coins, Wallet as WalletIcon, Loader2, AlertCircle, Info } from "lucide-react";
 import { useWallet } from "@/lib/walletContext";
 import { useWalletBalances } from "@/hooks/use-wallet-balance";
 import { useToast } from "@/hooks/use-toast";
@@ -120,6 +121,22 @@ export default function DepositModal({
         </DialogHeader>
 
         <div className="py-6 space-y-6">
+          {depositAssets.includes("XRP") && step === 1 && (
+            <Alert data-testid="alert-fassets-info">
+              <Info className="h-4 w-4" />
+              <AlertTitle>How XRP Deposits Work</AlertTitle>
+              <AlertDescription className="text-xs space-y-2">
+                <p>Your XRP is converted to shXRP through a secure bridging process:</p>
+                <ol className="list-decimal list-inside space-y-1 ml-2">
+                  <li>System reserves collateral with a FAssets agent</li>
+                  <li>You send XRP to the agent's address</li>
+                  <li>System generates proof and mints FXRP on Flare</li>
+                  <li>FXRP is deposited to vault for shXRP tokens</li>
+                </ol>
+              </AlertDescription>
+            </Alert>
+          )}
+          
           <div className="flex items-center gap-3 p-4 rounded-md bg-primary/10">
             <MultiAssetIcon assets={depositAssets.join(",")} size={28} />
             <div className="flex-1">

@@ -4,6 +4,7 @@ import type { Vault as VaultType, Escrow } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import VaultCard from "@/components/VaultCard";
 import DepositModal from "@/components/DepositModal";
+import BridgeStatusModal from "@/components/BridgeStatusModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import { Input } from "@/components/ui/input";
 import {
@@ -23,6 +24,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 
 export default function Vaults() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
+  const [bridgeStatusModalOpen, setBridgeStatusModalOpen] = useState(false);
+  const [bridgeInfo, setBridgeInfo] = useState<{ bridgeId: string; vaultName: string; amount: string } | null>(null);
   const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
   const [walletConnectSigningOpen, setWalletConnectSigningOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
@@ -167,40 +170,85 @@ export default function Vaults() {
       .filter((amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
       .reduce((sum, amt) => sum + parseFloat(amt.replace(/,/g, "")), 0);
 
-    // For single-asset vaults, use that asset. For multi-asset, use first asset for payment
     const paymentAsset = selectedVault.depositAssets[0];
-    const paymentAmount = amounts[paymentAsset] || totalAmount.toString();
 
-    // Store pending deposit
-    setPendingDeposit({
-      amounts,
-      vaultId: selectedVault.id,
-      vaultName: selectedVault.name,
-    });
-    setDepositModalOpen(false);
+    // Check if this is an XRP deposit
+    const isXRPDeposit = selectedVault.depositAssets.includes("XRP");
 
-    // Debug logging
-    console.log("Deposit routing - provider:", provider, "address:", address, "walletConnectProvider:", !!walletConnectProvider);
+    if (isXRPDeposit) {
+      // Use bridge flow for XRP deposits
+      try {
+        setDepositModalOpen(false);
+        
+        const response = await fetch("/api/deposits", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            walletAddress: address,
+            vaultId: selectedVault.id,
+            amount: totalAmount.toString(),
+            network: network,
+          }),
+        });
 
-    // Check if provider is set - if not, wallet may have disconnected
-    if (!provider) {
-      toast({
-        title: "Connection Lost",
-        description: "Your wallet connection has expired. Please reconnect your wallet.",
-        variant: "destructive",
-      });
-      setPendingDeposit(null);
-      return;
-    }
+        const data = await response.json();
 
-    // Route to correct signing method based on provider
-    if (provider === "walletconnect") {
-      console.log("Routing to WalletConnect deposit");
-      await handleWalletConnectDeposit(paymentAmount, paymentAsset);
+        if (!response.ok || !data.success) {
+          throw new Error(data.error || "Failed to create deposit");
+        }
+
+        // Show bridge status modal
+        setBridgeInfo({
+          bridgeId: data.bridgeId,
+          vaultName: selectedVault.name,
+          amount: totalAmount.toString(),
+        });
+        setBridgeStatusModalOpen(true);
+
+        toast({
+          title: "Bridge Initiated",
+          description: data.demo 
+            ? "Demo bridge created successfully" 
+            : "Bridge created. Follow the instructions to complete your deposit.",
+        });
+      } catch (error) {
+        console.error("Bridge creation error:", error);
+        toast({
+          title: "Deposit Failed",
+          description: error instanceof Error ? error.message : "Failed to create bridge",
+          variant: "destructive",
+        });
+      }
     } else {
-      console.log("Routing to Xaman deposit");
-      // Default to Xaman
-      await handleXamanDeposit(paymentAmount, paymentAsset);
+      // Use existing flow for non-XRP deposits
+      const paymentAmount = amounts[paymentAsset] || totalAmount.toString();
+
+      setPendingDeposit({
+        amounts,
+        vaultId: selectedVault.id,
+        vaultName: selectedVault.name,
+      });
+      setDepositModalOpen(false);
+
+      console.log("Deposit routing - provider:", provider, "address:", address, "walletConnectProvider:", !!walletConnectProvider);
+
+      if (!provider) {
+        toast({
+          title: "Connection Lost",
+          description: "Your wallet connection has expired. Please reconnect your wallet.",
+          variant: "destructive",
+        });
+        setPendingDeposit(null);
+        return;
+      }
+
+      if (provider === "walletconnect") {
+        console.log("Routing to WalletConnect deposit");
+        await handleWalletConnectDeposit(paymentAmount, paymentAsset);
+      } else {
+        console.log("Routing to Xaman deposit");
+        await handleXamanDeposit(paymentAmount, paymentAsset);
+      }
     }
   };
 
@@ -473,6 +521,16 @@ export default function Vaults() {
           vaultApyLabel={selectedVault.apyLabel}
           depositAssets={selectedVault.depositAssets}
           onConfirm={handleConfirmDeposit}
+        />
+      )}
+
+      {bridgeInfo && (
+        <BridgeStatusModal
+          open={bridgeStatusModalOpen}
+          onOpenChange={setBridgeStatusModalOpen}
+          bridgeId={bridgeInfo.bridgeId}
+          vaultName={bridgeInfo.vaultName}
+          amount={bridgeInfo.amount}
         />
       )}
 
