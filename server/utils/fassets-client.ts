@@ -228,9 +228,25 @@ export class FAssetsClient {
     const decimals = await assetManager.assetMintingDecimals();
     
     const amountUBA = ethers.parseUnits(xrpAmount, Number(decimals));
-    const lots = Number(amountUBA / lotSize);
     
-    return Math.ceil(lots);
+    // Calculate lots using BigInt arithmetic to avoid precision loss
+    // Formula: lots = ceil(amountUBA / lotSize)
+    const lots = (amountUBA + lotSize - 1n) / lotSize; // Ceiling division for BigInt
+    const lotsNumber = Number(lots);
+    
+    // Check minimum: FAssets requires at least 1 lot
+    if (lotsNumber < 1) {
+      const minAmount = ethers.formatUnits(lotSize, Number(decimals));
+      throw new Error(
+        `Amount too small. Minimum deposit is ${minAmount} XRP (1 lot). ` +
+        `Please increase your deposit amount.`
+      );
+    }
+    
+    console.log(`Lot size: ${ethers.formatUnits(lotSize, Number(decimals))} XRP`);
+    console.log(`Amount: ${xrpAmount} XRP = ${lotsNumber} lot(s)`);
+    
+    return lotsNumber;
   }
 
   async getAssetDecimals(): Promise<number> {
