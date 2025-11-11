@@ -1,4 +1,6 @@
 import { FlareClient } from "../utils/flare-client";
+import { FAssetsClient } from "../utils/fassets-client";
+import { generateFDCProof } from "../utils/fdc-proof";
 import type { IStorage } from "../storage";
 import type { SelectXrpToFxrpBridge } from "../../shared/schema";
 
@@ -7,7 +9,7 @@ export interface BridgeServiceConfig {
   storage: IStorage;
   flareClient: FlareClient;
   operatorPrivateKey: string;
-  demoMode?: boolean; // Enable demo mode for testing (default: true for coston2)
+  demoMode?: boolean;
 }
 
 /**
@@ -26,13 +28,21 @@ export interface BridgeServiceConfig {
 export class BridgeService {
   private config: BridgeServiceConfig;
   private _demoMode: boolean;
+  private fassetsClient: FAssetsClient | null;
 
   constructor(config: BridgeServiceConfig) {
     this.config = config;
-    // Demo mode defaults to true for testnet, false for mainnet
     this._demoMode = config.demoMode ?? (config.network === "coston2");
     
-    if (this._demoMode) {
+    // Only initialize FAssetsClient when in production mode
+    if (!this._demoMode) {
+      this.fassetsClient = new FAssetsClient({
+        network: config.network,
+        flareClient: config.flareClient,
+      });
+      console.log("✅ BridgeService initialized with FAssets integration");
+    } else {
+      this.fassetsClient = null;
       console.log("⚠️  BridgeService running in DEMO MODE - FAssets integration not active");
     }
   }
@@ -62,25 +72,31 @@ export class BridgeService {
         bridgeStartedAt: new Date(),
       });
 
+      let flareTxHash: string;
+
       if (this._demoMode) {
         // Demo mode: Simulate successful bridge
         await this.demoFAssetsMinting(bridge);
+        flareTxHash = `DEMO-0x${Date.now().toString(16)}`;
       } else {
-        // Production mode: Require real FAssets integration
-        await this.executeFAssetsMinting(bridge);
+        // Production mode: Execute real FAssets minting
+        // This reserves collateral and saves agent details
+        const reservationTxHash = await this.executeFAssetsMinting(bridge);
+        // At this point, we've reserved collateral but not yet minted FXRP
+        // The actual minting happens in executeMintingWithProof() after payment
+        flareTxHash = reservationTxHash;
       }
 
-      // Update status to completed
-      await this.config.storage.updateBridgeStatus(bridgeId, "completed", {
-        fxrpReceived: bridge.fxrpExpected,
-        fxrpReceivedAt: new Date(),
-        flareTxHash: this._demoMode 
-          ? `DEMO-0x${Date.now().toString(16)}`  // Mark as demo
-          : `0x${Date.now().toString(16)}`,       // Real tx hash
-        completedAt: new Date(),
+      // Update status (completed for demo, awaiting_payment for production)
+      const status = this._demoMode ? "completed" : "awaiting_payment";
+      await this.config.storage.updateBridgeStatus(bridgeId, status, {
+        fxrpReceived: this._demoMode ? bridge.fxrpExpected : undefined,
+        fxrpReceivedAt: this._demoMode ? new Date() : undefined,
+        flareTxHash,
+        completedAt: this._demoMode ? new Date() : undefined,
       });
 
-      console.log(`✅ Bridge completed: ${bridge.xrpAmount} XRP → ${bridge.fxrpExpected} FXRP ${this._demoMode ? '(DEMO)' : ''}`);
+      console.log(`✅ Bridge ${this._demoMode ? 'completed' : 'initiated'}: ${bridge.xrpAmount} XRP → ${bridge.fxrpExpected} FXRP ${this._demoMode ? '(DEMO)' : ''}`);
     } catch (error) {
       console.error("Bridge error:", error);
       await this.config.storage.updateBridgeStatus(bridgeId, "failed", {
@@ -111,22 +127,84 @@ export class BridgeService {
     console.log("   - Update executeFAssetsMinting() implementation");
   }
 
-  private async executeFAssetsMinting(bridge: SelectXrpToFxrpBridge): Promise<void> {
-    throw new Error(
-      "FAssets SDK integration required for production bridge operations.\n\n" +
-      "This requires:\n" +
-      "  1. FAssets AssetManager contract integration\n" +
-      "  2. Flare Data Connector (FDC) proof verification\n" +
-      "  3. XRPL transaction proof generation\n\n" +
-      "For testing on Coston2:\n" +
-      "  - Use demoMode: true (default for coston2)\n" +
-      "  - Bridge operations will simulate FXRP acquisition\n\n" +
-      "For production deployment:\n" +
-      "  - Integrate FAssets SDK: https://github.com/flare-foundation/fassets\n" +
-      "  - Configure AssetManager contract address\n" +
-      "  - Implement executeFAssetsMinting() with real SDK calls\n" +
-      "  - Set demoMode: false"
-    );
+  private async executeFAssetsMinting(bridge: SelectXrpToFxrpBridge): Promise<string> {
+    console.log("⏳ Executing FAssets collateral reservation...");
+    
+    if (!this.fassetsClient) {
+      throw new Error("FAssetsClient not initialized. This should never happen in production mode.");
+    }
+    
+    try {
+      const lotsToMint = await this.fassetsClient.calculateLots(bridge.xrpAmount.toString());
+      console.log(`Calculated lots needed: ${lotsToMint}`);
+      
+      const reservation = await this.fassetsClient.reserveCollateral(lotsToMint);
+      
+      await this.config.storage.updateBridgeStatus(bridge.id, "awaiting_payment", {
+        collateralReservationId: reservation.reservationId.toString(),
+        agentVaultAddress: reservation.agentVault,
+        agentUnderlyingAddress: reservation.agentUnderlyingAddress,
+        mintingFeeBIPS: reservation.feeBIPS.toString(),  // Store actual BIPS value
+        collateralReservationFeePaid: "0",
+        lastUnderlyingBlock: reservation.lastUnderlyingBlock.toString(),
+      });
+      
+      console.log(`✅ Collateral reserved with agent: ${reservation.agentVault}`);
+      console.log(`   Payment address: ${reservation.agentUnderlyingAddress}`);
+      console.log(`   Amount to pay: ${reservation.valueUBA} + ${reservation.feeUBA} fee`);
+      console.log("");
+      console.log("   ⏳ Waiting for XRP payment to agent address...");
+      console.log("   After payment is detected, executeMintingWithProof() will be called");
+      
+      // Return the reservation transaction hash
+      return reservation.reservationTxHash;
+    } catch (error) {
+      console.error("Error executing FAssets minting:", error);
+      throw error;
+    }
+  }
+
+  async executeMintingWithProof(bridgeId: string, xrplTxHash: string): Promise<void> {
+    console.log(`⏳ Executing minting with FDC proof for bridge ${bridgeId}`);
+    
+    if (!this.fassetsClient) {
+      throw new Error("FAssetsClient not initialized. This should never happen in production mode.");
+    }
+    
+    const bridge = await this.config.storage.getBridgeById(bridgeId);
+    if (!bridge) throw new Error("Bridge not found");
+    
+    if (!bridge.collateralReservationId) {
+      throw new Error("No collateral reservation found for this bridge");
+    }
+    
+    try {
+      const proof = await generateFDCProof(xrplTxHash, this.config.network);
+      console.log(`✅ FDC proof generated for tx: ${xrplTxHash}`);
+      
+      const mintingTxHash = await this.fassetsClient.executeMinting(
+        proof,
+        BigInt(bridge.collateralReservationId)
+      );
+      
+      // Update bridge status with actual minting transaction hash
+      await this.config.storage.updateBridgeStatus(bridgeId, "completed", {
+        xrplTxHash: xrplTxHash,
+        flareTxHash: mintingTxHash,
+        fdcProofHash: JSON.stringify(proof),
+        fxrpReceived: bridge.fxrpExpected,
+        fxrpReceivedAt: new Date(),
+        completedAt: new Date(),
+      });
+      
+      console.log(`✅ Minting executed on Flare: ${mintingTxHash}`);
+    } catch (error) {
+      console.error("Error executing minting with proof:", error);
+      await this.config.storage.updateBridgeStatus(bridgeId, "failed", {
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
   }
 
   /**

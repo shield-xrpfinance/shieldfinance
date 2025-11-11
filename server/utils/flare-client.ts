@@ -14,14 +14,13 @@ export interface FlareClientConfig {
 }
 
 export class FlareClient {
-  private provider: ethers.JsonRpcProvider;
-  private signer?: ethers.Wallet;
+  public provider: ethers.JsonRpcProvider;
+  public signer?: ethers.Wallet;
   private network: "mainnet" | "coston2";
 
   constructor(config: FlareClientConfig) {
     this.network = config.network;
     
-    // RPC URLs
     const rpcUrl = config.network === "mainnet"
       ? "https://flare-api.flare.network/ext/C/rpc"
       : "https://coston2-api.flare.network/ext/C/rpc";

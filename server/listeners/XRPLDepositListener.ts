@@ -3,22 +3,32 @@ import type { IStorage } from "../storage";
 
 export interface XRPLDepositListenerConfig {
   network: "testnet" | "mainnet";
-  vaultAddress: string; // XRPL address to monitor
+  vaultAddress: string;
   storage: IStorage;
   onDeposit: (deposit: DetectedDeposit) => Promise<void>;
+  onAgentPayment?: (payment: AgentPayment) => Promise<void>;
 }
 
 export interface DetectedDeposit {
-  walletAddress: string; // Sender address
-  amount: string; // XRP amount
-  txHash: string; // XRPL transaction hash
-  memo?: string; // Optional memo with vault ID
+  walletAddress: string;
+  amount: string;
+  txHash: string;
+  memo?: string;
+}
+
+export interface AgentPayment {
+  agentAddress: string;
+  walletAddress: string;
+  amount: string;
+  txHash: string;
+  memo?: string;
 }
 
 export class XRPLDepositListener {
   private client: Client;
   private config: XRPLDepositListenerConfig;
   private isRunning: boolean = false;
+  private monitoredAgentAddresses: Set<string> = new Set();
 
   constructor(config: XRPLDepositListenerConfig) {
     this.config = config;
@@ -61,31 +71,83 @@ export class XRPLDepositListener {
     console.log("XRPL Deposit Listener stopped");
   }
 
+  async addAgentAddress(agentAddress: string): Promise<void> {
+    if (this.monitoredAgentAddresses.has(agentAddress)) {
+      console.log(`Agent address ${agentAddress} already monitored`);
+      return;
+    }
+
+    this.monitoredAgentAddresses.add(agentAddress);
+    
+    if (this.isRunning) {
+      await this.client.request({
+        command: "subscribe",
+        accounts: [agentAddress],
+      });
+      console.log(`🔔 Now monitoring FAssets agent: ${agentAddress}`);
+    }
+  }
+
+  async removeAgentAddress(agentAddress: string): Promise<void> {
+    if (!this.monitoredAgentAddresses.has(agentAddress)) {
+      return;
+    }
+
+    this.monitoredAgentAddresses.delete(agentAddress);
+    
+    if (this.isRunning) {
+      await this.client.request({
+        command: "unsubscribe",
+        accounts: [agentAddress],
+      });
+      console.log(`🔕 Stopped monitoring FAssets agent: ${agentAddress}`);
+    }
+  }
+
   private async handleTransaction(tx: any) {
-    // Only process Payment transactions
     if (tx.transaction.TransactionType !== "Payment") return;
-
-    // Only process incoming payments
-    if (tx.transaction.Destination !== this.config.vaultAddress) return;
-
-    // Only process XRP (not issued currencies)
     if (typeof tx.transaction.Amount !== "string") return;
 
-    // Extract deposit details
-    const deposit: DetectedDeposit = {
-      walletAddress: tx.transaction.Account,
-      amount: (parseInt(tx.transaction.Amount) / 1_000_000).toString(), // Convert drops to XRP
-      txHash: tx.transaction.hash,
-      memo: this.extractMemo(tx.transaction.Memos),
-    };
+    const destination = tx.transaction.Destination;
+    const isVaultPayment = destination === this.config.vaultAddress;
+    const isAgentPayment = this.monitoredAgentAddresses.has(destination);
 
-    console.log(`💰 XRP Deposit detected:`, deposit);
+    if (!isVaultPayment && !isAgentPayment) return;
 
-    try {
-      // Call the onDeposit callback
-      await this.config.onDeposit(deposit);
-    } catch (error) {
-      console.error("Error handling deposit:", error);
+    const amount = (parseInt(tx.transaction.Amount) / 1_000_000).toString();
+    const memo = this.extractMemo(tx.transaction.Memos);
+
+    if (isVaultPayment) {
+      const deposit: DetectedDeposit = {
+        walletAddress: tx.transaction.Account,
+        amount: amount,
+        txHash: tx.transaction.hash,
+        memo: memo,
+      };
+
+      console.log(`💰 XRP Deposit to vault detected:`, deposit);
+
+      try {
+        await this.config.onDeposit(deposit);
+      } catch (error) {
+        console.error("Error handling deposit:", error);
+      }
+    } else if (isAgentPayment && this.config.onAgentPayment) {
+      const payment: AgentPayment = {
+        agentAddress: destination,
+        walletAddress: tx.transaction.Account,
+        amount: amount,
+        txHash: tx.transaction.hash,
+        memo: memo,
+      };
+
+      console.log(`🔗 XRP Payment to FAssets agent detected:`, payment);
+
+      try {
+        await this.config.onAgentPayment(payment);
+      } catch (error) {
+        console.error("Error handling agent payment:", error);
+      }
     }
   }
 
