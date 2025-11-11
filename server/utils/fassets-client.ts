@@ -1,5 +1,7 @@
 import { ethers } from "ethers";
 import { nameToAddress } from "@flarenetwork/flare-periphery-contract-artifacts";
+import { readFileSync } from "fs";
+import { join } from "path";
 import type { FlareClient } from "./flare-client";
 
 export interface FAssetsConfig {
@@ -39,17 +41,39 @@ export class FAssetsClient {
 
   /**
    * Load AssetManager ABI (cached for reuse)
-   * ESM-compatible dynamic import instead of require()
+   * Uses fs.readFileSync for reliable JSON loading in Node.js environment
    */
-  private async getAssetManagerABI(): Promise<any> {
+  private getAssetManagerABI(): any {
     if (this.assetManagerABI) {
       return this.assetManagerABI;
     }
 
-    // Dynamic import for ESM compatibility (tsx doesn't support require)
-    const module = await import("@flarenetwork/flare-periphery-contracts/artifacts/contracts/fasset/interfaces/IAssetManager.sol/IAssetManager.json");
-    this.assetManagerABI = module.default || module;
-    return this.assetManagerABI;
+    try {
+      // Use network-specific artifact path from flare-periphery-contract-artifacts package
+      // The package has separate folders for each network: coston2, flare, etc.
+      const networkFolder = this.config.network === "mainnet" ? "flare" : "coston2";
+      const artifactPath = join(
+        process.cwd(),
+        "node_modules",
+        "@flarenetwork",
+        "flare-periphery-contract-artifacts",
+        networkFolder,
+        "artifacts",
+        "contracts",
+        "IAssetManager.sol",
+        "IAssetManager.json"
+      );
+      
+      // Read JSON file directly using fs.readFileSync (works reliably in Node.js)
+      const abiJson = readFileSync(artifactPath, "utf8");
+      this.assetManagerABI = JSON.parse(abiJson);
+      
+      console.log(`✅ Loaded AssetManager ABI for ${this.config.network}`);
+      return this.assetManagerABI;
+    } catch (error) {
+      console.error(`Failed to load AssetManager ABI for ${this.config.network}:`, error);
+      throw new Error(`Failed to load AssetManager ABI for network ${this.config.network}`);
+    }
   }
 
   /**
@@ -98,7 +122,7 @@ export class FAssetsClient {
 
   private async getAssetManager(): Promise<ethers.Contract> {
     const assetManagerAddress = await this.getAssetManagerAddress();
-    const AssetManagerABI = await this.getAssetManagerABI();
+    const AssetManagerABI = this.getAssetManagerABI();
     
     const contract = new ethers.Contract(
       assetManagerAddress,
@@ -169,7 +193,7 @@ export class FAssetsClient {
     const receipt = await tx.wait();
     console.log(`Collateral reserved: ${receipt.hash}`);
     
-    const reservationEvent = await this.parseCollateralReservedEvent(receipt);
+    const reservationEvent = this.parseCollateralReservedEvent(receipt);
     
     return {
       reservationId: reservationEvent.collateralReservationId,
@@ -213,8 +237,8 @@ export class FAssetsClient {
     return Number(await assetManager.assetMintingDecimals());
   }
 
-  private async parseCollateralReservedEvent(receipt: any): Promise<any> {
-    const AssetManagerABI = await this.getAssetManagerABI();
+  private parseCollateralReservedEvent(receipt: any): any {
+    const AssetManagerABI = this.getAssetManagerABI();
     const iface = new ethers.Interface(AssetManagerABI.abi);
     
     for (const log of receipt.logs) {
