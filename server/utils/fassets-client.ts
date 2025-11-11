@@ -30,10 +30,26 @@ export interface CollateralReservation {
 export class FAssetsClient {
   private config: FAssetsConfig;
   private assetManagerAddress: string | null = null;
+  private assetManagerABI: any = null;
 
   constructor(config: FAssetsConfig) {
     this.config = config;
     console.log(`FAssetsClient initializing for ${config.network}...`);
+  }
+
+  /**
+   * Load AssetManager ABI (cached for reuse)
+   * ESM-compatible dynamic import instead of require()
+   */
+  private async getAssetManagerABI(): Promise<any> {
+    if (this.assetManagerABI) {
+      return this.assetManagerABI;
+    }
+
+    // Dynamic import for ESM compatibility (tsx doesn't support require)
+    const module = await import("@flarenetwork/flare-periphery-contracts/artifacts/contracts/fasset/interfaces/IAssetManager.sol/IAssetManager.json");
+    this.assetManagerABI = module.default || module;
+    return this.assetManagerABI;
   }
 
   /**
@@ -82,7 +98,7 @@ export class FAssetsClient {
 
   private async getAssetManager(): Promise<ethers.Contract> {
     const assetManagerAddress = await this.getAssetManagerAddress();
-    const AssetManagerABI = require("@flarenetwork/flare-periphery-contracts/artifacts/contracts/fasset/interfaces/IAssetManager.sol/IAssetManager.json");
+    const AssetManagerABI = await this.getAssetManagerABI();
     
     const contract = new ethers.Contract(
       assetManagerAddress,
@@ -153,7 +169,7 @@ export class FAssetsClient {
     const receipt = await tx.wait();
     console.log(`Collateral reserved: ${receipt.hash}`);
     
-    const reservationEvent = this.parseCollateralReservedEvent(receipt);
+    const reservationEvent = await this.parseCollateralReservedEvent(receipt);
     
     return {
       reservationId: reservationEvent.collateralReservationId,
@@ -197,8 +213,8 @@ export class FAssetsClient {
     return Number(await assetManager.assetMintingDecimals());
   }
 
-  private parseCollateralReservedEvent(receipt: any): any {
-    const AssetManagerABI = require("@flarenetwork/flare-periphery-contracts/artifacts/contracts/fasset/interfaces/IAssetManager.sol/IAssetManager.json");
+  private async parseCollateralReservedEvent(receipt: any): Promise<any> {
+    const AssetManagerABI = await this.getAssetManagerABI();
     const iface = new ethers.Interface(AssetManagerABI.abi);
     
     for (const log of receipt.logs) {

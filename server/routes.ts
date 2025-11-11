@@ -416,7 +416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Withdraw position (changed from DELETE to POST to accept transaction hash in body)
   app.post("/api/positions/:id/withdraw", async (req, res) => {
     try {
-      const network = req.body.network || "mainnet";
+      const network = req.body.network || "testnet"; // Default to testnet for Coston2
       const txHash = req.body.txHash; // Get transaction hash from Xaman
       const position = await storage.getPosition(req.params.id);
       if (!position) {
@@ -463,7 +463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Claim rewards (update position rewards to 0)
   app.patch("/api/positions/:id/claim", async (req, res) => {
     try {
-      const network = req.body.network || "mainnet";
+      const network = req.body.network || "testnet"; // Default to testnet for Coston2
       const txHash = req.body.txHash; // Get transaction hash from Xaman
       const position = await storage.getPosition(req.params.id);
       if (!position) {
@@ -634,7 +634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/wallet/balance/:address", async (req, res) => {
     try {
       const { address } = req.params;
-      const network = req.query.network as string || "mainnet";
+      const network = req.query.network as string || "testnet"; // Default to testnet for Coston2
       
       if (!address) {
         return res.status(400).json({ error: "Wallet address required" });
