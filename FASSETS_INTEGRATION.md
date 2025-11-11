@@ -27,21 +27,26 @@ Add the following to your `.env` file or Replit Secrets:
 # Required: Disable demo mode
 DEMO_MODE=false
 
-# Required: FAssets AssetManager contract addresses
-FASSETS_ASSET_MANAGER_COSTON2=0x... # Get from Flare Contract Registry
-FASSETS_ASSET_MANAGER_MAINNET=0x...  # Get from Flare Contract Registry
-
 # Required: Operator private key (for executing minting transactions)
 OPERATOR_PRIVATE_KEY=0x...  # Your operator wallet private key
 ```
 
-### 2. Get AssetManager Addresses
+**That's it!** AssetManager addresses are now automatically retrieved from the **Flare Contract Registry** at runtime, so you don't need to configure them manually.
 
-The AssetManager addresses can be obtained from:
-- **Coston2 Testnet**: [Flare Contract Registry - Coston2](https://coston2-explorer.flare.network/)
-- **Flare Mainnet**: [Flare Contract Registry - Mainnet](https://flare-explorer.flare.network/)
+### 2. Verify Contract Registry Lookup (Optional)
 
-Search for "FXRP AssetManager" in the contract registry.
+Run the helper script to verify that AssetManager addresses can be retrieved correctly:
+
+```bash
+npx tsx scripts/get-assetmanager-address.ts
+```
+
+This will show you:
+- AssetManager address on Flare Mainnet
+- AssetManager address on Coston2 Testnet  
+- FXRP token addresses for both networks
+
+The script verifies that the Contract Registry is accessible and returns valid addresses.
 
 ### 3. FAssets SDK Integration
 
@@ -115,26 +120,37 @@ When `DEMO_MODE=false`, the bridge follows this flow:
 1. Set environment variables:
 ```bash
 DEMO_MODE=false
-FASSETS_ASSET_MANAGER_COSTON2=0x[actual-address]
 OPERATOR_PRIVATE_KEY=0x[your-test-key]
 ```
 
-2. Restart the application
-
-3. Initiate a small test bridge (1-10 XRP)
-
-4. Monitor logs for each step:
+2. (Optional) Verify Contract Registry lookup:
 ```bash
-# Server logs will show:
+npx tsx scripts/get-assetmanager-address.ts
+```
+
+3. Restart the application
+
+4. Check that FAssetsClient initialized successfully:
+```bash
+# Server logs should show:
+✅ Retrieved AssetManager from Contract Registry
+   Network: coston2
+   AssetManager: 0x...
 ✅ BridgeService initialized (PRODUCTION MODE)
+```
+
+5. Initiate a small test bridge (1-10 XRP)
+
+6. Monitor logs for each step:
+```bash
 ⏳ Executing FAssets collateral reservation...
 ✅ Collateral reserved with agent: 0x...
 ⏳ Waiting for XRP payment to agent address...
 ```
 
-5. Send XRP to the provided agent address
+7. Send XRP to the provided agent address
 
-6. Watch the bridge progress through all 4 steps
+8. Watch the bridge progress through all 4 steps
 
 ### Common Issues
 
@@ -143,13 +159,16 @@ OPERATOR_PRIVATE_KEY=0x[your-test-key]
 - Check XRPL transaction was confirmed
 - Ensure XRPL listener is running
 
-#### "AssetManager address not configured"
-- Set `FASSETS_ASSET_MANAGER_COSTON2` or `FASSETS_ASSET_MANAGER_MAINNET`
-- Verify the address is correct from Flare Contract Registry
+#### "Failed to retrieve AssetManager address from Contract Registry"
+- Check your internet connection and RPC endpoint accessibility
+- Run `npx tsx scripts/get-assetmanager-address.ts` to diagnose the issue
+- Verify you're connected to the correct Flare network (Mainnet vs Coston2)
+- Check Flare Contract Registry status at https://dev.flare.network/
 
 #### "FAssetsClient not initialized"
 - Ensure `DEMO_MODE=false` is set
-- Check operator private key is configured
+- Check `OPERATOR_PRIVATE_KEY` is configured
+- Verify the operator wallet has sufficient FLR for transaction fees
 
 ## Security Considerations
 

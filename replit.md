@@ -80,5 +80,14 @@ Preferred communication style: Simple, everyday language.
 
 ### Blockchain Protocols
 - **FAssets Integration**: For bridging XRP to FXRP on Flare Network.
-  - FXRP Contract Addresses: Mainnet (0xAf7278D382323A865734f93B687b300005B8b60E), Coston2 (0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3).
+  - **Dynamic Address Resolution**: AssetManager addresses retrieved dynamically from Flare Contract Registry using `@flarenetwork/flare-periphery-contract-artifacts` package.
+  - **Registry Key**: "AssetManagerFXRP" (same for all networks).
+  - **AssetManager Addresses** (as of Nov 2024):
+    - Flare Mainnet: 0x2a3Fe068cD92178554cabcf7c95ADf49B4B0B6A8
+    - Coston2 Testnet: 0xc1Ca88b937d0b528842F95d5731ffB586f4fbDFA
+  - **FXRP Token Addresses**:
+    - Flare Mainnet: 0xAd552A648C74D49E10027AB8a618A3ad4901c5bE
+    - Coston2 Testnet: 0x0b6A3645c240605887a5532109323A3E12273dc7
+  - **Helper Script**: `scripts/get-assetmanager-address.ts` - Verifies Contract Registry lookups and displays current addresses.
+  - **Zero-Address Validation**: FAssetsClient validates registry responses to prevent initialization with invalid addresses.
 - **Firelight.finance Integration**: For generating yield on FXRP deposits.

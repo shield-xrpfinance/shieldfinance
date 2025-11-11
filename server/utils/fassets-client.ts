@@ -1,4 +1,5 @@
 import { ethers } from "ethers";
+import { nameToAddress } from "@flarenetwork/flare-periphery-contract-artifacts";
 import type { FlareClient } from "./flare-client";
 
 export interface FAssetsConfig {
@@ -37,7 +38,7 @@ export class FAssetsClient {
 
   /**
    * Get AssetManager address from Flare Contract Registry
-   * The Contract Registry dynamically provides deployed contract addresses
+   * Uses the official nameToAddress() helper from @flarenetwork/flare-periphery-contract-artifacts
    */
   private async getAssetManagerAddress(): Promise<string> {
     if (this.assetManagerAddress) {
@@ -45,26 +46,28 @@ export class FAssetsClient {
     }
 
     try {
-      // Flare Contract Registry address (same on all networks)
-      const CONTRACT_REGISTRY_ADDRESS = "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019";
-      
-      // Contract Registry ABI (minimal)
-      const registryABI = [
-        "function getContractAddressByName(string memory _name) external view returns (address)"
-      ];
-
-      const registry = new ethers.Contract(
-        CONTRACT_REGISTRY_ADDRESS,
-        registryABI,
+      // Use official helper to get AssetManager address from Flare Contract Registry
+      // Registry key is "AssetManagerFXRP" (verified via scripts/get-assetmanager-address.ts)
+      const networkName = this.config.network === "mainnet" ? "flare" : "coston2";
+      const address = await nameToAddress(
+        "AssetManagerFXRP",
+        networkName,
         this.config.flareClient.provider
       );
-
-      // Get AssetManager address for FXRP
-      const address = await registry.getContractAddressByName("AssetManager");
+      
+      // Validate that we got a real address, not the zero address
+      if (!address || address === ethers.ZeroAddress) {
+        throw new Error(
+          `Contract Registry returned zero address for "AssetManagerFXRP" on ${this.config.network}. ` +
+          `This means AssetManager is not deployed or the registry is misconfigured.`
+        );
+      }
+      
       this.assetManagerAddress = address;
       
       console.log(`✅ Retrieved AssetManager from Contract Registry`);
       console.log(`   Network: ${this.config.network}`);
+      console.log(`   Registry Key: "AssetManagerFXRP"`);
       console.log(`   AssetManager: ${address}`);
       
       return address;
