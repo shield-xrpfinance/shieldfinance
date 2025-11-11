@@ -124,9 +124,10 @@ export class FAssetsClient {
     const assetManagerAddress = await this.getAssetManagerAddress();
     const AssetManagerABI = this.getAssetManagerABI();
     
+    // The ABI file is directly an array, not an object with an 'abi' property
     const contract = new ethers.Contract(
       assetManagerAddress,
-      AssetManagerABI.abi,
+      AssetManagerABI,
       this.config.flareClient.signer || this.config.flareClient.provider
     );
     
@@ -239,7 +240,8 @@ export class FAssetsClient {
 
   private parseCollateralReservedEvent(receipt: any): any {
     const AssetManagerABI = this.getAssetManagerABI();
-    const iface = new ethers.Interface(AssetManagerABI.abi);
+    // The ABI file is directly an array, not an object with an 'abi' property
+    const iface = new ethers.Interface(AssetManagerABI);
     
     for (const log of receipt.logs) {
       try {
