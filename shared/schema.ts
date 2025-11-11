@@ -89,7 +89,7 @@ export const escrows = pgTable("escrows", {
 
 export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  requestId: text("request_id").notNull().unique(),
+  requestId: text("request_id").unique(), // Optional - only for external payment requests (e.g. Xaman)
   walletAddress: text("wallet_address").notNull(),
   vaultId: varchar("vault_id").notNull().references(() => vaults.id),
   positionId: varchar("position_id").references(() => positions.id),
