@@ -181,13 +181,100 @@ export default function BridgeStatusModal({
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Progress Indicator */}
-          <div className="space-y-2">
+          {/* Step-by-Step Progress Indicator */}
+          <div className="space-y-4">
             <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Progress</span>
+              <span className="text-muted-foreground">Bridge Progress</span>
               <span className="font-medium">{status.step} of 4 steps</span>
             </div>
             <Progress value={progress} className="h-2" data-testid="progress-bridge" />
+            
+            {/* Visual Stepper */}
+            <div className="space-y-3">
+              {/* Step 1: Reserve Collateral */}
+              <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
+                status.step >= 1 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-muted/30'
+              }`}>
+                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                  status.step > 1 ? 'bg-green-500' : status.step === 1 ? 'bg-blue-500' : 'bg-muted'
+                }`}>
+                  {status.step > 1 ? (
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  ) : status.step === 1 ? (
+                    <Loader2 className="h-4 w-4 text-white animate-spin" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">1</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Reserve Collateral</p>
+                  <p className="text-xs text-muted-foreground">FAssets agent reserves collateral</p>
+                </div>
+              </div>
+
+              {/* Step 2: Send Payment */}
+              <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
+                status.step >= 2 ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-muted/30'
+              }`}>
+                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                  status.step > 2 ? 'bg-green-500' : status.step === 2 ? 'bg-yellow-500' : 'bg-muted'
+                }`}>
+                  {status.step > 2 ? (
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  ) : status.step === 2 ? (
+                    <Clock className="h-4 w-4 text-white" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">2</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Send XRP Payment</p>
+                  <p className="text-xs text-muted-foreground">You send XRP to agent address</p>
+                </div>
+              </div>
+
+              {/* Step 3: Generate Proof */}
+              <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
+                status.step >= 3 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-muted/30'
+              }`}>
+                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                  status.step > 3 ? 'bg-green-500' : status.step === 3 ? 'bg-blue-500' : 'bg-muted'
+                }`}>
+                  {status.step > 3 ? (
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  ) : status.step === 3 ? (
+                    <Loader2 className="h-4 w-4 text-white animate-spin" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">3</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Generate FDC Proof</p>
+                  <p className="text-xs text-muted-foreground">Flare Data Connector verifies payment</p>
+                </div>
+              </div>
+
+              {/* Step 4: Mint FXRP & shXRP */}
+              <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
+                status.step >= 4 ? bridge.status === 'completed' ? 'bg-green-500/10 border border-green-500/20' : 'bg-blue-500/10 border border-blue-500/20' : 'bg-muted/30'
+              }`}>
+                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                  bridge.status === 'completed' ? 'bg-green-500' : status.step === 4 ? 'bg-blue-500' : 'bg-muted'
+                }`}>
+                  {bridge.status === 'completed' ? (
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  ) : status.step === 4 ? (
+                    <Loader2 className="h-4 w-4 text-white animate-spin" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">4</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Mint FXRP & shXRP</p>
+                  <p className="text-xs text-muted-foreground">Receive FXRP, deposit to vault for shXRP</p>
+                </div>
+              </div>
+            </div>
           </div>
 
           {/* Vault and Amount Info */}

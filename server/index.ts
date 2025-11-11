@@ -64,12 +64,13 @@ app.use((req, res, next) => {
   });
 
   // Initialize services
+  const demoMode = process.env.DEMO_MODE !== "false"; // Default to true unless explicitly set to false
   const bridgeService = new BridgeService({
     network: "coston2",
     storage,
     flareClient,
     operatorPrivateKey: process.env.DEPLOYER_PRIVATE_KEY || "",
-    demoMode: true, // Enable demo mode for Coston2 testing
+    demoMode,
   });
 
   console.log(`🌉 BridgeService initialized (${bridgeService.demoMode ? 'DEMO MODE' : 'PRODUCTION MODE'})`);

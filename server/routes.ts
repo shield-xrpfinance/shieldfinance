@@ -134,17 +134,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         xrpAmount: amount,
         fxrpExpected: amount, // 1:1 for now
         status: 'pending',
-        network: network || 'coston2',
       });
 
       // Initialize bridge service
+      const demoMode = process.env.DEMO_MODE !== "false"; // Default to true unless explicitly set to false
       const flareClient = new FlareClient({ network: network || 'coston2' });
       const bridgeService = new BridgeService({
         network: network === 'mainnet' ? 'mainnet' : 'coston2',
         storage,
         flareClient,
         operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY || '',
-        demoMode: true, // Default to demo mode for now
+        demoMode,
       });
 
       // Initiate bridge (reserves collateral, returns agent address in production)

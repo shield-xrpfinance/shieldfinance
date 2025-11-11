@@ -108,23 +108,44 @@ export class BridgeService {
 
   private async demoFAssetsMinting(bridge: SelectXrpToFxrpBridge): Promise<void> {
     console.log("⚠️  DEMO MODE: Simulating FAssets bridge (not using real FAssets protocol)");
-    console.log("   In production, this would:");
-    console.log("   1. Reserve collateral with FAssets agent");
-    console.log("   2. Execute minting with XRPL proof");
-    console.log("   3. Wait for Flare Data Connector verification");
-    console.log("   4. Receive FXRP tokens on Flare Network");
+    console.log("   Simulating 4-step bridge process with realistic delays...");
     
-    // Simulate bridge delay (2-5 seconds for demo)
-    const delay = 2000 + Math.random() * 3000;
-    console.log(`   Simulating bridge delay: ${(delay / 1000).toFixed(1)}s...`);
-    await new Promise(resolve => setTimeout(resolve, delay));
+    // Step 1: Collateral reserved (already in 'pending' status from initiateBridge)
+    console.log("   [1/4] Reserving collateral...");
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
+    
+    // Step 2: Set agent address for payment
+    console.log("   [2/4] Agent address assigned - awaiting payment...");
+    const demoAgentAddress = `rDEMOAgent${Date.now().toString(36)}`;
+    await this.config.storage.updateBridgeStatus(bridge.id, "awaiting_payment", {
+      agentVaultAddress: "0xDEMO" + Date.now().toString(16).slice(-8),
+      agentUnderlyingAddress: demoAgentAddress,
+      collateralReservationId: `demo-res-${Date.now()}`,
+      mintingFeeBIPS: "25", // 0.25% fee
+    });
+    await new Promise(resolve => setTimeout(resolve, 2000 + Math.random() * 2000));
+    
+    // Step 3: Payment detected, generating proof
+    console.log("   [3/4] Payment detected - generating FDC proof...");
+    await this.config.storage.updateBridgeStatus(bridge.id, "xrpl_confirmed", {
+      xrplTxHash: `DEMO-XRPL-${Date.now().toString(16)}`,
+      xrplConfirmedAt: new Date(),
+    });
+    await new Promise(resolve => setTimeout(resolve, 1500 + Math.random() * 1000));
+    
+    // Step 4: Executing minting
+    console.log("   [4/4] Executing minting...");
+    await this.config.storage.updateBridgeStatus(bridge.id, "fdc_proof_generated", {
+      fdcProofHash: `0xDEMOPROOF${Date.now().toString(16)}`,
+    });
+    await new Promise(resolve => setTimeout(resolve, 1000 + Math.random() * 1000));
     
     console.log("   ✅ Demo bridge completed successfully");
     console.log("");
     console.log("   To enable real FAssets:");
-    console.log("   - Set demoMode: false in BridgeService config");
+    console.log("   - Set DEMO_MODE=false environment variable");
+    console.log("   - Configure FASSETS_ASSET_MANAGER_COSTON2 address");
     console.log("   - Integrate official FAssets SDK");
-    console.log("   - Update executeFAssetsMinting() implementation");
   }
 
   private async executeFAssetsMinting(bridge: SelectXrpToFxrpBridge): Promise<string> {
