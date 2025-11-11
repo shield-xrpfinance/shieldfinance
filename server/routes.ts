@@ -138,7 +138,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Initialize bridge service
       const demoMode = process.env.DEMO_MODE !== "false"; // Default to true unless explicitly set to false
-      const flareClient = new FlareClient({ network: network || 'coston2' });
+      const flareClient = new FlareClient({ 
+        network: network || 'coston2',
+        privateKey: process.env.OPERATOR_PRIVATE_KEY // Add private key for signing transactions
+      });
       const bridgeService = new BridgeService({
         network: network === 'mainnet' ? 'mainnet' : 'coston2',
         storage,
