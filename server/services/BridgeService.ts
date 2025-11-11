@@ -2,7 +2,7 @@ import { FlareClient } from "../utils/flare-client";
 import { FAssetsClient } from "../utils/fassets-client";
 import { generateFDCProof } from "../utils/fdc-proof";
 import type { IStorage } from "../storage";
-import type { SelectXrpToFxrpBridge } from "../../shared/schema";
+import type { SelectXrpToFxrpBridge, PaymentRequest } from "../../shared/schema";
 import type { XRPLDepositListener } from "../listeners/XRPLDepositListener";
 
 export interface BridgeServiceConfig {
@@ -248,6 +248,67 @@ export class BridgeService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Reserve collateral and get agent address (fast, no delays)
+   * This is the first step before payment can be requested
+   */
+  async reserveCollateralQuick(bridgeId: string): Promise<void> {
+    const bridge = await this.config.storage.getBridgeById(bridgeId);
+    if (!bridge) throw new Error("Bridge not found");
+
+    console.log(`🌉 Reserving collateral for bridge ${bridgeId}`);
+
+    try {
+      await this.config.storage.updateBridgeStatus(bridgeId, "bridging", {
+        bridgeStartedAt: new Date(),
+      });
+
+      if (this._demoMode) {
+        const demoAgentAddress = `rDEMOAgent${Date.now().toString(36)}`;
+        await this.config.storage.updateBridgeStatus(bridgeId, "awaiting_payment", {
+          agentVaultAddress: "0xDEMO" + Date.now().toString(16).slice(-8),
+          agentUnderlyingAddress: demoAgentAddress,
+          collateralReservationId: `demo-res-${Date.now()}`,
+          mintingFeeBIPS: "25",
+        });
+        console.log(`✅ Demo agent address assigned: ${demoAgentAddress}`);
+      } else {
+        const reservationTxHash = await this.executeFAssetsMinting(bridge);
+        console.log(`✅ Collateral reserved, tx: ${reservationTxHash}`);
+      }
+    } catch (error) {
+      console.error("Collateral reservation error:", error);
+      await this.config.storage.updateBridgeStatus(bridgeId, "failed", {
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Build payment request for XRP → FXRP bridge
+   * Returns normalized payment payload for wallet signing
+   */
+  buildPaymentRequest(bridge: SelectXrpToFxrpBridge): PaymentRequest | null {
+    if (!bridge.agentUnderlyingAddress) {
+      console.warn(`Bridge ${bridge.id} does not have agent address yet`);
+      return null;
+    }
+
+    const xrpAmount = parseFloat(bridge.xrpAmount.toString());
+    const amountDrops = Math.floor(xrpAmount * 1_000_000).toString();
+
+    const network = this.config.network === "mainnet" ? "mainnet" : "testnet";
+
+    return {
+      bridgeId: bridge.id,
+      destination: bridge.agentUnderlyingAddress,
+      amountDrops,
+      memo: bridge.id,
+      network,
+    };
   }
 
   /**

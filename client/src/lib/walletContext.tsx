@@ -1,5 +1,17 @@
+/* @refresh reset */
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import type UniversalProvider from "@walletconnect/universal-provider";
+import type { PaymentRequest } from "@shared/schema";
+import { Buffer } from "buffer";
+
+interface PaymentRequestResult {
+  success: boolean;
+  payloadUuid?: string;
+  qrUrl?: string;
+  deepLink?: string;
+  txHash?: string;
+  error?: string;
+}
 
 interface WalletContextType {
   address: string | null;
@@ -8,9 +20,18 @@ interface WalletContextType {
   walletConnectProvider: UniversalProvider | null;
   connect: (address: string, provider: "xaman" | "walletconnect" | "web3auth", wcProvider?: UniversalProvider) => void;
   disconnect: () => void;
+  requestPayment: (paymentRequest: PaymentRequest) => Promise<PaymentRequestResult>;
 }
 
-const WalletContext = createContext<WalletContextType | undefined>(undefined);
+const WalletContext = createContext<WalletContextType>({
+  address: null,
+  provider: null,
+  isConnected: false,
+  walletConnectProvider: null,
+  connect: () => {},
+  disconnect: async () => {},
+  requestPayment: async () => ({ success: false, error: "Not initialized" }),
+});
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null);
@@ -68,19 +89,100 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     localStorage.removeItem("walletProvider");
   };
 
+  const requestPayment = async (paymentRequest: PaymentRequest): Promise<PaymentRequestResult> => {
+    if (!provider) {
+      return {
+        success: false,
+        error: "No wallet connected",
+      };
+    }
+
+    try {
+      if (provider === "xaman") {
+        const response = await fetch("/api/wallet/xaman/payment", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            destination: paymentRequest.destination,
+            amount: paymentRequest.amountDrops,
+            memo: paymentRequest.memo,
+            network: paymentRequest.network,
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create Xaman payment request");
+        }
+
+        const data = await response.json();
+        return {
+          success: true,
+          payloadUuid: data.uuid,
+          qrUrl: data.qrUrl,
+          deepLink: data.deepLink,
+        };
+      } else if (provider === "walletconnect") {
+        if (!walletConnectProvider || !address) {
+          return {
+            success: false,
+            error: "WalletConnect not properly initialized",
+          };
+        }
+
+        const tx = {
+          TransactionType: "Payment",
+          Account: address,
+          Destination: paymentRequest.destination,
+          Amount: paymentRequest.amountDrops,
+          Memos: [
+            {
+              Memo: {
+                MemoData: Buffer.from(paymentRequest.memo).toString("hex").toUpperCase(),
+              },
+            },
+          ],
+        };
+
+        const result = await walletConnectProvider.request({
+          method: "xrpl_signAndSubmit",
+          params: {
+            tx_json: tx,
+          },
+        }) as any;
+
+        return {
+          success: true,
+          txHash: result?.tx_json?.hash || "pending",
+        };
+      } else if (provider === "web3auth") {
+        return {
+          success: false,
+          error: "Web3Auth payment requests not yet implemented",
+        };
+      }
+
+      return {
+        success: false,
+        error: "Unknown provider",
+      };
+    } catch (error) {
+      console.error("Payment request error:", error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  };
+
   const isConnected = address !== null;
 
   return (
-    <WalletContext.Provider value={{ address, provider, isConnected, walletConnectProvider, connect, disconnect }}>
+    <WalletContext.Provider value={{ address, provider, isConnected, walletConnectProvider, connect, disconnect, requestPayment }}>
       {children}
     </WalletContext.Provider>
   );
 }
 
 export function useWallet() {
-  const context = useContext(WalletContext);
-  if (context === undefined) {
-    throw new Error("useWallet must be used within a WalletProvider");
-  }
-  return context;
+  return useContext(WalletContext);
 }

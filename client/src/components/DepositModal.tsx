@@ -17,7 +17,9 @@ import { useWallet } from "@/lib/walletContext";
 import { useWalletBalances } from "@/hooks/use-wallet-balance";
 import { useToast } from "@/hooks/use-toast";
 import ConnectWalletModal from "./ConnectWalletModal";
+import XamanSigningModal from "./XamanSigningModal";
 import { MultiAssetIcon } from "@/components/AssetIcon";
+import type { PaymentRequest } from "@shared/schema";
 
 interface DepositModalProps {
   open: boolean;
@@ -41,7 +43,10 @@ export default function DepositModal({
   const [amounts, setAmounts] = useState<{ [key: string]: string }>({});
   const [step, setStep] = useState<1 | 2>(1);
   const [connectWalletModalOpen, setConnectWalletModalOpen] = useState(false);
-  const { address, isConnected, provider } = useWallet();
+  const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
+  const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
+  const [processingPayment, setProcessingPayment] = useState(false);
+  const { address, isConnected, provider, requestPayment } = useWallet();
   const { balances, isLoading: balancesLoading, error: balancesError, getBalance, getBalanceFormatted } = useWalletBalances();
   const { toast } = useToast();
   const gasEstimate = "0.00012";

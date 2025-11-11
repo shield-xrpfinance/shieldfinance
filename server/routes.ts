@@ -139,25 +139,33 @@ export async function registerRoutes(
         status: 'pending',
       });
 
-      // Initiate bridge using shared bridge service (with xrplListener)
-      // This ensures agent addresses are registered for payment detection
-      // Initiate bridge in background (don't wait for completion)
-      // This allows the modal to open immediately and show real-time progress
-      bridgeService.initiateBridge(bridge.id).catch(async (error) => {
-        // Handle errors in background
-        console.error("Background bridge error:", error);
-        await storage.updateBridgeStatus(bridge.id, 'failed', {
-          errorMessage: error instanceof Error ? error.message : "Unknown error",
-        });
-      });
+      // Reserve collateral and get agent address (fast, no delays)
+      await bridgeService.reserveCollateralQuick(bridge.id);
 
-      // Return bridge info immediately so modal can open and poll status
+      // Get updated bridge with agent address
+      const updatedBridge = await storage.getBridgeById(bridge.id);
+      if (!updatedBridge) {
+        throw new Error("Bridge not found after collateral reservation");
+      }
+
+      // Build payment request
+      const paymentRequest = bridgeService.buildPaymentRequest(updatedBridge);
+
+      // For demo mode, continue with rest of bridge simulation in background
+      if (bridgeService.demoMode) {
+        bridgeService.initiateBridge(bridge.id).catch(async (error) => {
+          console.error("Background bridge simulation error:", error);
+        });
+      }
+
+      // Return bridge info with payment request
       res.json({
         success: true,
         bridgeId: bridge.id,
         amount: bridge.xrpAmount,
-        status: bridge.status, // Will be 'pending' initially
-        message: "Bridge initiated. Watch the progress in the modal.",
+        status: updatedBridge.status,
+        paymentRequest,
+        message: "Bridge initiated. Please send payment to complete the bridge.",
         demo: bridgeService.demoMode,
       });
     } catch (error) {
@@ -621,6 +629,102 @@ export async function registerRoutes(
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to get payload status" });
+    }
+  });
+
+  // Create Xaman payment request for bridge deposit
+  app.post("/api/wallet/xaman/payment", async (req, res) => {
+    try {
+      const { destination, amount, memo, network } = req.body;
+
+      if (!destination || !amount || !memo) {
+        return res.status(400).json({ error: "Missing required fields: destination, amount, memo" });
+      }
+
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
+
+      if (!apiKey || !apiSecret || apiKey.length === 0 || apiSecret.length === 0) {
+        console.warn("Xaman credentials not configured - falling back to demo mode");
+        return res.json({
+          uuid: `demo-payment-${Date.now()}`,
+          qrUrl: "demo",
+          deepLink: "",
+          demo: true
+        });
+      }
+
+      const xumm = new XummSdk(apiKey, apiSecret);
+
+      const payload = await xumm.payload?.create({
+        TransactionType: "Payment",
+        Destination: destination,
+        Amount: amount,
+        Memos: [
+          {
+            Memo: {
+              MemoData: Buffer.from(memo).toString("hex").toUpperCase(),
+            },
+          },
+        ],
+      });
+
+      if (!payload) {
+        throw new Error("Failed to create Xaman payment payload");
+      }
+
+      res.json({
+        uuid: payload.uuid,
+        qrUrl: payload.refs?.qr_png,
+        deepLink: payload.next?.always,
+        demo: false
+      });
+    } catch (error) {
+      console.error("Xaman payment request error:", error);
+      res.json({
+        uuid: `demo-payment-${Date.now()}`,
+        qrUrl: "demo",
+        deepLink: "",
+        demo: true
+      });
+    }
+  });
+
+  // Get Xaman payment status
+  app.get("/api/wallet/xaman/payment/:uuid", async (req, res) => {
+    try {
+      if (req.params.uuid.startsWith("demo-payment-")) {
+        return res.json({
+          signed: true,
+          txHash: `DEMO-${req.params.uuid}`,
+          demo: true
+        });
+      }
+
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
+
+      if (!apiKey || !apiSecret) {
+        return res.status(400).json({ error: "Xaman credentials not configured" });
+      }
+
+      const xumm = new XummSdk(apiKey, apiSecret);
+      const payload = await xumm.payload?.get(req.params.uuid);
+
+      if (!payload) {
+        return res.status(404).json({ error: "Payload not found" });
+      }
+
+      const signed = payload.meta?.signed || false;
+      const txHash = payload.response?.txid || null;
+
+      res.json({
+        signed,
+        txHash,
+        demo: false
+      });
+    } catch (error) {
+      res.status(500).json({ error: "Failed to get payment status" });
     }
   });
 

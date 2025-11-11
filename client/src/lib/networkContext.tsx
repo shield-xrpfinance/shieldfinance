@@ -1,3 +1,4 @@
+/* @refresh reset */
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 
 type Network = "mainnet" | "testnet";
@@ -9,7 +10,12 @@ interface NetworkContextType {
   setNetwork: (network: Network) => void;
 }
 
-const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
+const NetworkContext = createContext<NetworkContextType>({
+  network: "mainnet",
+  isTestnet: false,
+  toggleNetwork: () => {},
+  setNetwork: () => {},
+});
 
 export function NetworkProvider({ children }: { children: ReactNode }) {
   const [network, setNetworkState] = useState<Network>(() => {
@@ -44,9 +50,5 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
 }
 
 export function useNetwork() {
-  const context = useContext(NetworkContext);
-  if (context === undefined) {
-    throw new Error("useNetwork must be used within a NetworkProvider");
-  }
-  return context;
+  return useContext(NetworkContext);
 }

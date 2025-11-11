@@ -34,7 +34,7 @@ export default function Vaults() {
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("apy");
   const { toast } = useToast();
-  const { address, provider, walletConnectProvider } = useWallet();
+  const { address, provider, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
@@ -204,6 +204,42 @@ export default function Vaults() {
           amount: totalAmount.toString(),
         });
         setBridgeStatusModalOpen(true);
+
+        // Auto-trigger payment request if available
+        if (data.paymentRequest && provider) {
+          try {
+            const paymentResult = await requestPayment(data.paymentRequest);
+            
+            if (paymentResult.success) {
+              if (provider === "xaman" && paymentResult.payloadUuid) {
+                // Show Xaman signing modal
+                setXamanPayload({
+                  uuid: paymentResult.payloadUuid,
+                  qrUrl: paymentResult.qrUrl || "",
+                  deepLink: paymentResult.deepLink || "",
+                });
+                setXamanSigningModalOpen(true);
+              } else if (provider === "walletconnect" && paymentResult.txHash) {
+                toast({
+                  title: "Payment Submitted",
+                  description: `Transaction submitted: ${paymentResult.txHash}`,
+                });
+              }
+            } else {
+              console.warn("Payment request failed:", paymentResult.error);
+              toast({
+                title: "Payment Request Info",
+                description: "Please manually send the payment to complete the bridge. Details in the bridge status modal.",
+              });
+            }
+          } catch (paymentError) {
+            console.error("Payment request error:", paymentError);
+            toast({
+              title: "Payment Request Failed",
+              description: "Please manually send the payment to complete the bridge.",
+            });
+          }
+        }
 
         toast({
           title: "Bridge Initiated",

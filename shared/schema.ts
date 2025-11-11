@@ -220,3 +220,11 @@ export type InsertFirelightPosition = z.infer<typeof insertFirelightPositionSche
 export type SelectFirelightPosition = typeof firelightPositions.$inferSelect;
 export type InsertCompoundingRun = z.infer<typeof insertCompoundingRunSchema>;
 export type SelectCompoundingRun = typeof compoundingRuns.$inferSelect;
+
+export interface PaymentRequest {
+  bridgeId: string;
+  destination: string;
+  amountDrops: string;
+  memo: string;
+  network: "mainnet" | "testnet";
+}
