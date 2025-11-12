@@ -119,6 +119,7 @@ app.use((req, res, next) => {
   xrplListener.setAgentPaymentHandler(async (payment) => {
     console.log(`🔗 FAssets agent payment detected: ${payment.amount} XRP to ${payment.agentAddress}`);
     console.log(`   TX: ${payment.txHash}`);
+    console.log(`   Memo: ${payment.memo || '(none)'}`);
     
     try {
       // Find the bridge waiting for this agent payment
@@ -126,6 +127,87 @@ app.use((req, res, next) => {
       
       if (!bridge) {
         console.log(`⚠️  No bridge found for agent ${payment.agentAddress}`);
+        return;
+      }
+      
+      // Validate payment reference (memo) matches
+      if (!payment.memo || !bridge.paymentReference) {
+        console.log(`⚠️  Payment validation failed: missing memo or payment reference`);
+        console.log(`   Payment memo: ${payment.memo || '(none)'}`);
+        console.log(`   Expected reference: ${bridge.paymentReference || '(none)'}`);
+        console.log(`   Skipping payment - incorrect reference`);
+        return;
+      }
+      
+      if (payment.memo !== bridge.paymentReference) {
+        console.log(`⚠️  Payment reference mismatch for bridge ${bridge.id}`);
+        console.log(`   Received memo: ${payment.memo}`);
+        console.log(`   Expected reference: ${bridge.paymentReference}`);
+        console.log(`   Skipping payment - incorrect reference`);
+        return;
+      }
+      
+      // Validate exact amount matches (reservedValueUBA + reservedFeeUBA)
+      if (!bridge.reservedValueUBA || !bridge.reservedFeeUBA) {
+        console.log(`⚠️  Bridge ${bridge.id} missing reserved amounts`);
+        console.log(`   Cannot validate payment amount`);
+        return;
+      }
+      
+      // Calculate expected amount in drops (UBA) - use BigInt for precision
+      const expectedDrops = BigInt(bridge.reservedValueUBA) + BigInt(bridge.reservedFeeUBA);
+      
+      // Convert payment amount (XRP string) to drops without floating point
+      // XRP has 6 decimal places, so 1 XRP = 1,000,000 drops
+      let receivedDrops: bigint;
+      try {
+        // Trim whitespace and split on decimal point
+        const trimmedAmount = payment.amount.trim();
+        const parts = trimmedAmount.split('.');
+        
+        // Reject malformed amounts with multiple decimal points (e.g., "5..1")
+        if (parts.length > 2) {
+          throw new Error('Multiple decimal points not allowed');
+        }
+        
+        const [rawIntegerPart = '0', fractionalPart = ''] = parts;
+        
+        // Normalize integer part (treat empty string as "0" for amounts like ".5")
+        const integerPart = rawIntegerPart || '0';
+        
+        // Validate format (digits only)
+        if (!/^\d+$/.test(integerPart) || (fractionalPart && !/^\d+$/.test(fractionalPart))) {
+          throw new Error('Invalid number format');
+        }
+        
+        // XRP allows max 6 decimal places
+        if (fractionalPart.length > 6) {
+          throw new Error('Too many decimal places (max 6 for XRP)');
+        }
+        
+        // Pad fractional part to 6 digits and combine
+        const paddedFractional = fractionalPart.padEnd(6, '0');
+        const dropsString = integerPart + paddedFractional;
+        receivedDrops = BigInt(dropsString);
+        
+        // Validate non-zero positive amount
+        if (receivedDrops <= 0n) {
+          throw new Error('Amount must be positive');
+        }
+      } catch (error) {
+        console.log(`⚠️  Invalid payment amount for bridge ${bridge.id}: ${payment.amount}`);
+        console.log(`   Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+        console.log(`   Skipping payment - invalid amount format`);
+        return;
+      }
+      
+      // Compare amounts in drops (exact match required)
+      if (receivedDrops !== expectedDrops) {
+        console.log(`⚠️  Payment amount mismatch for bridge ${bridge.id}`);
+        console.log(`   Received: ${receivedDrops} drops (${payment.amount} XRP)`);
+        console.log(`   Expected: ${expectedDrops} drops`);
+        console.log(`   Difference: ${receivedDrops - expectedDrops} drops`);
+        console.log(`   Skipping payment - incorrect amount`);
         return;
       }
       
@@ -141,7 +223,9 @@ app.use((req, res, next) => {
         return;
       }
       
-      console.log(`✅ Matched payment to bridge ${bridge.id}`);
+      console.log(`✅ Payment validated successfully for bridge ${bridge.id}`);
+      console.log(`   Payment reference: ${payment.memo}`);
+      console.log(`   Amount: ${payment.amount} XRP (${receivedDrops} drops)`);
       console.log(`   Executing minting with proof...`);
       
       // Execute minting with the detected transaction
