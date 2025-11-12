@@ -42,7 +42,7 @@ const menuItems = [
     icon: History,
   },
   {
-    title: "Bridge History",
+    title: "Bridge Tracking",
     url: "/bridge-tracking",
     icon: Activity,
   },
