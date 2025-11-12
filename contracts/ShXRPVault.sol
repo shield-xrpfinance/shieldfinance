@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
@@ -92,6 +93,19 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
         // Deployer is first operator
         operators[msg.sender] = true;
         emit OperatorAdded(msg.sender);
+    }
+    
+    /**
+     * @dev Override decimals to match the underlying FXRP asset (6 decimals)
+     * 
+     * OpenZeppelin ERC20 defaults to 18 decimals, but FXRP uses 6.
+     * This ensures all ERC4626 math (convertToShares, convertToAssets, etc.)
+     * works correctly with 6-decimal FXRP values.
+     * 
+     * @return uint8 Number of decimals (inherited from FXRP)
+     */
+    function decimals() public view virtual override(ERC20, ERC4626) returns (uint8) {
+        return IERC20Metadata(address(asset())).decimals();
     }
     
     /**

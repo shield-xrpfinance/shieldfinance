@@ -1,6 +1,8 @@
 import { ethers } from "ethers";
 import { FlareClient } from "../utils/flare-client";
 import type { IStorage } from "../storage";
+import fs from "fs";
+import path from "path";
 
 export interface VaultServiceConfig {
   storage: IStorage;
@@ -12,6 +14,56 @@ export class VaultService {
 
   constructor(config: VaultServiceConfig) {
     this.config = config;
+  }
+
+  /**
+   * Get the latest deployed vault address from deployment files
+   */
+  private getVaultAddress(): string {
+    let vaultAddress: string | undefined;
+    
+    // Always read from latest deployment file first (source of truth)
+    try {
+      const deploymentsDir = path.join(process.cwd(), "deployments");
+      const files = fs.readdirSync(deploymentsDir)
+        .filter(f => 
+          f.startsWith("coston2-") && 
+          f.endsWith(".json") && 
+          f !== "coston2-latest.json" &&
+          f !== "coston2-deployment.json" && // Exclude old deployment file
+          /coston2-\d+\.json/.test(f) // Only include timestamped files
+        )
+        .sort()
+        .reverse();
+      
+      if (files.length > 0) {
+        const latestDeployment = JSON.parse(
+          fs.readFileSync(path.join(deploymentsDir, files[0]), "utf-8")
+        );
+        vaultAddress = latestDeployment.contracts?.ShXRPVault?.address;
+        console.log(`📄 Using vault address from deployment file (${files[0]}): ${vaultAddress}`);
+      }
+    } catch (error) {
+      console.warn("Failed to read deployment file, falling back to environment variable:", error);
+      vaultAddress = process.env.VITE_SHXRP_VAULT_ADDRESS;
+    }
+    
+    // Fallback to environment variable if deployment file reading failed
+    if (!vaultAddress || vaultAddress === "0x...") {
+      vaultAddress = process.env.VITE_SHXRP_VAULT_ADDRESS;
+      if (vaultAddress && vaultAddress !== "0x...") {
+        console.log(`📄 Using vault address from environment variable: ${vaultAddress}`);
+      }
+    }
+    
+    if (!vaultAddress || vaultAddress === "0x...") {
+      throw new Error(
+        "ShXRP Vault not deployed. " +
+        "Run deployment script first: DEPLOY_NETWORK=coston2 tsx scripts/deploy-direct.ts"
+      );
+    }
+    
+    return vaultAddress;
   }
 
   /**
@@ -30,16 +82,8 @@ export class VaultService {
     const vault = await this.config.storage.getVault(vaultId);
     if (!vault) throw new Error("Vault not found");
 
-    // Get vault contract address from environment or database
-    // TODO: Add contractAddress field to vaults table in future
-    const vaultContractAddress = process.env.VITE_SHXRP_VAULT_ADDRESS;
-    if (!vaultContractAddress || vaultContractAddress === "0x...") {
-      throw new Error(
-        "ShXRP Vault not deployed. " +
-        "Run deployment script first: DEPLOY_NETWORK=coston2 tsx scripts/deploy-direct.ts, " +
-        "then set VITE_SHXRP_VAULT_ADDRESS in environment."
-      );
-    }
+    // Get vault contract address from deployment file
+    const vaultContractAddress = this.getVaultAddress();
 
     try {
       // Get vault contract with correct ABI
