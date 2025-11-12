@@ -298,19 +298,28 @@ export class BridgeService {
       
       console.log(`⏰ XRPL Transaction Timestamp: ${unixTimestamp} (${new Date(unixTimestamp * 1000).toISOString()})`);
       
-      const proof = await generateFDCProof(xrplTxHash, this.config.network, unixTimestamp);
+      const fdcResult = await generateFDCProof(
+        xrplTxHash, 
+        this.config.network, 
+        this.config.flareClient,
+        unixTimestamp
+      );
       console.log(`✅ FDC proof generated for tx: ${xrplTxHash}`);
+      console.log(`   Attestation Tx Hash: ${fdcResult.attestationTxHash}`);
+      console.log(`   Voting Round ID: ${fdcResult.votingRoundId}`);
       
       const mintingTxHash = await this.fassetsClient.executeMinting(
-        proof,
+        fdcResult.proof,
         BigInt(bridge.collateralReservationId)
       );
       
-      // Update bridge status with actual minting transaction hash
+      // Update bridge status with actual minting transaction hash and attestation details
       await this.config.storage.updateBridgeStatus(bridgeId, "completed", {
         xrplTxHash: xrplTxHash,
         flareTxHash: mintingTxHash,
-        fdcProofHash: JSON.stringify(proof),
+        fdcAttestationTxHash: fdcResult.attestationTxHash,
+        fdcVotingRoundId: fdcResult.votingRoundId.toString(),
+        fdcProofHash: JSON.stringify(fdcResult.proof),
         fxrpReceived: bridge.fxrpExpected,
         fxrpReceivedAt: new Date(),
         completedAt: new Date(),

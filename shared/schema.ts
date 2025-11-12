@@ -130,6 +130,7 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   reservationExpiry: timestamp("reservation_expiry"),
   lastUnderlyingBlock: varchar("last_underlying_block"),
   lastUnderlyingTimestamp: timestamp("last_underlying_timestamp"),
+  fdcAttestationTxHash: varchar("fdc_attestation_tx_hash"),
   fdcProofHash: varchar("fdc_proof_hash"),
   fdcVotingRoundId: varchar("fdc_voting_round_id"),
   fdcRequestBytes: text("fdc_request_bytes"),

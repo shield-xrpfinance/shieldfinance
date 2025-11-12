@@ -1,0 +1,274 @@
+import { ethers } from "ethers";
+import { nameToAddress } from "@flarenetwork/flare-periphery-contract-artifacts";
+import { readFileSync } from "fs";
+import { join } from "path";
+import type { FlareClient } from "./flare-client";
+
+export interface FdcHubConfig {
+  network: "mainnet" | "coston2";
+  flareClient: FlareClient;
+}
+
+export interface AttestationSubmission {
+  txHash: string;
+  blockNumber: number;
+}
+
+/**
+ * FdcHubClient handles attestation request submissions to Flare Data Connector Hub
+ * 
+ * Attestation Flow:
+ * 1. Get encoded attestation request from FDC verifier (prepareRequest)
+ * 2. Submit to FdcHub on-chain (requestAttestation) - THIS CLASS
+ * 3. Wait for voting round finalization (~90-180 seconds)
+ * 4. Poll Data Availability Layer for proof
+ * 5. Use proof in smart contract verification
+ */
+export class FdcHubClient {
+  private config: FdcHubConfig;
+  private fdcHubAddress: string | null = null;
+  private fdcHubABI: any = null;
+  private feeConfigAddress: string | null = null;
+  private feeConfigABI: any = null;
+
+  constructor(config: FdcHubConfig) {
+    this.config = config;
+    console.log(`FdcHubClient initializing for ${config.network}...`);
+  }
+
+  /**
+   * Load FdcHub ABI from flare-periphery-contract-artifacts
+   */
+  private getFdcHubABI(): any {
+    if (this.fdcHubABI) {
+      return this.fdcHubABI;
+    }
+
+    try {
+      const networkFolder = this.config.network === "mainnet" ? "flare" : "coston2";
+      const artifactPath = join(
+        process.cwd(),
+        "node_modules",
+        "@flarenetwork",
+        "flare-periphery-contract-artifacts",
+        networkFolder,
+        "artifacts",
+        "contracts",
+        "IFdcHub.sol",
+        "IFdcHub.json"
+      );
+      
+      const abiJson = readFileSync(artifactPath, "utf8");
+      this.fdcHubABI = JSON.parse(abiJson);
+      
+      console.log(`✅ Loaded FdcHub ABI for ${this.config.network}`);
+      return this.fdcHubABI;
+    } catch (error) {
+      console.error(`Failed to load FdcHub ABI for ${this.config.network}:`, error);
+      throw new Error(`Failed to load FdcHub ABI for network ${this.config.network}`);
+    }
+  }
+
+  /**
+   * Load FdcRequestFeeConfigurations ABI for fee queries
+   */
+  private getFeeConfigABI(): any {
+    if (this.feeConfigABI) {
+      return this.feeConfigABI;
+    }
+
+    try {
+      const networkFolder = this.config.network === "mainnet" ? "flare" : "coston2";
+      const artifactPath = join(
+        process.cwd(),
+        "node_modules",
+        "@flarenetwork",
+        "flare-periphery-contract-artifacts",
+        networkFolder,
+        "artifacts",
+        "contracts",
+        "IFdcRequestFeeConfigurations.sol",
+        "IFdcRequestFeeConfigurations.json"
+      );
+      
+      const abiJson = readFileSync(artifactPath, "utf8");
+      this.feeConfigABI = JSON.parse(abiJson);
+      
+      console.log(`✅ Loaded FdcRequestFeeConfigurations ABI for ${this.config.network}`);
+      return this.feeConfigABI;
+    } catch (error) {
+      console.error(`Failed to load FdcRequestFeeConfigurations ABI:`, error);
+      throw new Error(`Failed to load FdcRequestFeeConfigurations ABI for network ${this.config.network}`);
+    }
+  }
+
+  /**
+   * Get FdcHub contract address from Flare Contract Registry
+   */
+  private async getFdcHubAddress(): Promise<string> {
+    if (this.fdcHubAddress) {
+      return this.fdcHubAddress;
+    }
+
+    try {
+      const networkName = this.config.network === "mainnet" ? "flare" : "coston2";
+      const address = await nameToAddress(
+        "FdcHub",
+        networkName,
+        this.config.flareClient.provider
+      );
+      
+      if (!address || address === ethers.ZeroAddress) {
+        throw new Error(
+          `Contract Registry returned zero address for "FdcHub" on ${this.config.network}. ` +
+          `This means FdcHub is not deployed or the registry is misconfigured.`
+        );
+      }
+      
+      this.fdcHubAddress = address;
+      
+      console.log(`✅ Retrieved FdcHub from Contract Registry`);
+      console.log(`   Network: ${this.config.network}`);
+      console.log(`   FdcHub: ${address}`);
+      
+      return address;
+    } catch (error) {
+      console.error("Failed to get FdcHub from Contract Registry:", error);
+      throw new Error(
+        `Failed to retrieve FdcHub address from Flare Contract Registry for ${this.config.network}`
+      );
+    }
+  }
+
+  /**
+   * Get FdcRequestFeeConfigurations contract address
+   */
+  private async getFeeConfigAddress(): Promise<string> {
+    if (this.feeConfigAddress) {
+      return this.feeConfigAddress;
+    }
+
+    try {
+      const networkName = this.config.network === "mainnet" ? "flare" : "coston2";
+      const address = await nameToAddress(
+        "FdcRequestFeeConfigurations",
+        networkName,
+        this.config.flareClient.provider
+      );
+      
+      if (!address || address === ethers.ZeroAddress) {
+        throw new Error(
+          `Contract Registry returned zero address for "FdcRequestFeeConfigurations"`
+        );
+      }
+      
+      this.feeConfigAddress = address;
+      console.log(`✅ Retrieved FdcRequestFeeConfigurations: ${address}`);
+      
+      return address;
+    } catch (error) {
+      console.error("Failed to get FdcRequestFeeConfigurations:", error);
+      throw new Error(
+        `Failed to retrieve FdcRequestFeeConfigurations address for ${this.config.network}`
+      );
+    }
+  }
+
+  /**
+   * Get attestation request fee for Payment type with XRP sourceId
+   */
+  private async getAttestationRequestFee(): Promise<bigint> {
+    try {
+      const feeConfigAddress = await this.getFeeConfigAddress();
+      const feeConfigABI = this.getFeeConfigABI();
+      
+      if (!this.config.flareClient.signer) {
+        throw new Error("FdcHubClient requires a signer. Please provide OPERATOR_PRIVATE_KEY.");
+      }
+      
+      const feeConfig = new ethers.Contract(
+        feeConfigAddress,
+        feeConfigABI,
+        this.config.flareClient.signer
+      );
+      
+      // Encode attestation type "Payment" and source ID "testXRP" (for coston2)
+      const attestationType = ethers.encodeBytes32String("Payment").substring(0, 66);
+      const sourceId = this.config.network === "mainnet" 
+        ? ethers.encodeBytes32String("XRP").substring(0, 66)
+        : ethers.encodeBytes32String("testXRP").substring(0, 66);
+      
+      console.log(`🔍 Querying attestation request fee...`);
+      console.log(`   Attestation Type: Payment (${attestationType})`);
+      console.log(`   Source ID: ${this.config.network === "mainnet" ? "XRP" : "testXRP"} (${sourceId})`);
+      
+      const fee = await feeConfig.getRequestFee(attestationType, sourceId);
+      
+      console.log(`✅ Attestation request fee: ${ethers.formatEther(fee)} FLR`);
+      
+      return fee;
+    } catch (error) {
+      console.error("Failed to get attestation request fee:", error);
+      throw new Error(`Failed to get attestation request fee: ${error}`);
+    }
+  }
+
+  /**
+   * Submit attestation request to FdcHub on-chain
+   * 
+   * Note: Voting round ID calculation is done in generateFDCProof() using the XRPL
+   * transaction timestamp, not the FdcHub submission timestamp. This ensures we
+   * poll the correct round in the Data Availability Layer.
+   * 
+   * @param abiEncodedRequest - Encoded attestation request from FDC verifier's prepareRequest
+   * @returns Attestation submission details including tx hash and block number
+   */
+  async submitAttestationRequest(abiEncodedRequest: string): Promise<AttestationSubmission> {
+    console.log(`\n🚀 Submitting attestation request to FdcHub...`);
+    
+    try {
+      const fdcHubAddress = await this.getFdcHubAddress();
+      const fdcHubABI = this.getFdcHubABI();
+      const requestFee = await this.getAttestationRequestFee();
+      
+      if (!this.config.flareClient.signer) {
+        throw new Error("FdcHubClient requires a signer for transactions. Please provide OPERATOR_PRIVATE_KEY.");
+      }
+      
+      const fdcHub = new ethers.Contract(
+        fdcHubAddress,
+        fdcHubABI,
+        this.config.flareClient.signer
+      );
+      
+      console.log(`📤 Calling FdcHub.requestAttestation()...`);
+      console.log(`   FdcHub Address: ${fdcHubAddress}`);
+      console.log(`   Request Fee: ${ethers.formatEther(requestFee)} FLR`);
+      console.log(`   Encoded Request Length: ${abiEncodedRequest.length} chars`);
+      
+      // Submit attestation request with required fee
+      const tx = await fdcHub.requestAttestation(abiEncodedRequest, {
+        value: requestFee,
+      });
+      
+      console.log(`⏳ Transaction submitted: ${tx.hash}`);
+      console.log(`   Waiting for confirmation...`);
+      
+      const receipt = await tx.wait();
+      
+      console.log(`✅ Attestation request submitted on-chain`);
+      console.log(`   Tx Hash: ${receipt.hash}`);
+      console.log(`   Block Number: ${receipt.blockNumber}`);
+      console.log(`   ⏰ Attestation will be processed in the calculated voting round`);
+      console.log(`   ⏰ Round should finalize in ~90-180 seconds`);
+      
+      return {
+        txHash: receipt.hash,
+        blockNumber: receipt.blockNumber,
+      };
+    } catch (error) {
+      console.error("❌ Failed to submit attestation request to FdcHub:", error);
+      throw error;
+    }
+  }
+}

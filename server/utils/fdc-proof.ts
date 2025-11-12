@@ -97,17 +97,23 @@ async function pollVerifierProof(
 
 /**
  * Generates a complete FDC proof for an XRPL transaction
- * This implements the full flow: prepareRequest -> calculate round -> poll FDC Verifier
+ * This implements the full flow: prepareRequest -> submit to FdcHub -> poll DA Layer
  * @param xrplTxHash - The XRPL transaction hash
  * @param network - The network (mainnet or coston2)
- * @param txTimestamp - Optional Unix timestamp of the XRPL transaction (for correct round calculation)
- * @returns Complete proof object with merkleProof array
+ * @param flareClient - FlareClient instance for FdcHub submission
+ * @param txTimestamp - Optional Unix timestamp of the XRPL transaction (for logging/validation)
+ * @returns Object containing proof and attestation submission details
  */
 export async function generateFDCProof(
   xrplTxHash: string, 
   network: "mainnet" | "coston2",
+  flareClient: any,
   txTimestamp?: number
-): Promise<any> {
+): Promise<{
+  proof: any;
+  attestationTxHash: string;
+  votingRoundId: number;
+}> {
   // Step 1: Call prepareRequest endpoint
   const attestationUrl = network === "mainnet"
     ? "https://fdc-verifiers-mainnet.flare.network/verifier/xrp/Payment/prepareRequest"
@@ -190,21 +196,44 @@ export async function generateFDCProof(
     throw new Error(`Missing abiEncodedRequest in prepareRequest response. Status: ${prepareResult.status}`);
   }
   
-  console.log("\n📋 Step 2: Calculate Voting Round ID");
-  console.log("  ABI Encoded Request:", abiEncodedRequest);
+  console.log("\n📋 Step 2: Calculate Voting Round ID from XRPL Transaction");
   console.log("  Round Offset (sec):", roundOffsetSec);
   console.log("  Round Duration (sec):", roundDurationSec);
   
-  // Step 3: Calculate voting round ID
-  // Use provided txTimestamp (from XRPL transaction) or fallback to current time
-  const timestamp = txTimestamp || Math.floor(Date.now() / 1000);
-  const votingRoundId = Math.floor((timestamp - roundOffsetSec) / roundDurationSec);
+  // Calculate voting round ID from XRPL transaction timestamp
+  // This MUST use the XRPL transaction timestamp, not the FdcHub submission timestamp
+  // to ensure we're querying the correct round in the Data Availability Layer
+  const xrplTxTimestamp = txTimestamp || Math.floor(Date.now() / 1000);
+  const votingRoundId = Math.floor((xrplTxTimestamp - roundOffsetSec) / roundDurationSec);
   
-  console.log("  Transaction Timestamp:", timestamp, txTimestamp ? "(from XRPL tx)" : "(current time fallback)");
+  console.log("  XRPL Tx Timestamp:", xrplTxTimestamp, txTimestamp ? "(from XRPL tx)" : "(current time fallback)");
   console.log("  Calculated Voting Round ID:", votingRoundId);
+  console.log("  Formula: floor((timestamp - offset) / duration) = floor((" + xrplTxTimestamp + " - " + roundOffsetSec + ") / " + roundDurationSec + ") = " + votingRoundId);
   
-  // Step 4: Poll FDC Verifier for the finalized proof
-  console.log("\n📋 Step 3: Poll FDC Verifier API for Proof");
+  console.log("\n📋 Step 3: Submit Attestation to FdcHub (On-Chain)");
+  console.log("  ABI Encoded Request:", abiEncodedRequest);
+  
+  // Import and initialize FdcHubClient
+  const { FdcHubClient } = await import("./fdchub-client");
+  const fdcHubClient = new FdcHubClient({
+    network,
+    flareClient
+  });
+  
+  // Submit attestation request to FdcHub on-chain
+  // Note: We don't use the submission block timestamp for round calculation
+  // because we need to use the XRPL transaction timestamp for correct round
+  const attestationSubmission = await fdcHubClient.submitAttestationRequest(abiEncodedRequest);
+  
+  console.log("✅ Attestation submitted to FdcHub on-chain");
+  console.log("  Tx Hash:", attestationSubmission.txHash);
+  console.log("  Block Number:", attestationSubmission.blockNumber);
+  console.log("  Expected Voting Round:", votingRoundId);
+  
+  // Step 4: Poll Data Availability Layer for the finalized proof
+  console.log("\n📋 Step 4: Poll Data Availability Layer for Proof");
+  console.log("  Using Voting Round ID:", votingRoundId);
+  console.log("  Waiting for voting round to finalize (~90-180 seconds)...");
   const proof = await pollVerifierProof(votingRoundId, abiEncodedRequest, network);
   
   console.log("\n✅ FDC Proof Generation Complete!");
@@ -217,6 +246,14 @@ export async function generateFDCProof(
   console.log("  Has Response:", !!proof.response);
   console.log("  Verification Status:", proof.verificationStatus);
   console.log("  Attestation Status:", proof.attestationStatus);
+  console.log("\n📤 Attestation Submission Details:");
+  console.log("  FdcHub Tx Hash:", attestationSubmission.txHash);
+  console.log("  Voting Round ID (from XRPL tx):", votingRoundId);
+  console.log("  Round Parameters: offset=" + roundOffsetSec + "s, duration=" + roundDurationSec + "s");
   
-  return proof;
+  return {
+    proof,
+    attestationTxHash: attestationSubmission.txHash,
+    votingRoundId: votingRoundId,
+  };
 }
