@@ -66,3 +66,25 @@ Preferred communication style: Simple, everyday language.
     - **Verifier Service**: `fdc-verifiers-testnet.flare.network`.
     - **FdcHub Integration**: On-chain attestation submission workflow.
     - **Voting Round Calculation**: Uses Flare's official hardcoded constants (firstRoundStartTime=1658430000, roundDuration=90s) per official documentation at dev.flare.network/fdc/guides/fdc-by-hand/.
+
+## Recent Changes (November 12, 2025)
+
+### Fixed FXRP Integration Issues
+1. **Dynamic FXRP Address Resolution**: Services now fetch correct FXRP token address (0x0b6A3645c240605887a5532109323A3E12273dc7) dynamically from AssetManager instead of using hardcoded wrong address (0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3).
+2. **Optimistic Balance Tracking**: BridgeService now reads actual minted FXRP from Transfer event logs instead of assuming fxrpReceived = fxrpExpected.
+3. **Decimal Formatting Updates**: Updated VaultService, YieldService, BridgeService, and all diagnostic scripts to use formatUnits/parseUnits with proper decimal precision.
+4. **Vault Contract Fixes**: Fixed minDeposit parameter and redeployed ShXRPVault with dynamically-fetched FXRP address.
+
+### Current Deployment Status
+- **Smart Account**: 0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd (Etherspot Prime SDK ERC-4337)
+- **ShXRPVault**: 0x1CE23bAEC4bb9709F827082d24a83d8Bc8865249 (redeployed with correct FXRP)
+- **FXRP Token (Correct)**: 0x0b6A3645c240605887a5532109323A3E12273dc7
+- **Smart Account Balance**: 145 FXRP, 70.67 CFLR
+
+### Known Issues
+- **Decimal Mismatch**: FXRP token on Coston2 reports 18 decimals on-chain via decimals() method, but AssetManager.assetMintingDecimals() returns 6. This creates a mismatch where:
+  - Service layer formats values using 6 decimals (parseUnits(amount, 6))
+  - Vault contract expects 18-decimal values (inherits from OpenZeppelin ERC4626)
+  - Deposit transactions fail with "execution reverted" because amounts are 10^12 times too small
+- **Root Cause**: Need to either (a) update service layer to use 18 decimals everywhere, or (b) override vault's convertToShares/convertToAssets to handle 6-decimal math
+- **Impact**: XRP → FXRP bridging works successfully, but FXRP → shXRP vault deposits fail during gas estimation
