@@ -121,6 +121,8 @@ export class XRPLDepositListener {
   }
 
   private async handleTransaction(tx: any) {
+    // XRPL WebSocket sends various message types - only process ones with transaction data
+    if (!tx.transaction) return;
     if (tx.transaction.TransactionType !== "Payment") return;
     if (typeof tx.transaction.Amount !== "string") return;
 
