@@ -225,19 +225,20 @@ export async function generateFDCProof(
   console.log("  Block Number:", attestationSubmission.blockNumber);
   console.log("  Block Timestamp:", attestationSubmission.blockTimestamp);
   
-  console.log("\n📋 Step 3: Calculate Voting Round ID from On-Chain VotingRounds Contract");
+  console.log("\n📋 Step 3: Calculate Voting Round ID Using Flare's Official Constants");
   
-  // CRITICAL FIX: Fetch voting round parameters from on-chain VotingRounds contract
-  // The prepareRequest API does NOT return round parameters - they must be fetched from blockchain
+  // Use Flare's official hardcoded voting round constants
+  // Per Flare documentation, these constants are the same across all networks
+  // Source: https://dev.flare.network/fdc/guides/fdc-by-hand/
   const votingRoundConfig = await fdcHubClient.getVotingRoundConfig();
   const votingRoundId = await fdcHubClient.getVotingRoundId(attestationSubmission.blockTimestamp);
   
-  console.log("  ✅ Voting Round ID calculated from on-chain VotingRounds contract:");
+  console.log("  ✅ Voting Round ID calculated using Flare's official constants:");
   console.log("     Block Timestamp:", attestationSubmission.blockTimestamp, `(${new Date(attestationSubmission.blockTimestamp * 1000).toISOString()})`);
   console.log("     Calculated Voting Round ID:", votingRoundId);
   console.log("     Round Offset:", votingRoundConfig.roundOffsetSec, `sec (${new Date(votingRoundConfig.roundOffsetSec * 1000).toISOString()})`);
   console.log("     Round Duration:", votingRoundConfig.roundDurationSec, "sec");
-  console.log("     Source: VotingRounds contract (fetched via FdcHubClient)");
+  console.log("     Source: Flare's official hardcoded constants (documented at dev.flare.network)");
   
   // Step 4: Wait for voting round to finalize, then poll Data Availability Layer
   console.log("\n📋 Step 4: Wait for Voting Round Finalization");

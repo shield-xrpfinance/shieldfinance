@@ -21,13 +21,16 @@ export interface VotingRoundConfig {
 }
 
 /**
- * Minimal VotingRounds ABI for querying round parameters
- * Since full ABI isn't in flare-periphery-contract-artifacts, we use minimal interface
+ * Flare FDC Voting Round Constants
+ * These values are hardcoded per Flare's official documentation and are the same
+ * across all Flare networks (Coston, Coston2, Songbird, Flare mainnet)
+ * 
+ * Source: https://dev.flare.network/fdc/guides/fdc-by-hand/
+ * 
+ * Formula: votingRoundId = floor((blockTimestamp - FIRST_VOTING_ROUND_START_TS) / VOTING_ROUND_DURATION_SEC)
  */
-const VOTING_ROUNDS_ABI = [
-  "function firstRoundStartTime() view returns (uint256)",
-  "function roundLength() view returns (uint256)"
-];
+const FIRST_VOTING_ROUND_START_TS = 1658430000; // July 21, 2022, 21:26:40 UTC
+const VOTING_ROUND_DURATION_SEC = 90; // 90 seconds per round
 
 /**
  * FdcHubClient handles attestation request submissions to Flare Data Connector Hub
@@ -35,9 +38,16 @@ const VOTING_ROUNDS_ABI = [
  * Attestation Flow:
  * 1. Get encoded attestation request from FDC verifier (prepareRequest)
  * 2. Submit to FdcHub on-chain (requestAttestation) - THIS CLASS
- * 3. Wait for voting round finalization (~90-180 seconds)
- * 4. Poll Data Availability Layer for proof
- * 5. Use proof in smart contract verification
+ * 3. Calculate voting round ID using Flare's official hardcoded constants
+ * 4. Wait for voting round finalization (~90-180 seconds)
+ * 5. Poll Data Availability Layer for proof
+ * 6. Use proof in smart contract verification
+ * 
+ * Voting Round Calculation:
+ * Uses Flare's official hardcoded constants (same across all networks):
+ * - firstRoundStartTime: 1658430000 (July 21, 2022, 21:26:40 UTC)
+ * - roundDuration: 90 seconds
+ * Formula: votingRoundId = floor((blockTimestamp - 1658430000) / 90)
  */
 export class FdcHubClient {
   private config: FdcHubConfig;
@@ -371,8 +381,14 @@ export class FdcHubClient {
   }
 
   /**
-   * Fetch and cache voting round configuration from on-chain VotingRounds contract
-   * This is used to calculate the voting round ID for FDC proof polling
+   * Get voting round configuration using Flare's official hardcoded constants
+   * 
+   * Per Flare's official documentation, voting round parameters are fixed constants
+   * that are the same across all Flare networks (Coston, Coston2, Songbird, Flare mainnet).
+   * 
+   * These constants are used to calculate the voting round ID for FDC proof polling.
+   * 
+   * @returns Voting round configuration with roundOffsetSec and roundDurationSec
    */
   async getVotingRoundConfig(): Promise<VotingRoundConfig> {
     // Return cached config if available
@@ -380,66 +396,37 @@ export class FdcHubClient {
       return this.votingRoundConfig;
     }
 
-    try {
-      console.log("📡 Fetching voting round configuration from on-chain VotingRounds contract...");
-      
-      // Get VotingRounds contract address from contract registry
-      const networkAlias = this.config.network === "mainnet" ? "flare" : "coston2";
-      const votingRoundsAddress = await nameToAddress("VotingRounds", networkAlias, this.config.flareClient.provider);
-      
-      if (!votingRoundsAddress || votingRoundsAddress === ethers.ZeroAddress) {
-        throw new Error(`VotingRounds contract address not found for network ${networkAlias}`);
-      }
-      
-      console.log(`   VotingRounds address: ${votingRoundsAddress}`);
-      
-      // Create contract instance with minimal ABI
-      const votingRoundsContract = new ethers.Contract(
-        votingRoundsAddress,
-        VOTING_ROUNDS_ABI,
-        this.config.flareClient.provider
+    // Use Flare's official hardcoded constants
+    // These are documented at: https://dev.flare.network/fdc/guides/fdc-by-hand/
+    const roundOffsetSec = FIRST_VOTING_ROUND_START_TS;
+    const roundDurationSec = VOTING_ROUND_DURATION_SEC;
+    
+    // Validate constants (sanity check)
+    if (roundDurationSec <= 0 || !Number.isFinite(roundDurationSec)) {
+      throw new Error(
+        `Invalid voting round duration constant: ${roundDurationSec}. ` +
+        `Expected a positive number.`
       );
-      
-      // Fetch round parameters
-      const [firstRoundStartTime, roundLength] = await Promise.all([
-        votingRoundsContract.firstRoundStartTime(),
-        votingRoundsContract.roundLength()
-      ]);
-      
-      // Convert BigNumber to number
-      const roundOffsetSec = Number(firstRoundStartTime);
-      const roundDurationSec = Number(roundLength);
-      
-      // Validate round parameters
-      if (roundDurationSec <= 0 || !Number.isFinite(roundDurationSec)) {
-        throw new Error(
-          `Invalid round duration from VotingRounds contract: ${roundDurationSec}. ` +
-          `Expected a positive number.`
-        );
-      }
-      
-      if (!Number.isFinite(roundOffsetSec)) {
-        throw new Error(
-          `Invalid round offset from VotingRounds contract: ${roundOffsetSec}. ` +
-          `Expected a finite number.`
-        );
-      }
-      
-      // Cache the configuration
-      this.votingRoundConfig = {
-        roundOffsetSec,
-        roundDurationSec
-      };
-      
-      console.log("✅ Voting round configuration fetched:");
-      console.log(`   Round Offset: ${roundOffsetSec} sec (${new Date(roundOffsetSec * 1000).toISOString()})`);
-      console.log(`   Round Duration: ${roundDurationSec} sec`);
-      
-      return this.votingRoundConfig;
-    } catch (error) {
-      console.error("❌ Failed to fetch voting round configuration:", error);
-      throw new Error(`Failed to fetch voting round configuration from VotingRounds contract: ${error}`);
     }
+    
+    if (!Number.isFinite(roundOffsetSec)) {
+      throw new Error(
+        `Invalid voting round offset constant: ${roundOffsetSec}. ` +
+        `Expected a finite number.`
+      );
+    }
+    
+    // Cache the configuration
+    this.votingRoundConfig = {
+      roundOffsetSec,
+      roundDurationSec
+    };
+    
+    console.log("✅ Using Flare's official voting round constants:");
+    console.log(`   Round Offset: ${roundOffsetSec} sec (${new Date(roundOffsetSec * 1000).toISOString()})`);
+    console.log(`   Round Duration: ${roundDurationSec} sec`);
+    
+    return this.votingRoundConfig;
   }
 
   /**
