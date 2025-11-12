@@ -292,23 +292,34 @@ export class BridgeService {
    * Returns normalized payment payload for wallet signing
    */
   buildPaymentRequest(bridge: SelectXrpToFxrpBridge): PaymentRequest | null {
+    console.log("=== buildPaymentRequest CALLED ===", {
+      bridgeId: bridge.id,
+      agentUnderlyingAddress: bridge.agentUnderlyingAddress,
+      xrpAmount: bridge.xrpAmount,
+      status: bridge.status,
+    });
+
     if (!bridge.agentUnderlyingAddress) {
-      console.warn(`Bridge ${bridge.id} does not have agent address yet`);
+      console.warn(`⚠️  Bridge ${bridge.id} does not have agent address yet - cannot build payment request`);
       return null;
     }
 
     const xrpAmount = parseFloat(bridge.xrpAmount.toString());
     const amountDrops = Math.floor(xrpAmount * 1_000_000).toString();
 
-    const network = this.config.network === "mainnet" ? "mainnet" : "testnet";
+    const network: "mainnet" | "testnet" = this.config.network === "mainnet" ? "mainnet" : "testnet";
 
-    return {
+    const paymentRequest: PaymentRequest = {
       bridgeId: bridge.id,
       destination: bridge.agentUnderlyingAddress,
       amountDrops,
       memo: bridge.id,
       network,
     };
+
+    console.log("✅ Payment request built:", paymentRequest);
+
+    return paymentRequest;
   }
 
   /**

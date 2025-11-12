@@ -193,6 +193,14 @@ export default function Vaults() {
 
         const data = await response.json();
 
+        console.log("=== POST /api/deposits RESPONSE ===", {
+          success: data.success,
+          bridgeId: data.bridgeId,
+          paymentRequest: data.paymentRequest,
+          paymentRequestExists: !!data.paymentRequest,
+          demo: data.demo,
+        });
+
         if (!response.ok || !data.success) {
           throw new Error(data.error || "Failed to create deposit");
         }
@@ -205,10 +213,20 @@ export default function Vaults() {
         });
         setBridgeStatusModalOpen(true);
 
+        console.log("=== CHECKING AUTO-TRIGGER CONDITIONS ===", {
+          paymentRequestExists: !!data.paymentRequest,
+          providerExists: !!provider,
+          providerType: provider,
+          walletConnectProviderExists: !!walletConnectProvider,
+        });
+
         // Auto-trigger payment request if available
         if (data.paymentRequest && provider) {
+          console.log("✅ Auto-triggering payment request with:", data.paymentRequest);
           try {
             const paymentResult = await requestPayment(data.paymentRequest);
+            
+            console.log("=== PAYMENT REQUEST RESULT ===", paymentResult);
             
             if (paymentResult.success) {
               if (provider === "xaman" && paymentResult.payloadUuid) {
@@ -226,19 +244,24 @@ export default function Vaults() {
                 });
               }
             } else {
-              console.warn("Payment request failed:", paymentResult.error);
+              console.warn("⚠️ Payment request failed:", paymentResult.error);
               toast({
                 title: "Payment Request Info",
                 description: "Please manually send the payment to complete the bridge. Details in the bridge status modal.",
               });
             }
           } catch (paymentError) {
-            console.error("Payment request error:", paymentError);
+            console.error("❌ Payment request exception:", paymentError);
             toast({
               title: "Payment Request Failed",
               description: "Please manually send the payment to complete the bridge.",
             });
           }
+        } else {
+          console.log("❌ Auto-trigger skipped - missing conditions:", {
+            hasPaymentRequest: !!data.paymentRequest,
+            hasProvider: !!provider,
+          });
         }
 
         toast({

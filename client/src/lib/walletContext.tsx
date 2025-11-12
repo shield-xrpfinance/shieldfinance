@@ -90,7 +90,15 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const requestPayment = async (paymentRequest: PaymentRequest): Promise<PaymentRequestResult> => {
+    console.log("=== requestPayment CALLED ===", {
+      provider,
+      paymentRequest,
+      address,
+      walletConnectProviderExists: !!walletConnectProvider,
+    });
+
     if (!provider) {
+      console.error("❌ requestPayment: No provider");
       return {
         success: false,
         error: "No wallet connected",
@@ -99,6 +107,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     try {
       if (provider === "xaman") {
+        console.log("📱 Routing to Xaman payment...");
         const response = await fetch("/api/wallet/xaman/payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -115,6 +124,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
 
         const data = await response.json();
+        console.log("✅ Xaman payment payload created:", data);
         return {
           success: true,
           payloadUuid: data.uuid,
@@ -122,7 +132,13 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           deepLink: data.deepLink,
         };
       } else if (provider === "walletconnect") {
+        console.log("🔗 Routing to WalletConnect payment...");
+        
         if (!walletConnectProvider || !address) {
+          console.error("❌ WalletConnect not initialized:", {
+            walletConnectProviderExists: !!walletConnectProvider,
+            addressExists: !!address,
+          });
           return {
             success: false,
             error: "WalletConnect not properly initialized",
@@ -143,6 +159,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           ],
         };
 
+        console.log("📤 Sending WalletConnect transaction:", tx);
+
         const result = await walletConnectProvider.request({
           method: "xrpl_signAndSubmit",
           params: {
@@ -150,23 +168,27 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           },
         }) as any;
 
+        console.log("✅ WalletConnect result:", result);
+
         return {
           success: true,
           txHash: result?.tx_json?.hash || "pending",
         };
       } else if (provider === "web3auth") {
+        console.log("⚠️ Web3Auth payment not implemented");
         return {
           success: false,
           error: "Web3Auth payment requests not yet implemented",
         };
       }
 
+      console.error("❌ Unknown provider:", provider);
       return {
         success: false,
         error: "Unknown provider",
       };
     } catch (error) {
-      console.error("Payment request error:", error);
+      console.error("❌ Payment request error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",

@@ -121,19 +121,55 @@ export class XRPLDepositListener {
   }
 
   private async handleTransaction(tx: any) {
+    console.log("=== XRPL Transaction Received ===", {
+      hasTransaction: !!tx.transaction,
+      type: tx.transaction?.TransactionType,
+      destination: tx.transaction?.Destination,
+    });
+
     // XRPL WebSocket sends various message types - only process ones with transaction data
-    if (!tx.transaction) return;
-    if (tx.transaction.TransactionType !== "Payment") return;
-    if (typeof tx.transaction.Amount !== "string") return;
+    if (!tx.transaction) {
+      console.log("⏭️  Skipping - no transaction data");
+      return;
+    }
+    
+    if (tx.transaction.TransactionType !== "Payment") {
+      console.log(`⏭️  Skipping - not a Payment (type: ${tx.transaction.TransactionType})`);
+      return;
+    }
+    
+    if (typeof tx.transaction.Amount !== "string") {
+      console.log("⏭️  Skipping - Amount is not a string (possibly IOU/token)");
+      return;
+    }
 
     const destination = tx.transaction.Destination;
     const isVaultPayment = this.config.vaultAddress && destination === this.config.vaultAddress;
     const isAgentPayment = this.monitoredAgentAddresses.has(destination);
 
-    if (!isVaultPayment && !isAgentPayment) return;
+    console.log("=== Matching Transaction Against Monitored Addresses ===", {
+      destination,
+      vaultAddress: this.config.vaultAddress,
+      isVaultPayment,
+      monitoredAgentAddresses: Array.from(this.monitoredAgentAddresses),
+      isAgentPayment,
+    });
+
+    if (!isVaultPayment && !isAgentPayment) {
+      console.log("⏭️  Skipping - destination not monitored");
+      return;
+    }
 
     const amount = (parseInt(tx.transaction.Amount) / 1_000_000).toString();
     const memo = this.extractMemo(tx.transaction.Memos);
+
+    console.log("=== Transaction Details ===", {
+      from: tx.transaction.Account,
+      to: destination,
+      amount,
+      memo,
+      txHash: tx.transaction.hash,
+    });
 
     if (isVaultPayment && this.config.onDeposit) {
       const deposit: DetectedDeposit = {
@@ -148,7 +184,7 @@ export class XRPLDepositListener {
       try {
         await this.config.onDeposit(deposit);
       } catch (error) {
-        console.error("Error handling deposit:", error);
+        console.error("❌ Error handling deposit:", error);
       }
     } else if (isAgentPayment && this.config.onAgentPayment) {
       const payment: AgentPayment = {
@@ -164,8 +200,15 @@ export class XRPLDepositListener {
       try {
         await this.config.onAgentPayment(payment);
       } catch (error) {
-        console.error("Error handling agent payment:", error);
+        console.error("❌ Error handling agent payment:", error);
       }
+    } else {
+      console.log("⚠️  No handler configured for this payment type:", {
+        isVaultPayment,
+        hasDepositHandler: !!this.config.onDeposit,
+        isAgentPayment,
+        hasAgentHandler: !!this.config.onAgentPayment,
+      });
     }
   }
 
