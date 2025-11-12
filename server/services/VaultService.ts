@@ -54,9 +54,15 @@ export class VaultService {
       await approveTx.wait();
 
       // Deposit FXRP to mint shXRP shares (ERC-4626 standard)
+      // Note: shXRP shares are minted to the smart account (custodial model)
+      // User ownership is tracked in the positions table via walletAddress
+      const smartAccountAddress = this.config.flareClient.getSignerAddress();
+      console.log(`  Minting shXRP to smart account: ${smartAccountAddress}`);
+      console.log(`  User's XRP wallet (tracked in DB): ${userAddress}`);
+      
       const depositTx = await vaultContract.deposit(
         ethers.parseEther(fxrpAmount),
-        userAddress // Receiver of shares
+        smartAccountAddress // Mint shares to smart account (not user's XRP address)
       );
 
       const receipt = await depositTx.wait();
