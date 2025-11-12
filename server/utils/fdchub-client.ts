@@ -196,14 +196,12 @@ export class FdcHubClient {
       const feeConfigAddress = await this.getFeeConfigAddress();
       const feeConfigABI = this.getFeeConfigABI();
       
-      if (!this.config.flareClient.signer) {
-        throw new Error("FdcHubClient requires a signer. Please provide OPERATOR_PRIVATE_KEY.");
-      }
+      const signer = this.config.flareClient.getContractSigner();
       
       const feeConfig = new ethers.Contract(
         feeConfigAddress,
         feeConfigABI,
-        this.config.flareClient.signer
+        signer
       );
       
       console.log(`🔍 Querying attestation request fee...`);
@@ -241,14 +239,12 @@ export class FdcHubClient {
       const fdcHubABI = this.getFdcHubABI();
       const requestFee = await this.getAttestationRequestFee(abiEncodedRequest);
       
-      if (!this.config.flareClient.signer) {
-        throw new Error("FdcHubClient requires a signer for transactions. Please provide OPERATOR_PRIVATE_KEY.");
-      }
+      const signer = this.config.flareClient.getContractSigner();
       
       const fdcHub = new ethers.Contract(
         fdcHubAddress,
         fdcHubABI,
-        this.config.flareClient.signer
+        signer
       );
       
       console.log(`📤 Calling FdcHub.requestAttestation()...`);
