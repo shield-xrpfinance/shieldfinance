@@ -191,7 +191,7 @@ app.use((req, res, next) => {
         receivedDrops = BigInt(dropsString);
         
         // Validate non-zero positive amount
-        if (receivedDrops <= 0n) {
+        if (receivedDrops <= BigInt(0)) {
           throw new Error('Amount must be positive');
         }
       } catch (error) {
