@@ -123,9 +123,13 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   vaultMintTxHash: text("vault_mint_tx_hash"),
   
   collateralReservationId: varchar("collateral_reservation_id"),
+  paymentReference: varchar("payment_reference"),
   agentVaultAddress: varchar("agent_vault_address"),
   agentUnderlyingAddress: varchar("agent_underlying_address"),
   mintingFeeBIPS: varchar("minting_fee_bips"),
+  reservedValueUBA: varchar("reserved_value_uba"),
+  reservedFeeUBA: varchar("reserved_fee_uba"),
+  reservationTxHash: varchar("reservation_tx_hash"),
   collateralReservationFeePaid: varchar("collateral_reservation_fee_paid"),
   reservationExpiry: timestamp("reservation_expiry"),
   lastUnderlyingBlock: varchar("last_underlying_block"),
