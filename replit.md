@@ -77,14 +77,29 @@ Preferred communication style: Simple, everyday language.
 
 ### Current Deployment Status
 - **Smart Account**: 0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd (Etherspot Prime SDK ERC-4337)
-- **ShXRPVault**: 0x1CE23bAEC4bb9709F827082d24a83d8Bc8865249 (redeployed with correct FXRP)
-- **FXRP Token (Correct)**: 0x0b6A3645c240605887a5532109323A3E12273dc7
+- **ShXRPVault (NEW)**: 0x8fe09217445e90DA692D29F30859dafA4eb281d1 (with correct decimals override)
+- **ShXRPVault (OLD)**: 0x1CE23bAEC4bb9709F827082d24a83d8Bc8865249 (deprecated - wrong decimals)
+- **FXRP Token**: 0x0b6A3645c240605887a5532109323A3E12273dc7
 - **Smart Account Balance**: 145 FXRP, 70.67 CFLR
 
-### Known Issues
-- **Decimal Mismatch**: FXRP token on Coston2 reports 18 decimals on-chain via decimals() method, but AssetManager.assetMintingDecimals() returns 6. This creates a mismatch where:
-  - Service layer formats values using 6 decimals (parseUnits(amount, 6))
-  - Vault contract expects 18-decimal values (inherits from OpenZeppelin ERC4626)
-  - Deposit transactions fail with "execution reverted" because amounts are 10^12 times too small
-- **Root Cause**: Need to either (a) update service layer to use 18 decimals everywhere, or (b) override vault's convertToShares/convertToAssets to handle 6-decimal math
-- **Impact**: XRP → FXRP bridging works successfully, but FXRP → shXRP vault deposits fail during gas estimation
+### ✅ DECIMAL MISMATCH RESOLVED (November 12, 2025)
+**Problem**: FXRP uses 6 decimals, but ShXRPVault inherited ERC4626's default 18 decimals, causing "Below minimum deposit" errors.
+
+**Solution Applied**:
+1. **Overrode decimals() in ShXRPVault**: Added `function decimals() public view override returns (uint8) { return IERC20Metadata(address(asset())).decimals(); }` to match FXRP's 6 decimals
+2. **Redeployed Vault**: New vault at 0x8fe09217445e90DA692D29F30859dafA4eb281d1 with correct decimal handling
+3. **Fixed minDeposit**: Corrected from 10^16 to 10000 (0.01 FXRP with 6 decimals)
+4. **Updated VaultService**: Now reads vault address from timestamped deployment files instead of environment variables
+
+**Verification**:
+- ✅ Vault.decimals() = 6 (matches FXRP)
+- ✅ MinDeposit = 10000 (0.01 FXRP)
+- ✅ End-to-end deposit successful: Transaction 0x92c1c5f834bb3e15d09996df4f10c9467a05a8afc20d55a528fcf0508e1acc32
+- ✅ Position created: 0bb1e2b9-a63a-405f-92c5-8e2a61bfbc8c
+- ✅ Full flow working: XRP → FXRP → shXRP
+
+**Decimal Handling Documentation**:
+- Database stores FXRP amounts as numeric (e.g., 20.000000)
+- BridgeService passes decimal strings to VaultService.mintShares()
+- VaultService uses parseUnits(amount, 6) to convert to raw units
+- All conversions now properly aligned with FXRP's 6-decimal standard

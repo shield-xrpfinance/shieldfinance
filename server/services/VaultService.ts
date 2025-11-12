@@ -69,7 +69,14 @@ export class VaultService {
   /**
    * Mint vault shares using ERC-4626 deposit function
    * 
+   * @param vaultId - Vault identifier from database
+   * @param userAddress - User's XRP wallet address (for position tracking)
+   * @param fxrpAmount - FXRP amount in decimal format (e.g., "20.000000" for 20 FXRP, NOT raw units)
    * @returns Object containing vaultMintTxHash and positionId
+   * 
+   * NOTE: fxrpAmount MUST be in decimal format (human-readable), not raw units.
+   * This function converts to raw units using parseUnits(fxrpAmount, 6) since FXRP uses 6 decimals.
+   * Calling code (BridgeService) provides bridge.fxrpReceived.toString() which is a decimal string.
    */
   async mintShares(
     vaultId: string,
