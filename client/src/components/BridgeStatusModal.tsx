@@ -136,12 +136,12 @@ export default function BridgeStatusModal({
   };
 
   const handleCopyMemo = () => {
-    if (bridge?.id) {
-      // Copy plain UUID - Xaman wallet will hex-encode it automatically
-      navigator.clipboard.writeText(bridge.id);
+    if (bridge?.paymentReference) {
+      // Copy FAssets payment reference (64-char hex from CollateralReserved event)
+      navigator.clipboard.writeText(bridge.paymentReference);
       toast({
         title: "Copied!",
-        description: "MEMO copied to clipboard",
+        description: "Payment reference copied to clipboard",
       });
     }
   };
@@ -381,6 +381,10 @@ export default function BridgeStatusModal({
                 {bridge.status}
               </Badge>
             </div>
+            <div className="flex items-center justify-between pt-2 border-t border-muted-foreground/20">
+              <span className="text-xs text-muted-foreground">Bridge ID (for support)</span>
+              <span className="text-xs font-mono text-muted-foreground">{bridge.id.slice(0, 8)}...{bridge.id.slice(-8)}</span>
+            </div>
           </div>
 
           {/* Agent Address - only show if available and not completed */}
@@ -408,24 +412,25 @@ export default function BridgeStatusModal({
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium">MEMO (Required):</p>
-                        <Badge variant="outline" className="text-xs">Must include</Badge>
+                        <p className="font-medium">Payment Reference (Memo):</p>
+                        <Badge variant="outline" className="text-xs">Required</Badge>
                       </div>
                       <div className="flex items-center gap-2 p-3 rounded-md bg-background border">
                         <code className="flex-1 text-sm break-all font-mono" data-testid="text-payment-memo">
-                          {bridge.id}
+                          {bridge.paymentReference || "Generating..."}
                         </code>
                         <Button
                           size="icon"
                           variant="ghost"
                           onClick={handleCopyMemo}
                           data-testid="button-copy-memo"
+                          disabled={!bridge.paymentReference}
                         >
                           <Copy className="h-4 w-4" />
                         </Button>
                       </div>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Wallet will hex-encode automatically - do NOT manually encode
+                        This unique FAssets reference must be included in your XRP payment memo
                       </p>
                     </div>
 
