@@ -57,8 +57,8 @@ const statusConfig = {
   },
   xrpl_confirmed: {
     icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
-    title: "Payment Detected",
-    description: "Payment detected! Generating proof...",
+    title: "Processing Proof",
+    description: "Payment confirmed! Generating cryptographic proof... This typically takes 3-5 minutes. Please wait.",
     step: 3,
     color: "bg-blue-500",
   },

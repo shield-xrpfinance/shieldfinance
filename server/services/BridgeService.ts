@@ -221,6 +221,14 @@ export class BridgeService {
       throw new Error("No collateral reservation found for this bridge");
     }
     
+    // Update status to xrpl_confirmed BEFORE starting proof generation
+    // This shows the user that payment was detected and proof generation is in progress
+    await this.config.storage.updateBridgeStatus(bridgeId, "xrpl_confirmed", {
+      xrplTxHash,
+      xrplConfirmedAt: new Date(),
+    });
+    console.log(`✅ Bridge status updated to xrpl_confirmed, starting proof generation...`);
+    
     try {
       // Fetch XRPL transaction to get accurate timestamp for voting round calculation
       const { Client } = await import("xrpl");
