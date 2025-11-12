@@ -8,6 +8,26 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### November 12, 2025 - Complete Fee Disclosure System - COMPLETED
+- **💰 Transparent Fee System Implemented**: Users now see complete fee breakdown before confirming deposits
+- **Schema Enhancement**: Added `totalAmountUBA` field to `xrp_to_fxrp_bridges` table to store total payment amount
+- **Backend Changes**:
+  - BridgeService calculates and persists total amount (base + 0.25% fee) during collateral reservation
+  - buildPaymentRequest updated to use `totalAmountUBA` ensuring wallet payment requests include correct total
+  - API responses enhanced to include fee breakdown: `reservedFeeUBA`, `totalAmountUBA` alongside base `xrpAmount`
+- **Frontend Transparency**:
+  - DepositModal Step 1: Shows fee calculation preview ("FAssets Bridge Fee (0.25%): X XRP")
+  - DepositModal Step 2: Displays detailed breakdown ("Deposit + Fee = Total Payment")
+  - BridgeStatusModal: Shows fee breakdown when displaying payment QR code and instructions
+  - BridgeTracking: Fixed type import (using `Vault` instead of non-existent `SelectVault`)
+- **User Experience**:
+  - Fee disclosed upfront before user confirms deposit (no surprises)
+  - Consistent display across all UI touchpoints
+  - Payment requests include correct total amount preventing rejections
+  - Legacy bridge support via fallback to base amount when total not available
+- **Verification**: Architect reviewed and approved implementation. Manual testing confirmed API endpoint working (200 OK), no errors in console
+- **Files Modified**: `shared/schema.ts`, `server/services/BridgeService.ts`, `server/routes.ts`, `client/src/components/DepositModal.tsx`, `client/src/components/BridgeStatusModal.tsx`, `client/src/pages/BridgeTracking.tsx`
+
 ### November 12, 2025 - Flare Smart Accounts (ERC-4337) - COMPLETED
 - **🔐 Smart Account Implementation Complete**: Fully implemented ERC-4337 account abstraction using Etherspot Prime SDK
 - **Architecture**: Smart account exclusive mode (no EOA fallback)
