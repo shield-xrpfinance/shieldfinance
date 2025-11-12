@@ -22,8 +22,8 @@ export class YieldService {
     console.log(`📈 Depositing ${fxrpAmount} FXRP to Firelight vault`);
 
     try {
-      // Get FXRP token contract
-      const fxrpToken = this.config.flareClient.getFXRPToken() as any;
+      // Get FXRP token contract (now using dynamic address resolution)
+      const fxrpToken = await this.config.flareClient.getFXRPToken() as any;
 
       // Approve Firelight vault to spend FXRP
       const approveTx = await fxrpToken.approve(
@@ -39,18 +39,19 @@ export class YieldService {
           "function deposit(uint256 assets, address receiver) returns (uint256)",
           "function balanceOf(address) view returns (uint256)",
         ],
-        this.config.flareClient as any
+        this.config.flareClient.getContractSigner()
       );
 
+      const smartAccountAddress = this.config.flareClient.getSignerAddress();
       const depositTx = await firelightVault.deposit(
         ethers.parseEther(fxrpAmount),
-        (this.config.flareClient as any).address // Receive stXRP to vault's address
+        smartAccountAddress // Receive stXRP to smart account
       );
       const receipt = await depositTx.wait();
 
       // Get stXRP balance
       const stxrpBalance = await firelightVault.balanceOf(
-        (this.config.flareClient as any).address
+        smartAccountAddress
       );
 
       // Record position in database

@@ -45,8 +45,8 @@ export class VaultService {
       // Get vault contract with correct ABI
       const vaultContract = this.config.flareClient.getShXRPVault(vaultContractAddress) as any;
 
-      // Get FXRP token and approve vault
-      const fxrpToken = this.config.flareClient.getFXRPToken() as any;
+      // Get FXRP token and approve vault (now using dynamic address resolution)
+      const fxrpToken = await this.config.flareClient.getFXRPToken() as any;
       const approveTx = await fxrpToken.approve(
         vaultContractAddress,
         ethers.parseEther(fxrpAmount)

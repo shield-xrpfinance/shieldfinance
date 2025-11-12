@@ -71,8 +71,9 @@ export const FLARE_CONTRACTS = {
       // Flare Contract Registry (same address across all networks)
       contractRegistry: "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019",
       
-      // FXRP Token (Testnet) - CONFIRMED
-      fxrpToken: "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3",
+      // FXRP Token (Testnet) - ⚠️ DEPRECATED: Use FlareClient.getFAssetTokenAddress() instead
+      // This address is WRONG - only kept for backwards compatibility
+      fxrpToken: "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3", // DEPRECATED - DO NOT USE
       
       // AssetManager Contract
       // ⚠️ DO NOT HARDCODE - Retrieve dynamically via contractRegistry

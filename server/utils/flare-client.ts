@@ -3,6 +3,7 @@ import { FLARE_CONTRACTS } from "../../shared/flare-contracts";
 import { FIRELIGHT_VAULT_ABI } from "../../shared/flare-abis";
 import { SmartAccountClient } from "./smart-account-client";
 import { SmartAccountSigner } from "./smart-account-signer";
+import { nameToAddress } from "@flarenetwork/flare-periphery-contract-artifacts";
 
 // Vault Controller ABI (ERC-4626 wrapper with additional functionality)
 const VAULT_CONTROLLER_ABI = [
@@ -26,6 +27,7 @@ export class FlareClient {
   private network: "mainnet" | "coston2";
   private rpcUrl: string;
   private smartAccountClient: SmartAccountClient;
+  private fAssetTokenAddressCache: string | null = null;
 
   constructor(config: FlareClientConfig) {
     this.network = config.network;
@@ -69,8 +71,44 @@ export class FlareClient {
     return contract.connect(this.getContractSigner());
   }
 
-  getFXRPToken() {
-    const address = FLARE_CONTRACTS[this.network].fassets.fxrpToken;
+  /**
+   * Dynamically fetches the FAsset (FXRP) token address from AssetManager contract.
+   * Uses caching to avoid repeated on-chain calls.
+   * This ensures we always use the correct token address.
+   */
+  async getFAssetTokenAddress(): Promise<string> {
+    // Return cached address if available
+    if (this.fAssetTokenAddressCache) {
+      return this.fAssetTokenAddressCache;
+    }
+
+    // Get AssetManager address from Flare Contract Registry
+    const networkName = this.network;
+    const assetManagerAddress = await nameToAddress(
+      "AssetManagerFXRP",
+      networkName,
+      this.provider
+    );
+
+    // Query AssetManager for the fAsset token address
+    const assetManagerAbi = ["function fAsset() external view returns (address)"];
+    const assetManager = new ethers.Contract(assetManagerAddress, assetManagerAbi, this.provider);
+    const fAssetAddress = await assetManager.fAsset();
+
+    // Cache the result
+    this.fAssetTokenAddressCache = fAssetAddress;
+    
+    console.log(`✅ FXRP Token Address (from AssetManager): ${fAssetAddress}`);
+    
+    return fAssetAddress;
+  }
+
+  /**
+   * Returns an FXRP token contract instance with the dynamically resolved address.
+   * IMPORTANT: This is now async and resolves the token address from AssetManager.
+   */
+  async getFXRPToken() {
+    const address = await this.getFAssetTokenAddress();
     const ERC20_ABI = [
       "function balanceOf(address) view returns (uint256)",
       "function approve(address spender, uint256 amount) returns (bool)",
