@@ -1,19 +1,30 @@
 import hre from "hardhat";
+import { ethers as ethersLib } from "ethers";
 import * as fs from "fs";
 import * as path from "path";
 
 async function main() {
   console.log("🚀 Starting Flare deployment...\n");
 
-  // Get ethers from hre
-  const { ethers } = hre;
-
-  // Get deployer account
-  const [deployer] = await ethers.getSigners();
+  // Get network configuration
+  const network = hre.network;
+  console.log("📡 Network:", network.name);
+  
+  // Create provider and wallet
+  const provider = new ethersLib.JsonRpcProvider(
+    network.config.url,
+    { chainId: network.config.chainId, name: network.name }
+  );
+  
+  if (!process.env.DEPLOYER_PRIVATE_KEY) {
+    throw new Error("DEPLOYER_PRIVATE_KEY not set");
+  }
+  
+  const deployer = new ethersLib.Wallet(process.env.DEPLOYER_PRIVATE_KEY, provider);
   console.log("📝 Deploying contracts with account:", deployer.address);
   
-  const balance = await ethers.provider.getBalance(deployer.address);
-  console.log("💰 Account balance:", ethers.formatEther(balance), "FLR\n");
+  const balance = await provider.getBalance(deployer.address);
+  console.log("💰 Account balance:", ethersLib.formatEther(balance), "FLR\n");
 
   if (balance === 0n) {
     console.error("❌ Error: Deployer account has zero balance!");
