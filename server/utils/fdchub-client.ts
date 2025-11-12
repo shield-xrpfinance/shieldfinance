@@ -175,10 +175,23 @@ export class FdcHubClient {
   }
 
   /**
-   * Get attestation request fee for Payment type with XRP sourceId
+   * Get attestation request fee for the given encoded attestation request
+   * 
+   * The fee is keyed by the full ABI-encoded attestation request payload,
+   * which includes the attestation type and source ID.
+   * 
+   * @param abiEncodedRequest - The full ABI-encoded attestation request from prepareRequest
    */
-  private async getAttestationRequestFee(): Promise<bigint> {
+  private async getAttestationRequestFee(abiEncodedRequest: string): Promise<bigint> {
     try {
+      // Validate the encoded request format
+      if (!abiEncodedRequest.startsWith('0x')) {
+        throw new Error(`Invalid encoded request: must start with 0x, got: ${abiEncodedRequest.substring(0, 10)}...`);
+      }
+      if (abiEncodedRequest.length % 2 !== 0) {
+        throw new Error(`Invalid encoded request: hex string must have even length, got: ${abiEncodedRequest.length}`);
+      }
+      
       const feeConfigAddress = await this.getFeeConfigAddress();
       const feeConfigABI = this.getFeeConfigABI();
       
@@ -192,17 +205,13 @@ export class FdcHubClient {
         this.config.flareClient.signer
       );
       
-      // Encode attestation type "Payment" and source ID "testXRP" (for coston2)
-      const attestationType = ethers.encodeBytes32String("Payment").substring(0, 66);
-      const sourceId = this.config.network === "mainnet" 
-        ? ethers.encodeBytes32String("XRP").substring(0, 66)
-        : ethers.encodeBytes32String("testXRP").substring(0, 66);
-      
       console.log(`🔍 Querying attestation request fee...`);
-      console.log(`   Attestation Type: Payment (${attestationType})`);
-      console.log(`   Source ID: ${this.config.network === "mainnet" ? "XRP" : "testXRP"} (${sourceId})`);
+      console.log(`   Request Data: ${abiEncodedRequest.substring(0, 66)}...`);
+      console.log(`   Request Data Length: ${abiEncodedRequest.length} chars (${(abiEncodedRequest.length - 2) / 2} bytes)`);
       
-      const fee = await feeConfig.getRequestFee(attestationType, sourceId);
+      // getRequestFee expects the full ABI-encoded request as bytes
+      // Pass the hex string directly - ethers v6 will handle the conversion
+      const fee = await feeConfig.getRequestFee(abiEncodedRequest);
       
       console.log(`✅ Attestation request fee: ${ethers.formatEther(fee)} FLR`);
       
@@ -229,7 +238,7 @@ export class FdcHubClient {
     try {
       const fdcHubAddress = await this.getFdcHubAddress();
       const fdcHubABI = this.getFdcHubABI();
-      const requestFee = await this.getAttestationRequestFee();
+      const requestFee = await this.getAttestationRequestFee(abiEncodedRequest);
       
       if (!this.config.flareClient.signer) {
         throw new Error("FdcHubClient requires a signer for transactions. Please provide OPERATOR_PRIVATE_KEY.");
