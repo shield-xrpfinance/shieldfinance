@@ -351,6 +351,69 @@ export async function registerRoutes(
     }
   });
 
+  // Reconcile individual bridge - smart recovery based on status and error
+  app.post("/api/bridges/:id/reconcile", async (req, res) => {
+    try {
+      const { id: bridgeId } = req.params;
+      
+      console.log(`🔄 Reconciliation requested for bridge ${bridgeId}`);
+
+      const result = await bridgeService.reconcileBridge(bridgeId);
+
+      // Fetch updated bridge status
+      const updatedBridge = await storage.getBridgeById(bridgeId);
+
+      res.json({
+        success: result.success,
+        message: result.message,
+        action: result.action,
+        bridge: updatedBridge
+      });
+    } catch (error) {
+      console.error("Bridge reconciliation error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to reconcile bridge" });
+      }
+    }
+  });
+
+  // Get all recoverable bridges
+  app.get("/api/bridges/recoverable", async (req, res) => {
+    try {
+      const recoverableBridges = await storage.getRecoverableBridges();
+      res.json(recoverableBridges);
+    } catch (error) {
+      console.error("Failed to fetch recoverable bridges:", error);
+      res.status(500).json({ error: "Failed to fetch recoverable bridges" });
+    }
+  });
+
+  // Reconcile all recoverable bridges
+  app.post("/api/bridges/reconcile-all", async (req, res) => {
+    try {
+      console.log(`🔄 Bulk reconciliation requested`);
+
+      const result = await bridgeService.reconcileAll();
+
+      res.json({
+        success: true,
+        total: result.total,
+        successful: result.successful,
+        failed: result.failed,
+        results: result.results
+      });
+    } catch (error) {
+      console.error("Bulk reconciliation error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to reconcile bridges" });
+      }
+    }
+  });
+
   // Create deposit via FAssets bridge
   app.post("/api/deposits", async (req, res) => {
     try {

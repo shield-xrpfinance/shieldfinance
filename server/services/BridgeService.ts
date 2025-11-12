@@ -618,6 +618,204 @@ export class BridgeService {
   }
 
   /**
+   * Attempt to reconcile a failed or stuck bridge
+   * Returns true if reconciliation was successful or in progress
+   */
+  async reconcileBridge(bridgeId: string): Promise<{ success: boolean; message: string; action?: string }> {
+    console.log(`🔍 Attempting to reconcile bridge ${bridgeId}...`);
+    
+    const bridge = await this.config.storage.getBridgeById(bridgeId);
+    if (!bridge) {
+      return { success: false, message: "Bridge not found" };
+    }
+
+    console.log(`   Current status: ${bridge.status}`);
+    console.log(`   Error message: ${bridge.errorMessage || 'none'}`);
+
+    try {
+      // FDC timeout - can retry proof generation
+      if (bridge.status === "fdc_timeout") {
+        console.log(`   ✅ Recoverable: FDC timeout - retrying proof generation`);
+        await this.retryProofGeneration(bridgeId);
+        return { 
+          success: true, 
+          message: "Retrying FDC proof generation",
+          action: "retry_proof" 
+        };
+      }
+
+      // Vault mint failed - can retry vault minting
+      if (bridge.status === "vault_mint_failed") {
+        console.log(`   ✅ Recoverable: Vault mint failed - retrying vault minting`);
+        await this.completeBridgeWithVaultMinting(bridgeId);
+        return { 
+          success: true, 
+          message: "Retrying vault share minting",
+          action: "retry_vault_mint" 
+        };
+      }
+
+      // Failed status with recoverable errors
+      if (bridge.status === "failed" && bridge.errorMessage) {
+        const errorMsg = bridge.errorMessage.toLowerCase();
+
+        // "Already known" error - the transaction might have been mined
+        if (errorMsg.includes("already known")) {
+          console.log(`   ✅ Recoverable: "Already known" error - attempting to resume from XRPL payment`);
+          if (bridge.xrplTxHash) {
+            await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
+            return { 
+              success: true, 
+              message: "Resuming from XRPL payment confirmation",
+              action: "resume_from_xrpl" 
+            };
+          } else {
+            return { 
+              success: false, 
+              message: "Cannot resume: Missing XRPL transaction hash" 
+            };
+          }
+        }
+
+        // "Attestation request not found" - proof might be available now
+        if (errorMsg.includes("attestation request not found")) {
+          console.log(`   ✅ Recoverable: Attestation not found - retrying proof generation`);
+          if (bridge.xrplTxHash) {
+            await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
+            return { 
+              success: true, 
+              message: "Retrying FDC proof generation",
+              action: "retry_proof_generation" 
+            };
+          } else {
+            return { 
+              success: false, 
+              message: "Cannot retry: Missing XRPL transaction hash" 
+            };
+          }
+        }
+
+        // FDC-related errors
+        if (errorMsg.includes("fdc") || errorMsg.includes("timeout")) {
+          console.log(`   ✅ Recoverable: FDC-related error - retrying`);
+          if (bridge.xrplTxHash) {
+            await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
+            return { 
+              success: true, 
+              message: "Retrying FDC proof generation",
+              action: "retry_fdc" 
+            };
+          } else {
+            return { 
+              success: false, 
+              message: "Cannot retry: Missing XRPL transaction hash" 
+            };
+          }
+        }
+      }
+
+      // Stuck at xrpl_confirmed without proof
+      if (bridge.status === "xrpl_confirmed" && !bridge.fdcProofData) {
+        console.log(`   ✅ Recoverable: Stuck at XRPL confirmed - generating proof`);
+        if (!bridge.xrplTxHash) {
+          return { 
+            success: false, 
+            message: "Cannot resume: Missing XRPL transaction hash" 
+          };
+        }
+        await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
+        return { 
+          success: true, 
+          message: "Resuming proof generation",
+          action: "resume_proof" 
+        };
+      }
+
+      // Stuck at fdc_proof_generated without minting
+      if (bridge.status === "fdc_proof_generated" && !bridge.flareTxHash) {
+        console.log(`   ✅ Recoverable: Stuck at FDC proof generated - executing minting`);
+        if (!bridge.fdcProofData) {
+          return { 
+            success: false, 
+            message: "Cannot mint: Missing FDC proof data" 
+          };
+        }
+        if (!bridge.collateralReservationId) {
+          return { 
+            success: false, 
+            message: "Cannot mint: Missing collateral reservation ID" 
+          };
+        }
+        // Resume minting process
+        await this.completeBridgeWithVaultMinting(bridgeId);
+        return { 
+          success: true, 
+          message: "Resuming minting process",
+          action: "resume_minting" 
+        };
+      }
+
+      // Not recoverable
+      console.log(`   ❌ Not recoverable: Status=${bridge.status}, no matching recovery pattern`);
+      return { 
+        success: false, 
+        message: `Bridge status '${bridge.status}' is not automatically recoverable` 
+      };
+
+    } catch (error) {
+      console.error(`❌ Reconciliation failed for bridge ${bridgeId}:`, error);
+      return { 
+        success: false, 
+        message: error instanceof Error ? error.message : "Unknown reconciliation error" 
+      };
+    }
+  }
+
+  /**
+   * Reconcile all recoverable bridges
+   * Returns summary of reconciliation attempts
+   */
+  async reconcileAll(): Promise<{ 
+    total: number; 
+    successful: number; 
+    failed: number; 
+    results: Array<{ bridgeId: string; success: boolean; message: string }> 
+  }> {
+    console.log(`🔄 Starting bulk reconciliation...`);
+    
+    const recoverableBridges = await this.config.storage.getRecoverableBridges();
+    console.log(`   Found ${recoverableBridges.length} recoverable bridge(s)`);
+
+    const results = [];
+    let successful = 0;
+    let failed = 0;
+
+    for (const bridge of recoverableBridges) {
+      const result = await this.reconcileBridge(bridge.id);
+      results.push({
+        bridgeId: bridge.id,
+        success: result.success,
+        message: result.message,
+      });
+
+      if (result.success) {
+        successful++;
+      } else {
+        failed++;
+      }
+    }
+
+    console.log(`✅ Bulk reconciliation complete: ${successful} successful, ${failed} failed`);
+
+    return {
+      total: recoverableBridges.length,
+      successful,
+      failed,
+      results,
+    };
+  }
+
+  /**
    * Check bridge status and retry if needed
    */
   async processPendingBridges(): Promise<void> {

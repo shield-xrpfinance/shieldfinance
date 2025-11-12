@@ -34,6 +34,7 @@ export interface IStorage {
   getBridgeByAgentAddress(agentAddress: string): Promise<SelectXrpToFxrpBridge | undefined>;
   getPendingBridges(): Promise<SelectXrpToFxrpBridge[]>;
   getStuckBridges(): Promise<SelectXrpToFxrpBridge[]>;
+  getRecoverableBridges(): Promise<SelectXrpToFxrpBridge[]>;
   updateBridge(id: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
   updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
   
@@ -407,6 +408,37 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async getRecoverableBridges(): Promise<SelectXrpToFxrpBridge[]> {
+    const allBridges = await db.query.xrpToFxrpBridges.findMany({
+      orderBy: desc(xrpToFxrpBridges.createdAt),
+    });
+
+    return allBridges.filter(bridge => {
+      // Status-based recoverable states
+      if (bridge.status === "fdc_timeout") return true;
+      if (bridge.status === "vault_mint_failed") return true;
+      
+      // Stuck at xrpl_confirmed without proof data
+      if (bridge.status === "xrpl_confirmed" && !bridge.fdcProofData) return true;
+      
+      // Stuck at fdc_proof_generated without minting
+      if (bridge.status === "fdc_proof_generated" && !bridge.flareTxHash) return true;
+      
+      // Failed status with recoverable error patterns
+      if (bridge.status === "failed" && bridge.errorMessage) {
+        const errorMsg = bridge.errorMessage.toLowerCase();
+        return (
+          errorMsg.includes("already known") ||
+          errorMsg.includes("attestation request not found") ||
+          errorMsg.includes("fdc") ||
+          errorMsg.includes("timeout")
+        );
+      }
+      
+      return false;
+    });
+  }
+
   async updateBridge(id: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void> {
     await db.update(xrpToFxrpBridges)
       .set(updates)
@@ -415,7 +447,7 @@ export class DatabaseStorage implements IStorage {
 
   async updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void> {
     await db.update(xrpToFxrpBridges)
-      .set({ status, ...updates, completedAt: status === 'completed' ? new Date() : undefined })
+      .set({ status: status as any, ...updates, completedAt: status === 'completed' ? new Date() : undefined })
       .where(eq(xrpToFxrpBridges.id, id));
   }
 
