@@ -1,8 +1,6 @@
 import { ethers } from "ethers";
 import { FLARE_CONTRACTS } from "../../shared/flare-contracts";
 import { FIRELIGHT_VAULT_ABI } from "../../shared/flare-abis";
-import { SmartAccountClient } from "./smart-account-client";
-import { SmartAccountSigner } from "./smart-account-signer";
 
 // Vault Controller ABI (ERC-4626 wrapper with additional functionality)
 const VAULT_CONTROLLER_ABI = [
@@ -13,19 +11,17 @@ const VAULT_CONTROLLER_ABI = [
 export interface FlareClientConfig {
   network: "mainnet" | "coston2";
   privateKey: string;
-  bundlerApiKey: string;
-  enablePaymaster?: boolean;
 }
 
 /**
- * FlareClient - Smart Account Only
- * All transactions are routed through ERC-4337 account abstraction for gasless, batched execution.
+ * FlareClient - Simple EOA Wallet
+ * Uses ethers.Wallet directly for smart contract interactions
  */
 export class FlareClient {
   public provider: ethers.JsonRpcProvider;
   private network: "mainnet" | "coston2";
   private rpcUrl: string;
-  private smartAccountClient: SmartAccountClient;
+  private wallet: ethers.Wallet;
 
   constructor(config: FlareClientConfig) {
     this.network = config.network;
@@ -36,27 +32,25 @@ export class FlareClient {
     
     this.provider = new ethers.JsonRpcProvider(this.rpcUrl);
     
-    const chainId = config.network === "mainnet" ? 14 : 114;
-    this.smartAccountClient = new SmartAccountClient({
-      chainId,
-      privateKey: config.privateKey,
-      bundlerApiKey: config.bundlerApiKey,
-      rpcUrl: this.rpcUrl,
-      enablePaymaster: config.enablePaymaster,
-    });
+    // Ensure private key has 0x prefix
+    const privateKey = config.privateKey.startsWith('0x') 
+      ? config.privateKey 
+      : `0x${config.privateKey}`;
+    
+    this.wallet = new ethers.Wallet(privateKey, this.provider);
   }
 
   async initialize(): Promise<void> {
-    await this.smartAccountClient.initialize();
-    console.log(`🔐 Using Smart Account: ${this.smartAccountClient.getAddress()}`);
+    const address = await this.wallet.getAddress();
+    console.log(`🔐 Using Wallet: ${address}`);
   }
 
   getSignerAddress(): string {
-    return this.smartAccountClient.getAddress();
+    return this.wallet.address;
   }
 
   getContractSigner(): ethers.Signer {
-    return new SmartAccountSigner(this.smartAccountClient, this.provider);
+    return this.wallet;
   }
 
   getVaultController(address: string) {
@@ -96,9 +90,13 @@ export class FlareClient {
     value?: bigint | string;
     data?: string;
   }): Promise<string> {
-    const userOpHash = await this.smartAccountClient.sendTransaction(tx);
-    const receipt = await this.smartAccountClient.waitForUserOpReceipt(userOpHash);
-    return receipt.receipt.transactionHash;
+    const txResponse = await this.wallet.sendTransaction({
+      to: tx.to,
+      value: tx.value,
+      data: tx.data,
+    });
+    const receipt = await txResponse.wait();
+    return receipt!.hash;
   }
 
   async sendBatchTransactions(txs: Array<{
@@ -106,12 +104,16 @@ export class FlareClient {
     value?: bigint | string;
     data?: string;
   }>): Promise<string> {
-    const userOpHash = await this.smartAccountClient.sendBatchTransactions(txs);
-    const receipt = await this.smartAccountClient.waitForUserOpReceipt(userOpHash);
-    return receipt.receipt.transactionHash;
+    // For regular wallets, execute transactions sequentially
+    // Last transaction hash is returned
+    let lastTxHash = "";
+    for (const tx of txs) {
+      lastTxHash = await this.sendTransaction(tx);
+    }
+    return lastTxHash;
   }
 
-  getSmartAccountClient(): SmartAccountClient {
-    return this.smartAccountClient;
+  getWallet(): ethers.Wallet {
+    return this.wallet;
   }
 }
