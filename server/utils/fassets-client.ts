@@ -125,16 +125,14 @@ export class FAssetsClient {
     const assetManagerAddress = await this.getAssetManagerAddress();
     const AssetManagerABI = this.getAssetManagerABI();
     
-    // Ensure we have a signer for transactions
-    if (!this.config.flareClient.signer) {
-      throw new Error("FAssetsClient requires a signer for transactions. Please provide OPERATOR_PRIVATE_KEY.");
-    }
+    // Get signer - works with both EOA and smart account modes
+    const signer = this.config.flareClient.getContractSigner();
     
     // The ABI file is directly an array, not an object with an 'abi' property
     const contract = new ethers.Contract(
       assetManagerAddress,
       AssetManagerABI,
-      this.config.flareClient.signer
+      signer
     );
     
     console.log(`AssetManager contract created at ${assetManagerAddress}`);

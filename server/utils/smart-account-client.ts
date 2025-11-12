@@ -68,7 +68,7 @@ export class SmartAccountClient {
 
   async sendTransaction(tx: {
     to: string;
-    value?: ethers.BigNumber | string;
+    value?: bigint | string;
     data?: string;
   }): Promise<string> {
     if (!this.primeSdk) {
@@ -84,7 +84,7 @@ export class SmartAccountClient {
 
       if (tx.value) {
         txData.value = typeof tx.value === 'string' 
-          ? ethers.BigNumber.from(tx.value)
+          ? BigInt(tx.value)
           : tx.value;
       }
 
@@ -113,7 +113,7 @@ export class SmartAccountClient {
 
   async sendBatchTransactions(txs: Array<{
     to: string;
-    value?: ethers.BigNumber | string;
+    value?: bigint | string;
     data?: string;
   }>): Promise<string> {
     if (!this.primeSdk) {
@@ -130,7 +130,7 @@ export class SmartAccountClient {
 
         if (tx.value) {
           txData.value = typeof tx.value === 'string' 
-            ? ethers.BigNumber.from(tx.value)
+            ? BigInt(tx.value)
             : tx.value;
         }
 
@@ -181,11 +181,11 @@ export class SmartAccountClient {
     throw new Error(`UserOp receipt not found after ${maxRetries} attempts`);
   }
 
-  getProvider(): ethers.providers.JsonRpcProvider {
-    return new ethers.providers.JsonRpcProvider(this.config.rpcUrl);
+  getProvider(): ethers.JsonRpcProvider {
+    return new ethers.JsonRpcProvider(this.config.rpcUrl);
   }
 
-  getSigner(): ethers.Signer {
+  getEOASigner(): ethers.Signer {
     return new ethers.Wallet(this.config.privateKey, this.getProvider());
   }
 }
