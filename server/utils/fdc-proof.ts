@@ -9,7 +9,10 @@ export async function generateFDCProof(xrplTxHash: string, network: "mainnet" | 
   
   const response = await fetch(attestationUrl, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { 
+      "Content-Type": "application/json",
+      "X-API-KEY": "00000000-0000-0000-0000-000000000000" // Flare public dev/test API key
+    },
     body: JSON.stringify({
       attestationType: "0x5061796d656e74",
       sourceId: sourceId,
