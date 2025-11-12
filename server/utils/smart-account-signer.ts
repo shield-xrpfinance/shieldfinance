@@ -22,7 +22,10 @@ export class SmartAccountSigner implements ethers.Signer {
     this.smartAccountClient = smartAccountClient;
     this.provider = provider;
     // Keep EOA wallet for signing operations only (not for sending transactions)
-    this.eoaWallet = new ethers.Wallet(smartAccountClient['config'].privateKey, provider);
+    const privateKey = smartAccountClient['config'].privateKey.startsWith('0x')
+      ? smartAccountClient['config'].privateKey
+      : `0x${smartAccountClient['config'].privateKey}`;
+    this.eoaWallet = new ethers.Wallet(privateKey, provider);
   }
 
   async getAddress(): Promise<string> {
@@ -95,6 +98,7 @@ export class SmartAccountSigner implements ethers.Signer {
 
   /**
    * This is the critical method - routes all transaction execution through ERC-4337
+   * Returns a fully hydrated TransactionResponse with working wait() method
    */
   async sendTransaction(transaction: ethers.TransactionRequest): Promise<ethers.TransactionResponse> {
     console.log('🔐 SmartAccountSigner: Routing transaction through ERC-4337 bundler');
@@ -111,15 +115,22 @@ export class SmartAccountSigner implements ethers.Signer {
     console.log('📦 UserOp submitted:', userOpHash);
     
     // Wait for UserOp to be executed and get receipt
-    const receipt = await this.smartAccountClient.waitForUserOpReceipt(userOpHash);
+    const userOpReceipt = await this.smartAccountClient.waitForUserOpReceipt(userOpHash);
     
-    console.log('✅ Transaction executed:', receipt.receipt.transactionHash);
+    console.log('✅ Transaction executed:', userOpReceipt.receipt.transactionHash);
     
-    // Get the actual transaction from the provider
-    const response = await this.provider.getTransaction(receipt.receipt.transactionHash);
+    // Get the actual on-chain transaction
+    const txHash = userOpReceipt.receipt.transactionHash;
+    let response = await this.provider.getTransaction(txHash);
+    
+    // If transaction not immediately available, wait briefly and retry
+    if (!response) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      response = await this.provider.getTransaction(txHash);
+    }
     
     if (!response) {
-      throw new Error(`Transaction ${receipt.receipt.transactionHash} not found`);
+      throw new Error(`Transaction ${txHash} not found after UserOp execution`);
     }
 
     return response;

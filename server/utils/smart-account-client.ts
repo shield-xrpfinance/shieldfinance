@@ -23,20 +23,26 @@ export class SmartAccountClient {
       console.log('🔐 Initializing Flare Smart Account...');
       console.log(`   Chain ID: ${this.config.chainId}`);
       
-      const bundlerProvider = this.config.bundlerApiKey
-        ? new EtherspotBundler(this.config.chainId, this.config.bundlerApiKey)
-        : undefined;
+      if (!this.config.bundlerApiKey) {
+        throw new Error('Bundler API key is required for smart account initialization');
+      }
+
+      // Ensure private key has 0x prefix (required by Etherspot)
+      const privateKey = this.config.privateKey.startsWith('0x') 
+        ? this.config.privateKey 
+        : `0x${this.config.privateKey}`;
+
+      const bundlerProvider = new EtherspotBundler(
+        this.config.chainId, 
+        this.config.bundlerApiKey
+      );
 
       const sdkConfig: any = {
         chainId: this.config.chainId,
-        projectKey: this.config.bundlerApiKey,
+        bundlerProvider: bundlerProvider,
       };
 
-      if (bundlerProvider) {
-        sdkConfig.bundlerProvider = bundlerProvider;
-      }
-
-      if (this.config.enablePaymaster && this.config.bundlerApiKey) {
+      if (this.config.enablePaymaster) {
         sdkConfig.paymaster = {
           url: `https://arka.etherspot.io?apiKey=${this.config.bundlerApiKey}&chainId=${this.config.chainId}`,
         };
@@ -44,7 +50,7 @@ export class SmartAccountClient {
       }
 
       this.primeSdk = new PrimeSdk(
-        { privateKey: this.config.privateKey },
+        { privateKey: privateKey },
         sdkConfig
       );
 
@@ -185,7 +191,18 @@ export class SmartAccountClient {
     return new ethers.JsonRpcProvider(this.config.rpcUrl);
   }
 
-  getEOASigner(): ethers.Signer {
-    return new ethers.Wallet(this.config.privateKey, this.getProvider());
+  /**
+   * @deprecated This method is deprecated and should not be used.
+   * The system operates in smart-account-only mode. All transactions MUST go through ERC-4337.
+   * Use getContractSigner() from FlareClient instead, which returns SmartAccountSigner.
+   * 
+   * This method will be removed in a future version.
+   */
+  getEOASigner(): never {
+    throw new Error(
+      'getEOASigner() is not supported in smart-account-only mode. ' +
+      'All transactions must route through ERC-4337. ' +
+      'Use FlareClient.getContractSigner() instead.'
+    );
   }
 }
