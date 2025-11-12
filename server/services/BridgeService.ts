@@ -204,7 +204,7 @@ export class BridgeService {
       
       await this.config.storage.updateBridgeStatus(bridge.id, "awaiting_payment", {
         collateralReservationId: reservation.reservationId.toString(),
-        paymentReference: reservation.paymentReference,
+        paymentReference: reservation.paymentReference.toUpperCase(),
         agentVaultAddress: reservation.agentVault,
         agentUnderlyingAddress: reservation.agentUnderlyingAddress,
         mintingFeeBIPS: reservation.feeBIPS.toString(),
@@ -265,7 +265,7 @@ export class BridgeService {
         const demoPaymentReference = timestamp + '0'.repeat(48); // Total 64 hex chars
         
         // Calculate synthetic amounts (1:1 ratio, 0.25% fee)
-        const valueUBA = BigInt(Math.floor(bridge.xrpAmount * 1_000_000));
+        const valueUBA = BigInt(Math.floor(Number(bridge.xrpAmount) * 1_000_000));
         const feeUBA = valueUBA / BigInt(400); // 0.25% fee
         const expiryMinutes = 30;
         const reservationExpiry = new Date(Date.now() + expiryMinutes * 60 * 1000);
@@ -274,7 +274,7 @@ export class BridgeService {
           agentVaultAddress: "0xDEMO" + Date.now().toString(16).slice(-8),
           agentUnderlyingAddress: demoAgentAddress,
           collateralReservationId: `demo-res-${Date.now()}`,
-          paymentReference: demoPaymentReference,
+          paymentReference: demoPaymentReference.toUpperCase(),
           reservedValueUBA: valueUBA.toString(),
           reservedFeeUBA: feeUBA.toString(),
           reservationTxHash: `DEMO-RES-${Date.now().toString(16)}`,

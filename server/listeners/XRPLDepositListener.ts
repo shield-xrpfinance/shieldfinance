@@ -324,9 +324,22 @@ export class XRPLDepositListener {
       const memoData = memos[0]?.Memo?.MemoData;
       if (!memoData) return undefined;
       
-      // Convert hex to UTF-8
-      return Buffer.from(memoData, "hex").toString("utf-8");
+      // Validate that memoData is a valid hex string
+      if (typeof memoData !== 'string') {
+        console.log("⚠️  Memo data is not a string, skipping");
+        return undefined;
+      }
+      
+      // Check if it's valid hex (only 0-9, a-f, A-F characters)
+      if (!/^[0-9a-fA-F]+$/.test(memoData)) {
+        console.log(`⚠️  Invalid hex memo data: ${memoData}`);
+        return undefined;
+      }
+      
+      // Return canonical uppercase hex string (matches FAssets payment references)
+      return memoData.toUpperCase();
     } catch (error) {
+      console.log("⚠️  Error extracting memo:", error);
       return undefined;
     }
   }
