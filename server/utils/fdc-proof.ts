@@ -14,7 +14,7 @@ async function pollVerifierProof(
     ? "https://fdc-verifiers.flare.network/api/proof/get-specific-proof"
     : "https://fdc-verifiers-testnet.flare.network/api/proof/get-specific-proof";
   
-  const maxAttempts = 40; // 10 minutes max (40 attempts * 15 seconds) - extended for FDC finalization
+  const maxAttempts = 60; // 15 minutes max (60 attempts * 15 seconds) - extended for slow FDC finalization
   const pollInterval = 15000; // 15 seconds
   
   console.log("🔄 Starting FDC Verifier proof polling...");
