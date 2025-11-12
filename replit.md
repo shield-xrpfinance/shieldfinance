@@ -8,6 +8,22 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### November 12, 2025 - CRITICAL FIX: Payment Reference Validation Bug
+- **🐛 Fixed Critical Bridging Bug**: Resolved payment reference mismatch causing 100% bridge failure rate for 2+ days
+- **Root Cause #1**: XRPL listener was decoding hex payment references to UTF-8, causing memo comparison failures
+  - Before: Memo received as `FBPRf�` (garbled UTF-8) vs expected `46425052664100010000...` (hex) → always failed
+  - After: Memo returned as uppercase hex `46425052664100010000...` → matches stored reference
+- **Root Cause #2**: Frontend sending wrong parameter name to payment API
+  - Before: `amount` parameter sent to `/api/wallet/xaman/payment` → 400 error
+  - After: `amountDrops` parameter → payment requests work correctly
+- **Changes**:
+  - Modified `XRPLDepositListener.extractMemo()` to return canonical uppercase hex (no UTF-8 decoding)
+  - Fixed `walletContext.requestPayment()` to send `amountDrops` instead of `amount`
+  - Updated `BridgeService` to store all payment references in uppercase (production + demo mode)
+  - Backfilled 2 existing pending bridges to uppercase format
+- **Impact**: Bridges can now progress through complete flow: awaiting_payment → xrpl_confirmed → fdc_proof_generated → fxrp_minted → completed
+- **Files Modified**: `server/listeners/XRPLDepositListener.ts`, `client/src/lib/walletContext.tsx`, `server/services/BridgeService.ts`
+
 ### November 12, 2025 - Bridge Tracking Payment Restart Feature
 - **Bridge Tracking Enhancement**: Added "Send Payment" button to bridge tracking page for bridges in `awaiting_payment` status
 - **User Flow**: Users can now reopen BridgeStatusModal after closing it to complete payment without losing progress
