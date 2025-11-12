@@ -123,3 +123,14 @@ Preferred communication style: Simple, everyday language.
 - **Attestation Format Fix**: Corrected attestationType and sourceId to proper hex-encoded values (0x5061796d656e74... and 0x7465737458525000...) per Flare documentation.
 - **Enhanced Error Logging**: Added detailed stack traces and structured logging for all FDC proof generation steps.
 - **FDC Verifier API Workflow**: prepareRequest (with retry) → extract voting round from XRPL tx timestamp → poll FDC Verifier for finalized proof (15-second intervals).
+
+### Bridge Tracking UI Consolidation (November 12, 2024)
+- **Tabbed Interface**: Redesigned Bridge Tracking page (`client/src/pages/BridgeTracking.tsx`) with three tabs: Active, Completed, Failed.
+- **Mutually Exclusive Filtering**: Implemented priority-based filtering logic to ensure each bridge appears in exactly one tab:
+  - **Failed (highest priority)**: Bridges with `status === "failed"` OR `errorMessage !== null` (any bridge with an error)
+  - **Completed**: Bridges with `status === "completed"` AND no error message (successfully finished operations)
+  - **Active**: In-progress bridges (`awaiting_payment`, `xrpl_confirmed`, `proof_generated`, `minting`) without errors
+- **Navigation Consistency**: Renamed sidebar label from "Bridge History" to "Bridge Tracking" to match page route and purpose.
+- **Improved UX**: Page title and tabs now visible even when wallet is disconnected, with helpful "Connect wallet" messaging in each tab content.
+- **Badge Counts**: Each tab shows real-time count of bridges in that category (e.g., "Active (2)").
+- **Empty States**: Contextual messages for each tab when no bridges exist, guiding users on what to expect.
