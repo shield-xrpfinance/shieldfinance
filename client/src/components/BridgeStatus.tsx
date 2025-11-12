@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, AlertCircle, Loader2, Copy, RefreshCw } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, Loader2, Copy, RefreshCw, Send } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -20,6 +20,8 @@ interface BridgeStatusProps {
   errorMessage?: string;
   bridgeId?: string;
   agentUnderlyingAddress?: string;
+  onSendPayment?: () => void;
+  isVaultsLoading?: boolean;
 }
 
 export function BridgeStatus({
@@ -32,6 +34,8 @@ export function BridgeStatus({
   errorMessage,
   bridgeId,
   agentUnderlyingAddress,
+  onSendPayment,
+  isVaultsLoading = false,
 }: BridgeStatusProps) {
   const { toast } = useToast();
 
@@ -236,6 +240,28 @@ export function BridgeStatus({
                 </p>
               </div>
             </div>
+            {onSendPayment && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onSendPayment}
+                disabled={isVaultsLoading}
+                className="w-full"
+                data-testid="button-send-payment"
+              >
+                {isVaultsLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Send className="mr-2 h-4 w-4" />
+                    Send Payment
+                  </>
+                )}
+              </Button>
+            )}
           </div>
         )}
 

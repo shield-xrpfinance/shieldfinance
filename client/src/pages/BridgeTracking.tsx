@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useWallet } from "@/lib/walletContext";
 import { BridgeStatus } from "@/components/BridgeStatus";
@@ -8,17 +8,60 @@ import { Button } from "@/components/ui/button";
 import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import type { SelectXrpToFxrpBridge } from "@shared/schema";
+import BridgeStatusModal from "@/components/BridgeStatusModal";
+import type { SelectXrpToFxrpBridge, SelectVault } from "@shared/schema";
 
 export default function BridgeTracking() {
   const { address } = useWallet();
   const [activeTab, setActiveTab] = useState("active");
+  const [selectedBridge, setSelectedBridge] = useState<{
+    bridgeId: string;
+    vaultName: string;
+    amount: string;
+  } | null>(null);
   const { toast } = useToast();
 
   const { data: bridges, isLoading } = useQuery<SelectXrpToFxrpBridge[]>({
     queryKey: [`/api/bridges/wallet/${address}`],
     enabled: !!address,
   });
+
+  const { data: vaults, isLoading: isLoadingVaults } = useQuery<SelectVault[]>({
+    queryKey: ["/api/vaults"],
+  });
+
+  // Memoize vault lookup map for performance
+  const vaultMap = useMemo(() => {
+    if (!vaults) return new Map<string, SelectVault>();
+    return new Map(vaults.map(v => [v.id, v]));
+  }, [vaults]);
+
+  // Callback to open payment modal for a bridge
+  const handleSendPayment = useCallback((bridge: SelectXrpToFxrpBridge) => {
+    if (!vaultMap.size) {
+      toast({
+        title: "Loading",
+        description: "Please wait while vault data loads...",
+      });
+      return;
+    }
+    
+    const vault = vaultMap.get(bridge.vaultId);
+    if (!vault) {
+      toast({
+        title: "Error",
+        description: "Vault not found",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setSelectedBridge({
+      bridgeId: bridge.id,
+      vaultName: vault.name,
+      amount: bridge.xrpAmount,
+    });
+  }, [vaultMap, toast]);
 
   const retryAllMutation = useMutation({
     mutationFn: async () => {
@@ -155,6 +198,8 @@ export default function BridgeTracking() {
                   errorMessage={bridge.errorMessage || undefined}
                   bridgeId={bridge.id}
                   agentUnderlyingAddress={bridge.agentUnderlyingAddress || undefined}
+                  onSendPayment={() => handleSendPayment(bridge)}
+                  isVaultsLoading={isLoadingVaults}
                 />
               ))}
             </div>
@@ -192,6 +237,8 @@ export default function BridgeTracking() {
                   errorMessage={bridge.errorMessage || undefined}
                   bridgeId={bridge.id}
                   agentUnderlyingAddress={bridge.agentUnderlyingAddress || undefined}
+                  onSendPayment={() => handleSendPayment(bridge)}
+                  isVaultsLoading={isLoadingVaults}
                 />
               ))}
             </div>
@@ -252,12 +299,26 @@ export default function BridgeTracking() {
                   errorMessage={bridge.errorMessage || undefined}
                   bridgeId={bridge.id}
                   agentUnderlyingAddress={bridge.agentUnderlyingAddress || undefined}
+                  onSendPayment={() => handleSendPayment(bridge)}
+                  isVaultsLoading={isLoadingVaults}
                 />
               ))}
             </div>
           )}
         </TabsContent>
       </Tabs>
+
+      {selectedBridge && (
+        <BridgeStatusModal
+          open={!!selectedBridge}
+          onOpenChange={(open) => {
+            if (!open) setSelectedBridge(null);
+          }}
+          bridgeId={selectedBridge.bridgeId}
+          vaultName={selectedBridge.vaultName}
+          amount={selectedBridge.amount}
+        />
+      )}
     </div>
   );
 }
