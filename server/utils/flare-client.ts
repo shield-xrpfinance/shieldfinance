@@ -2,7 +2,6 @@ import { ethers } from "ethers";
 import { FLARE_CONTRACTS } from "../../shared/flare-contracts";
 import { FIRELIGHT_VAULT_ABI } from "../../shared/flare-abis";
 import { SmartAccountClient } from "./smart-account-client";
-import { SmartAccountSigner } from "./smart-account-signer";
 
 // Vault Controller ABI (ERC-4626 wrapper with additional functionality)
 const VAULT_CONTROLLER_ABI = [
@@ -74,7 +73,8 @@ export class FlareClient {
 
   getContractSigner(): ethers.Signer {
     if (this.signingMode === 'smart-account' && this.smartAccountClient) {
-      return new SmartAccountSigner(this.smartAccountClient, this.provider);
+      console.warn('⚠️  Smart account mode not fully implemented - falling back to EOA for contract calls');
+      return this.smartAccountClient.getEOASigner();
     } else if (this.signer) {
       return this.signer;
     }
