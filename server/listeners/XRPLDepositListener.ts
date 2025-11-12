@@ -128,11 +128,13 @@ export class XRPLDepositListener {
       hasTransaction: !!tx.transaction,
       type: tx.transaction?.TransactionType,
       destination: tx.transaction?.Destination,
+      fullMessage: JSON.stringify(tx, null, 2),
     });
 
     // XRPL WebSocket sends various message types - only process ones with transaction data
     if (!tx.transaction) {
       console.log("⏭️  Skipping - no transaction data");
+      console.log("📋 Full message received:", JSON.stringify(tx, null, 2));
       return;
     }
     

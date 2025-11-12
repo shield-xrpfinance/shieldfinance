@@ -3,9 +3,13 @@ export async function generateFDCProof(xrplTxHash: string, network: "mainnet" | 
     ? "https://fdc-verifiers-mainnet.flare.network/verifier/xrp/Payment/prepareResponse"
     : "https://fdc-verifiers-testnet.flare.network/verifier/xrp/Payment/prepareResponse";
   
+  // Attestation type "Payment" in hex, padded to 32 bytes (64 hex chars)
+  const attestationType = "0x5061796d656e74000000000000000000000000000000000000000000000000";
+  
+  // Source ID for XRP (testnet/mainnet), padded to 32 bytes (64 hex chars)
   const sourceId = network === "mainnet"
-    ? "0x5852500000000000000000000000000000000000"
-    : "0x7458525000000000000000000000000000000000";
+    ? "0x5852500000000000000000000000000000000000000000000000000000000000" // XRP mainnet
+    : "0x7458525000000000000000000000000000000000000000000000000000000000"; // tXRP testnet
   
   const response = await fetch(attestationUrl, {
     method: "POST",
@@ -14,7 +18,7 @@ export async function generateFDCProof(xrplTxHash: string, network: "mainnet" | 
       "X-API-KEY": "00000000-0000-0000-0000-000000000000" // Flare public dev/test API key
     },
     body: JSON.stringify({
-      attestationType: "0x5061796d656e74",
+      attestationType: attestationType,
       sourceId: sourceId,
       requestBody: {
         transactionId: xrplTxHash,
