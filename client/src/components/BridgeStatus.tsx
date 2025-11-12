@@ -1,7 +1,19 @@
-import { CheckCircle2, Clock, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, Loader2, Copy } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { useToast } from "@/hooks/use-toast";
+
+// Convert string to hex for XRPL MEMO field (browser-safe implementation)
+function stringToHex(str: string): string {
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(str);
+  return Array.from(bytes)
+    .map(byte => byte.toString(16).padStart(2, '0'))
+    .join('')
+    .toUpperCase();
+}
 
 interface BridgeStatusProps {
   status: string;
@@ -26,11 +38,24 @@ export function BridgeStatus({
   bridgeId,
   agentUnderlyingAddress,
 }: BridgeStatusProps) {
+  const { toast } = useToast();
+  
   const stages = [
     { key: "pending", label: "XRPL Confirmation", completed: ["xrpl_confirmed", "bridging", "completed"].includes(status) },
     { key: "bridging", label: "XRP → FXRP Bridge", completed: ["bridging", "completed"].includes(status) },
     { key: "completed", label: "Vault Shares Minted", completed: status === "completed" },
   ];
+  
+  // Convert bridge ID to hex format for XRPL MEMO
+  const hexMemo = bridgeId ? stringToHex(bridgeId) : "";
+  
+  const copyToClipboard = (text: string, label: string) => {
+    navigator.clipboard.writeText(text);
+    toast({
+      title: "Copied!",
+      description: `${label} copied to clipboard`,
+    });
+  };
 
   const currentStageIndex = stages.findIndex((s) => !s.completed);
   const progress = ((currentStageIndex === -1 ? stages.length : currentStageIndex) / stages.length) * 100;
@@ -101,18 +126,52 @@ export function BridgeStatus({
               <p className="text-sm font-medium text-foreground">Payment Required</p>
               <p className="text-xs text-muted-foreground">Send {xrpAmount} XRP to complete the bridge</p>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-3">
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">Destination Address:</p>
-                <code className="block rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid="text-agent-address">
-                  {agentUnderlyingAddress}
-                </code>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid="text-agent-address">
+                    {agentUnderlyingAddress}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyToClipboard(agentUnderlyingAddress, "Address")}
+                    data-testid="button-copy-address"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
               </div>
               <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">MEMO (Required):</p>
-                <code className="block rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid="text-payment-memo">
-                  {bridgeId}
-                </code>
+                <p className="text-xs font-medium text-muted-foreground">Destination Tag (for Xaman):</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 rounded bg-background px-2 py-1.5 font-mono text-xs" data-testid="text-destination-tag">
+                    Leave empty - Use MEMO field instead
+                  </code>
+                </div>
+              </div>
+              <div className="space-y-1">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground">MEMO (Hex-Encoded - Required):</p>
+                  <Badge variant="outline" className="text-xs">Copy this value</Badge>
+                </div>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid="text-payment-memo">
+                    {hexMemo}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => copyToClipboard(hexMemo, "MEMO")}
+                    data-testid="button-copy-memo"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground italic">
+                  Bridge ID: {bridgeId}
+                </p>
               </div>
             </div>
           </div>

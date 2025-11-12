@@ -102,3 +102,6 @@ Preferred communication style: Simple, everyday language.
 - **Manual Reconciliation**: Added `POST /api/bridges/:id/reconcile-payment` endpoint for manual payment verification when automatic detection fails.
 - **FDC Authentication**: Fixed 401 Unauthorized errors by adding X-API-KEY header to FDC proof generation requests.
 - **WalletConnect Auto-Payment**: Implemented proper session restoration with lazy SDK loading, timeout guards, and bundle optimization for seamless cross-page UX.
+- **WalletConnect Provider Guard**: Fixed auto-payment triggering by adding guard condition to verify WalletConnect provider instance is initialized before calling requestPayment. Prevents silent failures when provider state is incomplete.
+- **Manual Payment UX**: Added destination address and MEMO display to BridgeStatus component for "awaiting_payment" state. Users can now see exact payment details (agent address + bridge ID as MEMO) for manual testing and fallback workflows.
+- **Enhanced Error Messaging**: Added detailed logging and user-facing toast notifications when auto-payment skips due to incomplete wallet connection state.
