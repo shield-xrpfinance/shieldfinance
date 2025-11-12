@@ -816,6 +816,86 @@ export class BridgeService {
   }
 
   /**
+   * Reconcile all recoverable bridges on startup
+   * This is a specialized version of reconcileAll() for server initialization
+   * Returns detailed stats for logging and monitoring
+   */
+  async reconcileRecoverableBridgesOnStartup(): Promise<{
+    attempted: number;
+    succeeded: number;
+    failed: number;
+    failures: Array<{ bridgeId: string; error: string; status: string }>;
+  }> {
+    const stats = {
+      attempted: 0,
+      succeeded: 0,
+      failed: 0,
+      failures: [] as Array<{ bridgeId: string; error: string; status: string }>,
+    };
+
+    try {
+      console.log(`\n🔄 [STARTUP RECONCILIATION] Starting automatic recovery of stuck bridges...`);
+      
+      const recoverableBridges = await this.config.storage.getRecoverableBridges();
+      stats.attempted = recoverableBridges.length;
+      
+      if (recoverableBridges.length === 0) {
+        console.log(`   ✅ No recoverable bridges found`);
+        return stats;
+      }
+
+      console.log(`   Found ${recoverableBridges.length} recoverable bridge(s)`);
+
+      // Process bridges sequentially to avoid overwhelming services
+      for (const bridge of recoverableBridges) {
+        try {
+          console.log(`   Processing bridge ${bridge.id} (status: ${bridge.status})`);
+          const result = await this.reconcileBridge(bridge.id);
+          
+          if (result.success) {
+            stats.succeeded++;
+            console.log(`   ✅ Successfully reconciled bridge ${bridge.id}`);
+          } else {
+            stats.failed++;
+            stats.failures.push({
+              bridgeId: bridge.id,
+              error: result.message,
+              status: bridge.status,
+            });
+            console.warn(`   ⚠️  Failed to reconcile bridge ${bridge.id}: ${result.message}`);
+          }
+        } catch (error) {
+          stats.failed++;
+          const errorMsg = error instanceof Error ? error.message : "Unknown error";
+          stats.failures.push({
+            bridgeId: bridge.id,
+            error: errorMsg,
+            status: bridge.status,
+          });
+          console.error(`   ❌ Error reconciling bridge ${bridge.id}:`, error);
+        }
+      }
+
+      console.log(
+        `\n✅ [STARTUP RECONCILIATION] Complete: ${stats.succeeded}/${stats.attempted} succeeded, ${stats.failed} failed`
+      );
+
+      // Log failed bridges at warn level for monitoring
+      if (stats.failures.length > 0) {
+        console.warn(`\n⚠️  [STARTUP RECONCILIATION] Failed bridges:`, 
+          stats.failures.map(f => `${f.bridgeId} (${f.status}): ${f.error}`).join('\n   ')
+        );
+      }
+
+    } catch (error) {
+      console.error(`\n❌ [STARTUP RECONCILIATION] Unexpected error:`, error);
+      // Don't throw - let server continue even if reconciliation fails
+    }
+
+    return stats;
+  }
+
+  /**
    * Check bridge status and retry if needed
    */
   async processPendingBridges(): Promise<void> {

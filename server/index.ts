@@ -205,6 +205,45 @@ app.use((req, res, next) => {
     } else {
       console.log(`✅ No stuck bridges found`);
     }
+
+    // Automatic reconciliation: Recover all other failed/stuck bridges
+    const autoReconcileEnabled = process.env.AUTO_RECONCILE_ON_START !== "false"; // Default enabled
+    if (autoReconcileEnabled) {
+      // Run in background to avoid blocking server startup
+      bridgeService.reconcileRecoverableBridgesOnStartup().catch((error) => {
+        console.error(`❌ Startup reconciliation failed:`, error);
+      });
+      
+      // Optional: Set up periodic reconciliation
+      const reconcileIntervalMinutes = process.env.AUTO_RECONCILE_INTERVAL_MINUTES 
+        ? parseInt(process.env.AUTO_RECONCILE_INTERVAL_MINUTES, 10) 
+        : undefined;
+      
+      if (reconcileIntervalMinutes && reconcileIntervalMinutes > 0) {
+        console.log(`⏰ Scheduling periodic reconciliation every ${reconcileIntervalMinutes} minute(s)`);
+        let reconciliationInProgress = false;
+        
+        setInterval(async () => {
+          // In-flight guard: Skip if previous reconciliation is still running
+          if (reconciliationInProgress) {
+            console.warn(`⏭️  [PERIODIC RECONCILIATION] Skipping - previous run still in progress`);
+            return;
+          }
+          
+          try {
+            reconciliationInProgress = true;
+            console.log(`\n⏰ [PERIODIC RECONCILIATION] Starting scheduled reconciliation...`);
+            await bridgeService.reconcileRecoverableBridgesOnStartup();
+          } catch (error) {
+            console.error(`❌ [PERIODIC RECONCILIATION] Failed:`, error);
+          } finally {
+            reconciliationInProgress = false;
+          }
+        }, reconcileIntervalMinutes * 60 * 1000);
+      }
+    } else {
+      console.log(`ℹ️  Automatic reconciliation disabled (AUTO_RECONCILE_ON_START=false)`);
+    }
   }
 
   // Initialize deposit service (needs bridgeService)

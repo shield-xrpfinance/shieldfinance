@@ -38,6 +38,12 @@ Preferred communication style: Simple, everyday language.
 - **Utilities**: FlareClient (ethers.js wrapper), XRPLDepositListener (WebSocket).
 - **Database Schema Extensions**: `xrp_to_fxrp_bridges`, `firelight_positions`, `compounding_runs`.
 - **Production Mode**: FAssets SDK integration for real on-chain FXRP minting.
+- **Automatic Reconciliation**: Built-in recovery system for stuck/failed bridges
+  - **Startup Reconciliation**: Automatically attempts to recover failed bridges on server startup (configurable via `AUTO_RECONCILE_ON_START`, default: enabled)
+  - **Periodic Reconciliation**: Optional scheduled recovery via `AUTO_RECONCILE_INTERVAL_MINUTES` environment variable (opt-in, in-flight guard prevents overlapping runs)
+  - **Recovery Categories**: FDC timeouts, vault mint failures, "already known" errors, attestation not found, bridges stuck at `xrpl_confirmed` or `fdc_proof_generated`
+  - **Manual Recovery**: API endpoints for individual (`POST /api/bridges/:id/reconcile`) and bulk (`POST /api/bridges/reconcile-all`) reconciliation
+  - **UI Integration**: Retry buttons on failed bridges in Bridge Tracking page with success/error notifications
 
 ### Security Features
 - **Smart Contracts**: ERC-4626 standard, OpenZeppelin AccessControl, ReentrancyGuard.
