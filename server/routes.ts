@@ -108,6 +108,155 @@ export async function registerRoutes(
     }
   });
 
+  // Manual payment reconciliation endpoint
+  app.post("/api/bridges/:bridgeId/reconcile-payment", async (req, res) => {
+    try {
+      const { bridgeId } = req.params;
+      const { xrplTxHash } = req.body;
+
+      if (!xrplTxHash) {
+        return res.status(400).json({ error: "Missing required field: xrplTxHash" });
+      }
+
+      console.log(`🔍 Manual reconciliation requested for bridge ${bridgeId}, tx: ${xrplTxHash}`);
+
+      // 1. Get bridge and verify status
+      const bridge = await storage.getBridgeById(bridgeId);
+      if (!bridge) {
+        return res.status(404).json({ error: "Bridge not found" });
+      }
+
+      if (bridge.status !== "awaiting_payment") {
+        return res.status(400).json({ 
+          error: `Bridge is in '${bridge.status}' status, expected 'awaiting_payment'`,
+          currentStatus: bridge.status 
+        });
+      }
+
+      if (!bridge.agentUnderlyingAddress) {
+        return res.status(400).json({ error: "Bridge does not have an agent address assigned" });
+      }
+
+      // 2. Determine network and connect to XRPL
+      const network = bridge.walletAddress.startsWith("r") ? "testnet" : "testnet"; // Default to testnet for now
+      const xrplServer = network === "testnet" 
+        ? "wss://s.altnet.rippletest.net:51233"
+        : "wss://xrplcluster.com";
+
+      console.log(`Connecting to XRPL ${network} to verify transaction...`);
+      const client = new Client(xrplServer);
+      await client.connect();
+
+      try {
+        // 3. Fetch transaction from XRPL
+        const txResponse = await client.request({
+          command: 'tx',
+          transaction: xrplTxHash,
+        }) as any;
+
+        console.log("Transaction fetched:", JSON.stringify(txResponse.result, null, 2));
+
+        const validated = txResponse?.result?.validated;
+        const txResult = txResponse?.result?.meta?.TransactionResult;
+        const txType = txResponse?.result?.tx_json?.TransactionType;
+        const destination = txResponse?.result?.tx_json?.Destination;
+        const amount = txResponse?.result?.tx_json?.DeliverMax || txResponse?.result?.tx_json?.Amount;
+
+        // 4. Validate transaction
+        if (!validated) {
+          await client.disconnect();
+          return res.status(400).json({ 
+            error: "Transaction is not yet validated on the ledger",
+            validated: false 
+          });
+        }
+
+        if (txResult !== "tesSUCCESS") {
+          await client.disconnect();
+          return res.status(400).json({ 
+            error: `Transaction failed with result: ${txResult}`,
+            txResult 
+          });
+        }
+
+        if (txType !== "Payment") {
+          await client.disconnect();
+          return res.status(400).json({ 
+            error: `Transaction is not a Payment, got: ${txType}`,
+            txType 
+          });
+        }
+
+        // 5. Validate destination matches agent address
+        if (destination !== bridge.agentUnderlyingAddress) {
+          await client.disconnect();
+          return res.status(400).json({ 
+            error: "Payment destination does not match bridge agent address",
+            expected: bridge.agentUnderlyingAddress,
+            actual: destination
+          });
+        }
+
+        // 6. Validate amount (convert drops to XRP)
+        let amountXRP: number;
+        if (typeof amount === 'string') {
+          amountXRP = parseInt(amount) / 1_000_000;
+        } else {
+          await client.disconnect();
+          return res.status(400).json({ 
+            error: "Invalid amount format in transaction",
+            amount 
+          });
+        }
+
+        const expectedXRP = parseFloat(bridge.xrpAmount.toString());
+        if (amountXRP < expectedXRP) {
+          await client.disconnect();
+          return res.status(400).json({ 
+            error: "Payment amount is less than bridge amount",
+            expected: expectedXRP,
+            actual: amountXRP
+          });
+        }
+
+        console.log(`✅ Transaction validated: ${amountXRP} XRP sent to ${destination}`);
+
+        // 7. Update bridge status to xrpl_confirmed
+        await storage.updateBridgeStatus(bridgeId, "xrpl_confirmed", {
+          xrplTxHash: xrplTxHash,
+          xrplConfirmedAt: new Date(),
+        });
+
+        // 8. Trigger minting with proof
+        console.log(`Triggering minting for bridge ${bridgeId}...`);
+        await bridgeService.executeMintingWithProof(bridgeId, xrplTxHash);
+
+        await client.disconnect();
+
+        res.json({ 
+          success: true, 
+          message: "Payment reconciled successfully",
+          bridgeId,
+          xrplTxHash,
+          amountXRP,
+          destination
+        });
+
+      } catch (txError) {
+        await client.disconnect();
+        throw txError;
+      }
+
+    } catch (error) {
+      console.error("Payment reconciliation error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to reconcile payment" });
+      }
+    }
+  });
+
   // Create deposit via FAssets bridge
   app.post("/api/deposits", async (req, res) => {
     try {

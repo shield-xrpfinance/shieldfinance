@@ -101,6 +101,9 @@ export class XRPLDepositListener {
         accounts: [agentAddress],
       });
       console.log(`🔔 Now monitoring FAssets agent: ${agentAddress}`);
+      
+      // Check for recent transactions that may have been made before subscription
+      await this.checkRecentTransactions(agentAddress);
     }
   }
 
@@ -209,6 +212,101 @@ export class XRPLDepositListener {
         isAgentPayment,
         hasAgentHandler: !!this.config.onAgentPayment,
       });
+    }
+  }
+
+  /**
+   * Check for recent transactions that may have occurred before subscription.
+   * This helps catch payments made in the brief window before the agent address was registered.
+   */
+  private async checkRecentTransactions(address: string): Promise<void> {
+    console.log(`🔍 Checking recent transactions for ${address}...`);
+    
+    try {
+      const response = await this.client.request({
+        command: "account_tx",
+        account: address,
+        limit: 20,
+      });
+
+      if (!response.result?.transactions || response.result.transactions.length === 0) {
+        console.log(`No recent transactions found for ${address}`);
+        return;
+      }
+
+      console.log(`Found ${response.result.transactions.length} recent transactions for ${address}`);
+
+      // Current time in seconds (XRPL uses Ripple Epoch: seconds since 2000-01-01)
+      const currentTime = Math.floor(Date.now() / 1000) - 946684800; // Ripple epoch offset
+      const fifteenMinutesAgo = currentTime - (15 * 60); // 15 minutes in seconds
+
+      let processedCount = 0;
+
+      for (const txWrapper of response.result.transactions) {
+        const tx = txWrapper.tx as any;
+        
+        // Skip if transaction data is missing
+        if (!tx) {
+          continue;
+        }
+        
+        // Only process Payment transactions
+        if (tx.TransactionType !== "Payment") {
+          continue;
+        }
+
+        // Only process incoming payments (where this address is the destination)
+        if (tx.Destination !== address) {
+          continue;
+        }
+
+        // Only process XRP payments (not IOUs/tokens)
+        if (typeof tx.Amount !== "string") {
+          continue;
+        }
+
+        // Check if transaction is within the last 15 minutes
+        const txTime = tx.date;
+        if (txTime && txTime < fifteenMinutesAgo) {
+          console.log(`⏭️  Skipping old transaction from ${new Date((txTime + 946684800) * 1000).toISOString()}`);
+          continue;
+        }
+
+        // Process this transaction
+        const amount = (parseInt(tx.Amount) / 1_000_000).toString();
+        const memo = this.extractMemo(tx.Memos);
+
+        console.log(`📋 Processing historical transaction:`, {
+          from: tx.Account,
+          to: tx.Destination,
+          amount,
+          memo,
+          txHash: tx.hash,
+          date: txTime ? new Date((txTime + 946684800) * 1000).toISOString() : 'unknown',
+        });
+
+        // Handle as agent payment
+        if (this.config.onAgentPayment) {
+          const payment: AgentPayment = {
+            agentAddress: address,
+            walletAddress: tx.Account,
+            amount: amount,
+            txHash: tx.hash,
+            memo: memo,
+          };
+
+          try {
+            await this.config.onAgentPayment(payment);
+            processedCount++;
+          } catch (error) {
+            console.error(`❌ Error processing historical payment:`, error);
+          }
+        }
+      }
+
+      console.log(`✅ Processed ${processedCount} historical transaction(s) for ${address}`);
+    } catch (error) {
+      console.error(`❌ Error checking recent transactions for ${address}:`, error);
     }
   }
 
