@@ -34,9 +34,27 @@ export function BridgeStatus({
   const { toast } = useToast();
   
   const stages = [
-    { key: "pending", label: "XRPL Confirmation", completed: ["xrpl_confirmed", "bridging", "completed"].includes(status) },
-    { key: "bridging", label: "XRP → FXRP Bridge", completed: ["bridging", "completed"].includes(status) },
-    { key: "completed", label: "Vault Shares Minted", completed: status === "completed" },
+    { 
+      key: "pending", 
+      label: "XRPL Confirmation", 
+      completed: ["xrpl_confirmed", "proof_generated", "minting", "vault_minting", "completed", "vault_minted"].includes(status) 
+    },
+    { 
+      key: "proof", 
+      label: "XRP → FXRP Bridge", 
+      completed: ["proof_generated", "minting", "vault_minting", "completed", "vault_minted"].includes(status) 
+    },
+    { 
+      key: "minting", 
+      label: "Minting Vault Shares", 
+      completed: ["completed", "vault_minted"].includes(status),
+      failed: status === "vault_mint_failed"
+    },
+    { 
+      key: "completed", 
+      label: "shXRP Shares Ready", 
+      completed: ["completed", "vault_minted"].includes(status) 
+    },
   ];
   
   const copyToClipboard = (text: string, label: string) => {
@@ -55,19 +73,25 @@ export function BridgeStatus({
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Deposit Processing</CardTitle>
-          {status === "completed" && (
+          {(status === "completed" || status === "vault_minted") && (
             <Badge variant="default" data-testid="badge-status-completed">
               <CheckCircle2 className="mr-1 h-3 w-3" />
               Completed
             </Badge>
           )}
-          {status === "failed" && (
+          {(status === "failed" || status === "vault_mint_failed") && (
             <Badge variant="destructive" data-testid="badge-status-failed">
               <AlertCircle className="mr-1 h-3 w-3" />
               Failed
             </Badge>
           )}
-          {!["completed", "failed"].includes(status) && (
+          {status === "vault_minting" && (
+            <Badge variant="secondary" data-testid="badge-status-processing">
+              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+              Minting Shares
+            </Badge>
+          )}
+          {!["completed", "vault_minted", "failed", "vault_mint_failed", "vault_minting"].includes(status) && (
             <Badge variant="secondary" data-testid="badge-status-processing">
               <Loader2 className="mr-1 h-3 w-3 animate-spin" />
               Processing
@@ -94,7 +118,9 @@ export function BridgeStatus({
               className="flex items-start gap-3"
               data-testid={`stage-${stage.key}`}
             >
-              {stage.completed ? (
+              {stage.failed ? (
+                <AlertCircle className="h-5 w-5 text-destructive mt-0.5" data-testid={`icon-${stage.key}-failed`} />
+              ) : stage.completed ? (
                 <CheckCircle2 className="h-5 w-5 text-primary mt-0.5" data-testid={`icon-${stage.key}-completed`} />
               ) : currentStageIndex === index ? (
                 <Loader2 className="h-5 w-5 text-muted-foreground animate-spin mt-0.5" data-testid={`icon-${stage.key}-processing`} />
@@ -102,7 +128,7 @@ export function BridgeStatus({
                 <Clock className="h-5 w-5 text-muted-foreground mt-0.5" data-testid={`icon-${stage.key}-pending`} />
               )}
               <div className="flex-1 min-w-0">
-                <p className={`text-sm font-medium ${stage.completed ? "text-foreground" : "text-muted-foreground"}`}>
+                <p className={`text-sm font-medium ${stage.failed ? "text-destructive" : stage.completed ? "text-foreground" : "text-muted-foreground"}`}>
                   {stage.label}
                 </p>
               </div>

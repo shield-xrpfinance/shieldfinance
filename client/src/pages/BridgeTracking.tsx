@@ -22,22 +22,25 @@ export default function BridgeTracking() {
     }
 
     const failed = bridges.filter(
-      (b) => b.status === "failed" || b.errorMessage !== null
+      (b) => b.status === "failed" || b.status === "vault_mint_failed" || b.errorMessage !== null
     );
 
     const completed = bridges.filter(
-      (b) => b.status === "completed" && !b.errorMessage
+      (b) => (b.status === "completed" || b.status === "vault_minted") && !b.errorMessage
     );
 
     const active = bridges.filter(
       (b) =>
         !b.errorMessage &&
         b.status !== "completed" &&
+        b.status !== "vault_minted" &&
         b.status !== "failed" &&
+        b.status !== "vault_mint_failed" &&
         (b.status === "awaiting_payment" ||
           b.status === "xrpl_confirmed" ||
           b.status === "proof_generated" ||
-          b.status === "minting")
+          b.status === "minting" ||
+          b.status === "vault_minting")
     );
 
     return {

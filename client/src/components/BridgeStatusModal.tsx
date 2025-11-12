@@ -62,6 +62,27 @@ const statusConfig = {
     step: 3,
     color: "bg-blue-500",
   },
+  proof_generated: {
+    icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
+    title: "Proof Generated",
+    description: "Cryptographic proof generated! Executing FXRP minting...",
+    step: 3,
+    color: "bg-blue-500",
+  },
+  minting: {
+    icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
+    title: "Minting FXRP",
+    description: "Minting FXRP tokens on Flare network...",
+    step: 4,
+    color: "bg-blue-500",
+  },
+  vault_minting: {
+    icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
+    title: "Minting Vault Shares",
+    description: "Depositing FXRP to vault and minting shXRP shares...",
+    step: 5,
+    color: "bg-blue-500",
+  },
   fdc_proof_generated: {
     icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
     title: "Executing Minting",
@@ -69,12 +90,26 @@ const statusConfig = {
     step: 4,
     color: "bg-blue-500",
   },
+  vault_minted: {
+    icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
+    title: "Vault Shares Ready",
+    description: "✅ Successfully minted shXRP vault shares!",
+    step: 5,
+    color: "bg-green-500",
+  },
   completed: {
     icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
     title: "Bridge Completed",
     description: "✅ Bridge completed! You received shXRP",
-    step: 4,
+    step: 5,
     color: "bg-green-500",
+  },
+  vault_mint_failed: {
+    icon: <XCircle className="h-5 w-5 text-red-500" />,
+    title: "Vault Minting Failed",
+    description: "❌ Vault share minting failed. Please contact support.",
+    step: 0,
+    color: "bg-red-500",
   },
   failed: {
     icon: <XCircle className="h-5 w-5 text-red-500" />,
@@ -110,7 +145,7 @@ export default function BridgeStatusModal({
         setBridge(data);
 
         // Stop polling if bridge is completed or failed
-        if (data.status === "completed" || data.status === "failed") {
+        if (data.status === "completed" || data.status === "vault_minted" || data.status === "failed" || data.status === "vault_mint_failed") {
           shouldContinuePolling = false;
         }
       } catch (error) {
@@ -176,7 +211,7 @@ export default function BridgeStatusModal({
   }
 
   const status = statusConfig[bridge.status as keyof typeof statusConfig] || statusConfig.pending;
-  const progress = (status.step / 4) * 100;
+  const progress = (status.step / 5) * 100;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -196,7 +231,7 @@ export default function BridgeStatusModal({
           <div className="space-y-4">
             <div className="flex items-center justify-between text-sm">
               <span className="text-muted-foreground">Bridge Progress</span>
-              <span className="font-medium">{status.step} of 4 steps</span>
+              <span className="font-medium">{status.step} of 5 steps</span>
             </div>
             <Progress value={progress} className="h-2" data-testid="progress-bridge" />
             
@@ -265,14 +300,14 @@ export default function BridgeStatusModal({
                 </div>
               </div>
 
-              {/* Step 4: Mint FXRP & shXRP */}
+              {/* Step 4: Mint FXRP */}
               <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
-                status.step >= 4 ? bridge.status === 'completed' ? 'bg-green-500/10 border border-green-500/20' : 'bg-blue-500/10 border border-blue-500/20' : 'bg-muted/30'
+                status.step >= 4 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-muted/30'
               }`}>
                 <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                  bridge.status === 'completed' ? 'bg-green-500' : status.step === 4 ? 'bg-blue-500' : 'bg-muted'
+                  status.step > 4 ? 'bg-green-500' : status.step === 4 ? 'bg-blue-500' : 'bg-muted'
                 }`}>
-                  {bridge.status === 'completed' ? (
+                  {status.step > 4 ? (
                     <CheckCircle2 className="h-4 w-4 text-white" />
                   ) : status.step === 4 ? (
                     <Loader2 className="h-4 w-4 text-white animate-spin" />
@@ -281,8 +316,29 @@ export default function BridgeStatusModal({
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Mint FXRP & shXRP</p>
-                  <p className="text-xs text-muted-foreground">Receive FXRP, deposit to vault for shXRP</p>
+                  <p className="text-sm font-medium">Mint FXRP</p>
+                  <p className="text-xs text-muted-foreground">Receive FXRP tokens on Flare network</p>
+                </div>
+              </div>
+
+              {/* Step 5: Mint Vault Shares */}
+              <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
+                status.step >= 5 ? (bridge.status === 'completed' || bridge.status === 'vault_minted') ? 'bg-green-500/10 border border-green-500/20' : 'bg-blue-500/10 border border-blue-500/20' : 'bg-muted/30'
+              }`}>
+                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                  (bridge.status === 'completed' || bridge.status === 'vault_minted') ? 'bg-green-500' : status.step === 5 ? 'bg-blue-500' : 'bg-muted'
+                }`}>
+                  {(bridge.status === 'completed' || bridge.status === 'vault_minted') ? (
+                    <CheckCircle2 className="h-4 w-4 text-white" />
+                  ) : status.step === 5 ? (
+                    <Loader2 className="h-4 w-4 text-white animate-spin" />
+                  ) : (
+                    <span className="text-xs text-muted-foreground">5</span>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-medium">Mint Vault Shares</p>
+                  <p className="text-xs text-muted-foreground">Deposit FXRP to vault for shXRP shares</p>
                 </div>
               </div>
             </div>
@@ -300,14 +356,14 @@ export default function BridgeStatusModal({
             </div>
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Status</span>
-              <Badge variant={bridge.status === "completed" ? "default" : "secondary"}>
+              <Badge variant={(bridge.status === "completed" || bridge.status === "vault_minted") ? "default" : "secondary"}>
                 {bridge.status}
               </Badge>
             </div>
           </div>
 
           {/* Agent Address - only show if available and not completed */}
-          {bridge.agentUnderlyingAddress && bridge.status !== "completed" && (
+          {bridge.agentUnderlyingAddress && bridge.status !== "completed" && bridge.status !== "vault_minted" && (
             <div className="space-y-3">
               <Alert data-testid="alert-agent-address">
                 <AlertDescription className="space-y-4">
@@ -386,7 +442,7 @@ export default function BridgeStatusModal({
           )}
 
           {/* Error Message */}
-          {bridge.status === "failed" && bridge.errorMessage && (
+          {(bridge.status === "failed" || bridge.status === "vault_mint_failed") && bridge.errorMessage && (
             <Alert variant="destructive" data-testid="alert-error">
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>{bridge.errorMessage}</AlertDescription>
@@ -404,7 +460,7 @@ export default function BridgeStatusModal({
           )}
 
           {/* Success State */}
-          {bridge.status === "completed" && (
+          {(bridge.status === "completed" || bridge.status === "vault_minted") && (
             <Alert className="border-green-500/50 bg-green-500/10" data-testid="alert-success">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
               <AlertDescription className="text-green-700 dark:text-green-300">
@@ -418,11 +474,11 @@ export default function BridgeStatusModal({
         <DialogFooter>
           <Button
             onClick={() => onOpenChange(false)}
-            variant={bridge.status === "completed" ? "default" : "outline"}
+            variant={(bridge.status === "completed" || bridge.status === "vault_minted") ? "default" : "outline"}
             className="w-full"
             data-testid="button-close-bridge-status"
           >
-            {bridge.status === "completed" ? "View Portfolio" : "Close"}
+            {(bridge.status === "completed" || bridge.status === "vault_minted") ? "View Portfolio" : "Close"}
           </Button>
         </DialogFooter>
       </DialogContent>
