@@ -60,11 +60,22 @@ async function pollVerifierProof(
       lastStatusCode = response.status; // Update last status code
       
       if (response.ok) {
-        const proofData = await response.json();
+        const rawProofData = await response.json();
         console.log("✅ FDC Verifier proof retrieved successfully!");
-        console.log("📦 Proof structure:", JSON.stringify(proofData, null, 2));
-        console.log("🔍 Merkle proof array length:", proofData.merkleProof?.length || 0);
-        return proofData;
+        console.log("📦 Raw proof structure:", JSON.stringify(rawProofData, null, 2));
+        
+        // Transform FDC Verifier response to AssetManager contract format
+        // FDC Verifier returns: { proof: [...], response: {...} }
+        // AssetManager expects: { merkleProof: [...], data: {...} }
+        const transformedProof = {
+          merkleProof: rawProofData.proof || [],
+          data: rawProofData.response || rawProofData.data
+        };
+        
+        console.log("✅ Proof transformed for AssetManager contract");
+        console.log("🔍 Merkle proof array length:", transformedProof.merkleProof.length);
+        
+        return transformedProof;
       }
       
       if (response.status === 404) {
