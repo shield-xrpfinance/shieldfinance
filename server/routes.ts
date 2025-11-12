@@ -457,6 +457,20 @@ export async function registerRoutes(
       // Build payment request
       const paymentRequest = bridgeService.buildPaymentRequest(updatedBridge);
 
+      // Calculate fee breakdown for UI display
+      const baseAmountXRP = updatedBridge.reservedValueUBA 
+        ? (Number(updatedBridge.reservedValueUBA) / 1_000_000).toFixed(6)
+        : bridge.xrpAmount;
+      const feeAmountXRP = updatedBridge.reservedFeeUBA
+        ? (Number(updatedBridge.reservedFeeUBA) / 1_000_000).toFixed(6)
+        : "0";
+      const totalAmountXRP = updatedBridge.totalAmountUBA
+        ? (Number(updatedBridge.totalAmountUBA) / 1_000_000).toFixed(6)
+        : bridge.xrpAmount;
+      const feePercentage = updatedBridge.mintingFeeBIPS
+        ? (Number(updatedBridge.mintingFeeBIPS) / 100).toFixed(2)
+        : "0.25";
+
       // For demo mode, continue with rest of bridge simulation in background
       if (bridgeService.demoMode) {
         bridgeService.initiateBridge(bridge.id).catch(async (error) => {
@@ -464,13 +478,19 @@ export async function registerRoutes(
         });
       }
 
-      // Return bridge info with payment request
+      // Return bridge info with payment request and fee breakdown
       res.json({
         success: true,
         bridgeId: bridge.id,
         amount: bridge.xrpAmount,
         status: updatedBridge.status,
         paymentRequest,
+        feeBreakdown: {
+          baseAmount: baseAmountXRP,
+          feeAmount: feeAmountXRP,
+          totalAmount: totalAmountXRP,
+          feePercentage: `${feePercentage}%`,
+        },
         message: "Bridge initiated. Please send payment to complete the bridge.",
         demo: bridgeService.demoMode,
       });
