@@ -104,4 +104,5 @@ Preferred communication style: Simple, everyday language.
 - **WalletConnect Auto-Payment**: Implemented proper session restoration with lazy SDK loading, timeout guards, and bundle optimization for seamless cross-page UX.
 - **WalletConnect Provider Guard**: Fixed auto-payment triggering by adding guard condition to verify WalletConnect provider instance is initialized before calling requestPayment. Prevents silent failures when provider state is incomplete.
 - **Manual Payment UX**: Added destination address and MEMO display to BridgeStatus component for "awaiting_payment" state. Users can now see exact payment details (agent address + bridge ID as MEMO) for manual testing and fallback workflows.
+  - **Hex-Encoded MEMO Fix**: Fixed "Invalid payment reference" wallet errors by displaying MEMO in hex-encoded format (required by XRPL). Uses browser-safe TextEncoder API to match server-side Buffer encoding. Includes copy-to-clipboard buttons for easy manual payment submission.
 - **Enhanced Error Messaging**: Added detailed logging and user-facing toast notifications when auto-payment skips due to incomplete wallet connection state.
