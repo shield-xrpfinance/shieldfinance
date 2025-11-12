@@ -202,12 +202,30 @@ export async function generateFDCProof(
   
   // Step 2: Extract abiEncodedRequest and round parameters
   const abiEncodedRequest = prepareResult.abiEncodedRequest;
-  const roundOffsetSec = prepareResult.roundOffsetSec || 0;
-  const roundDurationSec = prepareResult.roundDurationSec || 90;
+  
+  // CRITICAL FIX: Extract round parameters from roundParams object (nested), not top level
+  // prepareRequest response structure: { ..., roundParams: { roundOffsetSec, roundDurationSec }, ... }
+  const roundParams = prepareResult.roundParams || prepareResult.responseBody?.roundParams;
+  
+  if (!roundParams || !roundParams.roundOffsetSec || !roundParams.roundDurationSec) {
+    throw new Error(
+      `Missing round parameters in prepareRequest response. ` +
+      `Expected roundParams.roundOffsetSec and roundParams.roundDurationSec. ` +
+      `Got: ${JSON.stringify(prepareResult, null, 2)}`
+    );
+  }
+  
+  const roundOffsetSec = Number(roundParams.roundOffsetSec);
+  const roundDurationSec = Number(roundParams.roundDurationSec);
   
   if (!abiEncodedRequest) {
     throw new Error(`Missing abiEncodedRequest in prepareRequest response. Status: ${prepareResult.status}`);
   }
+  
+  console.log("✅ Round parameters extracted from prepareRequest:");
+  console.log(`  Round Offset: ${roundOffsetSec} sec (${new Date(roundOffsetSec * 1000).toISOString()})`);
+  console.log(`  Round Duration: ${roundDurationSec} sec`);
+  console.log(`  This fixes the voting round calculation bug!`);
   
   console.log("\n📋 Step 2: Submit Attestation to FdcHub (On-Chain)");
   console.log("  ABI Encoded Request:", abiEncodedRequest);
