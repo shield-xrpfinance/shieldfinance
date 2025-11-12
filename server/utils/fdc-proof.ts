@@ -28,8 +28,8 @@ async function pollVerifierProof(
   network: "mainnet" | "coston2"
 ): Promise<any> {
   const verifierUrl = network === "mainnet"
-    ? "https://fdc-verifiers.flare.network/api/proof/get-specific-proof"
-    : "https://fdc-verifiers-testnet.flare.network/api/proof/get-specific-proof";
+    ? "https://flr-data-availability.flare.network/api/v1/fdc/proof-by-request-round"
+    : "https://ctn2-data-availability.flare.network/api/v1/fdc/proof-by-request-round";
   
   const maxAttempts = 60; // 15 minutes max (60 attempts * 15 seconds) - extended for slow FDC finalization
   const pollInterval = 15000; // 15 seconds
@@ -52,7 +52,7 @@ async function pollVerifierProof(
           "X-API-KEY": "00000000-0000-0000-0000-000000000000"
         },
         body: JSON.stringify({
-          roundId: votingRoundId,
+          votingRoundId: votingRoundId,
           requestBytes: requestBytes
         })
       });
