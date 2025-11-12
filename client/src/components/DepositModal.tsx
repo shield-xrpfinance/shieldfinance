@@ -66,6 +66,12 @@ export default function DepositModal({
     return sum + val;
   }, 0);
 
+  // Calculate FAssets minting fee (0.25% for XRP bridges)
+  const isXRPDeposit = depositAssets.includes("XRP");
+  const mintingFeePercentage = 0.25; // 0.25% = 25 BIPS
+  const mintingFee = isXRPDeposit ? (totalValue * (mintingFeePercentage / 100)) : 0;
+  const totalWithFee = totalValue + mintingFee;
+
   const projectedEarnings = totalValue
     ? (totalValue * parseFloat(vaultApy) / 100).toFixed(2)
     : "0";
@@ -237,16 +243,22 @@ export default function DepositModal({
               {!balancesLoading && (
                 <div className="space-y-2 p-4 rounded-md bg-muted/50">
                   <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Total Value</span>
-                    <span className="font-semibold font-mono">{totalValue.toFixed(2)}</span>
+                    <span className="text-muted-foreground">Deposit Amount</span>
+                    <span className="font-semibold font-mono">{totalValue.toFixed(2)} XRP</span>
+                  </div>
+                  {isXRPDeposit && mintingFee > 0 && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Bridge Fee ({mintingFeePercentage}%)</span>
+                      <span className="font-mono">+{mintingFee.toFixed(6)} XRP</span>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between text-sm pt-2 border-t">
+                    <span className="font-medium">Total Payment</span>
+                    <span className="font-bold font-mono">{totalWithFee.toFixed(6)} XRP</span>
                   </div>
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Projected Annual Earnings</span>
-                    <span className="font-semibold font-mono">{projectedEarnings}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-muted-foreground">Est. Gas Fee</span>
-                    <span className="font-mono">{gasEstimate} XRP</span>
+                    <span className="font-semibold font-mono">+{projectedEarnings} XRP</span>
                   </div>
                 </div>
               )}
@@ -258,29 +270,36 @@ export default function DepositModal({
               <div className="space-y-3 p-4 rounded-md border">
                 {Object.entries(amounts).filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0).map(([asset, amount]) => (
                   <div key={asset} className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">{asset} Amount</span>
+                    <span className="text-sm text-muted-foreground">{asset} Deposit</span>
                     <span className="font-semibold font-mono">{amount} {asset}</span>
                   </div>
                 ))}
+                {isXRPDeposit && mintingFee > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-muted-foreground">
+                      Bridge Fee ({mintingFeePercentage}%)
+                    </span>
+                    <span className="font-mono text-sm">+{mintingFee.toFixed(6)} XRP</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between pt-2 border-t">
-                  <span className="text-sm text-muted-foreground">Total Value</span>
-                  <span className="font-semibold font-mono">{totalValue.toFixed(2)}</span>
+                  <span className="font-medium">Total Payment Required</span>
+                  <span className="text-lg font-bold font-mono">{totalWithFee.toFixed(6)} XRP</span>
                 </div>
-                <div className="flex items-center justify-between">
+                <div className="flex items-center justify-between pt-2 border-t">
                   <span className="text-sm text-muted-foreground">Annual Earnings</span>
-                  <span className="font-medium font-mono text-chart-2">+{projectedEarnings}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Gas Fee</span>
-                  <span className="font-mono text-sm">{gasEstimate} XRP</span>
-                </div>
-                <div className="pt-3 border-t flex items-center justify-between">
-                  <span className="font-medium">Total Cost</span>
-                  <span className="text-lg font-bold font-mono">
-                    {(totalValue + parseFloat(gasEstimate)).toFixed(5)}
-                  </span>
+                  <span className="font-medium font-mono text-chart-2">+{projectedEarnings} XRP</span>
                 </div>
               </div>
+              
+              {isXRPDeposit && (
+                <Alert>
+                  <Info className="h-4 w-4" />
+                  <AlertDescription className="text-xs">
+                    You'll be prompted to send {totalWithFee.toFixed(6)} XRP ({totalValue.toFixed(2)} XRP + {mintingFee.toFixed(6)} XRP bridge fee) to complete your deposit.
+                  </AlertDescription>
+                </Alert>
+              )}
             </div>
           )}
         </div>

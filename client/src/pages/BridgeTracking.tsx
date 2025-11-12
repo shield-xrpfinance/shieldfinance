@@ -9,7 +9,7 @@ import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2 } from "luc
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
-import type { SelectXrpToFxrpBridge, SelectVault } from "@shared/schema";
+import type { SelectXrpToFxrpBridge, Vault } from "@shared/schema";
 
 export default function BridgeTracking() {
   const { address } = useWallet();
@@ -26,13 +26,13 @@ export default function BridgeTracking() {
     enabled: !!address,
   });
 
-  const { data: vaults, isLoading: isLoadingVaults } = useQuery<SelectVault[]>({
+  const { data: vaults, isLoading: isLoadingVaults } = useQuery<Vault[]>({
     queryKey: ["/api/vaults"],
   });
 
   // Memoize vault lookup map for performance
   const vaultMap = useMemo(() => {
-    if (!vaults) return new Map<string, SelectVault>();
+    if (!vaults) return new Map<string, Vault>();
     return new Map(vaults.map(v => [v.id, v]));
   }, [vaults]);
 

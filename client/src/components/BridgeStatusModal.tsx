@@ -465,9 +465,25 @@ export default function BridgeStatusModal({
               <span className="font-medium">{vaultName}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Amount</span>
+              <span className="text-sm text-muted-foreground">Deposit Amount</span>
               <span className="font-medium font-mono">{amount} XRP</span>
             </div>
+            {bridge && bridge.reservedFeeUBA && (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Bridge Fee (0.25%)</span>
+                  <span className="font-medium font-mono">+{(Number(bridge.reservedFeeUBA) / 1_000_000).toFixed(6)} XRP</span>
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t border-muted-foreground/20">
+                  <span className="text-sm font-medium">Total Payment</span>
+                  <span className="font-bold font-mono">
+                    {bridge.totalAmountUBA 
+                      ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)
+                      : amount} XRP
+                  </span>
+                </div>
+              </>
+            )}
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Status</span>
               <Badge variant={(bridge.status === "completed" || bridge.status === "vault_minted") ? "default" : "secondary"}>
@@ -556,7 +572,9 @@ export default function BridgeStatusModal({
                         )}
                       </Button>
                       <p className="text-xs text-muted-foreground text-center">
-                        Or manually send {amount} XRP using the details above
+                        Or manually send {bridge.totalAmountUBA 
+                          ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)
+                          : amount} XRP using the details above
                       </p>
                     </div>
                   )}
@@ -572,7 +590,9 @@ export default function BridgeStatusModal({
 
                   {!isConnected && (
                     <p className="text-xs text-muted-foreground text-center font-medium">
-                      Send exactly {amount} XRP with the MEMO above
+                      Send exactly {bridge.totalAmountUBA 
+                        ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)
+                        : amount} XRP with the MEMO above
                     </p>
                   )}
                 </AlertDescription>
