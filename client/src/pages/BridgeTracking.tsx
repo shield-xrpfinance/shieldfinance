@@ -4,7 +4,7 @@ import { useWallet } from "@/lib/walletContext";
 import { BridgeStatus } from "@/components/BridgeStatus";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { AlertCircle, Activity, CheckCircle2, XCircle, Wallet } from "lucide-react";
+import { Activity, CheckCircle2, XCircle, Wallet } from "lucide-react";
 import type { SelectXrpToFxrpBridge } from "@shared/schema";
 
 export default function BridgeTracking() {
@@ -21,18 +21,23 @@ export default function BridgeTracking() {
       return { activeBridges: [], completedBridges: [], failedBridges: [] };
     }
 
-    const active = bridges.filter(
-      (b) =>
-        b.status === "awaiting_payment" ||
-        b.status === "xrpl_confirmed" ||
-        b.status === "proof_generated" ||
-        b.status === "minting"
-    );
-
-    const completed = bridges.filter((b) => b.status === "completed");
-
     const failed = bridges.filter(
       (b) => b.status === "failed" || b.errorMessage !== null
+    );
+
+    const completed = bridges.filter(
+      (b) => b.status === "completed" && !b.errorMessage
+    );
+
+    const active = bridges.filter(
+      (b) =>
+        !b.errorMessage &&
+        b.status !== "completed" &&
+        b.status !== "failed" &&
+        (b.status === "awaiting_payment" ||
+          b.status === "xrpl_confirmed" ||
+          b.status === "proof_generated" ||
+          b.status === "minting")
     );
 
     return {
