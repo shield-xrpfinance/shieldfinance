@@ -876,6 +876,8 @@ export async function registerRoutes(
           {
             Memo: {
               MemoData: Buffer.from(memo).toString("hex").toUpperCase(),
+              MemoType: Buffer.from("bridge_id").toString("hex").toUpperCase(),
+              MemoFormat: Buffer.from("text/plain").toString("hex").toUpperCase(),
             },
           },
         ],
