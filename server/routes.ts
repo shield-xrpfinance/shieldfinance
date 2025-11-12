@@ -257,6 +257,69 @@ export async function registerRoutes(
     }
   });
 
+  // Recovery endpoint: Trigger FDC proof generation for stuck bridges
+  app.post("/api/bridges/:id/recover-proof", async (req, res) => {
+    try {
+      const { id: bridgeId } = req.params;
+      
+      if (!bridgeId) {
+        return res.status(400).json({ error: "Bridge ID is required" });
+      }
+
+      // 1. Get the bridge
+      const bridge = await storage.getBridgeById(bridgeId);
+      if (!bridge) {
+        return res.status(404).json({ error: "Bridge not found" });
+      }
+
+      // 2. Verify bridge is stuck at xrpl_confirmed
+      if (bridge.status !== "xrpl_confirmed") {
+        return res.status(400).json({ 
+          error: "Bridge is not in xrpl_confirmed status",
+          currentStatus: bridge.status,
+          message: "This recovery endpoint is only for bridges stuck at xrpl_confirmed"
+        });
+      }
+
+      // 3. Verify we have XRPL transaction hash
+      if (!bridge.xrplTxHash) {
+        return res.status(400).json({ 
+          error: "Bridge has no XRPL transaction hash",
+          message: "Cannot generate FDC proof without XRPL transaction hash"
+        });
+      }
+
+      // 4. Check if proof already exists
+      if (bridge.fdcProofData) {
+        return res.status(400).json({ 
+          error: "Bridge already has FDC proof data",
+          message: "FDC proof was already generated. Bridge may be stuck at a later stage."
+        });
+      }
+
+      console.log(`🔧 Recovery: Triggering FDC proof generation for bridge ${bridgeId}`);
+      console.log(`   XRPL TX: ${bridge.xrplTxHash}`);
+
+      // 5. Trigger proof generation and minting
+      await bridgeService.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
+
+      res.json({ 
+        success: true, 
+        message: "FDC proof generation triggered successfully",
+        bridgeId,
+        xrplTxHash: bridge.xrplTxHash
+      });
+
+    } catch (error) {
+      console.error("FDC proof recovery error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to recover FDC proof generation" });
+      }
+    }
+  });
+
   // Create deposit via FAssets bridge
   app.post("/api/deposits", async (req, res) => {
     try {

@@ -129,8 +129,15 @@ app.use((req, res, next) => {
         return;
       }
       
-      if (bridge.status !== "awaiting_payment") {
-        console.log(`⚠️  Bridge ${bridge.id} not in awaiting_payment state (current: ${bridge.status})`);
+      // Allow processing if:
+      // 1. Status is awaiting_payment (normal flow)
+      // 2. Status is xrpl_confirmed BUT no FDC proof yet (recovery/retry from manual reconciliation or duplicate detection)
+      const canProcess = 
+        bridge.status === "awaiting_payment" || 
+        (bridge.status === "xrpl_confirmed" && !bridge.fdcProofData);
+      
+      if (!canProcess) {
+        console.log(`⏭️  Bridge ${bridge.id} already processed (status: ${bridge.status}, has proof: ${!!bridge.fdcProofData})`);
         return;
       }
       
