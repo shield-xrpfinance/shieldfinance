@@ -231,6 +231,26 @@ async function main() {
     console.log(`  Collateral Reservation ID: ${bridge.collateralReservationId}`);
     console.log(`  Amount: ${bridge.xrpAmount} XRP`);
 
+    // Preflight check: Verify collateral reservation hasn't expired
+    if (bridge.reservationExpiry) {
+      const expiry = new Date(bridge.reservationExpiry);
+      const now = new Date();
+      if (now > expiry) {
+        const minutesExpired = Math.floor((now.getTime() - expiry.getTime()) / 1000 / 60);
+        console.error(`\n❌ PREFLIGHT CHECK FAILED: Collateral reservation expired!`);
+        console.error(`  Expiry Time: ${expiry.toISOString()}`);
+        console.error(`  Current Time: ${now.toISOString()}`);
+        console.error(`  Expired: ${minutesExpired} minutes ago`);
+        console.error(`\n💡 Solution: Create a new bridge with a fresh collateral reservation.`);
+        console.error(`  FAssets reservations expire ~3 minutes after creation.`);
+        throw new Error(`Collateral reservation expired ${minutesExpired} minutes ago. Minting cannot succeed with expired reservation.`);
+      }
+      const minutesRemaining = Math.floor((expiry.getTime() - now.getTime()) / 1000 / 60);
+      console.log(`✅ Collateral reservation valid (expires in ${minutesRemaining} minutes)`);
+    } else {
+      console.warn(`⚠️  Warning: No reservation expiry time found in bridge data`);
+    }
+
     // Step 2: Retrieve FDC proof
     console.log("\n📋 Step 2: Retrieving FDC proof...");
     const fdcProof = await retrieveFDCProof(bridge.xrplTxHash, votingRound, NETWORK);
