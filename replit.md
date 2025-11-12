@@ -6,6 +6,18 @@ This project is a full-stack DeFi application providing a dashboard for XRP liqu
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### November 12, 2025 - Bridge Tracking Payment Restart Feature
+- **Bridge Tracking Enhancement**: Added "Send Payment" button to bridge tracking page for bridges in `awaiting_payment` status
+- **User Flow**: Users can now reopen BridgeStatusModal after closing it to complete payment without losing progress
+- **Implementation Details**:
+  - Vault name lookup with memoized Map for O(1) performance
+  - Loading state on button while vaults data is being fetched
+  - Toast notifications for vault loading and error states
+  - Full integration with existing Xaman/WalletConnect payment flow
+- **Files Modified**: `client/src/pages/BridgeTracking.tsx`, `client/src/components/BridgeStatus.tsx`
+
 ## System Architecture
 
 ### Frontend
