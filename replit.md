@@ -57,6 +57,8 @@ Preferred communication style: Simple, everyday language.
 ### Blockchain & Wallet Integration
 - **Xaman (XUMM)**: XRP wallet integration (`xumm-sdk`) for transaction signing, payload management, requires `XUMM_API_KEY`, `XUMM_API_SECRET`.
 - **WalletConnect**: XRPL-compatible wallet connection using `@walletconnect/universal-provider` for `xrpl` namespace, supports XRPL mainnet/testnet, dynamic chain switching, requires `VITE_WALLETCONNECT_PROJECT_ID`.
+  - **Session Restoration**: Lazy-loaded SDK with type-only imports, 5-second timeout guard, automatic IndexedDB session restoration with address validation.
+  - **Bundle Optimization**: Type-only import prevents bundling, dynamic import enables code splitting, finally block ensures timeout cleanup.
 - **Web3Auth (Social Login)**: Enables social login (`@web3auth/modal`) for XRP wallet creation, uses `@noble/secp256k1` for key derivation, polyfills for Buffer/process, requires `VITE_WEB3AUTH_CLIENT_ID`.
 - **Transaction Signing Routing**: Automatically routes to Xaman or WalletConnect based on connection method.
 - **XRP Ledger Balance Fetching**: Real-time balance retrieval for XRP, RLUSD, USDC using `xrpl` library.
@@ -90,4 +92,13 @@ Preferred communication style: Simple, everyday language.
     - Coston2 Testnet: 0x0b6A3645c240605887a5532109323A3E12273dc7
   - **Helper Script**: `scripts/get-assetmanager-address.ts` - Verifies Contract Registry lookups and displays current addresses.
   - **Zero-Address Validation**: FAssetsClient validates registry responses to prevent initialization with invalid addresses.
+  - **FDC Attestation**: Payment proof generation using Flare Data Connector with public test API key (00000000-0000-0000-0000-000000000000) for development/testing.
 - **Firelight.finance Integration**: For generating yield on FXRP deposits.
+
+## Recent Updates (November 2024)
+
+### Payment Detection & Processing Improvements
+- **Historical Transaction Detection**: Extended XRPL listener lookback window from 5 to 15 minutes to catch payments made before listener subscription.
+- **Manual Reconciliation**: Added `POST /api/bridges/:id/reconcile-payment` endpoint for manual payment verification when automatic detection fails.
+- **FDC Authentication**: Fixed 401 Unauthorized errors by adding X-API-KEY header to FDC proof generation requests.
+- **WalletConnect Auto-Payment**: Implemented proper session restoration with lazy SDK loading, timeout guards, and bundle optimization for seamless cross-page UX.
