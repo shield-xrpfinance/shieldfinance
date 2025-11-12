@@ -221,7 +221,7 @@ export default function Vaults() {
         });
 
         // Auto-trigger payment request if available
-        if (data.paymentRequest && provider) {
+        if (data.paymentRequest && provider && (provider === "xaman" || walletConnectProvider)) {
           console.log("✅ Auto-triggering payment request with:", data.paymentRequest);
           try {
             const paymentResult = await requestPayment(data.paymentRequest);
@@ -261,7 +261,24 @@ export default function Vaults() {
           console.log("❌ Auto-trigger skipped - missing conditions:", {
             hasPaymentRequest: !!data.paymentRequest,
             hasProvider: !!provider,
+            providerType: provider,
+            hasWalletConnectProvider: !!walletConnectProvider,
+            reason: !data.paymentRequest 
+              ? "No payment request" 
+              : !provider 
+                ? "No provider" 
+                : provider === "walletconnect" && !walletConnectProvider
+                  ? "WalletConnect provider not initialized"
+                  : "Unknown",
           });
+          
+          if (provider === "walletconnect" && !walletConnectProvider) {
+            toast({
+              title: "Connection Issue",
+              description: "Your wallet connection is incomplete. Please reconnect your wallet and try again.",
+              variant: "destructive",
+            });
+          }
         }
 
         toast({

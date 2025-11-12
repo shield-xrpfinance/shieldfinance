@@ -252,6 +252,8 @@ export default function ConnectWalletModal({
       });
 
       setTimeout(() => {
+        // Note: Demo mode doesn't have a real provider instance, so pass null
+        // This means auto-payment won't work in demo mode (expected behavior)
         connect(mockAddress, "walletconnect");
         if (onConnect) {
           onConnect(mockAddress, "walletconnect");
