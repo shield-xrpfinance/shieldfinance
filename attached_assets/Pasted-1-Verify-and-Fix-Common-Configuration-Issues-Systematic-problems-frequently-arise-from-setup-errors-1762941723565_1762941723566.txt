@@ -1,0 +1,24 @@
+1. Verify and Fix Common Configuration Issues
+Systematic problems frequently arise from setup errors. Double-check these:
+
+Use Testnet-Specific Endpoints: Ensure you're using the Coston2 verifier at https://fdc-verifiers-testnet.flare.network/ (rate-limited for dev use). Avoid mainnet URLs. For the source chain, use testETH (not ETH) for Sepolia interactions.
+API Key Validation: Include a valid X-API-KEY header in verifier requests. If using the public service, generate one via the Swagger API docs at https://fdc-verifiers-testnet.flare.network/verifier/api-doc.
+Request Preparation: When calling prepareRequest, confirm:
+attestationType: 32-byte hex for "EVMTransaction" (e.g., 0x...).
+sourceId: "testETH".
+requestBody: Accurate transaction hash, at least the required confirmations (default: chain-specific, e.g., 12 for Sepolia), and other fields like url or proofType.
+Submit the resulting abiEncodedRequest to FdcHub (0x1c78A073E3BD2aCa4cc327d55FB0cD4f0549B55b) with requestAttestation and 1 testnet ETH (get from faucet at https://faucet.flare.network/coston2).
+
+Contract Compilation: Set EVM version to Shanghai in tools like Hardhat/Foundry.
+Transaction Maturity: Wait for the source tx to reach required confirmations before attesting.
+
+If issues persist, test with Flare's starter kits from their GitHub.
+2. Troubleshoot Round and Consensus Problems
+FDC operates in rounds (90-180 seconds). Systematic failures here indicate timing or consensus issues:
+
+Check Consensus: After submission, compute roundId and monitor at https://coston-systems-explorer.flare.rocks/voting-epoch/<roundId>?tab=fdc. If no consensus (e.g., Merkle root not formed), resubmit the request.
+Wait for Finalization: Proofs are invalid pre-finalization. Query Relay contract's isFinalized(roundId) or listen for ProtocolMessageRelayed events (protocolId=200). Use DA Layer API /api/v0/fdc/get-proof-round-id-bytes only post-finalization.
+Validate Proofs On-Chain: Call IFdcVerification.verifyEVMTransaction via ContractRegistry.getFdcVerification() to ensure Merkle proof integrity before use.
+Handle Rate Limits: Public verifiers throttle; for heavy testing, run your own verifier (docs guide setup with Docker/Flare Entity).
+
+Monitor explorer for patterns—if rounds consistently fail, it may be a network-wide testnet glitch.
