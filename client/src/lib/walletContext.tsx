@@ -1,5 +1,5 @@
 /* @refresh reset */
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+import { createContext, useContext, useState, useEffect, useRef, ReactNode } from "react";
 import type UniversalProvider from "@walletconnect/universal-provider";
 import type { PaymentRequest } from "@shared/schema";
 import { Buffer } from "buffer";
@@ -38,28 +38,104 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const [provider, setProvider] = useState<"xaman" | "walletconnect" | "web3auth" | null>(null);
   const [walletConnectProvider, setWalletConnectProvider] = useState<UniversalProvider | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const initRef = useRef(false);
 
   // Restore wallet connection from localStorage on mount
   useEffect(() => {
-    const savedAddress = localStorage.getItem("walletAddress");
-    const savedProvider = localStorage.getItem("walletProvider");
+    // Prevent double initialization (e.g., in React StrictMode)
+    if (initRef.current) return;
+    initRef.current = true;
 
-    if (savedAddress && savedProvider) {
-      // Auto-restore Xaman and Web3Auth connections
-      // WalletConnect requires active session and cannot be restored from localStorage alone
-      if (savedProvider === "xaman" || savedProvider === "web3auth") {
-        setAddress(savedAddress);
-        setProvider(savedProvider as "xaman" | "web3auth");
-        console.log(`Restored wallet connection: ${savedProvider} - ${savedAddress}`);
-      } else if (savedProvider === "walletconnect") {
-        // Clear WalletConnect connection - user needs to reconnect manually
-        localStorage.removeItem("walletAddress");
-        localStorage.removeItem("walletProvider");
-        console.log("WalletConnect session expired - please reconnect");
+    const restoreConnection = async () => {
+      const savedAddress = localStorage.getItem("walletAddress");
+      const savedProvider = localStorage.getItem("walletProvider");
+
+      if (savedAddress && savedProvider) {
+        if (savedProvider === "xaman" || savedProvider === "web3auth") {
+          setAddress(savedAddress);
+          setProvider(savedProvider as "xaman" | "web3auth");
+          console.log(`Restored wallet connection: ${savedProvider} - ${savedAddress}`);
+        } else if (savedProvider === "walletconnect") {
+          const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
+          if (!projectId || projectId === "demo-project-id") {
+            // Clear and skip - WC not configured
+            localStorage.removeItem("walletAddress");
+            localStorage.removeItem("walletProvider");
+            console.log("WalletConnect not configured - cleared saved connection");
+          } else {
+            // Lazy load WalletConnect SDK only when needed
+            let timeoutId: NodeJS.Timeout | undefined;
+            try {
+              // Dynamic import with timeout to prevent blocking
+              const timeout = new Promise((_, reject) => {
+                timeoutId = setTimeout(() => reject(new Error("WalletConnect initialization timeout")), 5000);
+              });
+              
+              const loadWC = async () => {
+                const { default: UniversalProvider } = await import("@walletconnect/universal-provider");
+                return await UniversalProvider.init({
+                  projectId,
+                  metadata: {
+                    name: "XRP Liquid Staking Protocol",
+                    description: "Earn yield on your XRP",
+                    url: window.location.origin,
+                    icons: [window.location.origin + "/favicon.ico"],
+                  },
+                });
+              };
+              
+              // Race between loading and timeout
+              const wcProvider = await Promise.race([loadWC(), timeout]) as any;
+              
+              // Check if session exists (auto-persisted in IndexedDB)
+              if (wcProvider?.session) {
+                const accounts = wcProvider.session.namespaces?.xrpl?.accounts || [];
+                if (accounts.length > 0) {
+                  // Extract address from CAIP-10 format "xrpl:0:rAddress..." or "xrpl:1:rAddress..."
+                  const restoredAddress = accounts[0].split(":")[2];
+                  
+                  if (restoredAddress === savedAddress) {
+                    // Restore connection
+                    setAddress(restoredAddress);
+                    setProvider("walletconnect");
+                    setWalletConnectProvider(wcProvider);
+                    console.log("✅ WalletConnect session restored:", restoredAddress);
+                  } else {
+                    // Address mismatch - clear localStorage
+                    localStorage.removeItem("walletAddress");
+                    localStorage.removeItem("walletProvider");
+                    console.log("WalletConnect address mismatch - cleared");
+                  }
+                } else {
+                  // No accounts in session - clear localStorage
+                  localStorage.removeItem("walletAddress");
+                  localStorage.removeItem("walletProvider");
+                  console.log("No accounts in WalletConnect session - cleared");
+                }
+              } else {
+                // No active session - clear localStorage
+                localStorage.removeItem("walletAddress");
+                localStorage.removeItem("walletProvider");
+                console.log("No WalletConnect session found - cleared");
+              }
+            } catch (error) {
+              console.error("WalletConnect restoration error:", error);
+              localStorage.removeItem("walletAddress");
+              localStorage.removeItem("walletProvider");
+            } finally {
+              // Always clear timeout to prevent unhandled rejection
+              if (timeoutId) {
+                clearTimeout(timeoutId);
+              }
+            }
+          }
+        }
       }
-    }
+      
+      setIsInitialized(true);
+    };
     
-    setIsInitialized(true);
+    restoreConnection();
   }, []);
 
   const connect = (walletAddress: string, walletProvider: "xaman" | "walletconnect" | "web3auth", wcProvider?: UniversalProvider) => {
