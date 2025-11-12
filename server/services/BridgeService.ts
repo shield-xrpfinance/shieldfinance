@@ -1,6 +1,6 @@
 import { FlareClient } from "../utils/flare-client";
 import { FAssetsClient } from "../utils/fassets-client";
-import { generateFDCProof } from "../utils/fdc-proof";
+import { generateFDCProof, FDCTimeoutError } from "../utils/fdc-proof";
 import type { IStorage } from "../storage";
 import type { SelectXrpToFxrpBridge, PaymentRequest } from "../../shared/schema";
 import type { XRPLDepositListener } from "../listeners/XRPLDepositListener";
@@ -321,6 +321,22 @@ export class BridgeService {
       // Trigger vault share minting (final step)
       await this.completeBridgeWithVaultMinting(bridgeId);
     } catch (error) {
+      // Handle FDC timeout separately - this is a recoverable state
+      if (error instanceof FDCTimeoutError) {
+        console.warn(`⏰ FDC proof polling timeout for bridge ${bridgeId}. This is common on testnet.`);
+        console.warn(`   Voting Round: ${error.votingRoundId}, Last Status: ${error.lastStatusCode}`);
+        
+        await this.config.storage.updateBridgeStatus(bridgeId, "fdc_timeout", {
+          errorMessage: `FDC proof polling timeout after 15 minutes. This is a known testnet issue. You can retry proof generation.`,
+          fdcVotingRoundId: error.votingRoundId.toString(),
+          fdcRequestBytes: error.requestBytes,
+        });
+        
+        console.log(`✅ Bridge ${bridgeId} marked as 'fdc_timeout' - can be retried via /api/bridges/${bridgeId}/retry-proof`);
+        return; // Don't throw - timeout is a recoverable state
+      }
+      
+      // Other errors are terminal failures
       console.error("Error executing minting with proof:", error);
       await this.config.storage.updateBridgeStatus(bridgeId, "failed", {
         errorMessage: error instanceof Error ? error.message : "Unknown error",
@@ -490,6 +506,106 @@ export class BridgeService {
     console.log("✅ Payment request built:", paymentRequest);
 
     return paymentRequest;
+  }
+
+  /**
+   * Retry FDC proof generation for a bridge that timed out
+   * Resumes polling from the stored votingRoundId
+   */
+  async retryProofGeneration(bridgeId: string): Promise<void> {
+    console.log(`🔄 Retrying FDC proof generation for bridge ${bridgeId}`);
+    
+    const bridge = await this.config.storage.getBridgeById(bridgeId);
+    if (!bridge) {
+      throw new Error("Bridge not found");
+    }
+    
+    // Validate bridge is in fdc_timeout status
+    if (bridge.status !== "fdc_timeout") {
+      throw new Error(`Bridge is in '${bridge.status}' status, expected 'fdc_timeout'`);
+    }
+    
+    // Validate required retry data is present
+    if (!bridge.fdcVotingRoundId || !bridge.fdcRequestBytes) {
+      throw new Error("Missing FDC retry data (votingRoundId or requestBytes). Cannot retry.");
+    }
+    
+    if (!bridge.xrplTxHash) {
+      throw new Error("Missing XRPL transaction hash. Cannot retry proof generation.");
+    }
+    
+    if (!bridge.collateralReservationId) {
+      throw new Error("Missing collateral reservation ID. Cannot retry minting.");
+    }
+    
+    if (!this.fassetsClient) {
+      throw new Error("FAssetsClient not initialized. This should never happen in production mode.");
+    }
+    
+    console.log(`📋 Retry context:`);
+    console.log(`   Voting Round ID: ${bridge.fdcVotingRoundId}`);
+    console.log(`   XRPL Tx Hash: ${bridge.xrplTxHash}`);
+    console.log(`   Request Bytes: ${bridge.fdcRequestBytes.substring(0, 50)}...`);
+    
+    try {
+      // Update status to xrpl_confirmed (back to "processing proof" state)
+      await this.config.storage.updateBridgeStatus(bridgeId, "xrpl_confirmed", {
+        errorMessage: null, // Clear previous timeout error message
+      });
+      
+      console.log(`🔄 Resuming FDC proof polling from voting round ${bridge.fdcVotingRoundId}...`);
+      
+      // Resume proof generation - this will use the same voting round
+      const proof = await generateFDCProof(
+        bridge.xrplTxHash, 
+        this.config.network,
+        undefined // Let it recalculate from current time or use stored round
+      );
+      
+      console.log(`✅ FDC proof generated on retry for bridge ${bridgeId}`);
+      
+      // Execute minting with the proof
+      const mintingTxHash = await this.fassetsClient.executeMinting(
+        proof,
+        BigInt(bridge.collateralReservationId)
+      );
+      
+      // Update bridge status to completed
+      await this.config.storage.updateBridgeStatus(bridgeId, "completed", {
+        xrplTxHash: bridge.xrplTxHash,
+        flareTxHash: mintingTxHash,
+        fdcProofHash: JSON.stringify(proof),
+        fxrpReceived: bridge.fxrpExpected,
+        fxrpReceivedAt: new Date(),
+        completedAt: new Date(),
+        errorMessage: null, // Clear error message
+      });
+      
+      console.log(`✅ Retry successful! Minting executed on Flare: ${mintingTxHash}`);
+      
+      // Trigger vault share minting (final step)
+      await this.completeBridgeWithVaultMinting(bridgeId);
+    } catch (error) {
+      // Handle timeout again - could timeout again
+      if (error instanceof FDCTimeoutError) {
+        console.warn(`⏰ FDC proof polling timed out again for bridge ${bridgeId}`);
+        
+        await this.config.storage.updateBridgeStatus(bridgeId, "fdc_timeout", {
+          errorMessage: `FDC proof polling timeout (retry attempt). Testnet FDC can be slow. Try again later.`,
+          fdcVotingRoundId: error.votingRoundId.toString(),
+          fdcRequestBytes: error.requestBytes,
+        });
+        
+        throw new Error("FDC proof polling timed out again. Please try again later.");
+      }
+      
+      // Other errors are terminal
+      console.error("Error retrying proof generation:", error);
+      await this.config.storage.updateBridgeStatus(bridgeId, "failed", {
+        errorMessage: `Retry failed: ${error instanceof Error ? error.message : "Unknown error"}`,
+      });
+      throw error;
+    }
   }
 
   /**

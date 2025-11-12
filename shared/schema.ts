@@ -1,7 +1,25 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, decimal, integer, timestamp } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+
+// Bridge status enum for XRP → FXRP bridges
+export const bridgeStatusEnum = pgEnum("bridge_status", [
+  "pending",
+  "bridging", 
+  "awaiting_payment",
+  "xrpl_confirmed",
+  "generating_proof",
+  "fdc_timeout",
+  "proof_generated",
+  "fdc_proof_generated",
+  "minting",
+  "vault_minting",
+  "vault_minted",
+  "completed",
+  "vault_mint_failed",
+  "failed"
+]);
 
 export const vaults = pgTable("vaults", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -98,7 +116,7 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   fxrpExpected: decimal("fxrp_expected", { precision: 18, scale: 6 }).notNull(),
   fxrpReceived: decimal("fxrp_received", { precision: 18, scale: 6 }),
   
-  status: text("status").notNull().default("pending"),
+  status: bridgeStatusEnum("status").notNull().default("pending"),
   
   xrplTxHash: text("xrpl_tx_hash"),
   flareTxHash: text("flare_tx_hash"),

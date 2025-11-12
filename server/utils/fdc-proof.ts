@@ -1,9 +1,26 @@
 /**
+ * Custom error class for FDC proof polling timeouts
+ * Contains diagnostic information for retry logic
+ */
+export class FDCTimeoutError extends Error {
+  constructor(
+    public votingRoundId: number,
+    public verifierUrl: string,
+    public lastStatusCode: number,
+    public requestBytes: string
+  ) {
+    super(`FDC proof polling timeout after 15 minutes. Voting Round: ${votingRoundId}, Last Status: ${lastStatusCode}`);
+    this.name = 'FDCTimeoutError';
+  }
+}
+
+/**
  * Polls the FDC Verifier API for a finalized proof
  * @param votingRoundId - The voting round ID to poll for
  * @param requestBytes - The ABI encoded request bytes
  * @param network - The network to poll (mainnet or coston2)
  * @returns The complete proof object with merkleProof array
+ * @throws FDCTimeoutError if polling times out after maxAttempts
  */
 async function pollVerifierProof(
   votingRoundId: number, 
@@ -16,6 +33,8 @@ async function pollVerifierProof(
   
   const maxAttempts = 60; // 15 minutes max (60 attempts * 15 seconds) - extended for slow FDC finalization
   const pollInterval = 15000; // 15 seconds
+  
+  let lastStatusCode = 404; // Track last status code for diagnostics
   
   console.log("🔄 Starting FDC Verifier proof polling...");
   console.log("  Voting Round ID:", votingRoundId);
@@ -37,6 +56,8 @@ async function pollVerifierProof(
           requestBytes: requestBytes
         })
       });
+      
+      lastStatusCode = response.status; // Update last status code
       
       if (response.ok) {
         const proofData = await response.json();
@@ -63,13 +84,15 @@ async function pollVerifierProof(
       console.error(`❌ Polling attempt ${attempt} failed:`, error.message);
       console.error(`   Error details:`, JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       if (attempt === maxAttempts) {
-        throw new Error(`FDC Verifier polling timeout after ${maxAttempts} attempts. Last error: ${error.message}`);
+        // Throw FDCTimeoutError with diagnostic info for retry logic
+        throw new FDCTimeoutError(votingRoundId, verifierUrl, lastStatusCode, requestBytes);
       }
       await new Promise(resolve => setTimeout(resolve, pollInterval));
     }
   }
   
-  throw new Error("FDC Verifier polling failed: Maximum attempts reached");
+  // This should never be reached, but just in case
+  throw new FDCTimeoutError(votingRoundId, verifierUrl, lastStatusCode, requestBytes);
 }
 
 /**

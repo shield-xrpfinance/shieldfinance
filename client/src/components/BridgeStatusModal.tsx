@@ -19,10 +19,12 @@ import {
   Loader2,
   ArrowRight,
   XCircle,
-  Info
+  Info,
+  RefreshCw
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { SelectXrpToFxrpBridge } from "@shared/schema";
 
 interface BridgeStatusModalProps {
@@ -33,92 +35,36 @@ interface BridgeStatusModalProps {
   amount: string;
 }
 
-const statusConfig = {
-  pending: {
-    icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
-    title: "Reserving Collateral",
-    description: "Reserving collateral with FAssets agent...",
-    step: 1,
-    color: "bg-blue-500",
-  },
-  bridging: {
-    icon: <Clock className="h-5 w-5 text-yellow-500" />,
-    title: "Awaiting Payment",
-    description: "Collateral reserved! Please send XRP to agent address below",
-    step: 2,
-    color: "bg-yellow-500",
-  },
-  awaiting_payment: {
-    icon: <Clock className="h-5 w-5 text-yellow-500" />,
-    title: "Awaiting Payment",
-    description: "Waiting for your XRP payment to agent",
-    step: 2,
-    color: "bg-yellow-500",
-  },
-  xrpl_confirmed: {
-    icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
-    title: "Processing Proof",
-    description: "Payment confirmed! Generating cryptographic proof... This can take 5-15 minutes. You can close this modal and check the Bridge Tracking page.",
-    step: 3,
-    color: "bg-blue-500",
-  },
-  proof_generated: {
-    icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
-    title: "Proof Generated",
-    description: "Cryptographic proof generated! Executing FXRP minting...",
-    step: 3,
-    color: "bg-blue-500",
-  },
-  minting: {
-    icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
-    title: "Minting FXRP",
-    description: "Minting FXRP tokens on Flare network...",
-    step: 4,
-    color: "bg-blue-500",
-  },
-  vault_minting: {
-    icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
-    title: "Minting Vault Shares",
-    description: "Depositing FXRP to vault and minting shXRP shares...",
-    step: 5,
-    color: "bg-blue-500",
-  },
-  fdc_proof_generated: {
-    icon: <Loader2 className="h-5 w-5 animate-spin text-blue-500" />,
-    title: "Executing Minting",
-    description: "Proof generated! Executing minting...",
-    step: 4,
-    color: "bg-blue-500",
-  },
-  vault_minted: {
-    icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-    title: "Vault Shares Ready",
-    description: "✅ Successfully minted shXRP vault shares!",
-    step: 5,
-    color: "bg-green-500",
-  },
-  completed: {
-    icon: <CheckCircle2 className="h-5 w-5 text-green-500" />,
-    title: "Bridge Completed",
-    description: "✅ Bridge completed! You received shXRP",
-    step: 5,
-    color: "bg-green-500",
-  },
-  vault_mint_failed: {
-    icon: <XCircle className="h-5 w-5 text-red-500" />,
-    title: "Vault Minting Failed",
-    description: "❌ Vault share minting failed. Please contact support.",
-    step: 0,
-    color: "bg-red-500",
-  },
-  failed: {
-    icon: <XCircle className="h-5 w-5 text-red-500" />,
-    title: "Bridge Failed",
-    description: "❌ Bridge failed. Please contact support.",
-    step: 0,
-    color: "bg-red-500",
-  },
-};
+// Simplified 4-stage mapping
+type BridgeStage = 1 | 2 | 3 | 4 | "timeout" | "failed";
+
+function getBridgeStage(status: string): BridgeStage {
+  // Stage 1: Waiting for XRP Payment
+  if (["pending", "bridging", "awaiting_payment"].includes(status)) {
+    return 1;
+  }
+  // Stage 2: Bridging XRP → FXRP (proof generation and minting)
+  if (["xrpl_confirmed", "generating_proof", "proof_generated", "fdc_proof_generated", "minting"].includes(status)) {
+    return 2;
+  }
+  // Stage 3: Minting Vault Shares
+  if (["vault_minting"].includes(status)) {
+    return 3;
+  }
+  // Stage 4: shXRP Shares Ready
+  if (["completed", "vault_minted"].includes(status)) {
+    return 4;
+  }
+  // Timeout state
+  if (status === "fdc_timeout") {
+    return "timeout";
+  }
+  // Failed states
+  if (["failed", "vault_mint_failed"].includes(status)) {
+    return "failed";
+  }
+  return 1; // Default to stage 1
+}
 
 export default function BridgeStatusModal({
   open,
@@ -128,6 +74,8 @@ export default function BridgeStatusModal({
   amount,
 }: BridgeStatusModalProps) {
   const [bridge, setBridge] = useState<SelectXrpToFxrpBridge | null>(null);
+  const [isRetrying, setIsRetrying] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -144,8 +92,9 @@ export default function BridgeStatusModal({
         const data = await response.json();
         setBridge(data);
 
-        // Stop polling if bridge is completed or failed
-        if (data.status === "completed" || data.status === "vault_minted" || data.status === "failed" || data.status === "vault_mint_failed") {
+        // Stop polling if bridge is completed, failed, or timed out
+        const terminalStates = ["completed", "vault_minted", "failed", "vault_mint_failed", "fdc_timeout"];
+        if (terminalStates.includes(data.status)) {
           shouldContinuePolling = false;
         }
       } catch (error) {
@@ -174,7 +123,7 @@ export default function BridgeStatusModal({
       shouldContinuePolling = false;
       clearInterval(interval);
     };
-  }, [open, bridgeId, toast]);
+  }, [open, bridgeId, toast, retryCount]);
 
   const handleCopyAddress = () => {
     if (bridge?.agentUnderlyingAddress) {
@@ -197,6 +146,42 @@ export default function BridgeStatusModal({
     }
   };
 
+  const handleRetryProof = async () => {
+    if (!bridge) return;
+    
+    setIsRetrying(true);
+    try {
+      const response = await apiRequest(`/api/bridges/${bridge.id}/retry-proof`, {
+        method: "POST",
+      });
+
+      if (response.success) {
+        toast({
+          title: "Retry Initiated",
+          description: "FDC proof generation retry has been started. This may take 5-15 minutes.",
+        });
+        
+        // Increment retry count to restart polling
+        setRetryCount(prev => prev + 1);
+        
+        // Refresh bridge status
+        const updatedResponse = await fetch(`/api/bridges/${bridge.id}`);
+        if (updatedResponse.ok) {
+          const updatedBridge = await updatedResponse.json();
+          setBridge(updatedBridge);
+        }
+      }
+    } catch (error) {
+      toast({
+        title: "Retry Failed",
+        description: error instanceof Error ? error.message : "Failed to retry proof generation",
+        variant: "destructive",
+      });
+    } finally {
+      setIsRetrying(false);
+    }
+  };
+
   if (!bridge) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -210,139 +195,175 @@ export default function BridgeStatusModal({
     );
   }
 
-  const status = statusConfig[bridge.status as keyof typeof statusConfig] || statusConfig.pending;
-  const progress = (status.step / 5) * 100;
+  const stage = getBridgeStage(bridge.status);
+  const isCompleted = stage === 4;
+  const isFailed = stage === "failed";
+  const isTimeout = stage === "timeout";
+  
+  // Calculate progress (0-100%)
+  const progress = typeof stage === "number" ? (stage / 4) * 100 : 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg" data-testid="modal-bridge-status">
         <DialogHeader>
-          <div className="flex items-center gap-3">
-            {status.icon}
-            <div>
-              <DialogTitle data-testid="text-bridge-status-title">{status.title}</DialogTitle>
-              <DialogDescription>{status.description}</DialogDescription>
-            </div>
-          </div>
+          <DialogTitle data-testid="text-bridge-status-title">
+            {isCompleted && "Bridge Complete!"}
+            {isFailed && "Bridge Failed"}
+            {isTimeout && "FDC Proof Timeout"}
+            {!isCompleted && !isFailed && !isTimeout && "Bridge in Progress"}
+          </DialogTitle>
+          <DialogDescription>
+            {isCompleted && "Your XRP has been successfully bridged to shXRP"}
+            {isFailed && "The bridge operation encountered an error"}
+            {isTimeout && "FDC proof generation timed out - this is a known testnet issue"}
+            {!isCompleted && !isFailed && !isTimeout && `Processing your ${amount} XRP bridge to ${vaultName}`}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
-          {/* Step-by-Step Progress Indicator */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Bridge Progress</span>
-              <span className="font-medium">{status.step} of 5 steps</span>
+          {/* Progress Bar - only show for active stages */}
+          {!isTimeout && !isFailed && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Progress</span>
+                <span className="font-medium">Stage {stage} of 4</span>
+              </div>
+              <Progress value={progress} className="h-2" data-testid="progress-bridge" />
             </div>
-            <Progress value={progress} className="h-2" data-testid="progress-bridge" />
-            
-            {/* Visual Stepper */}
+          )}
+
+          {/* Simplified 4-Stage Indicator */}
+          {!isTimeout && !isFailed && (
             <div className="space-y-3">
-              {/* Step 1: Reserve Collateral */}
-              <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
-                status.step >= 1 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-muted/30'
+              {/* Stage 1: Waiting for XRP Payment */}
+              <div className={`flex items-start gap-3 p-3 rounded-md ${
+                stage >= 1 ? 'bg-primary/10 border border-primary/20' : 'bg-muted/30'
               }`}>
                 <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                  status.step > 1 ? 'bg-green-500' : status.step === 1 ? 'bg-blue-500' : 'bg-muted'
+                  stage > 1 ? 'bg-green-500' : stage === 1 ? 'bg-primary' : 'bg-muted'
                 }`}>
-                  {status.step > 1 ? (
+                  {stage > 1 ? (
                     <CheckCircle2 className="h-4 w-4 text-white" />
-                  ) : status.step === 1 ? (
+                  ) : stage === 1 ? (
                     <Loader2 className="h-4 w-4 text-white animate-spin" />
                   ) : (
-                    <span className="text-xs text-muted-foreground">1</span>
+                    <span className="text-xs text-white">1</span>
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Reserve Collateral</p>
-                  <p className="text-xs text-muted-foreground">FAssets agent reserves collateral</p>
+                  <p className="text-sm font-medium">Waiting for XRP Payment</p>
+                  <p className="text-xs text-muted-foreground">Send XRP to the agent address below</p>
                 </div>
               </div>
 
-              {/* Step 2: Send Payment */}
-              <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
-                status.step >= 2 ? 'bg-yellow-500/10 border border-yellow-500/20' : 'bg-muted/30'
+              {/* Stage 2: Bridging XRP → FXRP */}
+              <div className={`flex items-start gap-3 p-3 rounded-md ${
+                stage >= 2 ? 'bg-primary/10 border border-primary/20' : 'bg-muted/30'
               }`}>
                 <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                  status.step > 2 ? 'bg-green-500' : status.step === 2 ? 'bg-yellow-500' : 'bg-muted'
+                  stage > 2 ? 'bg-green-500' : stage === 2 ? 'bg-primary' : 'bg-muted'
                 }`}>
-                  {status.step > 2 ? (
+                  {stage > 2 ? (
                     <CheckCircle2 className="h-4 w-4 text-white" />
-                  ) : status.step === 2 ? (
-                    <Clock className="h-4 w-4 text-white" />
+                  ) : stage === 2 ? (
+                    <Loader2 className="h-4 w-4 text-white animate-spin" />
                   ) : (
-                    <span className="text-xs text-muted-foreground">2</span>
+                    <span className="text-xs text-white">2</span>
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Send XRP Payment</p>
-                  <p className="text-xs text-muted-foreground">You send XRP to agent address</p>
+                  <p className="text-sm font-medium">Bridging XRP → FXRP</p>
+                  <p className="text-xs text-muted-foreground">Generating FDC proof and minting FXRP (5-15 min)</p>
                 </div>
               </div>
 
-              {/* Step 3: Generate Proof */}
-              <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
-                status.step >= 3 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-muted/30'
+              {/* Stage 3: Minting Vault Shares */}
+              <div className={`flex items-start gap-3 p-3 rounded-md ${
+                stage >= 3 ? 'bg-primary/10 border border-primary/20' : 'bg-muted/30'
               }`}>
                 <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                  status.step > 3 ? 'bg-green-500' : status.step === 3 ? 'bg-blue-500' : 'bg-muted'
+                  stage > 3 ? 'bg-green-500' : stage === 3 ? 'bg-primary' : 'bg-muted'
                 }`}>
-                  {status.step > 3 ? (
+                  {stage > 3 ? (
                     <CheckCircle2 className="h-4 w-4 text-white" />
-                  ) : status.step === 3 ? (
+                  ) : stage === 3 ? (
                     <Loader2 className="h-4 w-4 text-white animate-spin" />
                   ) : (
-                    <span className="text-xs text-muted-foreground">3</span>
+                    <span className="text-xs text-white">3</span>
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Generate FDC Proof</p>
-                  <p className="text-xs text-muted-foreground">Flare Data Connector verifies payment</p>
+                  <p className="text-sm font-medium">Minting Vault Shares</p>
+                  <p className="text-xs text-muted-foreground">Depositing FXRP and minting shXRP shares</p>
                 </div>
               </div>
 
-              {/* Step 4: Mint FXRP */}
-              <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
-                status.step >= 4 ? 'bg-blue-500/10 border border-blue-500/20' : 'bg-muted/30'
+              {/* Stage 4: shXRP Shares Ready */}
+              <div className={`flex items-start gap-3 p-3 rounded-md ${
+                stage === 4 ? 'bg-green-500/10 border border-green-500/20' : 'bg-muted/30'
               }`}>
                 <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                  status.step > 4 ? 'bg-green-500' : status.step === 4 ? 'bg-blue-500' : 'bg-muted'
+                  stage === 4 ? 'bg-green-500' : 'bg-muted'
                 }`}>
-                  {status.step > 4 ? (
+                  {stage === 4 ? (
                     <CheckCircle2 className="h-4 w-4 text-white" />
-                  ) : status.step === 4 ? (
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
                   ) : (
-                    <span className="text-xs text-muted-foreground">4</span>
+                    <span className="text-xs text-white">4</span>
                   )}
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium">Mint FXRP</p>
-                  <p className="text-xs text-muted-foreground">Receive FXRP tokens on Flare network</p>
-                </div>
-              </div>
-
-              {/* Step 5: Mint Vault Shares */}
-              <div className={`flex items-start gap-3 p-3 rounded-md transition-colors ${
-                status.step >= 5 ? (bridge.status === 'completed' || bridge.status === 'vault_minted') ? 'bg-green-500/10 border border-green-500/20' : 'bg-blue-500/10 border border-blue-500/20' : 'bg-muted/30'
-              }`}>
-                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                  (bridge.status === 'completed' || bridge.status === 'vault_minted') ? 'bg-green-500' : status.step === 5 ? 'bg-blue-500' : 'bg-muted'
-                }`}>
-                  {(bridge.status === 'completed' || bridge.status === 'vault_minted') ? (
-                    <CheckCircle2 className="h-4 w-4 text-white" />
-                  ) : status.step === 5 ? (
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">5</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Mint Vault Shares</p>
-                  <p className="text-xs text-muted-foreground">Deposit FXRP to vault for shXRP shares</p>
+                  <p className="text-sm font-medium">shXRP Shares Ready</p>
+                  <p className="text-xs text-muted-foreground">Bridge complete! Vault shares in your portfolio</p>
                 </div>
               </div>
             </div>
-          </div>
+          )}
+
+          {/* FDC Timeout State */}
+          {isTimeout && (
+            <Alert variant="default" className="border-yellow-500/50 bg-yellow-500/10" data-testid="alert-timeout">
+              <AlertCircle className="h-4 w-4 text-yellow-600" />
+              <AlertDescription className="space-y-4">
+                <div>
+                  <p className="font-medium text-yellow-900 dark:text-yellow-100">FDC Proof Timeout - Testnet Issue</p>
+                  <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
+                    The FDC verifier proof generation timed out after 15 minutes. This is a known issue on Flare testnet.
+                    You can retry proof generation below.
+                  </p>
+                </div>
+                <Button 
+                  onClick={handleRetryProof} 
+                  disabled={isRetrying}
+                  className="w-full"
+                  data-testid="button-retry-proof"
+                >
+                  {isRetrying ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2" />
+                      Retry Proof Generation
+                    </>
+                  )}
+                </Button>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Failed State */}
+          {isFailed && (
+            <Alert variant="destructive" data-testid="alert-failed">
+              <XCircle className="h-4 w-4" />
+              <AlertDescription>
+                <p className="font-medium">Bridge Operation Failed</p>
+                <p className="text-sm mt-1">{bridge.errorMessage || "An error occurred during the bridge process. Please contact support."}</p>
+              </AlertDescription>
+            </Alert>
+          )}
 
           {/* Vault and Amount Info */}
           <div className="p-4 rounded-md bg-muted/50 space-y-2">

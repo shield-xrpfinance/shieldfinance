@@ -257,6 +257,37 @@ export async function registerRoutes(
     }
   });
 
+  // Retry FDC proof generation for timed-out bridges
+  app.post("/api/bridges/:id/retry-proof", async (req, res) => {
+    try {
+      const { id: bridgeId } = req.params;
+      
+      console.log(`🔄 Retry proof generation requested for bridge ${bridgeId}`);
+
+      // Call BridgeService.retryProofGeneration
+      await bridgeService.retryProofGeneration(bridgeId);
+
+      // Fetch updated bridge status
+      const updatedBridge = await storage.getBridgeById(bridgeId);
+      if (!updatedBridge) {
+        return res.status(404).json({ error: "Bridge not found" });
+      }
+
+      res.json({
+        success: true,
+        message: "FDC proof generation retry initiated",
+        bridge: updatedBridge
+      });
+    } catch (error) {
+      console.error("Retry proof generation error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to retry proof generation" });
+      }
+    }
+  });
+
   // Recovery endpoint: Trigger FDC proof generation for stuck bridges
   app.post("/api/bridges/:id/recover-proof", async (req, res) => {
     try {
