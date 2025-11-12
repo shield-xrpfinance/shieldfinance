@@ -410,6 +410,21 @@ export class FdcHubClient {
       const roundOffsetSec = Number(firstRoundStartTime);
       const roundDurationSec = Number(roundLength);
       
+      // Validate round parameters
+      if (roundDurationSec <= 0 || !Number.isFinite(roundDurationSec)) {
+        throw new Error(
+          `Invalid round duration from VotingRounds contract: ${roundDurationSec}. ` +
+          `Expected a positive number.`
+        );
+      }
+      
+      if (!Number.isFinite(roundOffsetSec)) {
+        throw new Error(
+          `Invalid round offset from VotingRounds contract: ${roundOffsetSec}. ` +
+          `Expected a finite number.`
+        );
+      }
+      
       // Cache the configuration
       this.votingRoundConfig = {
         roundOffsetSec,
@@ -438,10 +453,20 @@ export class FdcHubClient {
     // Fetch and cache round configuration if needed
     const config = await this.getVotingRoundConfig();
     
+    // Validate block timestamp is not before the first round started
+    if (blockTimestamp < config.roundOffsetSec) {
+      throw new Error(
+        `Block timestamp (${blockTimestamp}) is before first voting round start time (${config.roundOffsetSec}). ` +
+        `This suggests the attestation was submitted before the voting system was initialized, which should not happen. ` +
+        `Block time: ${new Date(blockTimestamp * 1000).toISOString()}, ` +
+        `First round start: ${new Date(config.roundOffsetSec * 1000).toISOString()}`
+      );
+    }
+    
     // Calculate voting round ID
     const votingRoundId = Math.floor((blockTimestamp - config.roundOffsetSec) / config.roundDurationSec);
     
-    // Validate result
+    // Validate result (should never be negative after the above check, but double-check)
     if (votingRoundId < 0 || !Number.isFinite(votingRoundId)) {
       throw new Error(
         `Invalid voting round ID calculated: ${votingRoundId}. ` +

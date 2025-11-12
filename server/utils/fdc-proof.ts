@@ -200,37 +200,15 @@ export async function generateFDCProof(
   console.log("✅ PrepareRequest response received");
   console.log("📦 Response structure:", JSON.stringify(prepareResult, null, 2));
   
-  // Step 2: Extract abiEncodedRequest and round parameters
+  // Step 2: Extract abiEncodedRequest from prepareRequest response
   const abiEncodedRequest = prepareResult.abiEncodedRequest;
-  
-  // CRITICAL FIX: Extract round parameters from roundParams object (nested), not top level
-  // prepareRequest response structure: { ..., roundParams: { roundOffsetSec, roundDurationSec }, ... }
-  const roundParams = prepareResult.roundParams || prepareResult.responseBody?.roundParams;
-  
-  if (!roundParams || !roundParams.roundOffsetSec || !roundParams.roundDurationSec) {
-    throw new Error(
-      `Missing round parameters in prepareRequest response. ` +
-      `Expected roundParams.roundOffsetSec and roundParams.roundDurationSec. ` +
-      `Got: ${JSON.stringify(prepareResult, null, 2)}`
-    );
-  }
-  
-  const roundOffsetSec = Number(roundParams.roundOffsetSec);
-  const roundDurationSec = Number(roundParams.roundDurationSec);
   
   if (!abiEncodedRequest) {
     throw new Error(`Missing abiEncodedRequest in prepareRequest response. Status: ${prepareResult.status}`);
   }
   
-  console.log("✅ Round parameters extracted from prepareRequest:");
-  console.log(`  Round Offset: ${roundOffsetSec} sec (${new Date(roundOffsetSec * 1000).toISOString()})`);
-  console.log(`  Round Duration: ${roundDurationSec} sec`);
-  console.log(`  This fixes the voting round calculation bug!`);
-  
   console.log("\n📋 Step 2: Submit Attestation to FdcHub (On-Chain)");
   console.log("  ABI Encoded Request:", abiEncodedRequest);
-  console.log("  Round Offset (sec):", roundOffsetSec);
-  console.log("  Round Duration (sec):", roundDurationSec);
   
   // Import and initialize FdcHubClient
   const { FdcHubClient } = await import("./fdchub-client");
@@ -247,41 +225,28 @@ export async function generateFDCProof(
   console.log("  Block Number:", attestationSubmission.blockNumber);
   console.log("  Block Timestamp:", attestationSubmission.blockTimestamp);
   
-  console.log("\n📋 Step 3: Calculate Voting Round ID");
+  console.log("\n📋 Step 3: Calculate Voting Round ID from On-Chain VotingRounds Contract");
   
-  // CRITICAL: Use FdcHub block timestamp, not XRPL timestamp
-  // FdcHub uses its own blockchain timestamp when processing attestations
-  const fdcHubTimestamp = attestationSubmission.blockTimestamp;
-  const votingRoundId = Math.floor((fdcHubTimestamp - roundOffsetSec) / roundDurationSec);
+  // CRITICAL FIX: Fetch voting round parameters from on-chain VotingRounds contract
+  // The prepareRequest API does NOT return round parameters - they must be fetched from blockchain
+  const votingRoundConfig = await fdcHubClient.getVotingRoundConfig();
+  const votingRoundId = await fdcHubClient.getVotingRoundId(attestationSubmission.blockTimestamp);
   
-  console.log("  ✅ Using FdcHub Block Timestamp (CORRECT):");
-  console.log("     Timestamp:", fdcHubTimestamp, `(${new Date(fdcHubTimestamp * 1000).toISOString()})`);
+  console.log("  ✅ Voting Round ID calculated from on-chain VotingRounds contract:");
+  console.log("     Block Timestamp:", attestationSubmission.blockTimestamp, `(${new Date(attestationSubmission.blockTimestamp * 1000).toISOString()})`);
   console.log("     Calculated Voting Round ID:", votingRoundId);
-  console.log("     Formula: floor((timestamp - offset) / duration) = floor((" + fdcHubTimestamp + " - " + roundOffsetSec + ") / " + roundDurationSec + ") = " + votingRoundId);
-  
-  // Show XRPL timestamp comparison for diagnostic purposes
-  if (txTimestamp) {
-    const xrplRoundId = Math.floor((txTimestamp - roundOffsetSec) / roundDurationSec);
-    const timeDiff = fdcHubTimestamp - txTimestamp;
-    console.log("\n  📊 Comparison with XRPL Timestamp (for diagnostics):");
-    console.log("     XRPL Tx Timestamp:", txTimestamp, `(${new Date(txTimestamp * 1000).toISOString()})`);
-    console.log("     XRPL Would Calculate Round:", xrplRoundId);
-    console.log("     Time Difference:", timeDiff, "seconds");
-    if (xrplRoundId !== votingRoundId) {
-      console.log("     ⚠️  DIFFERENT ROUNDS - Using FdcHub timestamp is correct!");
-    } else {
-      console.log("     ✅ Same round - both timestamps in same voting period");
-    }
-  }
+  console.log("     Round Offset:", votingRoundConfig.roundOffsetSec, `sec (${new Date(votingRoundConfig.roundOffsetSec * 1000).toISOString()})`);
+  console.log("     Round Duration:", votingRoundConfig.roundDurationSec, "sec");
+  console.log("     Source: VotingRounds contract (fetched via FdcHubClient)");
   
   // Step 4: Wait for voting round to finalize, then poll Data Availability Layer
   console.log("\n📋 Step 4: Wait for Voting Round Finalization");
   console.log("  Using Voting Round ID:", votingRoundId);
   
-  // Calculate wait time based on round duration (wait 2x the round duration to be safe)
-  // Flare voting rounds are typically 90 seconds, but we use the actual value from prepareRequest
-  const waitTime = roundDurationSec * 2 * 1000; // Convert to milliseconds, wait 2 full rounds
-  console.log(`  Round Duration: ${roundDurationSec}s`);
+  // Calculate wait time based on actual round duration from on-chain contract
+  // We wait 2x the round duration to be safe and ensure finalization
+  const waitTime = votingRoundConfig.roundDurationSec * 2 * 1000; // Convert to milliseconds
+  console.log(`  Round Duration: ${votingRoundConfig.roundDurationSec}s (from VotingRounds contract)`);
   console.log(`  Waiting ${waitTime / 1000}s (2x round duration) before polling...`);
   console.log(`  This ensures the voting round has time to finalize`);
   
@@ -306,7 +271,7 @@ export async function generateFDCProof(
   console.log("  FdcHub Block:", attestationSubmission.blockNumber);
   console.log("  FdcHub Block Timestamp:", attestationSubmission.blockTimestamp);
   console.log("  Voting Round ID (from FdcHub block):", votingRoundId);
-  console.log("  Round Parameters: offset=" + roundOffsetSec + "s, duration=" + roundDurationSec + "s");
+  console.log("  Round Parameters: offset=" + votingRoundConfig.roundOffsetSec + "s, duration=" + votingRoundConfig.roundDurationSec + "s");
   
   return {
     proof,
