@@ -19,7 +19,10 @@ export class DepositService {
   }
 
   /**
-   * Orchestrate full deposit flow: XRP → FXRP → Vault → Firelight
+   * Orchestrate initial deposit flow: Create bridge and initiate XRP → FXRP conversion
+   * 
+   * Note: Vault share minting happens AFTER the bridge completes (3-15 minutes later)
+   * via the completion handler in BridgeService.
    */
   async processDeposit(deposit: DetectedDeposit, vaultId: string): Promise<void> {
     console.log(`🎯 Processing deposit: ${deposit.amount} XRP for vault ${vaultId}`);
@@ -49,23 +52,10 @@ export class DepositService {
       console.log(`✅ Bridge request created: ${bridge.id}`);
 
       // Step 2: Initiate FAssets bridge (XRP → FXRP)
+      // This is async and takes 3-15 minutes. Vault minting happens after completion.
       await this.config.bridgeService.initiateBridge(bridge.id);
 
-      // Step 3: Mint vault shares (FXRP → shXRP)
-      const mintTxHash = await this.config.vaultService.mintShares(
-        vaultId,
-        deposit.walletAddress,
-        deposit.amount
-      );
-
-      await this.config.storage.updateBridgeStatus(bridge.id, "completed", {
-        vaultMintTxHash: mintTxHash,
-      });
-
-      // Step 4: (Optional) Deploy to Firelight for yield
-      // await this.config.yieldService.depositToFirelight(vaultId, deposit.amount);
-
-      console.log(`🎉 Deposit processed successfully!`);
+      console.log(`🌉 Bridge initiated. Vault shares will be minted after FXRP is received.`);
     } catch (error) {
       console.error("Deposit processing error:", error);
       throw error;

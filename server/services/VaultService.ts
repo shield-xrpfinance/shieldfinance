@@ -16,12 +16,14 @@ export class VaultService {
 
   /**
    * Mint vault shares using ERC-4626 deposit function
+   * 
+   * @returns Object containing vaultMintTxHash and positionId
    */
   async mintShares(
     vaultId: string,
     userAddress: string,
     fxrpAmount: string
-  ): Promise<string> {
+  ): Promise<{ vaultMintTxHash: string; positionId: string }> {
     console.log(`🏦 Minting ${fxrpAmount} shXRP shares for ${userAddress}`);
 
     // Get vault details from database
@@ -61,14 +63,19 @@ export class VaultService {
       console.log(`✅ Shares minted: ${receipt.hash}`);
 
       // Create position in database
-      await this.config.storage.createPosition({
+      const position = await this.config.storage.createPosition({
         walletAddress: userAddress,
         vaultId,
         amount: fxrpAmount,
         rewards: "0",
       });
 
-      return receipt.hash;
+      console.log(`✅ Position created: ${position.id}`);
+
+      return {
+        vaultMintTxHash: receipt.hash,
+        positionId: position.id,
+      };
     } catch (error) {
       console.error("Vault minting error:", error);
       throw error;
