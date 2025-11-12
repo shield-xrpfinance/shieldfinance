@@ -124,31 +124,35 @@ export class XRPLDepositListener {
   }
 
   private async handleTransaction(tx: any) {
+    // XRPL WebSocket can send transaction data in either tx.transaction or tx.tx_json
+    const transaction = tx.transaction || tx.tx_json;
+    
     console.log("=== XRPL Transaction Received ===", {
-      hasTransaction: !!tx.transaction,
-      type: tx.transaction?.TransactionType,
-      destination: tx.transaction?.Destination,
-      fullMessage: JSON.stringify(tx, null, 2),
+      hasTransaction: !!transaction,
+      type: transaction?.TransactionType,
+      destination: transaction?.Destination,
+      txHash: transaction?.hash || tx.hash,
     });
 
     // XRPL WebSocket sends various message types - only process ones with transaction data
-    if (!tx.transaction) {
+    if (!transaction) {
       console.log("⏭️  Skipping - no transaction data");
-      console.log("📋 Full message received:", JSON.stringify(tx, null, 2));
       return;
     }
     
-    if (tx.transaction.TransactionType !== "Payment") {
-      console.log(`⏭️  Skipping - not a Payment (type: ${tx.transaction.TransactionType})`);
+    if (transaction.TransactionType !== "Payment") {
+      console.log(`⏭️  Skipping - not a Payment (type: ${transaction.TransactionType})`);
       return;
     }
     
-    if (typeof tx.transaction.Amount !== "string") {
+    // Amount can be in either Amount or DeliverMax field
+    const amount = transaction.Amount || transaction.DeliverMax;
+    if (typeof amount !== "string") {
       console.log("⏭️  Skipping - Amount is not a string (possibly IOU/token)");
       return;
     }
 
-    const destination = tx.transaction.Destination;
+    const destination = transaction.Destination;
     const isVaultPayment = this.config.vaultAddress && destination === this.config.vaultAddress;
     const isAgentPayment = this.monitoredAgentAddresses.has(destination);
 
@@ -165,22 +169,23 @@ export class XRPLDepositListener {
       return;
     }
 
-    const amount = (parseInt(tx.transaction.Amount) / 1_000_000).toString();
-    const memo = this.extractMemo(tx.transaction.Memos);
+    const amountDrops = (parseInt(amount) / 1_000_000).toString();
+    const memo = this.extractMemo(transaction.Memos);
+    const txHash = transaction.hash || tx.hash;
 
     console.log("=== Transaction Details ===", {
-      from: tx.transaction.Account,
+      from: transaction.Account,
       to: destination,
-      amount,
+      amount: amountDrops,
       memo,
-      txHash: tx.transaction.hash,
+      txHash,
     });
 
     if (isVaultPayment && this.config.onDeposit) {
       const deposit: DetectedDeposit = {
-        walletAddress: tx.transaction.Account,
-        amount: amount,
-        txHash: tx.transaction.hash,
+        walletAddress: transaction.Account,
+        amount: amountDrops,
+        txHash: txHash,
         memo: memo,
       };
 
@@ -194,9 +199,9 @@ export class XRPLDepositListener {
     } else if (isAgentPayment && this.config.onAgentPayment) {
       const payment: AgentPayment = {
         agentAddress: destination,
-        walletAddress: tx.transaction.Account,
-        amount: amount,
-        txHash: tx.transaction.hash,
+        walletAddress: transaction.Account,
+        amount: amountDrops,
+        txHash: txHash,
         memo: memo,
       };
 
