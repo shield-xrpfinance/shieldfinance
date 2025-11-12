@@ -1,9 +1,11 @@
-import { CheckCircle2, Clock, AlertCircle, Loader2, Copy } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, Loader2, Copy, RefreshCw } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Note: XRPL wallets (Xaman) automatically hex-encode MEMO fields
 // Users should enter the plain UUID, not the hex-encoded version
@@ -32,6 +34,28 @@ export function BridgeStatus({
   agentUnderlyingAddress,
 }: BridgeStatusProps) {
   const { toast } = useToast();
+
+  const retryMutation = useMutation({
+    mutationFn: async () => {
+      if (!bridgeId) throw new Error("Bridge ID is required");
+      const response = await apiRequest("POST", `/api/bridges/${bridgeId}/reconcile`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Retry Successful",
+        description: data.message || "Bridge reconciliation initiated successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/bridges/wallet'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Retry Failed",
+        description: error.message || "Failed to retry bridge reconciliation",
+        variant: "destructive",
+      });
+    },
+  });
   
   const stages = [
     { 
@@ -71,32 +95,51 @@ export function BridgeStatus({
   return (
     <Card data-testid={`card-bridge-${status}`}>
       <CardHeader>
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <CardTitle>Deposit Processing</CardTitle>
-          {(status === "completed" || status === "vault_minted") && (
-            <Badge variant="default" data-testid="badge-status-completed">
-              <CheckCircle2 className="mr-1 h-3 w-3" />
-              Completed
-            </Badge>
-          )}
-          {(status === "failed" || status === "vault_mint_failed") && (
-            <Badge variant="destructive" data-testid="badge-status-failed">
-              <AlertCircle className="mr-1 h-3 w-3" />
-              Failed
-            </Badge>
-          )}
-          {status === "vault_minting" && (
-            <Badge variant="secondary" data-testid="badge-status-processing">
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-              Minting Shares
-            </Badge>
-          )}
-          {!["completed", "vault_minted", "failed", "vault_mint_failed", "vault_minting"].includes(status) && (
-            <Badge variant="secondary" data-testid="badge-status-processing">
-              <Loader2 className="mr-1 h-3 w-3 animate-spin" />
-              Processing
-            </Badge>
-          )}
+          <div className="flex items-center gap-2">
+            {(status === "completed" || status === "vault_minted") && (
+              <Badge variant="default" data-testid="badge-status-completed">
+                <CheckCircle2 className="mr-1 h-3 w-3" />
+                Completed
+              </Badge>
+            )}
+            {(status === "failed" || status === "vault_mint_failed" || errorMessage) && (
+              <>
+                <Badge variant="destructive" data-testid="badge-status-failed">
+                  <AlertCircle className="mr-1 h-3 w-3" />
+                  Failed
+                </Badge>
+                {bridgeId && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => retryMutation.mutate()}
+                    disabled={retryMutation.isPending}
+                    data-testid="button-retry-bridge"
+                  >
+                    {retryMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <RefreshCw className="h-3 w-3" />
+                    )}
+                  </Button>
+                )}
+              </>
+            )}
+            {status === "vault_minting" && (
+              <Badge variant="secondary" data-testid="badge-status-processing">
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                Minting Shares
+              </Badge>
+            )}
+            {!["completed", "vault_minted", "failed", "vault_mint_failed", "vault_minting"].includes(status) && !errorMessage && (
+              <Badge variant="secondary" data-testid="badge-status-processing">
+                <Loader2 className="mr-1 h-3 w-3 animate-spin" />
+                Processing
+              </Badge>
+            )}
+          </div>
         </div>
         <CardDescription>
           Depositing {xrpAmount} XRP → {fxrpExpected} shXRP shares

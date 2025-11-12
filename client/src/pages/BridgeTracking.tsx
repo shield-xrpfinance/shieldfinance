@@ -1,19 +1,44 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useWallet } from "@/lib/walletContext";
 import { BridgeStatus } from "@/components/BridgeStatus";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Activity, CheckCircle2, XCircle, Wallet } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { SelectXrpToFxrpBridge } from "@shared/schema";
 
 export default function BridgeTracking() {
   const { address } = useWallet();
   const [activeTab, setActiveTab] = useState("active");
+  const { toast } = useToast();
 
   const { data: bridges, isLoading } = useQuery<SelectXrpToFxrpBridge[]>({
     queryKey: [`/api/bridges/wallet/${address}`],
     enabled: !!address,
+  });
+
+  const retryAllMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/bridges/reconcile-all");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Bulk Retry Complete",
+        description: `Successfully retried ${data.successful} bridge(s). ${data.failed} failed.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/bridges/wallet'] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Bulk Retry Failed",
+        description: error.message || "Failed to retry bridges",
+        variant: "destructive",
+      });
+    },
   });
 
   const { activeBridges, completedBridges, failedBridges } = useMemo(() => {
@@ -192,6 +217,29 @@ export default function BridgeTracking() {
             </Card>
           ) : (
             <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <p className="text-sm text-muted-foreground">
+                  {failedBridges.length} failed bridge{failedBridges.length !== 1 ? 's' : ''}
+                </p>
+                <Button
+                  variant="outline"
+                  onClick={() => retryAllMutation.mutate()}
+                  disabled={retryAllMutation.isPending}
+                  data-testid="button-retry-all"
+                >
+                  {retryAllMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Retrying...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="mr-2 h-4 w-4" />
+                      Retry All
+                    </>
+                  )}
+                </Button>
+              </div>
               {failedBridges.map((bridge) => (
                 <BridgeStatus
                   key={bridge.id}
