@@ -190,6 +190,90 @@ export default function BridgeStatusModal({
     }
   };
 
+  const handleSendPayment = async () => {
+    if (!isConnected) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet first",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!bridge?.agentUnderlyingAddress || !bridge?.paymentReference) {
+      toast({
+        title: "Payment Details Missing",
+        description: "Bridge is not ready for payment yet",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSendingPayment(true);
+    try {
+      // Convert XRP amount to drops (1 XRP = 1,000,000 drops)
+      const xrpAmount = parseFloat(bridge.xrpAmount);
+      const amountInDrops = (xrpAmount * 1_000_000).toString();
+
+      const result = await requestPayment({
+        destination: bridge.agentUnderlyingAddress,
+        amountDrops: amountInDrops,
+        memo: bridge.paymentReference,
+        network: "testnet", // Coston2 testnet
+      });
+
+      if (result.success) {
+        if (provider === "xaman" && result.payloadUuid) {
+          // Show Xaman QR code modal
+          setXamanPayloadUuid(result.payloadUuid);
+          setXamanQrUrl(result.qrUrl || null);
+          setXamanDeepLink(result.deepLink || null);
+          setShowXamanModal(true);
+        } else if (provider === "walletconnect") {
+          // WalletConnect auto-triggers signing, just show success
+          toast({
+            title: "Payment Sent!",
+            description: "Transaction submitted. Waiting for confirmation...",
+          });
+        }
+      } else {
+        toast({
+          title: "Payment Failed",
+          description: result.error || "Failed to create payment request",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error("Error sending payment:", error);
+      toast({
+        title: "Payment Error",
+        description: error instanceof Error ? error.message : "Failed to send payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSendingPayment(false);
+    }
+  };
+
+  const handleXamanSuccess = (txHash: string) => {
+    toast({
+      title: "Payment Sent!",
+      description: "Your XRP payment has been sent. Bridge processing will continue automatically.",
+    });
+    setShowXamanModal(false);
+    // Refresh bridge status to pick up the payment
+    setRetryCount(prev => prev + 1);
+  };
+
+  const handleXamanError = (error: string) => {
+    toast({
+      title: "Payment Failed",
+      description: error,
+      variant: "destructive",
+    });
+    setShowXamanModal(false);
+  };
+
   if (!bridge) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -448,7 +532,35 @@ export default function BridgeStatusModal({
                     </div>
                   </div>
 
-                  {/* QR Code */}
+                  {/* Send Payment Button - Wallet Integration */}
+                  {isConnected && bridge.paymentReference && bridge.status === "awaiting_payment" && (
+                    <div className="space-y-2">
+                      <Button 
+                        onClick={handleSendPayment}
+                        disabled={isSendingPayment}
+                        className="w-full"
+                        size="lg"
+                        data-testid="button-send-payment"
+                      >
+                        {isSendingPayment ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Preparing Payment...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-2" />
+                            Send Payment with {provider === "xaman" ? "Xaman" : provider === "walletconnect" ? "WalletConnect" : "Wallet"}
+                          </>
+                        )}
+                      </Button>
+                      <p className="text-xs text-muted-foreground text-center">
+                        Or manually send {amount} XRP using the details above
+                      </p>
+                    </div>
+                  )}
+
+                  {/* QR Code - for manual sending */}
                   <div className="flex justify-center p-4 bg-white rounded-md">
                     <QRCodeSVG 
                       value={bridge.agentUnderlyingAddress} 
@@ -457,9 +569,11 @@ export default function BridgeStatusModal({
                     />
                   </div>
 
-                  <p className="text-xs text-muted-foreground text-center font-medium">
-                    Send exactly {amount} XRP with the MEMO above
-                  </p>
+                  {!isConnected && (
+                    <p className="text-xs text-muted-foreground text-center font-medium">
+                      Send exactly {amount} XRP with the MEMO above
+                    </p>
+                  )}
                 </AlertDescription>
               </Alert>
             </div>
@@ -516,6 +630,19 @@ export default function BridgeStatusModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+
+      {/* Xaman Signing Modal */}
+      <XamanSigningModal
+        open={showXamanModal}
+        onOpenChange={setShowXamanModal}
+        payloadUuid={xamanPayloadUuid}
+        qrUrl={xamanQrUrl}
+        deepLink={xamanDeepLink}
+        onSuccess={handleXamanSuccess}
+        onError={handleXamanError}
+        title="Send XRP Payment"
+        description="Scan the QR code with your Xaman wallet to send the XRP payment"
+      />
     </Dialog>
   );
 }
