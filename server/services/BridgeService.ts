@@ -71,6 +71,71 @@ export class BridgeService {
   }
 
   /**
+   * Parse actual minted FXRP amount from transaction receipt by analyzing Transfer events.
+   * 
+   * FXRP uses 6 decimals (not 18 like typical ERC20s), so we need to use formatUnits(value, 6).
+   * This extracts the actual amount minted from the Transfer event instead of using expected amount.
+   * 
+   * @param txHash - Transaction hash of the minting transaction
+   * @returns Actual FXRP amount minted (human-readable string with 6 decimals)
+   */
+  private async parseActualMintedAmount(txHash: string): Promise<string> {
+    const provider = this.config.flareClient.provider;
+    const smartAccountAddress = this.config.flareClient.getSignerAddress();
+    
+    // Get FXRP token address dynamically
+    const fxrpAddress = await this.config.flareClient.getFAssetTokenAddress();
+    
+    // Get transaction receipt
+    const receipt = await provider.getTransactionReceipt(txHash);
+    if (!receipt) {
+      throw new Error(`Transaction receipt not found for ${txHash}`);
+    }
+    
+    // ERC20 Transfer event signature: Transfer(address indexed from, address indexed to, uint256 value)
+    const transferEventSignature = ethers.id("Transfer(address,address,uint256)");
+    const zeroAddress = ethers.ZeroAddress;
+    
+    // Find Transfer event from FXRP contract where:
+    // - from = 0x0000...0000 (minting)
+    // - to = smartAccountAddress (minted to our smart account)
+    for (const log of receipt.logs) {
+      // Check if this is a Transfer event
+      if (log.topics[0] !== transferEventSignature) continue;
+      
+      // Check if this is the FXRP token
+      if (log.address.toLowerCase() !== fxrpAddress.toLowerCase()) continue;
+      
+      // Decode from and to addresses from topics
+      const from = ethers.getAddress("0x" + log.topics[1].slice(26));
+      const to = ethers.getAddress("0x" + log.topics[2].slice(26));
+      
+      // Check if this is a mint (from zero address) to smart account
+      if (from.toLowerCase() === zeroAddress.toLowerCase() && 
+          to.toLowerCase() === smartAccountAddress.toLowerCase()) {
+        
+        // Extract amount from log data
+        const rawAmount = BigInt(log.data);
+        
+        // Format with 6 decimals (FXRP uses 6 decimals, not 18)
+        const formattedAmount = ethers.formatUnits(rawAmount, 6);
+        
+        console.log(`✅ Parsed actual minted amount from Transfer event:`);
+        console.log(`   Raw amount: ${rawAmount.toString()}`);
+        console.log(`   Formatted (6 decimals): ${formattedAmount} FXRP`);
+        
+        return formattedAmount;
+      }
+    }
+    
+    // If no matching Transfer event found, throw error
+    throw new Error(
+      `No FXRP Transfer event found in transaction ${txHash}. ` +
+      `Expected Transfer from ${zeroAddress} to ${smartAccountAddress} on token ${fxrpAddress}`
+    );
+  }
+
+  /**
    * Initiate XRP → FXRP bridge using FAssets protocol
    * For now, this is a placeholder - actual FAssets integration requires:
    * 1. Reserve collateral with agent
@@ -459,6 +524,13 @@ export class BridgeService {
         BigInt(bridge.collateralReservationId)
       );
       
+      // Parse actual minted amount from Transfer events (FXRP uses 6 decimals, not 18)
+      const actualFxrpMinted = await this.parseActualMintedAmount(mintingTxHash);
+      
+      console.log(`✅ Minting executed on Flare: ${mintingTxHash}`);
+      console.log(`   Expected: ${bridge.fxrpExpected} FXRP`);
+      console.log(`   Actual minted: ${actualFxrpMinted} FXRP`);
+      
       // Update bridge status with actual minting transaction hash and attestation details
       await this.config.storage.updateBridgeStatus(bridgeId, "completed", {
         xrplTxHash: xrplTxHash,
@@ -466,12 +538,10 @@ export class BridgeService {
         fdcAttestationTxHash: fdcResult.attestationTxHash,
         fdcVotingRoundId: fdcResult.votingRoundId.toString(),
         fdcProofHash: JSON.stringify(fdcResult.proof),
-        fxrpReceived: bridge.fxrpExpected,
+        fxrpReceived: actualFxrpMinted, // Use actual minted amount from Transfer event
         fxrpReceivedAt: new Date(),
         completedAt: new Date(),
       });
-      
-      console.log(`✅ Minting executed on Flare: ${mintingTxHash}`);
       
       // Trigger vault share minting (final step)
       await this.completeBridgeWithVaultMinting(bridgeId);
@@ -654,18 +724,23 @@ export class BridgeService {
         BigInt(bridge.collateralReservationId)
       );
       
+      // Parse actual minted amount from Transfer events (FXRP uses 6 decimals, not 18)
+      const actualFxrpMinted = await this.parseActualMintedAmount(mintingTxHash);
+      
+      console.log(`✅ Retry successful! Minting executed on Flare: ${mintingTxHash}`);
+      console.log(`   Expected: ${bridge.fxrpExpected} FXRP`);
+      console.log(`   Actual minted: ${actualFxrpMinted} FXRP`);
+      
       // Update bridge status to completed
       await this.config.storage.updateBridgeStatus(bridgeId, "completed", {
         xrplTxHash: bridge.xrplTxHash,
         flareTxHash: mintingTxHash,
         fdcProofHash: JSON.stringify(proof),
-        fxrpReceived: bridge.fxrpExpected,
+        fxrpReceived: actualFxrpMinted, // Use actual minted amount from Transfer event
         fxrpReceivedAt: new Date(),
         completedAt: new Date(),
         errorMessage: null, // Clear error message
       });
-      
-      console.log(`✅ Retry successful! Minting executed on Flare: ${mintingTxHash}`);
       
       // Trigger vault share minting (final step)
       await this.completeBridgeWithVaultMinting(bridgeId);

@@ -1,0 +1,20 @@
+{
+  "network": "coston2",
+  "chainId": 114,
+  "timestamp": "2025-11-12T20:07:00.548Z",
+  "deployer": "0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D",
+  "contracts": {
+    "VaultController": {
+      "address": "0x78021898689153437CBb62895f20197e2bA9d881",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x78021898689153437CBb62895f20197e2bA9d881"
+    },
+    "ShXRPVault": {
+      "address": "0x1CE23bAEC4bb9709F827082d24a83d8Bc8865249",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x1CE23bAEC4bb9709F827082d24a83d8Bc8865249"
+    },
+    "FXRP": {
+      "address": "0x0b6A3645c240605887a5532109323A3E12273dc7",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x0b6A3645c240605887a5532109323A3E12273dc7"
+    }
+  }
+}

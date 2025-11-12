@@ -51,8 +51,8 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
     // Mapping of approved operators who can manage Firelight deposits
     mapping(address => bool) public operators;
     
-    // Minimum deposit amount (0.01 FXRP)
-    uint256 public minDeposit = 0.01 ether;
+    // Minimum deposit amount (0.01 FXRP with 6 decimals)
+    uint256 public minDeposit = 10000; // 0.01 FXRP (6 decimals)
     
     // Firelight.finance Integration
     // Firelight provides institutional-grade liquid staking for FXRP
@@ -268,9 +268,9 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
     
     /**
      * @dev Update minimum deposit amount
-     * @param newMinDeposit New minimum deposit (in wei, 18 decimals)
+     * @param newMinDeposit New minimum deposit (FXRP has 6 decimals)
      * 
-     * Example: 0.01 FXRP = 10000000000000000 (0.01 * 10^18)
+     * Example: 0.01 FXRP = 10000 (0.01 * 10^6)
      */
     function setMinDeposit(uint256 newMinDeposit) external onlyOwner {
         require(newMinDeposit > 0, "Min deposit must be positive");
@@ -435,12 +435,13 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
     // Already implemented in ERC4626
     
     /**
-     * @dev Returns the number of decimals (18, matches FXRP)
+     * @dev Returns the number of decimals (6, matches FXRP)
      * 
-     * Inherited from ERC20
+     * Note: shXRP inherits decimals from the underlying FXRP asset (6 decimals)
+     * Inherited from ERC4626 which uses the same decimals as the underlying asset
      * 
      * @return uint8 Number of decimals
      */
     // function decimals() public view override returns (uint8)
-    // Already implemented in ERC20
+    // Already implemented in ERC4626, automatically matches FXRP's 6 decimals
 }

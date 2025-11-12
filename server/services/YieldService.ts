@@ -28,7 +28,7 @@ export class YieldService {
       // Approve Firelight vault to spend FXRP
       const approveTx = await fxrpToken.approve(
         this.config.firelightVaultAddress,
-        ethers.parseEther(fxrpAmount)
+        ethers.parseUnits(fxrpAmount, 6) // FXRP uses 6 decimals, not 18
       );
       await approveTx.wait();
 
@@ -44,7 +44,7 @@ export class YieldService {
 
       const smartAccountAddress = this.config.flareClient.getSignerAddress();
       const depositTx = await firelightVault.deposit(
-        ethers.parseEther(fxrpAmount),
+        ethers.parseUnits(fxrpAmount, 6), // FXRP uses 6 decimals, not 18
         smartAccountAddress // Receive stXRP to smart account
       );
       const receipt = await depositTx.wait();
@@ -58,12 +58,12 @@ export class YieldService {
       await this.config.storage.createFirelightPosition({
         vaultId,
         fxrpDeposited: fxrpAmount,
-        stxrpReceived: ethers.formatEther(stxrpBalance),
-        currentStxrpBalance: ethers.formatEther(stxrpBalance),
+        stxrpReceived: ethers.formatUnits(stxrpBalance, 6), // FXRP uses 6 decimals, not 18
+        currentStxrpBalance: ethers.formatUnits(stxrpBalance, 6), // FXRP uses 6 decimals, not 18
         depositTxHash: receipt.hash,
       });
 
-      console.log(`✅ Deposited to Firelight: ${fxrpAmount} FXRP → ${ethers.formatEther(stxrpBalance)} stXRP`);
+      console.log(`✅ Deposited to Firelight: ${fxrpAmount} FXRP → ${ethers.formatUnits(stxrpBalance, 6)} stXRP`);
       return receipt.hash;
     } catch (error) {
       console.error("Firelight deposit error:", error);

@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
+import { nameToAddress } from "@flarenetwork/flare-periphery-contract-artifacts";
 
 import ShXRPVaultArtifact from "../artifacts/contracts/ShXRPVault.sol/ShXRPVault.json";
 import VaultControllerArtifact from "../artifacts/contracts/VaultController.sol/VaultController.json";
@@ -50,11 +51,18 @@ async function main() {
     throw new Error("Deployer has no balance. Please fund the account.");
   }
 
-  const fxrpAddress = network === "flare" 
-    ? "0xAf7278D382323A865734f93B687b300005B8b60E" 
-    : "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3";
+  // Dynamically fetch FXRP address from AssetManager
+  console.log("🔍 Fetching FXRP address from AssetManager...");
+  const assetManagerAddress = await nameToAddress("AssetManagerFXRP", network as "coston2" | "flare", provider);
+  console.log(`AssetManager address: ${assetManagerAddress}`);
 
-  console.log(`Using FXRP token: ${fxrpAddress}\n`);
+  // Create AssetManager contract instance with minimal ABI
+  const assetManagerAbi = ["function fAsset() external view returns (address)"];
+  const assetManager = new ethers.Contract(assetManagerAddress, assetManagerAbi, provider);
+
+  // Fetch the correct FXRP token address
+  const fxrpAddress = await assetManager.fAsset();
+  console.log(`✅ FXRP token address from AssetManager: ${fxrpAddress}\n`);
 
   console.log("📋 Deploying VaultController...");
   const VaultController = new ethers.ContractFactory(

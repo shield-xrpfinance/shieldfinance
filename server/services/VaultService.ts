@@ -49,7 +49,7 @@ export class VaultService {
       const fxrpToken = await this.config.flareClient.getFXRPToken() as any;
       const approveTx = await fxrpToken.approve(
         vaultContractAddress,
-        ethers.parseEther(fxrpAmount)
+        ethers.parseUnits(fxrpAmount, 6) // FXRP uses 6 decimals, not 18
       );
       await approveTx.wait();
 
@@ -61,7 +61,7 @@ export class VaultService {
       console.log(`  User's XRP wallet (tracked in DB): ${userAddress}`);
       
       const depositTx = await vaultContract.deposit(
-        ethers.parseEther(fxrpAmount),
+        ethers.parseUnits(fxrpAmount, 6), // FXRP uses 6 decimals, not 18
         smartAccountAddress // Mint shares to smart account (not user's XRP address)
       );
 

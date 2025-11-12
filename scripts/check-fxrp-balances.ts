@@ -1,11 +1,22 @@
 import { ethers } from "ethers";
+import { nameToAddress } from "@flarenetwork/flare-periphery-contract-artifacts";
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(
     "https://coston2-api.flare.network/ext/C/rpc"
   );
   
-  const fxrpAddress = "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3";
+  // Dynamically fetch FXRP address from AssetManager
+  const assetManagerAddress = await nameToAddress(
+    "AssetManagerFXRP",
+    "coston2",
+    provider
+  );
+  
+  const assetManagerAbi = ["function fAsset() external view returns (address)"];
+  const assetManager = new ethers.Contract(assetManagerAddress, assetManagerAbi, provider);
+  const fxrpAddress = await assetManager.fAsset();
+  
   const abi = ["function balanceOf(address) view returns (uint256)"];
   const contract = new ethers.Contract(fxrpAddress, abi, provider);
   
@@ -18,11 +29,12 @@ async function main() {
   
   console.log("\n═══════════════════════════════════════");
   console.log("FXRP Balance Check");
+  console.log("FXRP Token Address:", fxrpAddress);
   console.log("═══════════════════════════════════════\n");
   
   for (const { name, addr } of addresses) {
     const balance = await contract.balanceOf(addr);
-    const formatted = ethers.formatEther(balance);
+    const formatted = ethers.formatUnits(balance, 6);
     console.log(`${name}:`);
     console.log(`  Address: ${addr}`);
     console.log(`  Balance: ${formatted} FXRP`);

@@ -41,9 +41,9 @@ async function main() {
   const balance = await fxrpContract.balanceOf(smartAccount);
   
   console.log("Smart Account FXRP Balance (correct token):");
-  console.log("  ", ethers.formatEther(balance), "FXRP");
+  console.log("  ", ethers.formatUnits(balance, 6), "FXRP");
   
-  if (Number(ethers.formatEther(balance)) > 0) {
+  if (Number(ethers.formatUnits(balance, 6)) > 0) {
     console.log("  ✅ FOUND THE FXRP TOKENS!");
   }
   

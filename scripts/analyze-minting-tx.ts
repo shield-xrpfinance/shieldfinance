@@ -1,13 +1,24 @@
 import { ethers } from "ethers";
+import { nameToAddress } from "@flarenetwork/flare-periphery-contract-artifacts";
 
 async function main() {
   const provider = new ethers.JsonRpcProvider(
     "https://coston2-api.flare.network/ext/C/rpc"
   );
   
+  // Dynamically fetch FXRP address from AssetManager
+  const assetManagerAddress = await nameToAddress(
+    "AssetManagerFXRP",
+    "coston2",
+    provider
+  );
+  
+  const assetManagerAbi = ["function fAsset() external view returns (address)"];
+  const assetManager = new ethers.Contract(assetManagerAddress, assetManagerAbi, provider);
+  const fxrpAddress = await assetManager.fAsset();
+  
   const mintingTxHash = "0x5123f27e093519920c2379ab3ca1ca900ffe6d07a36e125687d7e6802b9017cd";
   const smartAccount = "0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd";
-  const fxrpAddress = "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3";
   
   console.log("\n═══════════════════════════════════════");
   console.log("Analyzing Minting Transaction");
@@ -47,7 +58,7 @@ async function main() {
       console.log("  Token:", log.address);
       console.log("  From:", from);
       console.log("  To:", to);
-      console.log("  Amount:", ethers.formatEther(value));
+      console.log("  Amount:", ethers.formatUnits(value, 6));
       
       if (log.address.toLowerCase() === fxrpAddress.toLowerCase()) {
         fxrpTransferFound = true;
