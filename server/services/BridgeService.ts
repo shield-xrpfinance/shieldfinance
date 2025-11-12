@@ -210,6 +210,7 @@ export class BridgeService {
         mintingFeeBIPS: reservation.feeBIPS.toString(),
         reservedValueUBA: reservation.valueUBA.toString(),
         reservedFeeUBA: reservation.feeUBA.toString(),
+        totalAmountUBA: totalUBA.toString(),
         reservationTxHash: reservation.reservationTxHash,
         collateralReservationFeePaid: "0",
         reservationExpiry,
@@ -267,6 +268,7 @@ export class BridgeService {
         // Calculate synthetic amounts (1:1 ratio, 0.25% fee)
         const valueUBA = BigInt(Math.floor(Number(bridge.xrpAmount) * 1_000_000));
         const feeUBA = valueUBA / BigInt(400); // 0.25% fee
+        const totalUBA = valueUBA + feeUBA;
         const expiryMinutes = 30;
         const reservationExpiry = new Date(Date.now() + expiryMinutes * 60 * 1000);
         
@@ -277,6 +279,7 @@ export class BridgeService {
           paymentReference: demoPaymentReference.toUpperCase(),
           reservedValueUBA: valueUBA.toString(),
           reservedFeeUBA: feeUBA.toString(),
+          totalAmountUBA: totalUBA.toString(),
           reservationTxHash: `DEMO-RES-${Date.now().toString(16)}`,
           reservationExpiry,
           mintingFeeBIPS: "25", // 0.25% fee
@@ -326,11 +329,8 @@ export class BridgeService {
     if (!bridge.paymentReference) {
       throw new Error("Bridge missing payment reference. Collateral reservation may not have completed.");
     }
-    if (!bridge.reservedValueUBA) {
-      throw new Error("Bridge missing reserved value. Collateral reservation may not have completed.");
-    }
-    if (!bridge.reservedFeeUBA) {
-      throw new Error("Bridge missing reserved fee. Collateral reservation may not have completed.");
+    if (!bridge.totalAmountUBA) {
+      throw new Error("Bridge missing total amount. Collateral reservation may not have completed.");
     }
     
     // Check expiry
@@ -344,10 +344,9 @@ export class BridgeService {
       }
     }
     
-    // Calculate total amount in XRP drops (1 XRP = 1,000,000 drops)
-    // UBA amounts are already in XRP base units with 6 decimals (same as drops)
-    const totalUBA = BigInt(bridge.reservedValueUBA) + BigInt(bridge.reservedFeeUBA);
-    const amountDrops = totalUBA.toString(); // UBA = drops for XRP
+    // Use total amount directly (UBA = drops for XRP)
+    // totalAmountUBA already includes both base amount and fee
+    const amountDrops = bridge.totalAmountUBA;
     
     // Map network
     const network: "mainnet" | "testnet" = this.config.network === "mainnet" ? "mainnet" : "testnet";

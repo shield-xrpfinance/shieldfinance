@@ -129,6 +129,7 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   mintingFeeBIPS: varchar("minting_fee_bips"),
   reservedValueUBA: varchar("reserved_value_uba"),
   reservedFeeUBA: varchar("reserved_fee_uba"),
+  totalAmountUBA: varchar("total_amount_uba"),
   reservationTxHash: varchar("reservation_tx_hash"),
   collateralReservationFeePaid: varchar("collateral_reservation_fee_paid"),
   reservationExpiry: timestamp("reservation_expiry"),
