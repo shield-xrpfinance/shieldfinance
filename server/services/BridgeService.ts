@@ -238,6 +238,129 @@ export class BridgeService {
     }
   }
 
+  /**
+   * Reserve collateral quickly for deposit initiation.
+   * This is called by POST /api/deposits after creating the bridge record.
+   * 
+   * Production mode: Calls executeFAssetsMinting() to reserve collateral with FAssets agent
+   * Demo mode: Generates synthetic reservation data without delays
+   * 
+   * Must complete in <5 seconds to provide quick API response to user
+   */
+  async reserveCollateralQuick(bridgeId: string): Promise<void> {
+    const bridge = await this.config.storage.getBridgeById(bridgeId);
+    if (!bridge) {
+      throw new Error(`Bridge ${bridgeId} not found`);
+    }
+
+    console.log(`🚀 Quick collateral reservation for bridge ${bridgeId}`);
+
+    try {
+      if (this._demoMode) {
+        // Demo mode: Generate synthetic reservation data without delays
+        const demoAgentAddress = `rDEMOAgent${Date.now().toString(36)}`;
+        
+        // Generate 64-character hex payment reference (32 bytes)
+        const timestamp = Date.now().toString(16).padStart(16, '0'); // 16 hex chars
+        const demoPaymentReference = timestamp + '0'.repeat(48); // Total 64 hex chars
+        
+        // Calculate synthetic amounts (1:1 ratio, 0.25% fee)
+        const valueUBA = BigInt(Math.floor(bridge.xrpAmount * 1_000_000));
+        const feeUBA = valueUBA / BigInt(400); // 0.25% fee
+        const expiryMinutes = 30;
+        const reservationExpiry = new Date(Date.now() + expiryMinutes * 60 * 1000);
+        
+        await this.config.storage.updateBridgeStatus(bridge.id, "awaiting_payment", {
+          agentVaultAddress: "0xDEMO" + Date.now().toString(16).slice(-8),
+          agentUnderlyingAddress: demoAgentAddress,
+          collateralReservationId: `demo-res-${Date.now()}`,
+          paymentReference: demoPaymentReference,
+          reservedValueUBA: valueUBA.toString(),
+          reservedFeeUBA: feeUBA.toString(),
+          reservationTxHash: `DEMO-RES-${Date.now().toString(16)}`,
+          reservationExpiry,
+          mintingFeeBIPS: "25", // 0.25% fee
+        });
+        
+        // Optionally register with listener in demo mode
+        if (this.xrplListener) {
+          await this.xrplListener.addAgentAddress(demoAgentAddress);
+          console.log(`🔔 [DEMO] XRPL listener now monitoring agent: ${demoAgentAddress}`);
+        }
+        
+        console.log(`✅ [DEMO] Quick reservation complete`);
+        console.log(`   Agent: ${demoAgentAddress}`);
+        console.log(`   Memo: ${demoPaymentReference}`);
+        console.log(`   Amount: ${ethers.formatUnits(valueUBA + feeUBA, 6)} XRP`);
+        console.log(`   Expires: ${reservationExpiry.toISOString()}`);
+      } else {
+        // Production mode: Call executeFAssetsMinting() which already handles:
+        // - Collateral reservation
+        // - Storage updates
+        // - XRPL listener registration
+        await this.executeFAssetsMinting(bridge);
+        console.log(`✅ Production reservation complete for bridge ${bridgeId}`);
+      }
+    } catch (error) {
+      console.error(`❌ Collateral reservation failed for bridge ${bridgeId}:`, error);
+      await this.config.storage.updateBridgeStatus(bridgeId, "failed", {
+        errorMessage: error instanceof Error ? error.message : "Collateral reservation failed",
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Build payment request from bridge data for API response.
+   * Validates all required fields and returns payment instructions.
+   * 
+   * @param bridge - Bridge record with reservation details
+   * @returns PaymentRequest with payment instructions
+   * @throws Error if bridge data is incomplete or reservation expired
+   */
+  buildPaymentRequest(bridge: SelectXrpToFxrpBridge): PaymentRequest {
+    // Validate required fields
+    if (!bridge.agentUnderlyingAddress) {
+      throw new Error("Bridge missing agent underlying address. Collateral reservation may not have completed.");
+    }
+    if (!bridge.paymentReference) {
+      throw new Error("Bridge missing payment reference. Collateral reservation may not have completed.");
+    }
+    if (!bridge.reservedValueUBA) {
+      throw new Error("Bridge missing reserved value. Collateral reservation may not have completed.");
+    }
+    if (!bridge.reservedFeeUBA) {
+      throw new Error("Bridge missing reserved fee. Collateral reservation may not have completed.");
+    }
+    
+    // Check expiry
+    if (bridge.reservationExpiry) {
+      const now = new Date();
+      if (now > bridge.reservationExpiry) {
+        throw new Error(
+          `Collateral reservation has expired (expired at ${bridge.reservationExpiry.toISOString()}). ` +
+          `Please create a new deposit.`
+        );
+      }
+    }
+    
+    // Calculate total amount in XRP drops (1 XRP = 1,000,000 drops)
+    // UBA amounts are already in XRP base units with 6 decimals (same as drops)
+    const totalUBA = BigInt(bridge.reservedValueUBA) + BigInt(bridge.reservedFeeUBA);
+    const amountDrops = totalUBA.toString(); // UBA = drops for XRP
+    
+    // Map network
+    const network: "mainnet" | "testnet" = this.config.network === "mainnet" ? "mainnet" : "testnet";
+    
+    return {
+      bridgeId: bridge.id,
+      destination: bridge.agentUnderlyingAddress,
+      amountDrops,
+      memo: bridge.paymentReference,
+      network,
+    };
+  }
+
   async executeMintingWithProof(bridgeId: string, xrplTxHash: string): Promise<void> {
     console.log(`⏳ Executing minting with FDC proof for bridge ${bridgeId}`);
     
@@ -469,77 +592,6 @@ export class BridgeService {
     }
   }
 
-  /**
-   * Reserve collateral and get agent address (fast, no delays)
-   * This is the first step before payment can be requested
-   */
-  async reserveCollateralQuick(bridgeId: string): Promise<void> {
-    const bridge = await this.config.storage.getBridgeById(bridgeId);
-    if (!bridge) throw new Error("Bridge not found");
-
-    console.log(`🌉 Reserving collateral for bridge ${bridgeId}`);
-
-    try {
-      await this.config.storage.updateBridgeStatus(bridgeId, "bridging", {
-        bridgeStartedAt: new Date(),
-      });
-
-      if (this._demoMode) {
-        const demoAgentAddress = `rDEMOAgent${Date.now().toString(36)}`;
-        await this.config.storage.updateBridgeStatus(bridgeId, "awaiting_payment", {
-          agentVaultAddress: "0xDEMO" + Date.now().toString(16).slice(-8),
-          agentUnderlyingAddress: demoAgentAddress,
-          collateralReservationId: `demo-res-${Date.now()}`,
-          mintingFeeBIPS: "25",
-        });
-        console.log(`✅ Demo agent address assigned: ${demoAgentAddress}`);
-      } else {
-        const reservationTxHash = await this.executeFAssetsMinting(bridge);
-        console.log(`✅ Collateral reserved, tx: ${reservationTxHash}`);
-      }
-    } catch (error) {
-      console.error("Collateral reservation error:", error);
-      await this.config.storage.updateBridgeStatus(bridgeId, "failed", {
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
-      });
-      throw error;
-    }
-  }
-
-  /**
-   * Build payment request for XRP → FXRP bridge
-   * Returns normalized payment payload for wallet signing
-   */
-  buildPaymentRequest(bridge: SelectXrpToFxrpBridge): PaymentRequest | null {
-    console.log("=== buildPaymentRequest CALLED ===", {
-      bridgeId: bridge.id,
-      agentUnderlyingAddress: bridge.agentUnderlyingAddress,
-      xrpAmount: bridge.xrpAmount,
-      status: bridge.status,
-    });
-
-    if (!bridge.agentUnderlyingAddress) {
-      console.warn(`⚠️  Bridge ${bridge.id} does not have agent address yet - cannot build payment request`);
-      return null;
-    }
-
-    const xrpAmount = parseFloat(bridge.xrpAmount.toString());
-    const amountDrops = Math.floor(xrpAmount * 1_000_000).toString();
-
-    const network: "mainnet" | "testnet" = this.config.network === "mainnet" ? "mainnet" : "testnet";
-
-    const paymentRequest: PaymentRequest = {
-      bridgeId: bridge.id,
-      destination: bridge.agentUnderlyingAddress,
-      amountDrops,
-      memo: bridge.id,
-      network,
-    };
-
-    console.log("✅ Payment request built:", paymentRequest);
-
-    return paymentRequest;
-  }
 
   /**
    * Retry FDC proof generation for a bridge that timed out
