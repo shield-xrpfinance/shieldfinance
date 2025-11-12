@@ -70,3 +70,7 @@ Preferred communication style: Simple, everyday language.
 ### Blockchain Protocols
 - **FAssets Integration**: For bridging XRP to FXRP on Flare Network, dynamic AssetManager address resolution via `@flarenetwork/flare-periphery-contract-artifacts`, FDC Attestation for payment proof generation.
 - **Firelight.finance Integration**: For generating yield on FXRP deposits.
+- **Flare Data Connector (FDC)**: Cross-chain data verification protocol
+  - **Data Availability API**: `ctn2-data-availability.flare.network` (Coston2 testnet), `flr-data-availability.flare.network` (mainnet)
+  - **Verifier Service**: `fdc-verifiers-testnet.flare.network` for request preparation
+  - **Known Integration Gap**: Current implementation polls DA Layer directly after `prepareRequest`, but attestation requests must first be submitted to FdcHub on-chain via FAssets SDK before proofs become available
