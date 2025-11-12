@@ -181,6 +181,30 @@ app.use((req, res, next) => {
     if (failureCount > 0) {
       console.warn(`⚠️  Warning: ${failureCount} pending bridge(s) not monitored. Manual intervention may be required.`);
     }
+
+    // Automatic recovery: Resume FDC proof generation for stuck bridges
+    console.log(`🔍 Checking for stuck bridges at xrpl_confirmed without FDC proofs...`);
+    const stuckBridges = await storage.getStuckBridges();
+    
+    if (stuckBridges.length > 0) {
+      console.log(`🔧 Found ${stuckBridges.length} stuck bridge(s) - resuming proof generation...`);
+      
+      for (const bridge of stuckBridges) {
+        try {
+          console.log(`   🔄 Resuming proof generation for bridge ${bridge.id} (TX: ${bridge.xrplTxHash})`);
+          // Resume proof generation in background (don't await to avoid blocking startup)
+          bridgeService.executeMintingWithProof(bridge.id, bridge.xrplTxHash!).catch((error) => {
+            console.error(`   ❌ Failed to resume proof generation for bridge ${bridge.id}:`, error);
+          });
+        } catch (error) {
+          console.error(`   ❌ Error initiating recovery for bridge ${bridge.id}:`, error);
+        }
+      }
+      
+      console.log(`✅ Automatic recovery initiated for ${stuckBridges.length} bridge(s)`);
+    } else {
+      console.log(`✅ No stuck bridges found`);
+    }
   }
 
   // Initialize deposit service (needs bridgeService)

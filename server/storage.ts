@@ -33,6 +33,7 @@ export interface IStorage {
   getBridgesByWallet(walletAddress: string): Promise<SelectXrpToFxrpBridge[]>;
   getBridgeByAgentAddress(agentAddress: string): Promise<SelectXrpToFxrpBridge | undefined>;
   getPendingBridges(): Promise<SelectXrpToFxrpBridge[]>;
+  getStuckBridges(): Promise<SelectXrpToFxrpBridge[]>;
   updateBridge(id: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
   updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
   
@@ -392,6 +393,16 @@ export class DatabaseStorage implements IStorage {
   async getPendingBridges(): Promise<SelectXrpToFxrpBridge[]> {
     return db.query.xrpToFxrpBridges.findMany({
       where: eq(xrpToFxrpBridges.status, "awaiting_payment"),
+      orderBy: desc(xrpToFxrpBridges.createdAt),
+    });
+  }
+
+  async getStuckBridges(): Promise<SelectXrpToFxrpBridge[]> {
+    return db.query.xrpToFxrpBridges.findMany({
+      where: and(
+        eq(xrpToFxrpBridges.status, "xrpl_confirmed"),
+        sql`${xrpToFxrpBridges.fdcProofData} IS NULL`
+      ),
       orderBy: desc(xrpToFxrpBridges.createdAt),
     });
   }
