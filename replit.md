@@ -73,4 +73,15 @@ Preferred communication style: Simple, everyday language.
 - **Flare Data Connector (FDC)**: Cross-chain data verification protocol
   - **Data Availability API**: `ctn2-data-availability.flare.network` (Coston2 testnet), `flr-data-availability.flare.network` (mainnet)
   - **Verifier Service**: `fdc-verifiers-testnet.flare.network` for request preparation
-  - **Known Integration Gap**: Current implementation polls DA Layer directly after `prepareRequest`, but attestation requests must first be submitted to FdcHub on-chain via FAssets SDK before proofs become available
+  - **FdcHub Integration**: Complete on-chain attestation submission workflow
+    - FdcHubClient (`server/utils/fdchub-client.ts`) submits attestation requests to FdcHub contract
+    - Voting round ID calculated from XRPL transaction timestamp using dynamic round parameters from prepareRequest
+    - Network-agnostic implementation works on both mainnet and Coston2 without code changes
+    - Attestation tx hash persisted in database (`fdcAttestationTxHash` field) for audit trail and retry support
+  - **FDC Proof Generation Flow**:
+    1. Prepare attestation request via FDC verifier service (`prepareRequest`)
+    2. Extract dynamic round parameters (`roundOffsetSec`, `roundDurationSec`) from prepareRequest
+    3. Calculate voting round ID from XRPL transaction timestamp (ensures correct round even if FdcHub submission is delayed)
+    4. Submit attestation on-chain to FdcHub contract via `requestAttestation()`
+    5. Poll Data Availability Layer for finalized proof using calculated voting round ID
+    6. Return proof for FXRP minting on Flare Network
