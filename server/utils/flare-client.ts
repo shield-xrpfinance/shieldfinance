@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import { FLARE_CONTRACTS } from "../../shared/flare-contracts";
 import { FIRELIGHT_VAULT_ABI } from "../../shared/flare-abis";
 import { SmartAccountClient } from "./smart-account-client";
+import { SmartAccountSigner } from "./smart-account-signer";
 
 // Vault Controller ABI (ERC-4626 wrapper with additional functionality)
 const VAULT_CONTROLLER_ABI = [
@@ -9,27 +10,25 @@ const VAULT_CONTROLLER_ABI = [
   "function getVault(address asset) view returns (address)",
 ] as const;
 
-export type SigningMode = 'eoa' | 'smart-account';
-
 export interface FlareClientConfig {
   network: "mainnet" | "coston2";
-  privateKey?: string;
-  signingMode?: SigningMode;
-  bundlerApiKey?: string;
+  privateKey: string;
+  bundlerApiKey: string;
   enablePaymaster?: boolean;
 }
 
+/**
+ * FlareClient - Smart Account Only
+ * All transactions are routed through ERC-4337 account abstraction for gasless, batched execution.
+ */
 export class FlareClient {
   public provider: ethers.JsonRpcProvider;
-  public signer?: ethers.Wallet;
   private network: "mainnet" | "coston2";
   private rpcUrl: string;
-  private signingMode: SigningMode;
-  private smartAccountClient?: SmartAccountClient;
+  private smartAccountClient: SmartAccountClient;
 
   constructor(config: FlareClientConfig) {
     this.network = config.network;
-    this.signingMode = config.signingMode || 'eoa';
     
     this.rpcUrl = config.network === "mainnet"
       ? "https://flare-api.flare.network/ext/C/rpc"
@@ -37,58 +36,37 @@ export class FlareClient {
     
     this.provider = new ethers.JsonRpcProvider(this.rpcUrl);
     
-    if (config.privateKey) {
-      if (this.signingMode === 'smart-account') {
-        const chainId = config.network === "mainnet" ? 14 : 114;
-        this.smartAccountClient = new SmartAccountClient({
-          chainId,
-          privateKey: config.privateKey,
-          bundlerApiKey: config.bundlerApiKey,
-          rpcUrl: this.rpcUrl,
-          enablePaymaster: config.enablePaymaster,
-        });
-      } else {
-        this.signer = new ethers.Wallet(config.privateKey, this.provider);
-      }
-    }
+    const chainId = config.network === "mainnet" ? 14 : 114;
+    this.smartAccountClient = new SmartAccountClient({
+      chainId,
+      privateKey: config.privateKey,
+      bundlerApiKey: config.bundlerApiKey,
+      rpcUrl: this.rpcUrl,
+      enablePaymaster: config.enablePaymaster,
+    });
   }
 
   async initialize(): Promise<void> {
-    if (this.signingMode === 'smart-account' && this.smartAccountClient) {
-      await this.smartAccountClient.initialize();
-      console.log(`🔐 Using Smart Account: ${this.smartAccountClient.getAddress()}`);
-    } else if (this.signer) {
-      console.log(`🔐 Using EOA: ${this.signer.address}`);
-    }
+    await this.smartAccountClient.initialize();
+    console.log(`🔐 Using Smart Account: ${this.smartAccountClient.getAddress()}`);
   }
 
   getSignerAddress(): string {
-    if (this.signingMode === 'smart-account' && this.smartAccountClient) {
-      return this.smartAccountClient.getAddress();
-    } else if (this.signer) {
-      return this.signer.address;
-    }
-    throw new Error('No signer configured');
+    return this.smartAccountClient.getAddress();
   }
 
   getContractSigner(): ethers.Signer {
-    if (this.signingMode === 'smart-account' && this.smartAccountClient) {
-      console.warn('⚠️  Smart account mode not fully implemented - falling back to EOA for contract calls');
-      return this.smartAccountClient.getEOASigner();
-    } else if (this.signer) {
-      return this.signer;
-    }
-    throw new Error('No signer configured');
+    return new SmartAccountSigner(this.smartAccountClient, this.provider);
   }
 
   getVaultController(address: string) {
     const contract = new ethers.Contract(address, VAULT_CONTROLLER_ABI, this.provider);
-    return this.signer || this.smartAccountClient ? contract.connect(this.getContractSigner()) : contract;
+    return contract.connect(this.getContractSigner());
   }
 
   getShXRPVault(address: string) {
     const contract = new ethers.Contract(address, FIRELIGHT_VAULT_ABI, this.provider);
-    return this.signer || this.smartAccountClient ? contract.connect(this.getContractSigner()) : contract;
+    return contract.connect(this.getContractSigner());
   }
 
   getFXRPToken() {
@@ -100,7 +78,7 @@ export class FlareClient {
       "function allowance(address owner, address spender) view returns (uint256)",
     ];
     const contract = new ethers.Contract(address, ERC20_ABI, this.provider);
-    return this.signer || this.smartAccountClient ? contract.connect(this.getContractSigner()) : contract;
+    return contract.connect(this.getContractSigner());
   }
 
   async getBalance(address: string): Promise<string> {
@@ -118,20 +96,9 @@ export class FlareClient {
     value?: bigint | string;
     data?: string;
   }): Promise<string> {
-    if (this.signingMode === 'smart-account' && this.smartAccountClient) {
-      const userOpHash = await this.smartAccountClient.sendTransaction(tx);
-      const receipt = await this.smartAccountClient.waitForUserOpReceipt(userOpHash);
-      return receipt.receipt.transactionHash;
-    } else if (this.signer) {
-      const txResponse = await this.signer.sendTransaction({
-        to: tx.to,
-        value: tx.value,
-        data: tx.data,
-      });
-      const receipt = await txResponse.wait();
-      return receipt!.hash;
-    }
-    throw new Error('No signer configured');
+    const userOpHash = await this.smartAccountClient.sendTransaction(tx);
+    const receipt = await this.smartAccountClient.waitForUserOpReceipt(userOpHash);
+    return receipt.receipt.transactionHash;
   }
 
   async sendBatchTransactions(txs: Array<{
@@ -139,19 +106,12 @@ export class FlareClient {
     value?: bigint | string;
     data?: string;
   }>): Promise<string> {
-    if (this.signingMode === 'smart-account' && this.smartAccountClient) {
-      const userOpHash = await this.smartAccountClient.sendBatchTransactions(txs);
-      const receipt = await this.smartAccountClient.waitForUserOpReceipt(userOpHash);
-      return receipt.receipt.transactionHash;
-    } else {
-      for (const tx of txs) {
-        await this.sendTransaction(tx);
-      }
-      return 'batch-complete';
-    }
+    const userOpHash = await this.smartAccountClient.sendBatchTransactions(txs);
+    const receipt = await this.smartAccountClient.waitForUserOpReceipt(userOpHash);
+    return receipt.receipt.transactionHash;
   }
 
-  getSmartAccountClient(): SmartAccountClient | undefined {
+  getSmartAccountClient(): SmartAccountClient {
     return this.smartAccountClient;
   }
 }

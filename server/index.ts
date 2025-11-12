@@ -57,24 +57,28 @@ app.use((req, res, next) => {
 (async () => {
   await storage.initializeVaults();
   
-  // Initialize Flare Network client with Smart Account support
-  // Smart accounts require ETHERSPOT_BUNDLER_API_KEY (get from https://developer.etherspot.io)
-  const useSmartAccounts = process.env.USE_SMART_ACCOUNTS === "true" && !!process.env.ETHERSPOT_BUNDLER_API_KEY;
+  // Initialize Flare Network client with Smart Account (ERC-4337)
+  // Requires ETHERSPOT_BUNDLER_API_KEY from https://developer.etherspot.io
+  if (!process.env.ETHERSPOT_BUNDLER_API_KEY) {
+    console.error('❌ ETHERSPOT_BUNDLER_API_KEY is required for smart account functionality');
+    console.error('   Get your API key from: https://dashboard.etherspot.io');
+    console.error('   Add to .env file: ETHERSPOT_BUNDLER_API_KEY=your_key_here');
+    process.exit(1);
+  }
   
-  if (process.env.USE_SMART_ACCOUNTS === "true" && !process.env.ETHERSPOT_BUNDLER_API_KEY) {
-    console.warn('⚠️  USE_SMART_ACCOUNTS=true but ETHERSPOT_BUNDLER_API_KEY not set.');
-    console.warn('   Falling back to EOA mode. Get API key from https://developer.etherspot.io');
+  if (!process.env.OPERATOR_PRIVATE_KEY) {
+    console.error('❌ OPERATOR_PRIVATE_KEY is required');
+    process.exit(1);
   }
   
   const flareClient = new FlareClient({
     network: "coston2",
     privateKey: process.env.OPERATOR_PRIVATE_KEY,
-    signingMode: useSmartAccounts ? 'smart-account' : 'eoa',
     bundlerApiKey: process.env.ETHERSPOT_BUNDLER_API_KEY,
     enablePaymaster: process.env.ENABLE_PAYMASTER === "true",
   });
 
-  // Initialize the client (required for smart accounts)
+  // Initialize smart account
   await flareClient.initialize();
 
   // Initialize services (note: bridgeService needs xrplListener, so we create it after listener is initialized)
