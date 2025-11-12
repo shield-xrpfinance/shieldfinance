@@ -239,7 +239,7 @@ export class FAssetsClient {
     
     // Calculate lots using BigInt arithmetic to avoid precision loss
     // Formula: lots = ceil(amountUBA / lotSize)
-    const lots = (amountUBA + lotSize - 1n) / lotSize; // Ceiling division for BigInt
+    const lots = (amountUBA + lotSize - BigInt(1)) / lotSize; // Ceiling division for BigInt
     const lotsNumber = Number(lots);
     
     // Check minimum: FAssets requires at least 1 lot

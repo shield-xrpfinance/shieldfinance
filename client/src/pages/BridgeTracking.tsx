@@ -69,6 +69,8 @@ export default function BridgeTracking() {
               flareTxHash={bridge.flareTxHash || undefined}
               vaultMintTxHash={bridge.vaultMintTxHash || undefined}
               errorMessage={bridge.errorMessage || undefined}
+              bridgeId={bridge.id}
+              agentUnderlyingAddress={bridge.agentUnderlyingAddress || undefined}
             />
           ))}
         </div>

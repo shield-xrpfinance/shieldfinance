@@ -11,6 +11,8 @@ interface BridgeStatusProps {
   flareTxHash?: string;
   vaultMintTxHash?: string;
   errorMessage?: string;
+  bridgeId?: string;
+  agentUnderlyingAddress?: string;
 }
 
 export function BridgeStatus({
@@ -21,6 +23,8 @@ export function BridgeStatus({
   flareTxHash,
   vaultMintTxHash,
   errorMessage,
+  bridgeId,
+  agentUnderlyingAddress,
 }: BridgeStatusProps) {
   const stages = [
     { key: "pending", label: "XRPL Confirmation", completed: ["xrpl_confirmed", "bridging", "completed"].includes(status) },
@@ -90,6 +94,29 @@ export function BridgeStatus({
             </div>
           ))}
         </div>
+
+        {status === "awaiting_payment" && bridgeId && agentUnderlyingAddress && (
+          <div className="space-y-3 p-4 rounded-lg bg-primary/10 border border-primary/20">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">Payment Required</p>
+              <p className="text-xs text-muted-foreground">Send {xrpAmount} XRP to complete the bridge</p>
+            </div>
+            <div className="space-y-2">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Destination Address:</p>
+                <code className="block rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid="text-agent-address">
+                  {agentUnderlyingAddress}
+                </code>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">MEMO (Required):</p>
+                <code className="block rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid="text-payment-memo">
+                  {bridgeId}
+                </code>
+              </div>
+            </div>
+          </div>
+        )}
 
         {xrplTxHash && (
           <div className="space-y-1 text-xs">
