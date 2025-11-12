@@ -20,11 +20,14 @@ import {
   ArrowRight,
   XCircle,
   Info,
-  RefreshCw
+  RefreshCw,
+  Send
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useWallet } from "@/lib/walletContext";
+import XamanSigningModal from "@/components/XamanSigningModal";
 import type { SelectXrpToFxrpBridge } from "@shared/schema";
 
 interface BridgeStatusModalProps {
@@ -76,7 +79,13 @@ export default function BridgeStatusModal({
   const [bridge, setBridge] = useState<SelectXrpToFxrpBridge | null>(null);
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
+  const [isSendingPayment, setIsSendingPayment] = useState(false);
+  const [xamanPayloadUuid, setXamanPayloadUuid] = useState<string | null>(null);
+  const [xamanQrUrl, setXamanQrUrl] = useState<string | null>(null);
+  const [xamanDeepLink, setXamanDeepLink] = useState<string | null>(null);
+  const [showXamanModal, setShowXamanModal] = useState(false);
   const { toast } = useToast();
+  const { requestPayment, provider, isConnected } = useWallet();
 
   useEffect(() => {
     if (!open || !bridgeId) {
