@@ -216,6 +216,7 @@ export default function BridgeStatusModal({
       const amountInDrops = (xrpAmount * 1_000_000).toString();
 
       const result = await requestPayment({
+        bridgeId: bridge.id,
         destination: bridge.agentUnderlyingAddress,
         amountDrops: amountInDrops,
         memo: bridge.paymentReference,
