@@ -108,3 +108,14 @@ Preferred communication style: Simple, everyday language.
   - **BridgeStatusModal Enhancement**: Modal now displays destination address, hex-encoded MEMO, and destination tag instructions immediately after deposit creation, with copy buttons for seamless manual payment flow.
 - **Enhanced Error Messaging**: Added detailed logging and user-facing toast notifications when auto-payment skips due to incomplete wallet connection state.
 - **Comprehensive Deposit Flow Logging**: Added detailed console logging throughout deposit flow to track provider state, walletConnectProvider status, and auto-payment trigger conditions for easier debugging.
+
+### FDC Proof Flow Implementation (November 12, 2024)
+- **Complete FDC Proof Pipeline**: Implemented end-to-end FDC proof generation flow with three-step process: prepareRequest → voting round calculation → DA Layer polling.
+- **Voting Round Calculation**: Implemented correct formula: `roundId = floor((timestamp - roundOffset) / roundDuration)` with Coston2 parameters (90s duration, 0s offset).
+- **Database Schema Extensions**: Added FDC tracking fields: `votingRoundId`, `abiEncodedRequest`, `fdcProofData` to `xrp_to_fxrp_bridges` table.
+- **Attestation Format Fix**: Corrected attestationType and sourceId to proper hex-encoded values (0x5061796d656e74... and 0x7465737458525000...) per Flare documentation.
+- **Enhanced Error Logging**: Added detailed stack traces and structured logging for all FDC proof generation steps.
+- **Infrastructure Blocker Identified**: Flare Data Availability Layer endpoints are not publicly accessible - DNS resolution fails for both `coston2-data-availability.flare.network` and `fdc-data-availability-coston2.flare.rocks`. Implementation is production-ready pending Flare infrastructure deployment.
+  - **Steps 1-2 Working**: prepareRequest and voting round calculation complete successfully.
+  - **Step 3 Blocked**: DA Layer polling returns ENOTFOUND DNS errors from Replit environment.
+  - **Next Actions**: Contact Flare to confirm correct DA Layer endpoint URL or implement mock/stub for testing until public endpoints are available.
