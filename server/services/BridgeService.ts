@@ -249,16 +249,17 @@ export class BridgeService {
       
       // Extract timestamp from response, checking all possible locations
       let rippleTimestamp: number | null = null;
+      const result = txResponse.result as any; // Use any to access dynamic response properties
       
-      if (txResponse.result.date !== undefined) {
-        rippleTimestamp = Number(txResponse.result.date);
-      } else if (txResponse.result.tx?.date !== undefined) {
-        rippleTimestamp = Number(txResponse.result.tx.date);
-      } else if (txResponse.result.tx_json?.date !== undefined) {
-        rippleTimestamp = Number(txResponse.result.tx_json.date);
-      } else if (txResponse.result.close_time_iso) {
+      if (result.date !== undefined) {
+        rippleTimestamp = Number(result.date);
+      } else if (result.tx?.date !== undefined) {
+        rippleTimestamp = Number(result.tx.date);
+      } else if (result.tx_json?.date !== undefined) {
+        rippleTimestamp = Number(result.tx_json.date);
+      } else if (result.close_time_iso) {
         // Fallback: convert ISO string to timestamp
-        const isoDate = new Date(txResponse.result.close_time_iso);
+        const isoDate = new Date(result.close_time_iso);
         rippleTimestamp = Math.floor(isoDate.getTime() / 1000) - rippleEpochOffset;
       }
       

@@ -100,36 +100,61 @@ export async function generateFDCProof(
   
   console.log("\n🚀 FDC Proof Generation - Complete Flow");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-  console.log("📋 Step 1: Prepare Request");
+  console.log("📋 Step 1: Prepare Request (with transaction indexing wait)");
   console.log("  Network:", network);
   console.log("  XRPL Tx Hash:", xrplTxHash);
   console.log("  Attestation Type:", attestationType);
   console.log("  Source ID:", sourceId);
   console.log("  Endpoint:", attestationUrl);
   
-  const prepareResponse = await fetch(attestationUrl, {
-    method: "POST",
-    headers: { 
-      "Content-Type": "application/json",
-      "X-API-KEY": "00000000-0000-0000-0000-000000000000" // Flare public dev/test API key
-    },
-    body: JSON.stringify({
-      attestationType: attestationType,
-      sourceId: sourceId,
-      requestBody: {
-        transactionId: xrplTxHash,
-        inUtxo: "0",
-        utxo: "0"
-      }
-    })
-  });
+  // Poll prepareRequest until transaction is indexed by FDC Verifier
+  const maxPrepareAttempts = 10; // 30 seconds max (10 attempts * 3 seconds)
+  const prepareInterval = 3000; // 3 seconds
+  let prepareResult: any = null;
   
-  if (!prepareResponse.ok) {
-    const errorText = await prepareResponse.text();
-    throw new Error(`FDC prepareRequest failed: ${prepareResponse.statusText} - ${errorText}`);
+  for (let attempt = 1; attempt <= maxPrepareAttempts; attempt++) {
+    console.log(`\n⏱️  PrepareRequest attempt ${attempt}/${maxPrepareAttempts}...`);
+    
+    const prepareResponse = await fetch(attestationUrl, {
+      method: "POST",
+      headers: { 
+        "Content-Type": "application/json",
+        "X-API-KEY": "00000000-0000-0000-0000-000000000000" // Flare public dev/test API key
+      },
+      body: JSON.stringify({
+        attestationType: attestationType,
+        sourceId: sourceId,
+        requestBody: {
+          transactionId: xrplTxHash,
+          inUtxo: "0",
+          utxo: "0"
+        }
+      })
+    });
+    
+    if (!prepareResponse.ok) {
+      const errorText = await prepareResponse.text();
+      throw new Error(`FDC prepareRequest failed: ${prepareResponse.statusText} - ${errorText}`);
+    }
+    
+    prepareResult = await prepareResponse.json();
+    
+    // Check if transaction is valid
+    if (prepareResult.status === "VALID") {
+      console.log("✅ Transaction indexed and validated by FDC Verifier");
+      break;
+    }
+    
+    console.log(`⏳ Transaction not yet indexed: ${prepareResult.status}`);
+    
+    if (attempt < maxPrepareAttempts) {
+      console.log(`   Waiting ${prepareInterval/1000}s before retry...`);
+      await new Promise(resolve => setTimeout(resolve, prepareInterval));
+    } else {
+      throw new Error(`Transaction not indexed after ${maxPrepareAttempts} attempts. Status: ${prepareResult.status}`);
+    }
   }
   
-  const prepareResult = await prepareResponse.json();
   console.log("✅ PrepareRequest response received");
   console.log("📦 Response structure:", JSON.stringify(prepareResult, null, 2));
   
@@ -139,7 +164,7 @@ export async function generateFDCProof(
   const roundDurationSec = prepareResult.roundDurationSec || 90;
   
   if (!abiEncodedRequest) {
-    throw new Error("Missing abiEncodedRequest in prepareRequest response");
+    throw new Error(`Missing abiEncodedRequest in prepareRequest response. Status: ${prepareResult.status}`);
   }
   
   console.log("\n📋 Step 2: Calculate Voting Round ID");

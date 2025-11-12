@@ -110,12 +110,16 @@ Preferred communication style: Simple, everyday language.
 - **Comprehensive Deposit Flow Logging**: Added detailed console logging throughout deposit flow to track provider state, walletConnectProvider status, and auto-payment trigger conditions for easier debugging.
 
 ### FDC Proof Flow Implementation (November 12, 2024)
-- **Complete FDC Proof Pipeline**: Implemented end-to-end FDC proof generation flow with three-step process: prepareRequest → voting round calculation → DA Layer polling.
-- **Voting Round Calculation**: Implemented correct formula: `roundId = floor((timestamp - roundOffset) / roundDuration)` with Coston2 parameters (90s duration, 0s offset).
+- **Complete FDC Verifier Integration**: Implemented end-to-end FDC proof generation using FDC Verifier API (`/api/proof/get-specific-proof`) instead of self-hosted DA Layer infrastructure.
+- **Transaction Indexing Retry Logic**: Added retry/polling logic to prepareRequest endpoint (10 attempts, 3-second intervals, 30s max) to wait for XRPL transactions to be indexed by FDC Verifier before proof generation.
+- **Production-Ready Timestamp Handling**: 
+  - Validates transaction is finalized (`validated: true`)
+  - Extracts timestamp from multiple possible locations in XRPL response
+  - Normalizes using `Number()` to prevent string concatenation errors
+  - Implements sanity checks (not future-dated, not >1 year old)
+  - Comprehensive error messages for debugging
+- **Voting Round Calculation**: Uses XRPL transaction timestamp (not current time) with correct formula: `roundId = floor((timestamp - roundOffset) / roundDuration)` and Coston2 parameters (90s duration, 0s offset).
 - **Database Schema Extensions**: Added FDC tracking fields: `votingRoundId`, `abiEncodedRequest`, `fdcProofData` to `xrp_to_fxrp_bridges` table.
 - **Attestation Format Fix**: Corrected attestationType and sourceId to proper hex-encoded values (0x5061796d656e74... and 0x7465737458525000...) per Flare documentation.
 - **Enhanced Error Logging**: Added detailed stack traces and structured logging for all FDC proof generation steps.
-- **Infrastructure Blocker Identified**: Flare Data Availability Layer endpoints are not publicly accessible - DNS resolution fails for both `coston2-data-availability.flare.network` and `fdc-data-availability-coston2.flare.rocks`. Implementation is production-ready pending Flare infrastructure deployment.
-  - **Steps 1-2 Working**: prepareRequest and voting round calculation complete successfully.
-  - **Step 3 Blocked**: DA Layer polling returns ENOTFOUND DNS errors from Replit environment.
-  - **Next Actions**: Contact Flare to confirm correct DA Layer endpoint URL or implement mock/stub for testing until public endpoints are available.
+- **FDC Verifier API Workflow**: prepareRequest (with retry) → extract voting round from XRPL tx timestamp → poll FDC Verifier for finalized proof (15-second intervals).
