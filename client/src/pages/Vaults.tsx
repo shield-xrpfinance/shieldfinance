@@ -162,9 +162,18 @@ export default function Vaults() {
   });
 
   const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
-    console.log("=== handleConfirmDeposit CALLED ===", { amounts, provider, address, walletConnectProvider: !!walletConnectProvider });
+    console.log("=== handleConfirmDeposit CALLED ===", { 
+      amounts, 
+      provider, 
+      address, 
+      walletConnectProvider: !!walletConnectProvider,
+      walletConnectProviderSession: walletConnectProvider?.session ? "exists" : "missing",
+    });
     
-    if (!selectedVault || !address) return;
+    if (!selectedVault || !address) {
+      console.error("❌ Missing selectedVault or address:", { selectedVault: !!selectedVault, address });
+      return;
+    }
 
     const totalAmount = Object.values(amounts)
       .filter((amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
@@ -176,9 +185,17 @@ export default function Vaults() {
     const isXRPDeposit = selectedVault.depositAssets.includes("XRP");
 
     if (isXRPDeposit) {
+      console.log("📍 XRP Deposit Flow - Starting bridge creation...");
       // Use bridge flow for XRP deposits
       try {
         setDepositModalOpen(false);
+        
+        console.log("📡 Calling POST /api/deposits with:", { 
+          walletAddress: address,
+          vaultId: selectedVault.id,
+          amount: totalAmount.toString(),
+          network,
+        });
         
         const response = await fetch("/api/deposits", {
           method: "POST",

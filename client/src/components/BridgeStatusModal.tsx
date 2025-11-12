@@ -151,6 +151,27 @@ export default function BridgeStatusModal({
     }
   };
 
+  const handleCopyMemo = () => {
+    if (bridge?.id) {
+      const hexMemo = stringToHex(bridge.id);
+      navigator.clipboard.writeText(hexMemo);
+      toast({
+        title: "Copied!",
+        description: "MEMO copied to clipboard",
+      });
+    }
+  };
+
+  // Convert string to hex for XRPL MEMO field (browser-safe implementation)
+  const stringToHex = (str: string): string => {
+    const encoder = new TextEncoder();
+    const bytes = encoder.encode(str);
+    return Array.from(bytes)
+      .map(byte => byte.toString(16).padStart(2, '0'))
+      .join('')
+      .toUpperCase();
+  };
+
   if (!bridge) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -299,21 +320,49 @@ export default function BridgeStatusModal({
           {bridge.agentUnderlyingAddress && bridge.status !== "completed" && (
             <div className="space-y-3">
               <Alert data-testid="alert-agent-address">
-                <AlertDescription className="space-y-3">
-                  <div>
-                    <p className="font-medium mb-2">Send XRP to this address:</p>
-                    <div className="flex items-center gap-2 p-3 rounded-md bg-background border">
-                      <code className="flex-1 text-sm break-all font-mono" data-testid="text-agent-address">
-                        {bridge.agentUnderlyingAddress}
-                      </code>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        onClick={handleCopyAddress}
-                        data-testid="button-copy-address"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
+                <AlertDescription className="space-y-4">
+                  <div className="space-y-3">
+                    <div>
+                      <p className="font-medium mb-2">Destination Address:</p>
+                      <div className="flex items-center gap-2 p-3 rounded-md bg-background border">
+                        <code className="flex-1 text-sm break-all font-mono" data-testid="text-agent-address">
+                          {bridge.agentUnderlyingAddress}
+                        </code>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={handleCopyAddress}
+                          data-testid="button-copy-address"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-medium">MEMO (Hex-Encoded - Required):</p>
+                        <Badge variant="outline" className="text-xs">Must include</Badge>
+                      </div>
+                      <div className="flex items-center gap-2 p-3 rounded-md bg-background border">
+                        <code className="flex-1 text-xs break-all font-mono" data-testid="text-payment-memo">
+                          {stringToHex(bridge.id)}
+                        </code>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={handleCopyMemo}
+                          data-testid="button-copy-memo"
+                        >
+                          <Copy className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">Bridge ID: {bridge.id}</p>
+                    </div>
+
+                    <div>
+                      <p className="font-medium mb-2">Destination Tag:</p>
+                      <p className="text-xs text-muted-foreground p-3 rounded-md bg-background border">Leave empty - Use MEMO field above</p>
                     </div>
                   </div>
 
@@ -321,13 +370,13 @@ export default function BridgeStatusModal({
                   <div className="flex justify-center p-4 bg-white rounded-md">
                     <QRCodeSVG 
                       value={bridge.agentUnderlyingAddress} 
-                      size={200}
+                      size={180}
                       data-testid="qr-agent-address"
                     />
                   </div>
 
-                  <p className="text-xs text-muted-foreground text-center">
-                    Scan the QR code or copy the address to send exactly {amount} XRP
+                  <p className="text-xs text-muted-foreground text-center font-medium">
+                    Send exactly {amount} XRP with the MEMO above
                   </p>
                 </AlertDescription>
               </Alert>
