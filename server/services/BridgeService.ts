@@ -1,3 +1,4 @@
+import { ethers } from "ethers";
 import { FlareClient } from "../utils/flare-client";
 import { FAssetsClient } from "../utils/fassets-client";
 import { generateFDCProof, FDCTimeoutError } from "../utils/fdc-proof";
@@ -184,13 +185,36 @@ export class BridgeService {
       
       const reservation = await this.fassetsClient.reserveCollateral(lotsToMint);
       
+      // Calculate total amount to pay (value + fee) with precision-safe formatting
+      const assetDecimals = await this.fassetsClient.getAssetDecimals();
+      const totalUBA = BigInt(reservation.valueUBA) + BigInt(reservation.feeUBA);
+      
+      // Use ethers.formatUnits for precision-safe conversion (no overflow/precision loss)
+      const totalXRP = ethers.formatUnits(totalUBA, assetDecimals);
+      
+      // lastUnderlyingTimestamp is the payment deadline (from FAssets protocol)
+      // This is the actual expiry time by which the minter must pay
+      const reservationExpiry = new Date(Number(reservation.lastUnderlyingTimestamp) * 1000);
+      
+      console.log('\n💰 Payment Instructions:');
+      console.log(`   Send exactly: ${totalXRP} XRP`);
+      console.log(`   To address: ${reservation.agentUnderlyingAddress}`);
+      console.log(`   With memo: ${reservation.paymentReference}`);
+      console.log(`   Before: ${reservationExpiry.toISOString()}`);
+      
       await this.config.storage.updateBridgeStatus(bridge.id, "awaiting_payment", {
         collateralReservationId: reservation.reservationId.toString(),
+        paymentReference: reservation.paymentReference,
         agentVaultAddress: reservation.agentVault,
         agentUnderlyingAddress: reservation.agentUnderlyingAddress,
-        mintingFeeBIPS: reservation.feeBIPS.toString(),  // Store actual BIPS value
+        mintingFeeBIPS: reservation.feeBIPS.toString(),
+        reservedValueUBA: reservation.valueUBA.toString(),
+        reservedFeeUBA: reservation.feeUBA.toString(),
+        reservationTxHash: reservation.reservationTxHash,
         collateralReservationFeePaid: "0",
+        reservationExpiry,
         lastUnderlyingBlock: reservation.lastUnderlyingBlock.toString(),
+        lastUnderlyingTimestamp: new Date(Number(reservation.lastUnderlyingTimestamp) * 1000),
       });
       
       // Register agent address with XRPL listener for payment detection

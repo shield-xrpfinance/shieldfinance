@@ -22,6 +22,7 @@ export interface CollateralReservation {
   reservationTxHash: string;
   agentVault: string;
   agentUnderlyingAddress: string;
+  paymentReference: string;  // Hex payment reference for XRPL memo
   feeBIPS: bigint;  // Agent's fee in basis points (e.g., 100 = 1%)
   valueUBA: bigint;
   feeUBA: bigint;   // Calculated fee amount in underlying base amount
@@ -240,11 +241,43 @@ export class FAssetsClient {
     
     const reservationEvent = this.parseCollateralReservedEvent(receipt);
     
+    // Convert paymentReference from bytes32 to hex string (remove 0x prefix for XRPL memo)
+    const paymentReference = reservationEvent.paymentReference.replace(/^0x/, '');
+    
+    // Validate payment reference is not empty, zero hash, or malformed
+    const isZeroHash = /^0+$/.test(paymentReference) || paymentReference === '';
+    const isValidLength = paymentReference.length === 64; // bytes32 = 64 hex chars
+    const isValidHex = /^[0-9a-fA-F]+$/.test(paymentReference);
+    
+    if (isZeroHash) {
+      throw new Error(
+        `Invalid payment reference from CollateralReserved event: zero hash. ` +
+        `This indicates the FAssets contract did not generate a valid reference.`
+      );
+    }
+    
+    if (!isValidLength || !isValidHex) {
+      throw new Error(
+        `Malformed payment reference from CollateralReserved event: "${paymentReference}" ` +
+        `(expected 64 hex characters, got ${paymentReference.length} characters). ` +
+        `This indicates corrupted contract data.`
+      );
+    }
+    
+    console.log('\n📝 Collateral Reservation Details:');
+    console.log(`   Reservation ID: ${reservationEvent.collateralReservationId}`);
+    console.log(`   Payment Reference: ${paymentReference}`);
+    console.log(`   Payment Address: ${reservationEvent.paymentAddress}`);
+    console.log(`   Value UBA: ${reservationEvent.valueUBA}`);
+    console.log(`   Fee UBA: ${reservationEvent.feeUBA}`);
+    console.log(`   Total to pay: ${BigInt(reservationEvent.valueUBA) + BigInt(reservationEvent.feeUBA)} UBA`);
+    
     return {
       reservationId: reservationEvent.collateralReservationId,
       reservationTxHash: receipt.hash,
       agentVault: agent.vaultAddress,
       agentUnderlyingAddress: reservationEvent.paymentAddress,
+      paymentReference,
       feeBIPS: agent.feeBIPS,  // Agent's fee rate in basis points
       valueUBA: reservationEvent.valueUBA,
       feeUBA: reservationEvent.feeUBA,  // Calculated fee amount
