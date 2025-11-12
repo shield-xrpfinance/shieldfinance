@@ -1,49 +1,49 @@
 /**
- * Polls the Data Availability Layer for a finalized proof
+ * Polls the FDC Verifier API for a finalized proof
  * @param votingRoundId - The voting round ID to poll for
  * @param requestBytes - The ABI encoded request bytes
  * @param network - The network to poll (mainnet or coston2)
  * @returns The complete proof object with merkleProof array
  */
-async function pollDALayerProof(
+async function pollVerifierProof(
   votingRoundId: number, 
   requestBytes: string,
   network: "mainnet" | "coston2"
 ): Promise<any> {
-  const daLayerUrl = network === "mainnet"
-    ? "https://mainnet-data-availability.flare.network/api/v0/fdc/get-proof-round-id-bytes"
-    : "https://coston2-data-availability.flare.network/api/v0/fdc/get-proof-round-id-bytes";
+  const verifierUrl = network === "mainnet"
+    ? "https://fdc-verifiers.flare.network/api/proof/get-specific-proof"
+    : "https://fdc-verifiers-testnet.flare.network/api/proof/get-specific-proof";
   
   const maxAttempts = 20; // 5 minutes max (20 attempts * 15 seconds)
   const pollInterval = 15000; // 15 seconds
   
-  console.log("🔄 Starting DA Layer polling...");
+  console.log("🔄 Starting FDC Verifier proof polling...");
   console.log("  Voting Round ID:", votingRoundId);
   console.log("  Request Bytes:", requestBytes);
-  console.log("  DA Layer URL:", daLayerUrl);
+  console.log("  Verifier URL:", verifierUrl);
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
       console.log(`\n⏱️  Polling attempt ${attempt}/${maxAttempts}...`);
       
-      const response = await fetch(daLayerUrl, {
+      const response = await fetch(verifierUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-API-KEY": "00000000-0000-0000-0000-000000000000"
         },
         body: JSON.stringify({
-          votingRoundId: votingRoundId,
+          roundId: votingRoundId,
           requestBytes: requestBytes
         })
       });
       
       if (response.ok) {
-        const proof = await response.json();
-        console.log("✅ DA Layer proof retrieved successfully!");
-        console.log("📦 Proof structure:", JSON.stringify(proof, null, 2));
-        console.log("🔍 Merkle proof array length:", proof.proof?.length || 0);
-        return proof;
+        const proofData = await response.json();
+        console.log("✅ FDC Verifier proof retrieved successfully!");
+        console.log("📦 Proof structure:", JSON.stringify(proofData, null, 2));
+        console.log("🔍 Merkle proof array length:", proofData.merkleProof?.length || 0);
+        return proofData;
       }
       
       if (response.status === 404) {
@@ -54,32 +54,37 @@ async function pollDALayerProof(
       
       // Other error - throw
       const errorText = await response.text();
-      throw new Error(`DA Layer error (${response.status}): ${errorText}`);
+      throw new Error(`FDC Verifier error (${response.status}): ${errorText}`);
       
     } catch (error: any) {
-      if (error.message.includes("DA Layer error")) {
-        throw error; // Re-throw DA Layer errors
+      if (error.message.includes("FDC Verifier error")) {
+        throw error; // Re-throw Verifier errors
       }
       console.error(`❌ Polling attempt ${attempt} failed:`, error.message);
       console.error(`   Error details:`, JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
       if (attempt === maxAttempts) {
-        throw new Error(`DA Layer polling timeout after ${maxAttempts} attempts. Last error: ${error.message}`);
+        throw new Error(`FDC Verifier polling timeout after ${maxAttempts} attempts. Last error: ${error.message}`);
       }
       await new Promise(resolve => setTimeout(resolve, pollInterval));
     }
   }
   
-  throw new Error("DA Layer polling failed: Maximum attempts reached");
+  throw new Error("FDC Verifier polling failed: Maximum attempts reached");
 }
 
 /**
  * Generates a complete FDC proof for an XRPL transaction
- * This implements the full flow: prepareRequest -> calculate round -> poll DA Layer
+ * This implements the full flow: prepareRequest -> calculate round -> poll FDC Verifier
  * @param xrplTxHash - The XRPL transaction hash
  * @param network - The network (mainnet or coston2)
+ * @param txTimestamp - Optional Unix timestamp of the XRPL transaction (for correct round calculation)
  * @returns Complete proof object with merkleProof array
  */
-export async function generateFDCProof(xrplTxHash: string, network: "mainnet" | "coston2"): Promise<any> {
+export async function generateFDCProof(
+  xrplTxHash: string, 
+  network: "mainnet" | "coston2",
+  txTimestamp?: number
+): Promise<any> {
   // Step 1: Call prepareRequest endpoint
   const attestationUrl = network === "mainnet"
     ? "https://fdc-verifiers-mainnet.flare.network/verifier/xrp/Payment/prepareRequest"
@@ -143,25 +148,27 @@ export async function generateFDCProof(xrplTxHash: string, network: "mainnet" | 
   console.log("  Round Duration (sec):", roundDurationSec);
   
   // Step 3: Calculate voting round ID
-  const currentTimestamp = Math.floor(Date.now() / 1000);
-  const votingRoundId = Math.floor((currentTimestamp - roundOffsetSec) / roundDurationSec);
+  // Use provided txTimestamp (from XRPL transaction) or fallback to current time
+  const timestamp = txTimestamp || Math.floor(Date.now() / 1000);
+  const votingRoundId = Math.floor((timestamp - roundOffsetSec) / roundDurationSec);
   
-  console.log("  Current Timestamp:", currentTimestamp);
+  console.log("  Transaction Timestamp:", timestamp, txTimestamp ? "(from XRPL tx)" : "(current time fallback)");
   console.log("  Calculated Voting Round ID:", votingRoundId);
   
-  // Step 4: Poll DA Layer for the finalized proof
-  console.log("\n📋 Step 3: Poll Data Availability Layer");
-  const proof = await pollDALayerProof(votingRoundId, abiEncodedRequest, network);
+  // Step 4: Poll FDC Verifier for the finalized proof
+  console.log("\n📋 Step 3: Poll FDC Verifier API for Proof");
+  const proof = await pollVerifierProof(votingRoundId, abiEncodedRequest, network);
   
   console.log("\n✅ FDC Proof Generation Complete!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("📦 Final Proof Object:");
-  console.log("  Attestation Type:", proof.attestationType);
-  console.log("  Source ID:", proof.sourceId);
-  console.log("  Voting Round:", proof.votingRound);
-  console.log("  Merkle Proof Length:", proof.proof?.length || 0);
-  console.log("  Has Request Body:", !!proof.requestBody);
-  console.log("  Has Response Body:", !!proof.responseBody);
+  console.log("  Round ID:", proof.roundId);
+  console.log("  Hash:", proof.hash);
+  console.log("  Merkle Proof Length:", proof.merkleProof?.length || 0);
+  console.log("  Has Request:", !!proof.request);
+  console.log("  Has Response:", !!proof.response);
+  console.log("  Verification Status:", proof.verificationStatus);
+  console.log("  Attestation Status:", proof.attestationStatus);
   
   return proof;
 }

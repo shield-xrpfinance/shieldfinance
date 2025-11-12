@@ -222,7 +222,67 @@ export class BridgeService {
     }
     
     try {
-      const proof = await generateFDCProof(xrplTxHash, this.config.network);
+      // Fetch XRPL transaction to get accurate timestamp for voting round calculation
+      const { Client } = await import("xrpl");
+      const xrplNetwork = this.config.network === "mainnet" 
+        ? "wss://xrplcluster.com" 
+        : "wss://s.altnet.rippletest.net:51233";
+      
+      const client = new Client(xrplNetwork);
+      await client.connect();
+      
+      console.log(`📡 Fetching XRPL transaction ${xrplTxHash} for timestamp...`);
+      const txResponse = await client.request({
+        command: "tx",
+        transaction: xrplTxHash,
+      });
+      await client.disconnect();
+      
+      // Verify transaction is validated
+      if (!txResponse.result?.validated) {
+        throw new Error("XRPL transaction is not yet validated. Cannot generate FDC proof for unvalidated transactions.");
+      }
+      
+      // Convert Ripple epoch timestamp to Unix timestamp
+      // Ripple epoch: January 1, 2000 at 00:00 UTC = 946684800 Unix timestamp
+      const rippleEpochOffset = 946684800;
+      
+      // Extract timestamp from response, checking all possible locations
+      let rippleTimestamp: number | null = null;
+      
+      if (txResponse.result.date !== undefined) {
+        rippleTimestamp = Number(txResponse.result.date);
+      } else if (txResponse.result.tx?.date !== undefined) {
+        rippleTimestamp = Number(txResponse.result.tx.date);
+      } else if (txResponse.result.tx_json?.date !== undefined) {
+        rippleTimestamp = Number(txResponse.result.tx_json.date);
+      } else if (txResponse.result.close_time_iso) {
+        // Fallback: convert ISO string to timestamp
+        const isoDate = new Date(txResponse.result.close_time_iso);
+        rippleTimestamp = Math.floor(isoDate.getTime() / 1000) - rippleEpochOffset;
+      }
+      
+      if (rippleTimestamp === null || !isFinite(rippleTimestamp)) {
+        throw new Error("Could not extract valid timestamp from XRPL transaction response");
+      }
+      
+      const unixTimestamp = rippleTimestamp + rippleEpochOffset;
+      
+      // Sanity checks on the timestamp
+      const now = Math.floor(Date.now() / 1000);
+      const oneYearAgo = now - (365 * 24 * 60 * 60);
+      
+      if (unixTimestamp > now + 60) {
+        throw new Error(`XRPL transaction timestamp is in the future: ${unixTimestamp} > ${now}`);
+      }
+      
+      if (unixTimestamp < oneYearAgo) {
+        throw new Error(`XRPL transaction timestamp is too old (>1 year): ${unixTimestamp} < ${oneYearAgo}`);
+      }
+      
+      console.log(`⏰ XRPL Transaction Timestamp: ${unixTimestamp} (${new Date(unixTimestamp * 1000).toISOString()})`);
+      
+      const proof = await generateFDCProof(xrplTxHash, this.config.network, unixTimestamp);
       console.log(`✅ FDC proof generated for tx: ${xrplTxHash}`);
       
       const mintingTxHash = await this.fassetsClient.executeMinting(
