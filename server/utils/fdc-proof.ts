@@ -1,7 +1,7 @@
 export async function generateFDCProof(xrplTxHash: string, network: "mainnet" | "coston2"): Promise<any> {
   const attestationUrl = network === "mainnet"
-    ? "https://attestation.flare.network/verifier/xrp/Payment/prepareResponse"
-    : "https://attestation-coston.flare.network/verifier/xrp/Payment/prepareResponse";
+    ? "https://fdc-verifiers-mainnet.flare.network/verifier/xrp/Payment/prepareResponse"
+    : "https://fdc-verifiers-testnet.flare.network/verifier/xrp/Payment/prepareResponse";
   
   const sourceId = network === "mainnet"
     ? "0x5852500000000000000000000000000000000000"
