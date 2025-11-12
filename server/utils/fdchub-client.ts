@@ -15,6 +15,20 @@ export interface AttestationSubmission {
   blockTimestamp: number; // Unix timestamp from Flare blockchain
 }
 
+export interface VotingRoundConfig {
+  roundOffsetSec: number;
+  roundDurationSec: number;
+}
+
+/**
+ * Minimal VotingRounds ABI for querying round parameters
+ * Since full ABI isn't in flare-periphery-contract-artifacts, we use minimal interface
+ */
+const VOTING_ROUNDS_ABI = [
+  "function firstRoundStartTime() view returns (uint256)",
+  "function roundLength() view returns (uint256)"
+];
+
 /**
  * FdcHubClient handles attestation request submissions to Flare Data Connector Hub
  * 
@@ -31,6 +45,7 @@ export class FdcHubClient {
   private fdcHubABI: any = null;
   private feeConfigAddress: string | null = null;
   private feeConfigABI: any = null;
+  private votingRoundConfig: VotingRoundConfig | null = null;
 
   constructor(config: FdcHubConfig) {
     this.config = config;
@@ -353,5 +368,87 @@ export class FdcHubClient {
       console.error("❌ Failed to submit attestation request to FdcHub:", error);
       throw error;
     }
+  }
+
+  /**
+   * Fetch and cache voting round configuration from on-chain VotingRounds contract
+   * This is used to calculate the voting round ID for FDC proof polling
+   */
+  async getVotingRoundConfig(): Promise<VotingRoundConfig> {
+    // Return cached config if available
+    if (this.votingRoundConfig) {
+      return this.votingRoundConfig;
+    }
+
+    try {
+      console.log("📡 Fetching voting round configuration from on-chain VotingRounds contract...");
+      
+      // Get VotingRounds contract address from contract registry
+      const networkAlias = this.config.network === "mainnet" ? "flare" : "coston2";
+      const votingRoundsAddress = await nameToAddress("VotingRounds", networkAlias, this.config.flareClient.provider);
+      
+      if (!votingRoundsAddress || votingRoundsAddress === ethers.ZeroAddress) {
+        throw new Error(`VotingRounds contract address not found for network ${networkAlias}`);
+      }
+      
+      console.log(`   VotingRounds address: ${votingRoundsAddress}`);
+      
+      // Create contract instance with minimal ABI
+      const votingRoundsContract = new ethers.Contract(
+        votingRoundsAddress,
+        VOTING_ROUNDS_ABI,
+        this.config.flareClient.provider
+      );
+      
+      // Fetch round parameters
+      const [firstRoundStartTime, roundLength] = await Promise.all([
+        votingRoundsContract.firstRoundStartTime(),
+        votingRoundsContract.roundLength()
+      ]);
+      
+      // Convert BigNumber to number
+      const roundOffsetSec = Number(firstRoundStartTime);
+      const roundDurationSec = Number(roundLength);
+      
+      // Cache the configuration
+      this.votingRoundConfig = {
+        roundOffsetSec,
+        roundDurationSec
+      };
+      
+      console.log("✅ Voting round configuration fetched:");
+      console.log(`   Round Offset: ${roundOffsetSec} sec (${new Date(roundOffsetSec * 1000).toISOString()})`);
+      console.log(`   Round Duration: ${roundDurationSec} sec`);
+      
+      return this.votingRoundConfig;
+    } catch (error) {
+      console.error("❌ Failed to fetch voting round configuration:", error);
+      throw new Error(`Failed to fetch voting round configuration from VotingRounds contract: ${error}`);
+    }
+  }
+
+  /**
+   * Calculate the voting round ID for a given block timestamp
+   * Uses the formula: votingRoundId = floor((blockTimestamp - roundOffsetSec) / roundDurationSec)
+   * 
+   * @param blockTimestamp - Unix timestamp from Flare blockchain block
+   * @returns Voting round ID for FDC proof polling
+   */
+  async getVotingRoundId(blockTimestamp: number): Promise<number> {
+    // Fetch and cache round configuration if needed
+    const config = await this.getVotingRoundConfig();
+    
+    // Calculate voting round ID
+    const votingRoundId = Math.floor((blockTimestamp - config.roundOffsetSec) / config.roundDurationSec);
+    
+    // Validate result
+    if (votingRoundId < 0 || !Number.isFinite(votingRoundId)) {
+      throw new Error(
+        `Invalid voting round ID calculated: ${votingRoundId}. ` +
+        `Block timestamp: ${blockTimestamp}, Offset: ${config.roundOffsetSec}, Duration: ${config.roundDurationSec}`
+      );
+    }
+    
+    return votingRoundId;
   }
 }
