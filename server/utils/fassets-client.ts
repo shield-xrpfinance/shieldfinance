@@ -191,16 +191,32 @@ export class FAssetsClient {
     const collateralReservationFee = await assetManager.collateralReservationFee(lotsToMint);
     console.log(`Collateral reservation fee: ${ethers.formatEther(collateralReservationFee)} FLR`);
     
+    // Log parameters before calling
+    console.log('\n🔍 Calling reserveCollateral with parameters:');
+    console.log(`  agentVault: ${agent.vaultAddress} (type: ${typeof agent.vaultAddress})`);
+    console.log(`  lots: ${lotsToMint} (type: ${typeof lotsToMint})`);
+    console.log(`  maxMintingFeeBIPS: ${agent.feeBIPS} (type: ${typeof agent.feeBIPS})`);
+    console.log(`  executor: ${ethers.ZeroAddress} (type: ${typeof ethers.ZeroAddress})`);
+    console.log(`  value: ${collateralReservationFee} (${ethers.formatEther(collateralReservationFee)} FLR)`);
+    
+    // Ensure all parameters are correct types - feeBIPS might be BigInt from contract
+    const maxMintingFeeBIPS = typeof agent.feeBIPS === 'bigint' 
+      ? agent.feeBIPS 
+      : BigInt(agent.feeBIPS);
+    
+    console.log(`  maxMintingFeeBIPS (converted): ${maxMintingFeeBIPS} (type: ${typeof maxMintingFeeBIPS})`);
+    
     const tx = await assetManager.reserveCollateral(
       agent.vaultAddress,
       lotsToMint,
-      agent.feeBIPS,
+      maxMintingFeeBIPS,
       ethers.ZeroAddress,
       { value: collateralReservationFee }
     );
     
+    console.log(`✅ Transaction sent: ${tx.hash}`);
     const receipt = await tx.wait();
-    console.log(`Collateral reserved: ${receipt.hash}`);
+    console.log(`✅ Collateral reserved: ${receipt.hash}`);
     
     const reservationEvent = this.parseCollateralReservedEvent(receipt);
     
