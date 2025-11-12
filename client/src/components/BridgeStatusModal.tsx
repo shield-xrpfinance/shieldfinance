@@ -151,11 +151,10 @@ export default function BridgeStatusModal({
     
     setIsRetrying(true);
     try {
-      const response = await apiRequest(`/api/bridges/${bridge.id}/retry-proof`, {
-        method: "POST",
-      });
+      const response = await apiRequest("POST", `/api/bridges/${bridge.id}/retry-proof`);
+      const result = await response.json();
 
-      if (response.success) {
+      if (result.success) {
         toast({
           title: "Retry Initiated",
           description: "FDC proof generation retry has been started. This may take 5-15 minutes.",
