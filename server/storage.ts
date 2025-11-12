@@ -33,6 +33,7 @@ export interface IStorage {
   getBridgesByWallet(walletAddress: string): Promise<SelectXrpToFxrpBridge[]>;
   getBridgeByAgentAddress(agentAddress: string): Promise<SelectXrpToFxrpBridge | undefined>;
   getPendingBridges(): Promise<SelectXrpToFxrpBridge[]>;
+  updateBridge(id: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
   updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
   
   createFirelightPosition(position: InsertFirelightPosition): Promise<SelectFirelightPosition>;
@@ -393,6 +394,12 @@ export class DatabaseStorage implements IStorage {
       where: eq(xrpToFxrpBridges.status, "awaiting_payment"),
       orderBy: desc(xrpToFxrpBridges.createdAt),
     });
+  }
+
+  async updateBridge(id: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void> {
+    await db.update(xrpToFxrpBridges)
+      .set(updates)
+      .where(eq(xrpToFxrpBridges.id, id));
   }
 
   async updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void> {

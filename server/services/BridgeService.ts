@@ -4,11 +4,13 @@ import { generateFDCProof } from "../utils/fdc-proof";
 import type { IStorage } from "../storage";
 import type { SelectXrpToFxrpBridge, PaymentRequest } from "../../shared/schema";
 import type { XRPLDepositListener } from "../listeners/XRPLDepositListener";
+import type { VaultService } from "./VaultService";
 
 export interface BridgeServiceConfig {
   network: "mainnet" | "coston2";
   storage: IStorage;
   flareClient: FlareClient;
+  vaultService?: VaultService;
   operatorPrivateKey: string;
   demoMode?: boolean;
 }
@@ -113,6 +115,11 @@ export class BridgeService {
       });
 
       console.log(`✅ Bridge ${this._demoMode ? 'completed' : 'initiated'}: ${bridge.xrpAmount} XRP → ${bridge.fxrpExpected} FXRP ${this._demoMode ? '(DEMO)' : ''}`);
+      
+      // Trigger vault share minting for demo mode
+      if (this._demoMode) {
+        await this.completeBridgeWithVaultMinting(bridgeId);
+      }
     } catch (error) {
       console.error("Bridge error:", error);
       await this.config.storage.updateBridgeStatus(bridgeId, "failed", {
@@ -310,12 +317,106 @@ export class BridgeService {
       });
       
       console.log(`✅ Minting executed on Flare: ${mintingTxHash}`);
+      
+      // Trigger vault share minting (final step)
+      await this.completeBridgeWithVaultMinting(bridgeId);
     } catch (error) {
       console.error("Error executing minting with proof:", error);
       await this.config.storage.updateBridgeStatus(bridgeId, "failed", {
         errorMessage: error instanceof Error ? error.message : "Unknown error",
       });
       throw error;
+    }
+  }
+
+  /**
+   * Complete bridge by minting vault shares (final step after FXRP is received)
+   * 
+   * This method is idempotent and safe to retry:
+   * - Checks if vault shares already minted (via vaultMintTxHash)
+   * - Allows retries from vault_mint_failed status
+   * - Persists transaction hash before creating position (prevents double-minting)
+   * 
+   * Status Flow:
+   * - completed/vault_minting/vault_mint_failed → vault_minting → vault_minted (success)
+   */
+  async completeBridgeWithVaultMinting(bridgeId: string): Promise<void> {
+    const bridge = await this.config.storage.getBridgeById(bridgeId);
+    if (!bridge) {
+      console.error(`❌ Bridge ${bridgeId} not found for vault minting`);
+      return;
+    }
+
+    // Idempotency check: Skip if vault shares already minted (tx hash is authoritative)
+    if (bridge.vaultMintTxHash) {
+      console.log(`⏭️  Bridge ${bridgeId} already has vault shares minted (tx: ${bridge.vaultMintTxHash}), skipping duplicate mint`);
+      
+      // If tx exists but position is missing, this is a recovery scenario - create position only
+      if (!bridge.positionId) {
+        console.log(`   ⚠️  Position missing for minted shares - this should not happen. Manual recovery needed.`);
+      }
+      return;
+    }
+
+    // Safety check: Only mint if FXRP was received
+    if (!bridge.fxrpReceived) {
+      console.warn(`⚠️  Cannot mint vault shares for bridge ${bridgeId}: fxrpReceived is null`);
+      return;
+    }
+
+    // Allow retries from completed, vault_minting, or vault_mint_failed
+    const retryableStatuses = ["completed", "vault_minting", "vault_mint_failed"];
+    if (!retryableStatuses.includes(bridge.status)) {
+      console.warn(`⚠️  Cannot mint vault shares for bridge ${bridgeId}: status=${bridge.status} (not retryable)`);
+      return;
+    }
+
+    // Check if VaultService is available
+    if (!this.config.vaultService) {
+      console.error(`❌ VaultService not configured in BridgeService - cannot mint shares for bridge ${bridgeId}`);
+      await this.config.storage.updateBridgeStatus(bridgeId, "vault_mint_failed", {
+        errorMessage: "VaultService not configured",
+      });
+      return;
+    }
+
+    console.log(`🏦 Completing bridge ${bridgeId} by minting vault shares...`);
+
+    try {
+      // Step 1: Update status to vault_minting (preserves completedAt timestamp)
+      await this.config.storage.updateBridge(bridgeId, {
+        status: "vault_minting",
+      });
+
+      // Step 2: Mint vault shares on-chain (this is the expensive/risky operation)
+      const { vaultMintTxHash, positionId } = await this.config.vaultService.mintShares(
+        bridge.vaultId,
+        bridge.walletAddress,
+        bridge.fxrpReceived.toString()
+      );
+
+      // Step 3: CRITICAL - Save transaction hash immediately before final status update
+      // This prevents double-minting if the process crashes before completing
+      await this.config.storage.updateBridge(bridgeId, {
+        vaultMintTxHash,
+      });
+
+      console.log(`✅ Vault mint tx saved: ${vaultMintTxHash}`);
+
+      // Step 4: Update final status with position link (preserves completedAt)
+      await this.config.storage.updateBridge(bridgeId, {
+        status: "vault_minted",
+        positionId,
+      });
+
+      console.log(`✅ Bridge ${bridgeId} fully completed: Vault shares minted (${vaultMintTxHash}), Position created (${positionId})`);
+    } catch (error) {
+      console.error(`❌ Vault minting failed for bridge ${bridgeId}:`, error);
+      await this.config.storage.updateBridge(bridgeId, {
+        status: "vault_mint_failed",
+        errorMessage: error instanceof Error ? error.message : "Unknown vault minting error",
+      });
+      // Note: Retries are allowed - this method can be called again to retry
     }
   }
 

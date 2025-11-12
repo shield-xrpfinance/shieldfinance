@@ -103,6 +103,7 @@ app.use((req, res, next) => {
     network: "coston2",
     storage,
     flareClient,
+    vaultService,
     operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY || "",
     demoMode,
   });
