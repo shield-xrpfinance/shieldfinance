@@ -12,6 +12,7 @@ export interface FdcHubConfig {
 export interface AttestationSubmission {
   txHash: string;
   blockNumber: number;
+  blockTimestamp: number; // Unix timestamp from Flare blockchain
 }
 
 /**
@@ -225,12 +226,12 @@ export class FdcHubClient {
   /**
    * Submit attestation request to FdcHub on-chain
    * 
-   * Note: Voting round ID calculation is done in generateFDCProof() using the XRPL
-   * transaction timestamp, not the FdcHub submission timestamp. This ensures we
-   * poll the correct round in the Data Availability Layer.
+   * Returns the block timestamp which is used by generateFDCProof() to calculate
+   * the voting round ID. FdcHub uses the Flare blockchain timestamp when processing
+   * attestations, so we must use the same timestamp for correct round calculation.
    * 
    * @param abiEncodedRequest - Encoded attestation request from FDC verifier's prepareRequest
-   * @returns Attestation submission details including tx hash and block number
+   * @returns Attestation submission details including tx hash, block number, and block timestamp
    */
   async submitAttestationRequest(abiEncodedRequest: string): Promise<AttestationSubmission> {
     console.log(`\n🚀 Submitting attestation request to FdcHub...`);
@@ -265,15 +266,23 @@ export class FdcHubClient {
       
       const receipt = await tx.wait();
       
+      // Fetch the block to get its timestamp - this is what FdcHub uses for round calculation
+      const block = await this.config.flareClient.provider.getBlock(receipt.blockNumber);
+      if (!block) {
+        throw new Error(`Failed to fetch block ${receipt.blockNumber}`);
+      }
+      
       console.log(`✅ Attestation request submitted on-chain`);
       console.log(`   Tx Hash: ${receipt.hash}`);
       console.log(`   Block Number: ${receipt.blockNumber}`);
+      console.log(`   Block Timestamp: ${block.timestamp} (${new Date(block.timestamp * 1000).toISOString()})`);
       console.log(`   ⏰ Attestation will be processed in the calculated voting round`);
       console.log(`   ⏰ Round should finalize in ~90-180 seconds`);
       
       return {
         txHash: receipt.hash,
         blockNumber: receipt.blockNumber,
+        blockTimestamp: block.timestamp,
       };
     } catch (error) {
       console.error("❌ Failed to submit attestation request to FdcHub:", error);

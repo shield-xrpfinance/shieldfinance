@@ -209,22 +209,10 @@ export async function generateFDCProof(
     throw new Error(`Missing abiEncodedRequest in prepareRequest response. Status: ${prepareResult.status}`);
   }
   
-  console.log("\n📋 Step 2: Calculate Voting Round ID from XRPL Transaction");
+  console.log("\n📋 Step 2: Submit Attestation to FdcHub (On-Chain)");
+  console.log("  ABI Encoded Request:", abiEncodedRequest);
   console.log("  Round Offset (sec):", roundOffsetSec);
   console.log("  Round Duration (sec):", roundDurationSec);
-  
-  // Calculate voting round ID from XRPL transaction timestamp
-  // This MUST use the XRPL transaction timestamp, not the FdcHub submission timestamp
-  // to ensure we're querying the correct round in the Data Availability Layer
-  const xrplTxTimestamp = txTimestamp || Math.floor(Date.now() / 1000);
-  const votingRoundId = Math.floor((xrplTxTimestamp - roundOffsetSec) / roundDurationSec);
-  
-  console.log("  XRPL Tx Timestamp:", xrplTxTimestamp, txTimestamp ? "(from XRPL tx)" : "(current time fallback)");
-  console.log("  Calculated Voting Round ID:", votingRoundId);
-  console.log("  Formula: floor((timestamp - offset) / duration) = floor((" + xrplTxTimestamp + " - " + roundOffsetSec + ") / " + roundDurationSec + ") = " + votingRoundId);
-  
-  console.log("\n📋 Step 3: Submit Attestation to FdcHub (On-Chain)");
-  console.log("  ABI Encoded Request:", abiEncodedRequest);
   
   // Import and initialize FdcHubClient
   const { FdcHubClient } = await import("./fdchub-client");
@@ -234,14 +222,39 @@ export async function generateFDCProof(
   });
   
   // Submit attestation request to FdcHub on-chain
-  // Note: We don't use the submission block timestamp for round calculation
-  // because we need to use the XRPL transaction timestamp for correct round
   const attestationSubmission = await fdcHubClient.submitAttestationRequest(abiEncodedRequest);
   
   console.log("✅ Attestation submitted to FdcHub on-chain");
   console.log("  Tx Hash:", attestationSubmission.txHash);
   console.log("  Block Number:", attestationSubmission.blockNumber);
-  console.log("  Expected Voting Round:", votingRoundId);
+  console.log("  Block Timestamp:", attestationSubmission.blockTimestamp);
+  
+  console.log("\n📋 Step 3: Calculate Voting Round ID");
+  
+  // CRITICAL: Use FdcHub block timestamp, not XRPL timestamp
+  // FdcHub uses its own blockchain timestamp when processing attestations
+  const fdcHubTimestamp = attestationSubmission.blockTimestamp;
+  const votingRoundId = Math.floor((fdcHubTimestamp - roundOffsetSec) / roundDurationSec);
+  
+  console.log("  ✅ Using FdcHub Block Timestamp (CORRECT):");
+  console.log("     Timestamp:", fdcHubTimestamp, `(${new Date(fdcHubTimestamp * 1000).toISOString()})`);
+  console.log("     Calculated Voting Round ID:", votingRoundId);
+  console.log("     Formula: floor((timestamp - offset) / duration) = floor((" + fdcHubTimestamp + " - " + roundOffsetSec + ") / " + roundDurationSec + ") = " + votingRoundId);
+  
+  // Show XRPL timestamp comparison for diagnostic purposes
+  if (txTimestamp) {
+    const xrplRoundId = Math.floor((txTimestamp - roundOffsetSec) / roundDurationSec);
+    const timeDiff = fdcHubTimestamp - txTimestamp;
+    console.log("\n  📊 Comparison with XRPL Timestamp (for diagnostics):");
+    console.log("     XRPL Tx Timestamp:", txTimestamp, `(${new Date(txTimestamp * 1000).toISOString()})`);
+    console.log("     XRPL Would Calculate Round:", xrplRoundId);
+    console.log("     Time Difference:", timeDiff, "seconds");
+    if (xrplRoundId !== votingRoundId) {
+      console.log("     ⚠️  DIFFERENT ROUNDS - Using FdcHub timestamp is correct!");
+    } else {
+      console.log("     ✅ Same round - both timestamps in same voting period");
+    }
+  }
   
   // Step 4: Wait for voting round to finalize, then poll Data Availability Layer
   console.log("\n📋 Step 4: Wait for Voting Round Finalization");
@@ -272,7 +285,9 @@ export async function generateFDCProof(
   console.log("  Attestation Status:", proof.attestationStatus);
   console.log("\n📤 Attestation Submission Details:");
   console.log("  FdcHub Tx Hash:", attestationSubmission.txHash);
-  console.log("  Voting Round ID (from XRPL tx):", votingRoundId);
+  console.log("  FdcHub Block:", attestationSubmission.blockNumber);
+  console.log("  FdcHub Block Timestamp:", attestationSubmission.blockTimestamp);
+  console.log("  Voting Round ID (from FdcHub block):", votingRoundId);
   console.log("  Round Parameters: offset=" + roundOffsetSec + "s, duration=" + roundDurationSec + "s");
   
   return {
