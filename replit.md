@@ -65,3 +65,4 @@ Preferred communication style: Simple, everyday language.
     - **Data Availability API**: `ctn2-data-availability.flare.network` (Coston2), `flr-data-availability.flare.network` (mainnet).
     - **Verifier Service**: `fdc-verifiers-testnet.flare.network`.
     - **FdcHub Integration**: On-chain attestation submission workflow.
+    - **Voting Round Calculation**: Uses Flare's official hardcoded constants (firstRoundStartTime=1658430000, roundDuration=90s) per official documentation at dev.flare.network/fdc/guides/fdc-by-hand/.
