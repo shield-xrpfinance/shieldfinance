@@ -206,6 +206,26 @@ export class FAssetsClient {
     
     console.log(`  maxMintingFeeBIPS (converted): ${maxMintingFeeBIPS} (type: ${typeof maxMintingFeeBIPS})`);
     
+    // Try to simulate the transaction first to get better error messages
+    try {
+      await assetManager.reserveCollateral.staticCall(
+        agent.vaultAddress,
+        lotsToMint,
+        maxMintingFeeBIPS,
+        ethers.ZeroAddress,
+        { value: collateralReservationFee }
+      );
+      console.log('✅ Static call succeeded - transaction should work');
+    } catch (staticError: any) {
+      console.error('❌ Static call failed - transaction will likely revert:');
+      console.error('  Reason:', staticError.message);
+      console.error('  Code:', staticError.code);
+      if (staticError.data) {
+        console.error('  Data:', staticError.data);
+      }
+      throw new Error(`Contract will reject transaction: ${staticError.message}`);
+    }
+    
     const tx = await assetManager.reserveCollateral(
       agent.vaultAddress,
       lotsToMint,
