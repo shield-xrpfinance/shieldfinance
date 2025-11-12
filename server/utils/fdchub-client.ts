@@ -284,7 +284,76 @@ export class FdcHubClient {
         blockNumber: receipt.blockNumber,
         blockTimestamp: block.timestamp,
       };
-    } catch (error) {
+    } catch (error: any) {
+      // Handle "already known" error - this means the attestation was already submitted
+      // This can happen on server restarts or duplicate submissions
+      if (error?.error?.code === -32000 && error?.error?.message === "already known") {
+        console.log("⚠️  Attestation already submitted to FdcHub (transaction in mempool or recently mined)");
+        console.log("   Polling for transaction to be mined and indexed...");
+        
+        const fdcHubAddress = await this.getFdcHubAddress();
+        const maxAttempts = 12; // 12 attempts = 60 seconds (5s intervals)
+        const pollInterval = 5000; // 5 seconds
+        
+        // Poll for the transaction over 60 seconds
+        for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+          console.log(`\n🔍 Search attempt ${attempt}/${maxAttempts}...`);
+          
+          const currentBlock = await this.config.flareClient.provider.getBlock("latest");
+          if (!currentBlock) {
+            console.log(`   Failed to fetch current block, retrying...`);
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+            continue;
+          }
+          
+          console.log(`   Current block: ${currentBlock.number}, searching back 20 blocks...`);
+          
+          // Search last 20 blocks for the attestation transaction
+          for (let i = 0; i < 20; i++) {
+            const blockNum = currentBlock.number - i;
+            const block = await this.config.flareClient.provider.getBlock(blockNum, false);
+            if (!block) continue;
+            
+            // Check each transaction in the block
+            for (const txHash of block.transactions) {
+              const tx = await this.config.flareClient.provider.getTransaction(txHash);
+              
+              if (tx && tx.to?.toLowerCase() === fdcHubAddress.toLowerCase()) {
+                // Check if this transaction contains our attestation request
+                if (tx.data && tx.data.includes(abiEncodedRequest.slice(2))) {
+                  console.log(`\n✅ Found attestation transaction!`);
+                  console.log(`   Tx Hash: ${tx.hash}`);
+                  console.log(`   Block Number: ${blockNum}`);
+                  console.log(`   Block Timestamp: ${block.timestamp} (${new Date(block.timestamp * 1000).toISOString()})`);
+                  
+                  return {
+                    txHash: tx.hash,
+                    blockNumber: blockNum,
+                    blockTimestamp: block.timestamp,
+                  };
+                }
+              }
+            }
+          }
+          
+          // Not found yet, wait before next attempt
+          if (attempt < maxAttempts) {
+            console.log(`   Not found yet, waiting ${pollInterval/1000}s before retry...`);
+            await new Promise(resolve => setTimeout(resolve, pollInterval));
+          }
+        }
+        
+        // After exhausting all retries, throw error instead of using placeholder
+        console.error(`\n❌ Could not find attestation transaction after ${maxAttempts} attempts (60 seconds)`);
+        console.error(`   This suggests the transaction was not actually submitted or is stuck in mempool`);
+        throw new Error(
+          `Failed to locate attestation transaction after "already known" error. ` +
+          `Searched ${maxAttempts} times over 60 seconds with no result. ` +
+          `The transaction may be stuck in mempool or was never actually submitted.`
+        );
+      }
+      
+      // Other errors - throw
       console.error("❌ Failed to submit attestation request to FdcHub:", error);
       throw error;
     }
