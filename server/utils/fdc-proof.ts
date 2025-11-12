@@ -73,6 +73,19 @@ async function pollVerifierProof(
         continue;
       }
       
+      // Handle 400 "attestation request not found" - voting round may still be finalizing
+      if (response.status === 400) {
+        const errorText = await response.text();
+        if (errorText.includes("attestation request not found")) {
+          console.log(`⏳ Attestation not yet indexed in Data Availability Layer (400). Waiting ${pollInterval/1000}s before retry...`);
+          console.log(`   This is normal - voting round may still be finalizing`);
+          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          continue;
+        }
+        // Other 400 error - throw
+        throw new Error(`FDC Verifier error (${response.status}): ${errorText}`);
+      }
+      
       // Other error - throw
       const errorText = await response.text();
       throw new Error(`FDC Verifier error (${response.status}): ${errorText}`);
@@ -230,10 +243,21 @@ export async function generateFDCProof(
   console.log("  Block Number:", attestationSubmission.blockNumber);
   console.log("  Expected Voting Round:", votingRoundId);
   
-  // Step 4: Poll Data Availability Layer for the finalized proof
-  console.log("\n📋 Step 4: Poll Data Availability Layer for Proof");
+  // Step 4: Wait for voting round to finalize, then poll Data Availability Layer
+  console.log("\n📋 Step 4: Wait for Voting Round Finalization");
   console.log("  Using Voting Round ID:", votingRoundId);
-  console.log("  Waiting for voting round to finalize (~90-180 seconds)...");
+  
+  // Calculate wait time based on round duration (wait 2x the round duration to be safe)
+  // Flare voting rounds are typically 90 seconds, but we use the actual value from prepareRequest
+  const waitTime = roundDurationSec * 2 * 1000; // Convert to milliseconds, wait 2 full rounds
+  console.log(`  Round Duration: ${roundDurationSec}s`);
+  console.log(`  Waiting ${waitTime / 1000}s (2x round duration) before polling...`);
+  console.log(`  This ensures the voting round has time to finalize`);
+  
+  await new Promise(resolve => setTimeout(resolve, waitTime));
+  
+  console.log("\n📋 Step 5: Poll Data Availability Layer for Proof");
+  console.log("  Voting round should be finalized now");
   const proof = await pollVerifierProof(votingRoundId, abiEncodedRequest, network);
   
   console.log("\n✅ FDC Proof Generation Complete!");
