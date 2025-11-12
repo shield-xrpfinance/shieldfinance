@@ -153,23 +153,13 @@ export default function BridgeStatusModal({
 
   const handleCopyMemo = () => {
     if (bridge?.id) {
-      const hexMemo = stringToHex(bridge.id);
-      navigator.clipboard.writeText(hexMemo);
+      // Copy plain UUID - Xaman wallet will hex-encode it automatically
+      navigator.clipboard.writeText(bridge.id);
       toast({
         title: "Copied!",
         description: "MEMO copied to clipboard",
       });
     }
-  };
-
-  // Convert string to hex for XRPL MEMO field (browser-safe implementation)
-  const stringToHex = (str: string): string => {
-    const encoder = new TextEncoder();
-    const bytes = encoder.encode(str);
-    return Array.from(bytes)
-      .map(byte => byte.toString(16).padStart(2, '0'))
-      .join('')
-      .toUpperCase();
   };
 
   if (!bridge) {
@@ -341,12 +331,12 @@ export default function BridgeStatusModal({
 
                     <div>
                       <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium">MEMO (Hex-Encoded - Required):</p>
+                        <p className="font-medium">MEMO (Required):</p>
                         <Badge variant="outline" className="text-xs">Must include</Badge>
                       </div>
                       <div className="flex items-center gap-2 p-3 rounded-md bg-background border">
-                        <code className="flex-1 text-xs break-all font-mono" data-testid="text-payment-memo">
-                          {stringToHex(bridge.id)}
+                        <code className="flex-1 text-sm break-all font-mono" data-testid="text-payment-memo">
+                          {bridge.id}
                         </code>
                         <Button
                           size="icon"
@@ -357,7 +347,9 @@ export default function BridgeStatusModal({
                           <Copy className="h-4 w-4" />
                         </Button>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">Bridge ID: {bridge.id}</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Wallet will hex-encode automatically - do NOT manually encode
+                      </p>
                     </div>
 
                     <div>

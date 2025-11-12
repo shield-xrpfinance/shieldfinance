@@ -5,15 +5,8 @@ import { Progress } from "@/components/ui/progress";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 
-// Convert string to hex for XRPL MEMO field (browser-safe implementation)
-function stringToHex(str: string): string {
-  const encoder = new TextEncoder();
-  const bytes = encoder.encode(str);
-  return Array.from(bytes)
-    .map(byte => byte.toString(16).padStart(2, '0'))
-    .join('')
-    .toUpperCase();
-}
+// Note: XRPL wallets (Xaman) automatically hex-encode MEMO fields
+// Users should enter the plain UUID, not the hex-encoded version
 
 interface BridgeStatusProps {
   status: string;
@@ -45,9 +38,6 @@ export function BridgeStatus({
     { key: "bridging", label: "XRP → FXRP Bridge", completed: ["bridging", "completed"].includes(status) },
     { key: "completed", label: "Vault Shares Minted", completed: status === "completed" },
   ];
-  
-  // Convert bridge ID to hex format for XRPL MEMO
-  const hexMemo = bridgeId ? stringToHex(bridgeId) : "";
   
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
@@ -153,22 +143,25 @@ export function BridgeStatus({
               </div>
               <div className="space-y-1">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground">MEMO (Hex-Encoded - Required):</p>
+                  <p className="text-xs font-medium text-muted-foreground">MEMO (Required):</p>
                   <Badge variant="outline" className="text-xs">Copy this value</Badge>
                 </div>
                 <div className="flex items-center gap-2">
                   <code className="flex-1 rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid="text-payment-memo">
-                    {hexMemo}
+                    {bridgeId}
                   </code>
                   <Button
                     size="sm"
                     variant="ghost"
-                    onClick={() => copyToClipboard(hexMemo, "MEMO")}
+                    onClick={() => copyToClipboard(bridgeId || "", "MEMO")}
                     data-testid="button-copy-memo"
                   >
                     <Copy className="h-3 w-3" />
                   </Button>
                 </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Wallet will hex-encode automatically - do NOT manually encode
+                </p>
                 <p className="text-xs text-muted-foreground italic">
                   Bridge ID: {bridgeId}
                 </p>
