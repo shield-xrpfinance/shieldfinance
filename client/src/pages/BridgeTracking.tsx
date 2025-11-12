@@ -12,7 +12,7 @@ export default function BridgeTracking() {
   const [activeTab, setActiveTab] = useState("active");
 
   const { data: bridges, isLoading } = useQuery<SelectXrpToFxrpBridge[]>({
-    queryKey: ["/api/bridges", address],
+    queryKey: [`/api/bridges/wallet/${address}`],
     enabled: !!address,
   });
 

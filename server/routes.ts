@@ -1754,7 +1754,7 @@ export async function registerRoutes(
   });
 
   // Bridge status tracking
-  app.get("/api/bridges/:walletAddress", async (req, res) => {
+  app.get("/api/bridges/wallet/:walletAddress", async (req, res) => {
     try {
       const bridges = await storage.getBridgesByWallet(req.params.walletAddress);
       res.json(bridges);
