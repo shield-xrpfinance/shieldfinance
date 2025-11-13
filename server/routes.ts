@@ -9,6 +9,49 @@ import type { FlareClient } from "./utils/flare-client";
 import { db } from "./db";
 import { fxrpToXrpRedemptions } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
+import { ethers } from "ethers";
+import fs from "fs";
+import path from "path";
+
+/**
+ * Get the latest deployed vault address from deployment files
+ */
+function getVaultAddress(): string {
+  let vaultAddress: string | undefined;
+  
+  try {
+    const deploymentsDir = path.join(process.cwd(), "deployments");
+    const files = fs.readdirSync(deploymentsDir)
+      .filter(f => 
+        f.startsWith("coston2-") && 
+        f.endsWith(".json") && 
+        f !== "coston2-latest.json" &&
+        f !== "coston2-deployment.json" &&
+        /coston2-\d+\.json/.test(f)
+      )
+      .sort()
+      .reverse();
+    
+    if (files.length > 0) {
+      const latestDeployment = JSON.parse(
+        fs.readFileSync(path.join(deploymentsDir, files[0]), "utf-8")
+      );
+      vaultAddress = latestDeployment.contracts?.ShXRPVault?.address;
+    }
+  } catch (error) {
+    console.warn("Failed to read deployment file:", error);
+  }
+  
+  if (!vaultAddress || vaultAddress === "0x...") {
+    vaultAddress = process.env.VITE_SHXRP_VAULT_ADDRESS;
+  }
+  
+  if (!vaultAddress || vaultAddress === "0x...") {
+    throw new Error("ShXRP Vault not deployed");
+  }
+  
+  return vaultAddress;
+}
 
 // Background verification for wallet-auto-submitted transactions
 async function verifyWalletAutoSubmittedTransaction(txHash: string, network: string) {
@@ -1588,6 +1631,115 @@ export async function registerRoutes(
     }
   });
 
+  // Admin endpoint: Generate diagnostic snapshot of current system state
+  app.get("/api/admin/diagnostic-snapshot", async (req, res) => {
+    try {
+      console.log('\n📊 [DIAGNOSTIC] Generating system snapshot...\n');
+      
+      const flareClient = (bridgeService as any).config.flareClient as FlareClient;
+      const smartAccountAddress = flareClient.getSignerAddress();
+      
+      // On-chain balances
+      // 1. Query CFLR balance
+      const provider = flareClient.provider;
+      const cflrBalanceRaw = await provider.getBalance(smartAccountAddress);
+      const cflrBalance = ethers.formatEther(cflrBalanceRaw);
+      
+      // 2. Query FXRP balance
+      const fxrpToken = await flareClient.getFXRPToken() as any;
+      const fxrpBalanceRaw = await fxrpToken.balanceOf(smartAccountAddress);
+      const fxrpBalance = ethers.formatUnits(fxrpBalanceRaw, 6);
+      
+      // 3. Query shXRP balance from vault contract
+      const vaultAddress = getVaultAddress();
+      const ERC20_ABI = [
+        'function balanceOf(address) view returns (uint256)',
+        'function decimals() view returns (uint8)'
+      ];
+      const vaultContract = new ethers.Contract(vaultAddress, ERC20_ABI, provider) as any;
+      const shxrpBalanceRaw = await vaultContract.balanceOf(smartAccountAddress);
+      const shxrpBalance = ethers.formatUnits(shxrpBalanceRaw, 6);
+      
+      // Database state
+      const positions = await storage.getPositions();
+      const allRedemptions = await db.select().from(fxrpToXrpRedemptions);
+      const transactions = await storage.getTransactions();
+      
+      // Calculate totals
+      const totalShxrpInDb = positions.reduce((sum: number, p: any) => sum + parseFloat(p.amount), 0);
+      const totalRedemptions = allRedemptions.length;
+      const completedRedemptions = allRedemptions.filter(r => r.status === 'completed').length;
+      const failedRedemptions = allRedemptions.filter(r => r.status === 'failed').length;
+      
+      // Detect discrepancies
+      const shxrpDiscrepancy = totalShxrpInDb - parseFloat(shxrpBalance);
+      const fxrpStuck = parseFloat(fxrpBalance);
+      
+      const snapshot = {
+        timestamp: new Date().toISOString(),
+        smartAccount: smartAccountAddress,
+        onChain: {
+          cflr: cflrBalance,
+          fxrp: fxrpBalance,
+          shxrp: shxrpBalance
+        },
+        database: {
+          positions: {
+            count: positions.length,
+            totalShxrp: totalShxrpInDb.toFixed(6),
+            records: positions.map((p: any) => ({
+              id: p.id,
+              walletAddress: p.walletAddress,
+              amount: p.amount,
+              status: p.status
+            }))
+          },
+          redemptions: {
+            total: totalRedemptions,
+            completed: completedRedemptions,
+            failed: failedRedemptions,
+            pending: totalRedemptions - completedRedemptions - failedRedemptions
+          },
+          transactions: {
+            count: transactions.length,
+            byType: {
+              deposit: transactions.filter((t: any) => t.type === 'deposit').length,
+              withdrawal: transactions.filter((t: any) => t.type === 'withdrawal').length
+            }
+          }
+        },
+        discrepancies: {
+          shxrpMismatch: {
+            database: totalShxrpInDb.toFixed(6),
+            onChain: shxrpBalance,
+            difference: shxrpDiscrepancy.toFixed(6),
+            critical: Math.abs(shxrpDiscrepancy) > 0.01
+          },
+          fxrpStuck: {
+            amount: fxrpBalance,
+            critical: fxrpStuck > 0.01
+          },
+          orphanedRedemptions: allRedemptions.filter(r => 
+            r.fxrpRedeemed && !r.xrplPayoutTxHash && r.status !== 'failed'
+          ).length
+        }
+      };
+      
+      console.log('✅ Diagnostic snapshot generated');
+      console.log(`   shXRP: ${shxrpBalance} on-chain vs ${totalShxrpInDb.toFixed(6)} in DB`);
+      console.log(`   FXRP stuck: ${fxrpBalance}`);
+      console.log(`   Discrepancy: ${shxrpDiscrepancy > 0 ? 'CRITICAL' : 'OK'}`);
+      
+      res.json(snapshot);
+    } catch (error) {
+      console.error("Diagnostic error:", error);
+      res.status(500).json({ 
+        error: "Failed to generate diagnostic snapshot",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   // Admin endpoint: Recover stuck FXRP by minting missing shXRP shares
   app.post("/api/admin/recover-stuck-fxrp", async (req, res) => {
     try {
@@ -1599,7 +1751,9 @@ export async function registerRoutes(
       
       // Check current FXRP balance in smart account
       const smartAccountAddress = flareClient.getSignerAddress();
-      const fxrpBalance = await flareClient.getFXRPBalance();
+      const fxrpToken = await flareClient.getFXRPToken() as any;
+      const fxrpBalanceRaw = await fxrpToken.balanceOf(smartAccountAddress);
+      const fxrpBalance = ethers.formatUnits(fxrpBalanceRaw, 6);
       
       console.log(`📊 Smart Account: ${smartAccountAddress}`);
       console.log(`💵 FXRP Balance: ${fxrpBalance} FXRP`);
