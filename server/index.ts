@@ -260,11 +260,25 @@ app.use((req, res, next) => {
       
       // Compare amounts in drops (exact match required)
       if (receivedDrops !== expectedDrops) {
-        console.log(`⚠️  Payment amount mismatch for bridge ${bridge.id}`);
+        console.log(`❌ Payment amount mismatch for bridge ${bridge.id}`);
         console.log(`   Received: ${receivedDrops} drops (${payment.amount} XRP)`);
         console.log(`   Expected: ${expectedDrops} drops`);
         console.log(`   Difference: ${receivedDrops - expectedDrops} drops`);
-        console.log(`   Skipping payment - incorrect amount`);
+        console.log(`   Marking bridge as failed with mismatch details...`);
+        
+        // Mark bridge as failed with detailed mismatch information
+        await storage.updateBridge(bridge.id, {
+          status: 'failed',
+          failureCode: 'amount_mismatch',
+          receivedAmountDrops: receivedDrops.toString(),
+          expectedAmountDrops: expectedDrops.toString(),
+          xrplTxHash: payment.txHash,
+          xrplConfirmedAt: new Date(),
+          errorMessage: `Payment amount mismatch: received ${receivedDrops} drops (${payment.amount} XRP), expected ${expectedDrops} drops`
+        });
+        
+        console.log(`✅ Bridge ${bridge.id} marked as failed - amount_mismatch`);
+        console.log(`   User can now cancel and retry with correct amount`);
         return;
       }
       

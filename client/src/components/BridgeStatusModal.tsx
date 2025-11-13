@@ -786,7 +786,37 @@ export default function BridgeStatusModal({
           {(bridge.status === "failed" || bridge.status === "vault_mint_failed") && bridge.errorMessage && (
             <Alert variant="destructive" data-testid="alert-error">
               <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{bridge.errorMessage}</AlertDescription>
+              <AlertDescription>
+                <div className="space-y-2">
+                  <p className="font-medium">{bridge.errorMessage}</p>
+                  
+                  {/* Amount Mismatch Details */}
+                  {(bridge as any).failureCode === 'amount_mismatch' && (bridge as any).receivedAmountDrops && (bridge as any).expectedAmountDrops && (
+                    <div className="mt-3 p-3 bg-destructive/10 rounded-md text-sm">
+                      <p className="font-semibold mb-2">Payment Amount Mismatch:</p>
+                      <div className="space-y-1">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Expected:</span>
+                          <span className="font-mono">{(Number((bridge as any).expectedAmountDrops) / 1_000_000).toFixed(6)} XRP</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Received:</span>
+                          <span className="font-mono">{(Number((bridge as any).receivedAmountDrops) / 1_000_000).toFixed(6)} XRP</span>
+                        </div>
+                        <div className="flex justify-between pt-2 border-t border-destructive/20">
+                          <span className="text-muted-foreground">Difference:</span>
+                          <span className="font-mono font-semibold">
+                            {(Number((bridge as any).receivedAmountDrops - (bridge as any).expectedAmountDrops) / 1_000_000).toFixed(6)} XRP
+                          </span>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-xs text-muted-foreground">
+                        You must send the exact amount displayed. You can cancel this deposit and create a new one with the correct amount.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </AlertDescription>
             </Alert>
           )}
 
@@ -813,16 +843,14 @@ export default function BridgeStatusModal({
         </div>
 
         <DialogFooter className="flex-col gap-2 sm:flex-col">
-          {/* Cancel Deposit Button */}
+          {/* Cancel Deposit Button - allow canceling failed bridges with amount mismatch */}
           {bridge.status !== "completed" && 
            bridge.status !== "vault_minted" && 
            bridge.status !== "cancelled" &&
-           bridge.status !== "failed" &&
            bridge.status !== "vault_mint_failed" &&
            bridge.status !== "minting" &&
            bridge.status !== "vault_minting" &&
-           remainingSeconds !== null &&
-           remainingSeconds > 0 &&
+           (remainingSeconds !== null && remainingSeconds > 0 || bridge.status === "failed") &&
            isConnected && (
             <Button
               onClick={() => setShowCancelDialog(true)}
