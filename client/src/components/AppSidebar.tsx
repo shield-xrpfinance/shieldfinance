@@ -68,7 +68,7 @@ export function AppSidebar() {
           </div>
           <div>
             <h2 className="font-bold text-lg">Shield Finance</h2>
-            <p className="text-xs text-muted-foreground">Liquid Protocol</p>
+            <p className="text-xs text-muted-foreground">XRP Liquid Staking Protocol</p>
           </div>
         </div>
       </SidebarHeader>
