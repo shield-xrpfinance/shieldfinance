@@ -322,21 +322,24 @@ export class FAssetsClient {
     await approveTx.wait();
     console.log(`   ✅ Approval granted`);
     
-    // Request redemption using populateTransaction to bypass ENS resolution
+    // Request redemption by manually encoding function data to bypass ENS validation
     // Function signature: redeem(uint256 lots, address payable executor, string memory receiverUnderlyingAddress)
-    console.log(`   Requesting redemption from AssetManager (bypassing ENS resolution)...`);
+    console.log(`   Requesting redemption from AssetManager (manually encoding to bypass ENS)...`);
     
     try {
-      // Populate the transaction (bypasses ENS resolution)
-      const unsignedTx = await assetManager.redeem.populateTransaction(
+      // Manually encode the function call to bypass ethers' address validation
+      const data = assetManager.interface.encodeFunctionData('redeem', [
         lots,
         ethers.ZeroAddress, // No executor (we'll handle confirmation ourselves)
-        receiverUnderlyingAddress // XRPL address to receive XRP
-      );
+        receiverUnderlyingAddress // XRPL address to receive XRP (not validated as Ethereum address)
+      ]);
       
-      // Get signer and send transaction
+      // Get signer and send raw transaction
       const signer = this.config.flareClient.getContractSigner();
-      const tx = await signer.sendTransaction(unsignedTx);
+      const tx = await signer.sendTransaction({
+        to: await this.getAssetManagerAddress(),
+        data: data,
+      });
       
       console.log(`✅ Redemption transaction submitted: ${tx.hash}`);
       
