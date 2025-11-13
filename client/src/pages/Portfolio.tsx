@@ -18,6 +18,7 @@ import { useLocation } from "wouter";
 
 export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
+  const [withdrawalLoading, setWithdrawalLoading] = useState(false);
   const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
   const [pendingAction, setPendingAction] = useState<{ type: "claim"; positionId: string; amount: string; asset: string; vaultName: string } | null>(null);
@@ -159,6 +160,8 @@ export default function Portfolio() {
     const assetSymbol = selectedPosition.asset?.split(",")[0] || "XRP";
     const vaultId = formattedPositions.find((p) => p.id === selectedPosition.id)?.vaultId || "";
 
+    setWithdrawalLoading(true);
+    
     try {
       const response = await fetch("/api/withdrawals", {
         method: "POST",
@@ -183,8 +186,8 @@ export default function Portfolio() {
       queryClient.invalidateQueries({ queryKey: ["/api/redemptions"] });
       
       toast({
-        title: "Withdrawal Processing",
-        description: `Your withdrawal is being processed automatically. XRP will be sent to your XRPL wallet (${address.slice(0, 8)}...${address.slice(-6)}) shortly.`,
+        title: "Withdrawal Initiated",
+        description: `Withdrawal ID: ${data.redemptionId}. Your withdrawal is being processed automatically. Track status in the Withdrawals section below.`,
       });
     } catch (error) {
       console.error("Error processing withdrawal:", error);
@@ -193,6 +196,8 @@ export default function Portfolio() {
         description: error instanceof Error ? error.message : "Failed to process withdrawal. Please try again.",
         variant: "destructive",
       });
+    } finally {
+      setWithdrawalLoading(false);
     }
   };
 
@@ -390,6 +395,7 @@ export default function Portfolio() {
           rewards={selectedPosition.rewards}
           network={network}
           onConfirm={handleConfirmWithdraw}
+          loading={withdrawalLoading}
         />
       )}
 

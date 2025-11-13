@@ -24,6 +24,7 @@ interface WithdrawModalProps {
   rewards: string;
   network?: string;
   onConfirm: (amount: string) => void;
+  loading?: boolean;
 }
 
 export default function WithdrawModal({
@@ -35,6 +36,7 @@ export default function WithdrawModal({
   rewards,
   network = "mainnet",
   onConfirm,
+  loading = false,
 }: WithdrawModalProps) {
   const [amount, setAmount] = useState("");
   const { toast} = useToast();
@@ -188,10 +190,10 @@ export default function WithdrawModal({
           </Button>
           <Button
             onClick={handleConfirm}
-            disabled={!amount || parseFloat(amount.replace(/,/g, "")) <= 0}
+            disabled={!amount || parseFloat(amount.replace(/,/g, "")) <= 0 || loading}
             data-testid="button-confirm-withdraw"
           >
-            Confirm Withdrawal
+            {loading ? "Processing..." : "Confirm Withdrawal"}
           </Button>
         </DialogFooter>
       </DialogContent>
