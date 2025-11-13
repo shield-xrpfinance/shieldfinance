@@ -143,7 +143,7 @@ export class BridgeService {
           await this.config.storage.updateBridge(bridge.id, {
             status: 'cancelled',
             cancelledAt: now,
-            cancellationReason: 'expired'
+            cancellationReason: 'Expired after 30 minutes'
           });
 
           // Unsubscribe from XRPL listener if agent address exists
@@ -590,7 +590,7 @@ export class BridgeService {
       await this.config.storage.updateBridge(bridgeId, {
         status: 'cancelled',
         cancelledAt: new Date(),
-        cancellationReason: 'expired'
+        cancellationReason: 'Expired after 30 minutes'
       });
       throw new Error(errorMsg);
     }
