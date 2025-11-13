@@ -19,7 +19,8 @@ Preferred communication style: Simple, everyday language.
 
 ### Data Storage
 - **Database**: PostgreSQL (Neon serverless) with Drizzle ORM.
-- **Schema**: Includes `vaults`, `positions`, `transactions`, `vault_metrics_daily`, `withdrawal_requests`, `xrp_to_fxrp_bridges`, `firelight_positions`, `compounding_runs`.
+- **Schema**: Includes `vaults`, `positions`, `transactions`, `vault_metrics_daily`, `xrp_to_fxrp_bridges`, `fxrp_to_xrp_redemptions`, `firelight_positions`, `compounding_runs`.
+- **Deprecated Tables**: `withdrawal_requests`, `escrows` (legacy manual approval system, no longer used).
 
 ### System Design
 - **Separation of Concerns**: Monorepo structure with `/client`, `/server`, and `/shared` directories.
@@ -67,7 +68,55 @@ Preferred communication style: Simple, everyday language.
     - **FdcHub Integration**: On-chain attestation submission workflow.
     - **Voting Round Calculation**: Uses Flare's official hardcoded constants (firstRoundStartTime=1658430000, roundDuration=90s) per official documentation at dev.flare.network/fdc/guides/fdc-by-hand/.
 
-## Recent Changes (November 12, 2025)
+## Recent Changes
+
+### ✅ AUTOMATED WITHDRAWAL FLOW IMPLEMENTED (November 13, 2025)
+
+**Overview**: Implemented fully automated shXRP → FXRP → XRP redemption flow that returns XRP directly to the original depositor's XRPL wallet. No manual operator approval required.
+
+**Architecture**:
+1. **Database Schema**:
+   - Created `fxrpToXrpRedemptions` table with status machine tracking
+   - Status states: pending → redeeming_shares → redeemed_fxrp → redeeming_fxrp → awaiting_proof → xrpl_payout → completed
+   - Tracks complete redemption lifecycle with idempotent operations
+
+2. **Backend Services**:
+   - VaultService.redeemShares(): Burns shXRP tokens via ERC-4626 redeem() and returns FXRP to smart account
+   - BridgeService.redeemFxrpToXrp(): Orchestrates FAssets redemption to convert FXRP back to XRP
+   - FAssetsClient: Implements redemption request and payment proof generation using FDC attestations
+   - POST /api/withdrawals: Single endpoint that orchestrates the entire automated flow
+
+3. **Frontend Updates**:
+   - Portfolio: Withdrawal button triggers automated flow via POST /api/withdrawals
+   - WithdrawModal: Shows clear messaging that XRP will be sent to user's XRPL wallet automatically
+   - Removed all manual approval UI (Admin page, withdrawal requests, escrow displays)
+
+4. **Code Cleanup**:
+   - Removed Admin page and all approval-based endpoints
+   - Removed 10+ legacy API endpoints (withdrawal-requests, escrow CRUD)
+   - Removed Xaman-based withdrawal flow (Xaman only used for deposits now)
+   - Cleaned up all escrow and manual approval code from frontend
+
+**Withdrawal Flow**:
+1. User clicks "Withdraw" in Portfolio → WithdrawModal opens
+2. User enters shXRP amount → clicks Confirm
+3. Frontend calls POST /api/withdrawals with {positionId, shareAmount}
+4. Backend automatically:
+   - Validates position and share amount
+   - Burns shXRP tokens via vault.redeem() → receives FXRP
+   - Requests FAssets redemption for FXRP amount
+   - Generates FDC proof of redemption payment
+   - Confirms redemption payment on FAssets contract
+   - XRP sent to original depositor's XRPL wallet
+5. No user signature required (fully automated)
+
+**Security**:
+- Custodial model: Smart account holds assets, positions table tracks user ownership
+- Only position owner can withdraw (validated by userAddress in positions table)
+- ERC-4626 standard ensures correct share-to-asset conversion
+- Idempotent operations with retry logic for crash recovery
+
+### Recent Changes (November 12, 2025)
 
 ### Fixed FXRP Integration Issues
 1. **Dynamic FXRP Address Resolution**: Services now fetch correct FXRP token address (0x0b6A3645c240605887a5532109323A3E12273dc7) dynamically from AssetManager instead of using hardcoded wrong address (0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3).
