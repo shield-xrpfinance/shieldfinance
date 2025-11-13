@@ -322,38 +322,57 @@ export class FAssetsClient {
     await approveTx.wait();
     console.log(`   ✅ Approval granted`);
     
-    // Request redemption
+    // Request redemption using populateTransaction to bypass ENS resolution
     // Function signature: redeem(uint256 lots, address payable executor, string memory receiverUnderlyingAddress)
-    console.log(`   Requesting redemption from AssetManager...`);
-    const tx = await assetManager.redeem(
-      lots,
-      ethers.ZeroAddress, // No executor (we'll handle confirmation ourselves)
-      receiverUnderlyingAddress // XRPL address to receive XRP
-    );
+    console.log(`   Requesting redemption from AssetManager (bypassing ENS resolution)...`);
     
-    const receipt = await tx.wait();
-    console.log(`✅ Redemption requested: ${receipt.hash}`);
-    
-    // Parse RedemptionRequested event
-    const redemptionEvent = this.parseRedemptionRequestedEvent(receipt);
-    
-    console.log('\n📝 Redemption Request Details:');
-    console.log(`   Request ID: ${redemptionEvent.requestId}`);
-    console.log(`   Redeemer: ${redemptionEvent.redeemer}`);
-    console.log(`   Receiver XRPL Address: ${redemptionEvent.receiverUnderlyingAddress}`);
-    console.log(`   Amount (UBA): ${redemptionEvent.valueUBA}`);
-    console.log(`   Fee (UBA): ${redemptionEvent.feeUBA}`);
-    console.log(`   First underlying block: ${redemptionEvent.firstUnderlyingBlock}`);
-    console.log(`   Last underlying block: ${redemptionEvent.lastUnderlyingBlock}`);
-    console.log(`   Last underlying timestamp: ${redemptionEvent.lastUnderlyingTimestamp}`);
-    
-    return {
-      requestId: redemptionEvent.requestId,
-      txHash: receipt.hash,
-      firstUnderlyingBlock: redemptionEvent.firstUnderlyingBlock,
-      lastUnderlyingBlock: redemptionEvent.lastUnderlyingBlock,
-      lastUnderlyingTimestamp: redemptionEvent.lastUnderlyingTimestamp,
-    };
+    try {
+      // Populate the transaction (bypasses ENS resolution)
+      const unsignedTx = await assetManager.redeem.populateTransaction(
+        lots,
+        ethers.ZeroAddress, // No executor (we'll handle confirmation ourselves)
+        receiverUnderlyingAddress // XRPL address to receive XRP
+      );
+      
+      // Get signer and send transaction
+      const signer = this.config.flareClient.getContractSigner();
+      const tx = await signer.sendTransaction(unsignedTx);
+      
+      console.log(`✅ Redemption transaction submitted: ${tx.hash}`);
+      
+      const receipt = await tx.wait();
+      
+      if (!receipt) {
+        throw new Error('Transaction receipt is null - transaction may have failed');
+      }
+      
+      console.log(`✅ Redemption requested: ${receipt.hash}`);
+      
+      // Parse RedemptionRequested event
+      const redemptionEvent = this.parseRedemptionRequestedEvent(receipt);
+      
+      console.log('\n📝 Redemption Request Details:');
+      console.log(`   Request ID: ${redemptionEvent.requestId}`);
+      console.log(`   Redeemer: ${redemptionEvent.redeemer}`);
+      console.log(`   Receiver XRPL Address: ${redemptionEvent.receiverUnderlyingAddress}`);
+      console.log(`   Amount (UBA): ${redemptionEvent.valueUBA}`);
+      console.log(`   Fee (UBA): ${redemptionEvent.feeUBA}`);
+      console.log(`   First underlying block: ${redemptionEvent.firstUnderlyingBlock}`);
+      console.log(`   Last underlying block: ${redemptionEvent.lastUnderlyingBlock}`);
+      console.log(`   Last underlying timestamp: ${redemptionEvent.lastUnderlyingTimestamp}`);
+      
+      return {
+        requestId: redemptionEvent.requestId,
+        txHash: receipt.hash,
+        firstUnderlyingBlock: redemptionEvent.firstUnderlyingBlock,
+        lastUnderlyingBlock: redemptionEvent.lastUnderlyingBlock,
+        lastUnderlyingTimestamp: redemptionEvent.lastUnderlyingTimestamp,
+      };
+    } catch (error) {
+      console.error('Error requesting redemption:', error);
+      console.error('Redemption parameters:', { lots, executor: ethers.ZeroAddress, receiverUnderlyingAddress });
+      throw error;
+    }
   }
 
   async confirmRedemptionPayment(
