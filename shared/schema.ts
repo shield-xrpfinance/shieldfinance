@@ -165,6 +165,9 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   cancelledAt: timestamp("cancelled_at"),
   cancellationReason: text("cancellation_reason"),
   
+  failureCode: text("failure_code"),
+  receivedAmountDrops: varchar("received_amount_drops"),
+  expectedAmountDrops: varchar("expected_amount_drops"),
   errorMessage: text("error_message"),
   retryCount: integer("retry_count").notNull().default(0),
 });
