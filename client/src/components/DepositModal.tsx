@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -47,7 +47,25 @@ export default function DepositModal({
   const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
-  const [infoExpanded, setInfoExpanded] = useState(false);
+  
+  // Initialize info expanded state based on screen size (desktop: expanded, mobile: collapsed)
+  const [infoExpanded, setInfoExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth >= 640; // sm breakpoint
+    }
+    return false;
+  });
+
+  // Update info expanded state when screen size changes
+  useEffect(() => {
+    const handleResize = () => {
+      const isDesktop = window.innerWidth >= 640;
+      setInfoExpanded(isDesktop);
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   const { address, isConnected, provider, requestPayment } = useWallet();
   const { balances, isLoading: balancesLoading, error: balancesError, getBalance, getBalanceFormatted } = useWalletBalances();
   const { toast } = useToast();
