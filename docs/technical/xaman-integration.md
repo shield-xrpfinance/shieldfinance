@@ -1,6 +1,6 @@
 # Xaman (XUMM) Integration Technical Details
 
-This document covers the technical implementation of Xaman integration in Shield Finance.
+This document covers the technical implementation of Xaman integration in Shield Yield Vaults.
 
 ## Architecture Overview
 

@@ -1,4 +1,4 @@
-# Getting Started with Shield Finance
+# Getting Started with Shield Yield Vaults
 
 This guide will walk you through connecting your wallet and making your first deposit.
 
@@ -17,7 +17,7 @@ Before you begin, you'll need:
    - Download from [xaman.app](https://xaman.app)
    - Available for iOS, Android, and desktop
 
-2. **Connect to Shield Finance**
+2. **Connect to Shield Yield Vaults**
    - Visit the Dashboard page
    - Click "Connect Wallet"
    - Select "Xaman"
@@ -33,7 +33,7 @@ Before you begin, you'll need:
 
 ## Step 2: Choose a Network
 
-Shield Finance supports both mainnet and testnet:
+Shield Yield Vaults supports both mainnet and testnet:
 
 - **Mainnet**: Real assets and transactions
 - **Testnet**: Free test tokens for experimenting

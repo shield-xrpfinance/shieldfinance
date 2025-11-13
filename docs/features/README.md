@@ -1,6 +1,6 @@
 # Features Overview
 
-Shield Finance provides a comprehensive suite of features for XRP liquid staking:
+Shield Yield Vaults provides a comprehensive suite of features for XRP liquid staking:
 
 ## Core Features
 

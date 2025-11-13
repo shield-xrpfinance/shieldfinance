@@ -1,6 +1,6 @@
-# Introduction to Shield Finance
+# Introduction to Shield Yield Vaults
 
-Shield Finance is a comprehensive XRP liquid staking protocol that enables users to deposit XRP, RLUSD, and USDC into high-yield vaults while maintaining liquidity.
+Shield Yield Vaults is a comprehensive XRP liquid staking protocol that enables users to deposit XRP, RLUSD, and USDC into high-yield vaults while maintaining liquidity.
 
 ## What is Liquid Staking?
 

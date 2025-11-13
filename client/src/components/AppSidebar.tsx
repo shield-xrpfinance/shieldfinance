@@ -224,7 +224,7 @@ export function AppSidebar() {
             </div>
 
             <p className="text-center text-[10px] text-muted-foreground pt-2" data-testid="text-copyright">
-              Copyright© 2025 Shield Finance Inc. - All Rights Reserved
+              Copyright© 2025 Shield Yield Vaults Ltd. - All Rights Reserved
             </p>
           </div>
         </div>

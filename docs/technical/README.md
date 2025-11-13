@@ -1,6 +1,6 @@
 # Technical Architecture
 
-Shield Finance is built with a modern, production-ready full-stack architecture.
+Shield Yield Vaults is built with a modern, production-ready full-stack architecture.
 
 ## System Overview
 

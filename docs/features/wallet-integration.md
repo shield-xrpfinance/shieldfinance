@@ -1,6 +1,6 @@
 # Wallet Integration
 
-Shield Finance supports multiple wallet connection methods for maximum flexibility.
+Shield Yield Vaults supports multiple wallet connection methods for maximum flexibility.
 
 ## Supported Wallets
 

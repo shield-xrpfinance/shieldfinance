@@ -1,6 +1,6 @@
 # XRP Liquid Staking Protocol Documentation
 
-Welcome to the Shield Finance documentation. This comprehensive guide covers everything you need to know about using our XRP liquid staking platform.
+Welcome to the Shield Yield Vaults documentation. This comprehensive guide covers everything you need to know about using our XRP liquid staking platform.
 
 ## Table of Contents
 
@@ -15,6 +15,6 @@ Welcome to the Shield Finance documentation. This comprehensive guide covers eve
 
 ## Quick Links
 
-- [Live Application](https://your-app.replit.app)
+- [Live Application](https://shyield.finance)
 - [GitHub Repository](https://github.com/shield-xrpfinance/shieldfinance)
 - [Support](https://github.com/shield-xrpfinance/shieldfinance/issues)

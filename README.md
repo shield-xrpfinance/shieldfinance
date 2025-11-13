@@ -482,7 +482,7 @@ Contributions are welcome! Please follow these steps:
 
 ## 📄 License
 
-This project is proprietary software owned by Shield Finance Inc.
+This project is proprietary software owned by Shield Yield Vaults Ltd.
 
 ## 📚 Documentation
 
@@ -495,7 +495,7 @@ This project is proprietary software owned by Shield Finance Inc.
 ## 🔗 Links
 
 - **Repository**: [github.com/shield-xrpfinance/shieldfinance](https://github.com/shield-xrpfinance/shieldfinance)
-- **Live Application**: [Coming Soon]
+- **Live Application**: [https://shyield.finance](https://shyield.finance)
 - **Block Explorers**:
   - Flare Coston2: https://coston2-explorer.flare.network
   - Flare Mainnet: https://flare-explorer.flare.network
@@ -504,7 +504,7 @@ This project is proprietary software owned by Shield Finance Inc.
 
 ## 👥 Team
 
-**Shield Finance Inc.** - Making DeFi on XRP accessible and efficient
+**Shield Yield Vaults Ltd.** - Making DeFi on XRP accessible and efficient
 
 ---
 

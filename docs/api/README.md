@@ -1,12 +1,12 @@
 # API Reference
 
-Shield Finance provides a RESTful API for managing vaults, positions, and transactions.
+Shield Yield Vaults provides a RESTful API for managing vaults, positions, and transactions.
 
 ## Base URL
 
 ```
 Development: http://localhost:5000/api
-Production: https://your-app.replit.app/api
+Production: https://shyield.finance/api
 ```
 
 ## Authentication
