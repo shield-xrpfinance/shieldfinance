@@ -12,7 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Coins, Wallet as WalletIcon, Loader2, AlertCircle, Info } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Coins, Wallet as WalletIcon, Loader2, AlertCircle, Info, ChevronDown } from "lucide-react";
 import { useWallet } from "@/lib/walletContext";
 import { useWalletBalances } from "@/hooks/use-wallet-balance";
 import { useToast } from "@/hooks/use-toast";
@@ -46,6 +47,7 @@ export default function DepositModal({
   const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [infoExpanded, setInfoExpanded] = useState(false);
   const { address, isConnected, provider, requestPayment } = useWallet();
   const { balances, isLoading: balancesLoading, error: balancesError, getBalance, getBalanceFormatted } = useWalletBalances();
   const { toast } = useToast();
@@ -131,30 +133,43 @@ export default function DepositModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-6 space-y-6">
+        <div className="py-3 space-y-3 sm:py-6 sm:space-y-6">
           {depositAssets.includes("XRP") && step === 1 && (
-            <Alert data-testid="alert-fassets-info">
-              <Info className="h-4 w-4" />
-              <AlertTitle>How XRP Deposits Work</AlertTitle>
-              <AlertDescription className="text-xs space-y-2">
-                <p>Your XRP is converted to shXRP through a secure bridging process:</p>
-                <ol className="list-decimal list-inside space-y-1 ml-2">
-                  <li>System reserves collateral with a FAssets agent</li>
-                  <li>You send XRP to the agent's address</li>
-                  <li>System generates proof and mints FXRP on Flare</li>
-                  <li>FXRP is deposited to vault for shXRP tokens</li>
-                </ol>
-              </AlertDescription>
-            </Alert>
+            <Collapsible open={infoExpanded} onOpenChange={setInfoExpanded}>
+              <Alert data-testid="alert-fassets-info" className="p-3 sm:p-4">
+                <div className="flex items-start gap-2">
+                  <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <CollapsibleTrigger asChild>
+                      <button className="flex items-center justify-between w-full text-left group" data-testid="button-toggle-info">
+                        <AlertTitle className="text-sm">How XRP Deposits Work</AlertTitle>
+                        <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${infoExpanded ? 'rotate-180' : ''}`} />
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <AlertDescription className="text-xs space-y-1.5 mt-2">
+                        <p>Your XRP is converted to shXRP through a secure bridging process:</p>
+                        <ol className="list-decimal list-inside space-y-0.5 ml-2 text-xs">
+                          <li>System reserves collateral with a FAssets agent</li>
+                          <li>You send XRP to the agent's address</li>
+                          <li>System generates proof and mints FXRP on Flare</li>
+                          <li>FXRP is deposited to vault for shXRP tokens</li>
+                        </ol>
+                      </AlertDescription>
+                    </CollapsibleContent>
+                  </div>
+                </div>
+              </Alert>
+            </Collapsible>
           )}
           
-          <div className="flex items-center gap-3 p-4 rounded-md bg-primary/10">
-            <MultiAssetIcon assets={depositAssets.join(",")} size={28} />
-            <div className="flex-1">
-              <p className="text-sm font-medium">{vaultName}</p>
-              <p className="text-xs text-muted-foreground">APY: {vaultApyLabel || `${vaultApy}%`}</p>
+          <div className="flex items-center gap-2 p-3 rounded-md bg-primary/10 sm:gap-3 sm:p-4">
+            <MultiAssetIcon assets={depositAssets.join(",")} size={24} className="sm:w-7 sm:h-7 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">{vaultName}</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">APY: {vaultApyLabel || `${vaultApy}%`}</p>
             </div>
-            <Badge>{vaultApyLabel || `${vaultApy}% APY`}</Badge>
+            <Badge className="text-xs whitespace-nowrap">{vaultApyLabel || `${vaultApy}% APY`}</Badge>
           </div>
 
           {!isConnected && (
@@ -241,22 +256,22 @@ export default function DepositModal({
               ))}
 
               {!balancesLoading && (
-                <div className="space-y-2 p-4 rounded-md bg-muted/50">
-                  <div className="flex items-center justify-between text-sm">
+                <div className="space-y-1.5 p-3 rounded-md bg-muted/50 sm:space-y-2 sm:p-4">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-muted-foreground">Deposit Amount</span>
                     <span className="font-semibold font-mono">{totalValue.toFixed(2)} XRP</span>
                   </div>
                   {isXRPDeposit && mintingFee > 0 && (
-                    <div className="flex items-center justify-between text-sm">
+                    <div className="flex items-center justify-between text-xs sm:text-sm">
                       <span className="text-muted-foreground">Bridge Fee ({mintingFeePercentage}%)</span>
                       <span className="font-mono">+{mintingFee.toFixed(6)} XRP</span>
                     </div>
                   )}
-                  <div className="flex items-center justify-between text-sm pt-2 border-t">
+                  <div className="flex items-center justify-between text-xs sm:text-sm pt-1.5 border-t sm:pt-2">
                     <span className="font-medium">Total Payment</span>
                     <span className="font-bold font-mono">{totalWithFee.toFixed(6)} XRP</span>
                   </div>
-                  <div className="flex items-center justify-between text-sm">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
                     <span className="text-muted-foreground">Projected Annual Earnings</span>
                     <span className="font-semibold font-mono">+{projectedEarnings} XRP</span>
                   </div>
@@ -266,34 +281,34 @@ export default function DepositModal({
           )}
 
           {step === 2 && (
-            <div className="space-y-4">
-              <div className="space-y-3 p-4 rounded-md border">
+            <div className="space-y-3 sm:space-y-4">
+              <div className="space-y-2 p-3 rounded-md border sm:space-y-3 sm:p-4">
                 {Object.entries(amounts).filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0).map(([asset, amount]) => (
                   <div key={asset} className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">{asset} Deposit</span>
-                    <span className="font-semibold font-mono">{amount} {asset}</span>
+                    <span className="text-xs sm:text-sm text-muted-foreground">{asset} Deposit</span>
+                    <span className="font-semibold font-mono text-sm sm:text-base">{amount} {asset}</span>
                   </div>
                 ))}
                 {isXRPDeposit && mintingFee > 0 && (
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">
+                    <span className="text-xs sm:text-sm text-muted-foreground">
                       Bridge Fee ({mintingFeePercentage}%)
                     </span>
-                    <span className="font-mono text-sm">+{mintingFee.toFixed(6)} XRP</span>
+                    <span className="font-mono text-xs sm:text-sm">+{mintingFee.toFixed(6)} XRP</span>
                   </div>
                 )}
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <span className="font-medium">Total Payment Required</span>
-                  <span className="text-lg font-bold font-mono">{totalWithFee.toFixed(6)} XRP</span>
+                <div className="flex items-center justify-between pt-1.5 border-t sm:pt-2">
+                  <span className="font-medium text-xs sm:text-sm">Total Payment Required</span>
+                  <span className="text-base sm:text-lg font-bold font-mono">{totalWithFee.toFixed(6)} XRP</span>
                 </div>
-                <div className="flex items-center justify-between pt-2 border-t">
-                  <span className="text-sm text-muted-foreground">Annual Earnings</span>
-                  <span className="font-medium font-mono text-chart-2">+{projectedEarnings} XRP</span>
+                <div className="flex items-center justify-between pt-1.5 border-t sm:pt-2">
+                  <span className="text-xs sm:text-sm text-muted-foreground">Annual Earnings</span>
+                  <span className="font-medium font-mono text-chart-2 text-sm sm:text-base">+{projectedEarnings} XRP</span>
                 </div>
               </div>
               
               {isXRPDeposit && (
-                <Alert>
+                <Alert className="p-3 sm:p-4">
                   <Info className="h-4 w-4" />
                   <AlertDescription className="text-xs">
                     You'll be prompted to send {totalWithFee.toFixed(6)} XRP ({totalValue.toFixed(2)} XRP + {mintingFee.toFixed(6)} XRP bridge fee) to complete your deposit.
