@@ -1745,46 +1745,160 @@ export async function registerRoutes(
     try {
       console.log('\n🔧 [RECOVERY] Starting stuck FXRP recovery...\n');
       
-      // Access FlareClient from bridgeService config (passed during registerRoutes)
+      // Access FlareClient from bridgeService config
       const flareClient = (bridgeService as any).config.flareClient as FlareClient;
-      const vaultService = (bridgeService as any).config.vaultService;
       
       // Check current FXRP balance in smart account
       const smartAccountAddress = flareClient.getSignerAddress();
       const fxrpToken = await flareClient.getFXRPToken() as any;
-      const fxrpBalanceRaw = await fxrpToken.balanceOf(smartAccountAddress);
-      const fxrpBalance = ethers.formatUnits(fxrpBalanceRaw, 6);
       
+      // Read decimals from contracts (don't hardcode!)
+      const fxrpDecimals = await fxrpToken.decimals();
       console.log(`📊 Smart Account: ${smartAccountAddress}`);
+      console.log(`🔢 FXRP Decimals: ${fxrpDecimals}`);
+      
+      const fxrpBalanceRaw = await fxrpToken.balanceOf(smartAccountAddress);
+      const fxrpBalance = ethers.formatUnits(fxrpBalanceRaw, fxrpDecimals);
       console.log(`💵 FXRP Balance: ${fxrpBalance} FXRP`);
       
-      if (parseFloat(fxrpBalance) === 0) {
+      // Get vault address and contract
+      const vaultAddress = getVaultAddress();
+      console.log(`🏦 Vault Contract: ${vaultAddress}`);
+      const vaultContract = flareClient.getShXRPVault(vaultAddress) as any;
+      
+      // Read vault decimals
+      const vaultDecimals = await vaultContract.decimals();
+      console.log(`🔢 Vault (shXRP) Decimals: ${vaultDecimals}`);
+      
+      // Parse FXRP amount using actual decimals
+      const fxrpAmountRaw = ethers.parseUnits(fxrpBalance, fxrpDecimals);
+      
+      // Safety check 1: Read minimum deposit from vault contract (FXRP-denominated, use fxrpDecimals!)
+      const minDepositRaw = await vaultContract.minDeposit();
+      // minDeposit returns FXRP amount (asset), NOT shXRP amount (shares)
+      const minDeposit = ethers.formatUnits(minDepositRaw, fxrpDecimals);
+      console.log(`💰 Vault Min Deposit: ${minDeposit} FXRP (${minDepositRaw.toString()} raw)`);
+      
+      // Compare raw bigint values (both in FXRP units) to avoid decimal precision errors
+      if (fxrpAmountRaw < minDepositRaw) {
         return res.json({ 
-          success: true, 
-          message: "No stuck FXRP found. Nothing to recover.",
-          fxrpBalance: "0"
+          success: false, 
+          message: `FXRP balance ${fxrpBalance} below vault minimum deposit of ${minDeposit} FXRP. Nothing to recover.`,
+          fxrpBalance,
+          minDeposit
         });
       }
       
-      // Mint shXRP shares from stuck FXRP
-      console.log(`\n💡 Found ${fxrpBalance} FXRP to mint into shXRP`);
+      // Safety check 2: Record pre-mint shXRP balance for accurate delta reporting
+      const shxrpBalanceBeforeRaw = await vaultContract.balanceOf(smartAccountAddress);
+      const shxrpBalanceBefore = ethers.formatUnits(shxrpBalanceBeforeRaw, vaultDecimals);
+      console.log(`📈 Current shXRP Balance: ${shxrpBalanceBefore}`);
       
-      // Use VaultService to mint shares (includes approval + deposit)
-      const result = await vaultService.mintShares(
-        "default-vault", // Vault ID from database
-        fxrpBalance      // All available FXRP
-      );
+      // Safety check 3: CFLR balance check
+      console.log(`\n🔍 Running preflight checks...`);
       
-      console.log(`✅ Recovery complete!`);
-      console.log(`   shXRP Minted: ${result.sharesMinted}`);
-      console.log(`   Transaction: ${result.txHash}`);
+      const provider = flareClient.provider;
+      const cflrBalanceRaw = await provider.getBalance(smartAccountAddress);
+      const cflrBalance = ethers.formatEther(cflrBalanceRaw);
+      
+      // Require minimum CFLR for gas (conservative estimate: 0.01 CFLR)
+      const MIN_CFLR_FOR_GAS = ethers.parseEther("0.01");
+      if (cflrBalanceRaw < MIN_CFLR_FOR_GAS) {
+        throw new Error(`Insufficient CFLR for gas. Have: ${cflrBalance} CFLR, Need: at least 0.01 CFLR`);
+      }
+      console.log(`  ✅ Sufficient CFLR for gas: ${cflrBalance} CFLR`);
+      
+      // Safety check 4: Verify FXRP balance and vault capacity before approval
+      console.log(`\n🔍 Verifying FXRP balance and vault capacity...`);
+      
+      // Re-confirm FXRP balance hasn't changed during preflight checks
+      const fxrpBalanceRecheckRaw = await fxrpToken.balanceOf(smartAccountAddress);
+      if (fxrpBalanceRecheckRaw < fxrpAmountRaw) {
+        throw new Error(`FXRP balance changed during preflight. Expected ${fxrpBalance}, now ${ethers.formatUnits(fxrpBalanceRecheckRaw, fxrpDecimals)}`);
+      }
+      console.log(`  ✅ FXRP balance confirmed: ${fxrpBalance}`);
+      
+      // Check vault total assets to ensure capacity exists
+      const vaultTotalAssets = await vaultContract.totalAssets();
+      console.log(`  Vault Total Assets: ${ethers.formatUnits(vaultTotalAssets, fxrpDecimals)} FXRP`);
+      // Note: ERC-4626 vaults typically don't have explicit deposit caps,
+      // but checking totalAssets helps detect if vault is functional
+      
+      // Mint shXRP shares from stuck FXRP (direct vault deposit, no position creation)
+      console.log(`\n💡 Minting ${fxrpBalance} FXRP into shXRP shares...`);
+      
+      // Step 1: Explicit allowance reset (short-circuit on failure)
+      console.log(`  Resetting allowance to 0...`);
+      let resetTx;
+      try {
+        resetTx = await fxrpToken.approve(vaultAddress, 0);
+        await resetTx.wait();
+        console.log(`  ✅ Allowance reset: ${resetTx.hash}`);
+      } catch (resetError: any) {
+        throw new Error(`Failed to reset allowance. Aborting recovery. ${resetError.message}`);
+      }
+      
+      // Step 2: Set approval for exact deposit amount (short-circuit on failure)
+      console.log(`  Approving ${fxrpBalance} FXRP for vault...`);
+      let approveTx;
+      try {
+        approveTx = await fxrpToken.approve(vaultAddress, fxrpAmountRaw);
+        await approveTx.wait();
+        console.log(`  ✅ Approved: ${approveTx.hash}`);
+      } catch (approveError: any) {
+        throw new Error(`Failed to approve FXRP. Allowance remains at 0. ${approveError.message}`);
+      }
+      
+      // Step 3: Deposit FXRP into vault with guaranteed cleanup
+      console.log(`  Depositing ${fxrpBalance} FXRP into vault...`);
+      
+      let depositTx;
+      let depositSucceeded = false;
+      try {
+        // ERC-4626: deposit(assets, receiver) -> mints shares to receiver
+        depositTx = await vaultContract.deposit(fxrpAmountRaw, smartAccountAddress);
+        const depositReceipt = await depositTx.wait();
+        depositSucceeded = true;
+        console.log(`  ✅ Deposited: ${depositTx.hash}`);
+      } finally {
+        // Cleanup: Always reset allowance to 0 after deposit attempt
+        // This runs regardless of deposit success/failure
+        if (!depositSucceeded) {
+          console.error(`  ❌ Deposit failed, cleaning up approval...`);
+          try {
+            const cleanupTx = await fxrpToken.approve(vaultAddress, 0);
+            const cleanupReceipt = await cleanupTx.wait();
+            console.log(`  ✅ Allowance cleanup complete: ${cleanupTx.hash}`);
+          } catch (cleanupError) {
+            console.error(`  ⚠️  CRITICAL: Allowance cleanup failed. Manual intervention required.`);
+            console.error(`  Vault retains approval to spend FXRP. Reset manually: fxrpToken.approve(${vaultAddress}, 0)`);
+            throw cleanupError;
+          }
+          // Re-throw original deposit error after cleanup
+          throw new Error(`Deposit transaction failed. Allowance has been reset.`);
+        }
+      }
+      
+      // Step 4: Calculate actual shares minted (delta, not total balance)
+      const shxrpBalanceAfterRaw = await vaultContract.balanceOf(smartAccountAddress);
+      const shxrpBalanceAfter = ethers.formatUnits(shxrpBalanceAfterRaw, vaultDecimals);
+      const sharesMinted = (parseFloat(shxrpBalanceAfter) - parseFloat(shxrpBalanceBefore)).toFixed(Number(vaultDecimals));
+      
+      console.log(`\n✅ Recovery complete!`);
+      console.log(`   FXRP Deposited: ${fxrpBalance}`);
+      console.log(`   shXRP Minted: ${sharesMinted} (${shxrpBalanceBefore} → ${shxrpBalanceAfter})`);
+      console.log(`   Transaction: ${depositTx.hash}`);
+      console.log(`\n⚠️  Note: Shares minted to smart account. Run reconciliation to allocate to users.`);
       
       res.json({ 
         success: true, 
-        message: "Stuck FXRP successfully minted into shXRP",
+        message: "Stuck FXRP successfully minted into shXRP shares",
         fxrpDeposited: fxrpBalance,
-        sharesMinted: result.sharesMinted,
-        txHash: result.txHash
+        sharesMinted,
+        shxrpBalanceBefore,
+        shxrpBalanceAfter,
+        txHash: depositTx.hash,
+        note: "Shares minted to smart account. Run reconciliation to allocate to user positions."
       });
     } catch (error) {
       console.error("Recovery error:", error);

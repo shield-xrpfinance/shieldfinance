@@ -167,6 +167,9 @@ export const FIRELIGHT_VAULT_ABI = [
   "function asset() view returns (address)",  // Returns FXRP token address
   "function totalAssets() view returns (uint256)",  // Total FXRP in vault
   
+  // Custom ShXRPVault configuration
+  "function minDeposit() view returns (uint256)",  // Minimum deposit amount in FXRP
+  
   // Deposit functions
   "function deposit(uint256 assets, address receiver) returns (uint256 shares)",
   "function mint(uint256 shares, address receiver) returns (uint256 assets)",

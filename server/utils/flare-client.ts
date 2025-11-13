@@ -114,6 +114,7 @@ export class FlareClient {
       "function approve(address spender, uint256 amount) returns (bool)",
       "function transfer(address to, uint256 amount) returns (bool)",
       "function allowance(address owner, address spender) view returns (uint256)",
+      "function decimals() view returns (uint8)",
     ];
     const contract = new ethers.Contract(address, ERC20_ABI, this.provider);
     return contract.connect(this.getContractSigner());
