@@ -4,6 +4,7 @@ import type { Position, Vault } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import PortfolioTable from "@/components/PortfolioTable";
 import WithdrawModal from "@/components/WithdrawModal";
@@ -43,6 +44,23 @@ export default function Portfolio() {
       return response.json();
     },
     enabled: !!address,
+  });
+
+  const { data: redemptions = [] } = useQuery<any[]>({
+    queryKey: ["/api/withdrawals/wallet", address],
+    queryFn: async () => {
+      if (!address) return [];
+      const response = await fetch(`/api/withdrawals/wallet/${encodeURIComponent(address)}`);
+      if (!response.ok) throw new Error('Failed to fetch redemptions');
+      return response.json();
+    },
+    enabled: !!address,
+    refetchInterval: (query) => {
+      const hasActiveRedemptions = query.state.data?.some((r: any) => 
+        !["completed", "failed"].includes(r.status)
+      );
+      return hasActiveRedemptions ? 5000 : false;
+    },
   });
 
   const { data: vaults = [] } = useQuery<Vault[]>({
@@ -183,7 +201,7 @@ export default function Portfolio() {
       
       // Invalidate positions and redemptions cache to reflect the update
       queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/redemptions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/wallet", address] });
       
       toast({
         title: "Withdrawal Initiated",
@@ -382,6 +400,71 @@ export default function Portfolio() {
             onWithdraw={handleWithdraw}
             onClaim={handleClaim}
           />
+        )}
+
+        {/* Pending Withdrawals Section */}
+        {redemptions.length > 0 && (
+          <Card className="mt-6">
+            <CardHeader>
+              <CardTitle>Withdrawal History</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {redemptions.map((redemption) => {
+                  const statusBadgeVariant = 
+                    redemption.status === "completed" ? "default" :
+                    redemption.status === "failed" ? "destructive" :
+                    "secondary";
+                  
+                  const statusLabel = 
+                    redemption.status === "pending" ? "Initiated" :
+                    redemption.status === "redeeming_shares" ? "Redeeming Shares" :
+                    redemption.status === "redeemed_fxrp" ? "FXRP Redeemed" :
+                    redemption.status === "redeeming_fxrp" ? "Requesting Redemption" :
+                    redemption.status === "awaiting_proof" ? "Awaiting Proof" :
+                    redemption.status === "xrpl_payout" ? "Sending XRP" :
+                    redemption.status === "completed" ? "Completed" :
+                    redemption.status === "awaiting_liquidity" ? "Queued (Low Liquidity)" :
+                    redemption.status === "failed" ? "Failed" :
+                    `Unknown (${redemption.status})`;
+
+                  return (
+                    <div 
+                      key={redemption.id}
+                      className="flex items-center justify-between p-4 rounded-md border"
+                      data-testid={`redemption-${redemption.id}`}
+                    >
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3">
+                          <Badge variant={statusBadgeVariant} data-testid={`status-${redemption.id}`}>
+                            {statusLabel}
+                          </Badge>
+                          <span className="text-sm text-muted-foreground">
+                            {new Date(redemption.createdAt).toLocaleString()}
+                          </span>
+                        </div>
+                        <div className="mt-2 space-y-1">
+                          <p className="text-sm font-medium">
+                            Amount: {parseFloat(redemption.shareAmount).toFixed(6)} shXRP
+                          </p>
+                          {redemption.errorMessage && (
+                            <p className="text-sm text-destructive">
+                              Error: {redemption.errorMessage}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground">
+                          ID: {redemption.id.slice(0, 8)}...
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
         )}
       </div>
 
