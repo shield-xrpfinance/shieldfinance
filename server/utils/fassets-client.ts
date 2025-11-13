@@ -323,15 +323,15 @@ export class FAssetsClient {
     console.log(`   ✅ Approval granted`);
     
     // Request redemption by manually encoding function data to bypass ENS validation
-    // Function signature: redeem(uint256 lots, address payable executor, string memory receiverUnderlyingAddress)
+    // CORRECT Function signature: redeem(uint256 _lots, string _redeemerUnderlyingAddressString, address payable _executor)
     console.log(`   Requesting redemption from AssetManager (manually encoding to bypass ENS)...`);
     
     try {
-      // Manually encode the function call to bypass ethers' address validation
+      // Manually encode the function call with correct parameter order
       const data = assetManager.interface.encodeFunctionData('redeem', [
-        lots,
-        ethers.ZeroAddress, // No executor (we'll handle confirmation ourselves)
-        receiverUnderlyingAddress // XRPL address to receive XRP (not validated as Ethereum address)
+        lots,                      // Parameter 1: Number of lots to redeem
+        receiverUnderlyingAddress, // Parameter 2: XRPL address as string (not validated!)
+        ethers.ZeroAddress        // Parameter 3: Executor address (we handle confirmation ourselves)
       ]);
       
       // Get signer and send raw transaction
