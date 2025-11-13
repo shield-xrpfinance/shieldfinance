@@ -66,6 +66,15 @@ export default function DepositModal({
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Reset state when modal opens to prevent stale data
+  useEffect(() => {
+    if (open) {
+      setAmounts({});
+      setStep(1);
+    }
+  }, [open]);
+
   const { address, isConnected, provider, requestPayment } = useWallet();
   const { balances, isLoading: balancesLoading, error: balancesError, getBalance, getBalanceFormatted } = useWalletBalances();
   const { toast } = useToast();

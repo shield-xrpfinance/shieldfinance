@@ -424,6 +424,87 @@ export async function registerRoutes(
     }
   });
 
+  // Cancel a bridge deposit
+  app.post("/api/bridges/:id/cancel", async (req, res) => {
+    try {
+      const { id: bridgeId } = req.params;
+      const { walletAddress } = req.body;
+
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Missing required field: walletAddress" });
+      }
+
+      console.log(`🚫 Cancellation requested for bridge ${bridgeId} by ${walletAddress}`);
+
+      // 1. Get bridge
+      const bridge = await storage.getBridgeById(bridgeId);
+      if (!bridge) {
+        return res.status(404).json({ error: "Bridge not found" });
+      }
+
+      // 2. Verify wallet ownership
+      // TODO: Add signature verification - currently vulnerable to wallet spoofing
+      // Frontend should sign a message with timestamp and bridgeId, backend verifies signature
+      // Example: verifyXRPLSignature(walletAddress, signature, message)
+      if (bridge.walletAddress !== walletAddress) {
+        return res.status(403).json({ 
+          error: "Unauthorized - you can only cancel your own deposits",
+          bridgeWallet: bridge.walletAddress,
+          requestWallet: walletAddress
+        });
+      }
+
+      // 3. Check if bridge is already in a terminal state
+      if (["completed", "cancelled", "failed"].includes(bridge.status)) {
+        return res.status(400).json({ 
+          error: `Cannot cancel bridge in '${bridge.status}' status`,
+          currentStatus: bridge.status
+        });
+      }
+
+      // 4. Check if bridge has already started minting (point of no return)
+      if (["minting", "vault_minting", "vault_minted"].includes(bridge.status)) {
+        return res.status(400).json({ 
+          error: "Cannot cancel bridge - minting has already started",
+          currentStatus: bridge.status,
+          message: "Please wait for the deposit to complete or contact support if there's an issue"
+        });
+      }
+
+      // 5. Check if bridge is expired
+      if (bridge.expiresAt && new Date() > bridge.expiresAt) {
+        return res.status(400).json({ 
+          error: "Bridge has already expired",
+          expiredAt: bridge.expiresAt,
+          message: "This deposit request has been automatically cancelled due to expiration"
+        });
+      }
+
+      // 6. Cancel the bridge
+      await storage.updateBridge(bridgeId, {
+        status: "cancelled",
+        cancelledAt: new Date(),
+        cancellationReason: "user_cancelled"
+      });
+
+      console.log(`✅ Bridge ${bridgeId} cancelled successfully by user`);
+
+      const updatedBridge = await storage.getBridgeById(bridgeId);
+      res.json({
+        success: true,
+        message: "Deposit cancelled successfully",
+        bridge: updatedBridge
+      });
+    } catch (error) {
+      console.error("Bridge cancellation error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to cancel bridge" });
+      }
+    }
+  });
+
   // Get all recoverable bridges
   app.get("/api/bridges/recoverable", async (req, res) => {
     try {

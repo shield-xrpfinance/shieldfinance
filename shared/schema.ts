@@ -18,6 +18,7 @@ export const bridgeStatusEnum = pgEnum("bridge_status", [
   "vault_minted",
   "completed",
   "vault_mint_failed",
+  "cancelled",
   "failed"
 ]);
 
@@ -160,6 +161,10 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   fxrpReceivedAt: timestamp("fxrp_received_at"),
   completedAt: timestamp("completed_at"),
   
+  expiresAt: timestamp("expires_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  cancellationReason: text("cancellation_reason"),
+  
   errorMessage: text("error_message"),
   retryCount: integer("retry_count").notNull().default(0),
 });
@@ -273,6 +278,10 @@ export const insertEscrowSchema = createInsertSchema(escrows).omit({
 export const insertXrpToFxrpBridgeSchema = createInsertSchema(xrpToFxrpBridges).omit({
   id: true,
   createdAt: true,
+}).extend({
+  expiresAt: z.coerce.date().nullable().optional(),
+  cancelledAt: z.coerce.date().nullable().optional(),
+  cancellationReason: z.string().nullable().optional(),
 });
 
 export const insertFxrpToXrpRedemptionSchema = createInsertSchema(fxrpToXrpRedemptions).omit({
