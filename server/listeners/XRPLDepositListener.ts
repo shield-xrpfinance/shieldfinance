@@ -7,6 +7,7 @@ export interface XRPLDepositListenerConfig {
   storage: IStorage;
   onDeposit?: (deposit: DetectedDeposit) => Promise<void>;
   onAgentPayment?: (payment: AgentPayment) => Promise<void>;
+  onRedemptionPayment?: (payment: RedemptionPayment) => Promise<void>;
 }
 
 export interface DetectedDeposit {
@@ -24,12 +25,31 @@ export interface AgentPayment {
   memo?: string;
 }
 
+export interface RedemptionPayment {
+  redemptionId: string;
+  userAddress: string;  // User's XRPL address (destination)
+  agentAddress: string; // Agent's XRPL address (source)
+  amount: string;       // XRP amount
+  txHash: string;
+  memo?: string;
+}
+
+export interface PendingRedemption {
+  redemptionId: string;
+  userAddress: string;
+  expectedAmount: string;
+  agentAddress: string;
+  deadline: number; // Unix timestamp
+}
+
 export class XRPLDepositListener {
   private client: Client;
   private config: XRPLDepositListenerConfig;
   private isRunning: boolean = false;
   private monitoredAgentAddresses: Set<string> = new Set();
+  private monitoredUserAddresses: Set<string> = new Set();
   private agentPaymentHandlerSet: boolean = false;
+  private redemptionPaymentHandlerSet: boolean = false;
 
   constructor(config: XRPLDepositListenerConfig) {
     this.config = config;
@@ -54,6 +74,19 @@ export class XRPLDepositListener {
     console.log("✅ Agent payment handler registered with XRPL listener");
   }
 
+  /**
+   * Register redemption payment handler after construction (two-phase initialization).
+   * This allows creating the listener without callbacks that reference not-yet-created services.
+   */
+  setRedemptionPaymentHandler(handler: (payment: RedemptionPayment) => Promise<void>): void {
+    if (this.redemptionPaymentHandlerSet) {
+      throw new Error("Redemption payment handler already set. Cannot set handler multiple times.");
+    }
+    this.config.onRedemptionPayment = handler;
+    this.redemptionPaymentHandlerSet = true;
+    console.log("✅ Redemption payment handler registered with XRPL listener");
+  }
+
   async start() {
     if (this.isRunning) {
       console.log("XRPL listener already running");
@@ -73,10 +106,54 @@ export class XRPLDepositListener {
       });
     }
 
+    // Load pending redemptions from database and subscribe user addresses
+    await this.loadPendingRedemptions();
+
     // Listen for transactions
     this.client.on("transaction", async (tx: any) => {
       await this.handleTransaction(tx);
     });
+  }
+
+  /**
+   * Load all pending redemptions from database and subscribe user addresses.
+   * Called on startup to restore state after process restart.
+   */
+  private async loadPendingRedemptions(): Promise<void> {
+    try {
+      console.log("🔄 Loading pending redemptions from database...");
+      
+      const pendingRedemptions = await this.config.storage.getAllPendingRedemptions();
+      
+      if (pendingRedemptions.length === 0) {
+        console.log("✅ No pending redemptions to monitor");
+        return;
+      }
+
+      console.log(`📋 Found ${pendingRedemptions.length} pending redemption(s) awaiting proof`);
+
+      for (const redemption of pendingRedemptions) {
+        // Only subscribe if we have a user address (XRPL wallet)
+        if (!redemption.walletAddress) {
+          console.warn(`⚠️  Redemption ${redemption.id} missing wallet address, skipping`);
+          continue;
+        }
+
+        // Subscribe to user address to monitor for incoming payments
+        await this.subscribeUserForRedemption(redemption.walletAddress);
+        
+        console.log(`✅ Registered redemption ${redemption.id} for monitoring`, {
+          userAddress: redemption.walletAddress,
+          agentAddress: redemption.agentUnderlyingAddress || 'unknown',
+          xrpSent: redemption.xrpSent || 'pending',
+        });
+      }
+
+      console.log(`✅ Loaded ${pendingRedemptions.length} pending redemption(s) from database`);
+    } catch (error) {
+      console.error("❌ Error loading pending redemptions:", error);
+      // Don't throw - allow listener to continue even if loading fails
+    }
   }
 
   async stop() {
@@ -123,6 +200,79 @@ export class XRPLDepositListener {
     }
   }
 
+  /**
+   * Subscribe user address for redemption payment monitoring.
+   * This monitors for incoming XRP payments from the FAssets agent to the user.
+   * 
+   * @param userAddress - User's XRPL address (destination for redemption payment)
+   */
+  async subscribeUserForRedemption(userAddress: string): Promise<void> {
+    if (this.monitoredUserAddresses.has(userAddress)) {
+      console.log(`User address ${userAddress} already monitored for redemptions`);
+      return;
+    }
+
+    this.monitoredUserAddresses.add(userAddress);
+    
+    if (this.isRunning) {
+      await this.client.request({
+        command: "subscribe",
+        accounts: [userAddress],
+      });
+      console.log(`🔔 Now monitoring user for redemption payments: ${userAddress}`);
+      
+      // Check for recent transactions that may have been made before subscription
+      await this.checkRecentTransactionsForUser(userAddress);
+    }
+  }
+
+  /**
+   * Unsubscribe user address when redemption is completed or failed.
+   * 
+   * @param userAddress - User's XRPL address to stop monitoring
+   */
+  async unsubscribeUserAddress(userAddress: string): Promise<void> {
+    if (!this.monitoredUserAddresses.has(userAddress)) {
+      return;
+    }
+
+    this.monitoredUserAddresses.delete(userAddress);
+    
+    if (this.isRunning) {
+      await this.client.request({
+        command: "unsubscribe",
+        accounts: [userAddress],
+      });
+      console.log(`🔕 Stopped monitoring user for redemptions: ${userAddress}`);
+    }
+  }
+
+  /**
+   * Find a matching redemption from the database.
+   * Uses exact matching on destination, source, and amount.
+   * 
+   * @param destination - User's XRPL address (payment destination)
+   * @param source - Agent's XRPL address (payment source)
+   * @param amountDrops - XRP amount in drops (formatted as decimal string)
+   * @returns Matching redemption or null
+   */
+  private async findMatchingRedemption(
+    destination: string,
+    source: string,
+    amountDrops: string
+  ): Promise<any | null> {
+    try {
+      return await this.config.storage.getRedemptionByMatch(
+        destination,
+        source,
+        amountDrops
+      );
+    } catch (error) {
+      console.error("Error finding matching redemption:", error);
+      return null;
+    }
+  }
+
   private async handleTransaction(tx: any) {
     // XRPL WebSocket can send transaction data in either tx.transaction or tx.tx_json
     const transaction = tx.transaction || tx.tx_json;
@@ -153,18 +303,23 @@ export class XRPLDepositListener {
     }
 
     const destination = transaction.Destination;
+    const source = transaction.Account;
     const isVaultPayment = this.config.vaultAddress && destination === this.config.vaultAddress;
     const isAgentPayment = this.monitoredAgentAddresses.has(destination);
+    const isUserPayment = this.monitoredUserAddresses.has(destination);
 
     console.log("=== Matching Transaction Against Monitored Addresses ===", {
       destination,
+      source,
       vaultAddress: this.config.vaultAddress,
       isVaultPayment,
       monitoredAgentAddresses: Array.from(this.monitoredAgentAddresses),
       isAgentPayment,
+      monitoredUserAddresses: Array.from(this.monitoredUserAddresses),
+      isUserPayment,
     });
 
-    if (!isVaultPayment && !isAgentPayment) {
+    if (!isVaultPayment && !isAgentPayment && !isUserPayment) {
       console.log("⏭️  Skipping - destination not monitored");
       return;
     }
@@ -212,12 +367,52 @@ export class XRPLDepositListener {
       } catch (error) {
         console.error("❌ Error handling agent payment:", error);
       }
+    } else if (isUserPayment && this.config.onRedemptionPayment) {
+      // Check if this is a redemption payment (agent → user)
+      console.log(`🔍 Checking if payment to user is a redemption payment...`, {
+        destination,
+        source,
+        amount: amountDrops,
+      });
+
+      const matchingRedemption = await this.findMatchingRedemption(
+        destination,
+        source,
+        amountDrops
+      );
+
+      if (matchingRedemption) {
+        const payment: RedemptionPayment = {
+          redemptionId: matchingRedemption.id,
+          userAddress: destination,
+          agentAddress: source,
+          amount: amountDrops,
+          txHash: txHash,
+          memo: memo,
+        };
+
+        console.log(`💸 XRP Redemption payment detected (agent → user):`, payment);
+
+        try {
+          await this.config.onRedemptionPayment(payment);
+        } catch (error) {
+          console.error("❌ Error handling redemption payment:", error);
+        }
+      } else {
+        console.log(`ℹ️  Payment to monitored user but no matching redemption found`, {
+          destination,
+          source,
+          amount: amountDrops,
+        });
+      }
     } else {
       console.log("⚠️  No handler configured for this payment type:", {
         isVaultPayment,
         hasDepositHandler: !!this.config.onDeposit,
         isAgentPayment,
         hasAgentHandler: !!this.config.onAgentPayment,
+        isUserPayment,
+        hasRedemptionHandler: !!this.config.onRedemptionPayment,
       });
     }
   }
@@ -314,6 +509,109 @@ export class XRPLDepositListener {
       console.log(`✅ Processed ${processedCount} historical transaction(s) for ${address}`);
     } catch (error) {
       console.error(`❌ Error checking recent transactions for ${address}:`, error);
+    }
+  }
+
+  /**
+   * Check for recent incoming transactions to user address for redemption payments.
+   * This helps catch redemption payments made before the user address was subscribed.
+   */
+  private async checkRecentTransactionsForUser(userAddress: string): Promise<void> {
+    console.log(`🔍 Checking recent transactions for user ${userAddress}...`);
+    
+    try {
+      const response = await this.client.request({
+        command: "account_tx",
+        account: userAddress,
+        limit: 100, // Check last 100 transactions
+      });
+
+      if (!response.result?.transactions || response.result.transactions.length === 0) {
+        console.log(`No recent transactions found for user ${userAddress}`);
+        return;
+      }
+
+      console.log(`Found ${response.result.transactions.length} recent transactions for user ${userAddress}`);
+
+      // Current time in seconds (XRPL uses Ripple Epoch: seconds since 2000-01-01)
+      const currentTime = Math.floor(Date.now() / 1000) - 946684800; // Ripple epoch offset
+      const fifteenMinutesAgo = currentTime - (15 * 60); // 15 minutes in seconds
+
+      let processedCount = 0;
+
+      for (const txWrapper of response.result.transactions) {
+        const tx = txWrapper.tx as any;
+        
+        // Skip if transaction data is missing
+        if (!tx) {
+          continue;
+        }
+        
+        // Only process Payment transactions
+        if (tx.TransactionType !== "Payment") {
+          continue;
+        }
+
+        // Only process incoming payments (where this address is the destination)
+        if (tx.Destination !== userAddress) {
+          continue;
+        }
+
+        // Only process XRP payments (not IOUs/tokens)
+        if (typeof tx.Amount !== "string") {
+          continue;
+        }
+
+        // Check if transaction is within the last 15 minutes
+        const txTime = tx.date;
+        if (txTime && txTime < fifteenMinutesAgo) {
+          console.log(`⏭️  Skipping old transaction from ${new Date((txTime + 946684800) * 1000).toISOString()}`);
+          continue;
+        }
+
+        // Process this transaction
+        const amount = (parseInt(tx.Amount) / 1_000_000).toString();
+        const memo = this.extractMemo(tx.Memos);
+        const source = tx.Account;
+
+        console.log(`📋 Processing historical transaction for user:`, {
+          from: source,
+          to: tx.Destination,
+          amount,
+          memo,
+          txHash: tx.hash,
+          date: txTime ? new Date((txTime + 946684800) * 1000).toISOString() : 'unknown',
+        });
+
+        // Check if this matches a pending redemption
+        const matchingRedemption = await this.findMatchingRedemption(
+          userAddress,
+          source,
+          amount
+        );
+
+        if (matchingRedemption && this.config.onRedemptionPayment) {
+          const payment: RedemptionPayment = {
+            redemptionId: matchingRedemption.id,
+            userAddress: userAddress,
+            agentAddress: source,
+            amount: amount,
+            txHash: tx.hash,
+            memo: memo,
+          };
+
+          try {
+            await this.config.onRedemptionPayment(payment);
+            processedCount++;
+          } catch (error) {
+            console.error(`❌ Error processing historical redemption payment:`, error);
+          }
+        }
+      }
+
+      console.log(`✅ Processed ${processedCount} historical redemption transaction(s) for user ${userAddress}`);
+    } catch (error) {
+      console.error(`❌ Error checking recent transactions for user ${userAddress}:`, error);
     }
   }
 

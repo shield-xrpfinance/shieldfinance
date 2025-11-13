@@ -4,7 +4,7 @@ import { FAssetsClient } from "../utils/fassets-client";
 import { generateFDCProof, FDCTimeoutError } from "../utils/fdc-proof";
 import type { IStorage } from "../storage";
 import type { SelectXrpToFxrpBridge, PaymentRequest } from "../../shared/schema";
-import type { XRPLDepositListener } from "../listeners/XRPLDepositListener";
+import type { XRPLDepositListener, RedemptionPayment } from "../listeners/XRPLDepositListener";
 import type { VaultService } from "./VaultService";
 
 export interface BridgeServiceConfig {
@@ -1086,15 +1086,38 @@ export class BridgeService {
         receiverXrplAddress
       );
 
-      // Update redemption status with redemption details
+      // Step 2: Query redemption details to get assigned agent
+      console.log("⏳ Step 2: Querying redemption request for agent details...");
+      
+      const redemptionDetails = await this.fassetsClient.getRedemptionRequest(redemptionRequest.requestId);
+      
+      console.log(`✅ Agent assigned to redemption:`);
+      console.log(`   Agent Vault (Flare): ${redemptionDetails.agentVault}`);
+      console.log(`   Agent XRPL Address: ${redemptionDetails.paymentAddress}`);
+      
+      // Calculate expected XRP amount in drops for matching (FXRP and XRP both use 6 decimals)
+      const expectedXrpDrops = ethers.parseUnits(fxrpAmount, 6).toString();
+      
+      // Update redemption status with redemption details AND agent info
       await this.config.storage.updateRedemptionStatus(redemptionId, "redeeming_fxrp", {
         fassetsRedemptionTxHash: redemptionRequest.txHash,
         redemptionRequestId: redemptionRequest.requestId.toString(),
+        agentVaultAddress: redemptionDetails.agentVault,
+        agentUnderlyingAddress: redemptionDetails.paymentAddress,
+        expectedXrpDrops: expectedXrpDrops,
       });
+
+      // Subscribe XRPL listener to monitor for redemption payment from agent to user
+      if (this.xrplListener) {
+        await this.xrplListener.subscribeUserForRedemption(receiverXrplAddress);
+        console.log(`🔔 XRPL listener now monitoring user ${receiverXrplAddress} for redemption payment`);
+        console.log(`   Expecting payment from agent: ${redemptionDetails.paymentAddress}`);
+      }
 
       console.log(`✅ Redemption requested from FAssets`);
       console.log(`   Request ID: ${redemptionRequest.requestId}`);
       console.log(`   TX Hash: ${redemptionRequest.txHash}`);
+      console.log(`   Agent XRPL Address: ${redemptionDetails.paymentAddress}`);
       console.log(`   Agent will send XRP to: ${receiverXrplAddress}`);
       console.log("");
       console.log("   ⏳ Waiting for FAssets agent to send XRP...");
@@ -1198,11 +1221,25 @@ export class BridgeService {
     // Simulate redemption request
     const demoRedemptionRequestId = `demo-redemption-${Date.now()}`;
     const demoTxHash = `0xDEMOREDEMPTION${Date.now().toString(16)}`;
+    const demoAgentAddress = `rDEMOAgent${Date.now().toString(36)}`;
+    
+    // Calculate expected XRP amount in drops for matching (FXRP and XRP both use 6 decimals)
+    const expectedXrpDrops = ethers.parseUnits(fxrpAmount, 6).toString();
 
     await this.config.storage.updateRedemptionStatus(redemptionId, "redeeming_fxrp", {
       fassetsRedemptionTxHash: demoTxHash,
       redemptionRequestId: demoRedemptionRequestId,
+      agentVaultAddress: "0xDEMO" + Date.now().toString(16).slice(-8),
+      agentUnderlyingAddress: demoAgentAddress,
+      expectedXrpDrops: expectedXrpDrops,
     });
+
+    // Subscribe XRPL listener to monitor for redemption payment (demo mode)
+    if (this.xrplListener) {
+      await this.xrplListener.subscribeUserForRedemption(receiverXrplAddress);
+      console.log(`🔔 [DEMO] XRPL listener now monitoring user ${receiverXrplAddress} for redemption payment`);
+      console.log(`   Expecting payment from demo agent: ${demoAgentAddress}`);
+    }
 
     console.log("   [1/3] Redemption requested from AssetManager...");
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -1218,11 +1255,50 @@ export class BridgeService {
 
     // Simulate redemption confirmation
     console.log("   [3/3] Confirming redemption payment...");
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // Demo mode: Skip blockchain calls but still update user's position and create transaction
+    console.log("📝 Demo mode: Updating position and creating transaction...");
+    
+    // Get redemption to access positionId, vaultId, shareAmount
+    const redemption = await this.config.storage.getRedemptionById(redemptionId);
+    if (!redemption) {
+      throw new Error("Redemption not found");
+    }
+    
+    // Update position balance (deduct shXRP)
+    const position = await this.config.storage.getPosition(redemption.positionId);
+    if (!position) {
+      throw new Error("Position not found");
+    }
+    
+    const newBalance = parseFloat(position.amount) - parseFloat(redemption.shareAmount);
+    await this.config.storage.updatePosition(redemption.positionId, {
+      amount: newBalance.toFixed(6),
+    });
+    
+    // Create withdrawal transaction record
+    await this.config.storage.createTransaction({
+      vaultId: redemption.vaultId,
+      positionId: redemption.positionId,
+      type: "withdrawal",
+      amount: redemption.shareAmount,
+      rewards: "0",
+      status: "completed",
+      txHash: `demo-redemption-${redemptionId}`,
+      network: this.config.network === "mainnet" ? "mainnet" : "testnet",
+    });
+    
+    console.log("✅ Demo mode: Position and transaction updated");
+    
+    // Now mark as completed
     await this.config.storage.updateRedemptionStatus(redemptionId, "completed", {
       fdcProofHash: `0xDEMOPROOF${Date.now().toString(16)}`,
       fdcAttestationTxHash: `0xDEMOCONFIRM${Date.now().toString(16)}`,
+      completedAt: new Date(),
+      fxrpRedeemed: redemption.shareAmount,
+      xrpSent: redemption.shareAmount,
     });
-    await new Promise(resolve => setTimeout(resolve, 1000));
 
     console.log("   ✅ Demo redemption completed successfully");
     console.log("");
@@ -1238,5 +1314,208 @@ export class BridgeService {
   async processPendingBridges(): Promise<void> {
     // TODO: Query pending bridges and retry failed ones
     console.log("Checking for pending bridges...");
+  }
+
+  /**
+   * Phase 3: Generate FDC proof for redemption payment (agent→user)
+   * This is called after the XRPL listener detects the agent sending XRP to the user
+   */
+  async generateFDCProofForRedemption(
+    xrplTxHash: string,
+    redemptionId: string
+  ): Promise<{ proof: any; attestationTxHash: string; votingRoundId: number }> {
+    console.log(`\n🔄 Generating FDC proof for redemption ${redemptionId}`);
+    
+    // Fetch XRPL transaction for timestamp
+    const { Client } = await import("xrpl");
+    const network = this.config.network === "mainnet" 
+      ? "wss://xrplcluster.com" 
+      : "wss://s.altnet.rippletest.net:51233";
+    
+    const client = new Client(network);
+    await client.connect();
+    
+    const txResponse = await client.request({
+      command: "tx",
+      transaction: xrplTxHash,
+    });
+    await client.disconnect();
+    
+    if (!txResponse.result?.validated) {
+      throw new Error("XRPL transaction not validated yet");
+    }
+    
+    // Calculate Unix timestamp from Ripple epoch (matching existing pattern)
+    const rippleEpochOffset = 946684800;
+    const result = txResponse.result as any;
+    let rippleTimestamp: number | null = null;
+    
+    if (result.date !== undefined) {
+      rippleTimestamp = Number(result.date);
+    } else if (result.tx?.date !== undefined) {
+      rippleTimestamp = Number(result.tx.date);
+    } else if (result.tx_json?.date !== undefined) {
+      rippleTimestamp = Number(result.tx_json.date);
+    }
+    
+    if (rippleTimestamp === null || !isFinite(rippleTimestamp)) {
+      throw new Error("Could not extract valid timestamp from XRPL transaction");
+    }
+    
+    const unixTimestamp = rippleTimestamp + rippleEpochOffset;
+    
+    // Generate FDC proof (reuse existing generateFDCProof function)
+    const fdcResult = await generateFDCProof(
+      xrplTxHash,
+      this.config.network,
+      this.config.flareClient,
+      unixTimestamp
+    );
+    
+    console.log(`✅ FDC proof generated`);
+    console.log(`   Attestation TX: ${fdcResult.attestationTxHash}`);
+    console.log(`   Voting Round: ${fdcResult.votingRoundId}`);
+    
+    return fdcResult;
+  }
+
+  /**
+   * Confirm redemption payment on FAssets contract
+   * This submits the FDC proof to complete the redemption
+   */
+  async confirmRedemptionPayment(
+    proof: any,
+    requestId: bigint
+  ): Promise<string> {
+    if (!this.fassetsClient) {
+      throw new Error("FAssetsClient not initialized");
+    }
+    
+    console.log(`\n✅ Confirming redemption payment on FAssets contract`);
+    const txHash = await this.fassetsClient.confirmRedemptionPayment(proof, requestId);
+    console.log(`✅ Redemption payment confirmed: ${txHash}`);
+    
+    return txHash;
+  }
+
+  /**
+   * Handler called by XRPL listener when agent→user payment is detected
+   * Triggers Phase 3 background worker in non-blocking mode
+   */
+  async handleRedemptionPayment(payment: RedemptionPayment): Promise<void> {
+    console.log(`\n💰 Redemption payment detected!`);
+    console.log(`   Redemption ID: ${payment.redemptionId}`);
+    console.log(`   User: ${payment.userAddress}`);
+    console.log(`   Agent: ${payment.agentAddress}`);
+    console.log(`   Amount: ${payment.amount} XRP`);
+    console.log(`   TX Hash: ${payment.txHash}`);
+    
+    // Trigger Phase 3 in background (don't await)
+    this.processRedemptionConfirmation(payment.redemptionId, payment.txHash).catch(error => {
+      console.error(`Phase 3 failed for redemption ${payment.redemptionId}:`, error);
+    });
+  }
+
+  /**
+   * Phase 3 Background Worker: Process redemption confirmation
+   * This orchestrates the complete redemption confirmation flow:
+   * 1. Generate FDC proof of agent→user payment
+   * 2. Confirm redemption payment on FAssets contract
+   * 3. Update position balance (deduct shXRP)
+   * 4. Create withdrawal transaction record
+   * 5. Mark redemption as completed
+   */
+  async processRedemptionConfirmation(
+    redemptionId: string,
+    xrplTxHash: string
+  ): Promise<void> {
+    try {
+      console.log(`\n🔄 Starting redemption confirmation (Phase 3)`);
+      console.log(`   Redemption ID: ${redemptionId}`);
+      console.log(`   XRPL TX Hash: ${xrplTxHash}`);
+      
+      const redemption = await this.config.storage.getRedemptionById(redemptionId);
+      if (!redemption) throw new Error("Redemption not found");
+      
+      // Update status to xrpl_payout
+      await this.config.storage.updateRedemptionStatus(redemptionId, "xrpl_payout", {
+        xrplPayoutTxHash: xrplTxHash,
+        xrplPayoutAt: new Date(),
+      });
+      
+      // Step 1: Generate FDC proof of agent→user payment
+      console.log("⏳ Step 1: Generating FDC proof...");
+      const fdcResult = await this.generateFDCProofForRedemption(
+        xrplTxHash,
+        redemptionId
+      );
+      
+      // Step 2: Confirm redemption payment on FAssets contract
+      console.log("⏳ Step 2: Confirming redemption payment...");
+      const confirmationTxHash = await this.confirmRedemptionPayment(
+        fdcResult.proof,
+        BigInt(redemption.redemptionRequestId!)
+      );
+      
+      // Step 3: Update position balance (deduct shXRP)
+      console.log("⏳ Step 3: Updating position balance...");
+      const position = await this.config.storage.getPosition(redemption.positionId);
+      if (!position) throw new Error("Position not found");
+      
+      const newBalance = parseFloat(position.amount) - parseFloat(redemption.shareAmount);
+      await this.config.storage.updatePosition(redemption.positionId, {
+        amount: newBalance.toFixed(6)
+      });
+      
+      // Step 4: Create withdrawal transaction record
+      console.log("⏳ Step 4: Creating transaction record...");
+      await this.config.storage.createTransaction({
+        vaultId: redemption.vaultId,
+        positionId: redemption.positionId,
+        type: "withdrawal",
+        amount: redemption.fxrpRedeemed || "0",
+        rewards: "0",
+        status: "completed",
+        txHash: xrplTxHash,
+        network: this.config.network === "mainnet" ? "mainnet" : "testnet",
+      });
+      
+      // Step 5: Mark redemption as completed
+      await this.config.storage.updateRedemptionStatus(redemptionId, "completed", {
+        fdcAttestationTxHash: fdcResult.attestationTxHash,
+        fdcVotingRoundId: fdcResult.votingRoundId.toString(),
+        fdcProofHash: JSON.stringify(fdcResult.proof),
+        confirmationTxHash: confirmationTxHash,
+        completedAt: new Date(),
+      });
+      
+      // Unsubscribe user address from listener (cleanup)
+      if (this.xrplListener) {
+        await this.xrplListener.unsubscribeUserAddress(redemption.walletAddress);
+      }
+      
+      console.log(`✅ Redemption ${redemptionId} completed successfully`);
+      console.log(`   XRP sent to: ${redemption.walletAddress}`);
+      console.log(`   Amount: ${redemption.fxrpRedeemed} FXRP → ${redemption.xrpSent} XRP`);
+      
+    } catch (error) {
+      // Handle FDC timeout separately
+      if (error instanceof FDCTimeoutError) {
+        console.warn(`⏰ FDC timeout for redemption ${redemptionId}`);
+        await this.config.storage.updateRedemptionStatus(redemptionId, "awaiting_proof", {
+          errorMessage: `FDC proof timeout. Will retry.`,
+          fdcVotingRoundId: error.votingRoundId.toString(),
+          fdcRequestBytes: error.requestBytes,
+        });
+        return; // Don't throw - timeout is recoverable
+      }
+      
+      // Other errors are terminal
+      console.error(`❌ Redemption confirmation failed:`, error);
+      await this.config.storage.updateRedemptionStatus(redemptionId, "failed", {
+        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      });
+      throw error;
+    }
   }
 }

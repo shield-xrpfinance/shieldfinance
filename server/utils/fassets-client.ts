@@ -375,6 +375,43 @@ export class FAssetsClient {
     }
   }
 
+  /**
+   * Get redemption request details from FAssets contract
+   * This includes the assigned agent vault address and payment details
+   */
+  async getRedemptionRequest(requestId: bigint): Promise<{
+    agentVault: string;
+    valueUBA: bigint;
+    feeUBA: bigint;
+    firstUnderlyingBlock: bigint;
+    lastUnderlyingBlock: bigint;
+    lastUnderlyingTimestamp: bigint;
+    paymentAddress: string;
+  }> {
+    const assetManager = await this.getAssetManager();
+    
+    console.log(`\n🔍 Querying redemption request ${requestId}...`);
+    
+    // Query the redemption request from contract
+    const request = await assetManager.getRedemptionRequest(requestId);
+    
+    console.log(`✅ Redemption request details:`);
+    console.log(`   Agent Vault: ${request.agentVault}`);
+    console.log(`   Value UBA: ${request.valueUBA}`);
+    console.log(`   Fee UBA: ${request.feeUBA}`);
+    console.log(`   Payment Address: ${request.paymentAddress}`);
+    
+    return {
+      agentVault: request.agentVault,
+      valueUBA: request.valueUBA,
+      feeUBA: request.feeUBA,
+      firstUnderlyingBlock: request.firstUnderlyingBlock,
+      lastUnderlyingBlock: request.lastUnderlyingBlock,
+      lastUnderlyingTimestamp: request.lastUnderlyingTimestamp,
+      paymentAddress: request.paymentAddress,
+    };
+  }
+
   async confirmRedemptionPayment(
     proof: any,
     requestId: bigint

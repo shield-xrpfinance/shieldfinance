@@ -255,6 +255,11 @@ app.use((req, res, next) => {
     }
   });
   
+  // Register redemption payment handler with listener (Phase 3: agent→user payment detection)
+  xrplListener.setRedemptionPaymentHandler(async (payment) => {
+    await bridgeService.handleRedemptionPayment(payment);
+  });
+  
   // Start listener last (after all wiring is complete)
   await xrplListener.start();
 

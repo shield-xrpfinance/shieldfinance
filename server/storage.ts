@@ -44,6 +44,8 @@ export interface IStorage {
   getRedemptionsByWallet(walletAddress: string): Promise<SelectFxrpToXrpRedemption[]>;
   updateRedemption(id: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void>;
   updateRedemptionStatus(id: string, status: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void>;
+  getAllPendingRedemptions(): Promise<SelectFxrpToXrpRedemption[]>;
+  getRedemptionByMatch(userAddress: string, agentAddress: string, amountDrops: string): Promise<SelectFxrpToXrpRedemption | null>;
   
   createFirelightPosition(position: InsertFirelightPosition): Promise<SelectFirelightPosition>;
   getFirelightPositionByVault(vaultId: string): Promise<SelectFirelightPosition | undefined>;
@@ -495,6 +497,44 @@ export class DatabaseStorage implements IStorage {
     await db.update(fxrpToXrpRedemptions)
       .set({ status: status as any, ...updates, completedAt: status === 'completed' ? new Date() : undefined })
       .where(eq(fxrpToXrpRedemptions.id, id));
+  }
+
+  async getAllPendingRedemptions(): Promise<SelectFxrpToXrpRedemption[]> {
+    return db.query.fxrpToXrpRedemptions.findMany({
+      where: eq(fxrpToXrpRedemptions.status, "awaiting_proof"),
+      orderBy: desc(fxrpToXrpRedemptions.createdAt),
+    });
+  }
+
+  async getRedemptionByMatch(
+    userAddress: string,
+    agentAddress: string,
+    amountDrops: string
+  ): Promise<SelectFxrpToXrpRedemption | null> {
+    // Find redemptions awaiting proof that match the payment details
+    const redemptions = await db.query.fxrpToXrpRedemptions.findMany({
+      where: and(
+        eq(fxrpToXrpRedemptions.status, "awaiting_proof"),
+        eq(fxrpToXrpRedemptions.walletAddress, userAddress),
+        eq(fxrpToXrpRedemptions.agentUnderlyingAddress, agentAddress)
+      ),
+      orderBy: desc(fxrpToXrpRedemptions.createdAt),
+    });
+
+    // Match on exact amount (convert drops to decimal string with 6 decimals)
+    // amountDrops is already formatted as XRP (e.g., "100.5")
+    // We need to match against xrpSent field
+    for (const redemption of redemptions) {
+      if (!redemption.xrpSent) continue;
+      
+      // Compare amounts with exact match (no tolerance)
+      // Both should be decimal strings with up to 6 decimals
+      if (redemption.xrpSent === amountDrops) {
+        return redemption;
+      }
+    }
+
+    return null;
   }
 
   async createFirelightPosition(position: InsertFirelightPosition): Promise<SelectFirelightPosition> {

@@ -186,8 +186,13 @@ export const fxrpToXrpRedemptions = pgTable("fxrp_to_xrp_redemptions", {
   
   // FAssets redemption details (mirroring bridge fields)
   redemptionRequestId: varchar("redemption_request_id"),
-  agentVaultAddress: varchar("agent_vault_address"),
+  agentVaultAddress: varchar("agent_vault_address"), // Agent's Flare contract address
+  agentUnderlyingAddress: varchar("agent_underlying_address"), // Agent's XRPL address (payment source)
+  expectedXrpDrops: varchar("expected_xrp_drops"), // Expected XRP amount in drops for matching
+  confirmationTxHash: varchar("confirmation_tx_hash"), // Flare TX: Confirmation of redemption payment
   fdcAttestationTxHash: varchar("fdc_attestation_tx_hash"),
+  fdcVotingRoundId: varchar("fdc_voting_round_id"),
+  fdcRequestBytes: text("fdc_request_bytes"),
   fdcProofHash: varchar("fdc_proof_hash"),
   fdcProofData: text("fdc_proof_data"),
   
