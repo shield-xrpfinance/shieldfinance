@@ -166,6 +166,7 @@ export default function Portfolio() {
         body: JSON.stringify({
           positionId: selectedPosition.id,
           shareAmount: amount,
+          userAddress: address,
         }),
       });
 
