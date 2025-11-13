@@ -6,6 +6,9 @@ import { XummSdk } from "xumm-sdk";
 import { Client } from "xrpl";
 import type { BridgeService } from "./services/BridgeService";
 import type { FlareClient } from "./utils/flare-client";
+import { db } from "./db";
+import { fxrpToXrpRedemptions } from "@shared/schema";
+import { eq, and } from "drizzle-orm";
 
 // Background verification for wallet-auto-submitted transactions
 async function verifyWalletAutoSubmittedTransaction(txHash: string, network: string) {
@@ -1066,7 +1069,113 @@ export async function registerRoutes(
     }
   });
 
-  // Automated withdrawal flow: shXRP → FXRP → XRP
+  // Background processing function for redemptions
+  async function processRedemptionBackground(redemptionId: string) {
+    console.log(`\n🔄 Starting background withdrawal processing for ${redemptionId}`);
+    
+    try {
+      // Atomic claim: Transition from "pending" to "redeeming_shares" in one atomic operation
+      // This ensures only ONE worker can process this redemption (prevents race conditions)
+      console.log(`⏳ Attempting to claim redemption ${redemptionId}...`);
+      
+      const claimResult = await db.update(fxrpToXrpRedemptions)
+        .set({ status: "redeeming_shares" })
+        .where(
+          and(
+            eq(fxrpToXrpRedemptions.id, redemptionId),
+            eq(fxrpToXrpRedemptions.status, "pending")
+          )
+        )
+        .returning();
+
+      if (!claimResult || claimResult.length === 0) {
+        console.log(`⏭️  Redemption ${redemptionId} already claimed by another worker`);
+        console.log(`   Skipping duplicate background job`);
+        return;
+      }
+
+      console.log(`✅ Successfully claimed redemption ${redemptionId} for processing`);
+
+      const redemption = await storage.getRedemptionById(redemptionId);
+      if (!redemption) {
+        throw new Error("Redemption not found");
+      }
+
+      const position = await storage.getPosition(redemption.positionId);
+      if (!position) {
+        throw new Error("Position not found");
+      }
+
+      // Step 1: Redeem shXRP shares → FXRP (status already set to "redeeming_shares" above)
+      console.log(`⏳ Redeeming shXRP shares for redemption ${redemptionId}...`);
+
+      // Get VaultService from the main application context
+      const vaultService = (bridgeService as any).config?.vaultService;
+      if (!vaultService) {
+        throw new Error("VaultService not available");
+      }
+
+      // Step 2: Redeem shXRP shares → FXRP
+      const { fxrpReceived, txHash: vaultRedeemTxHash } = await vaultService.redeemShares(
+        position.vaultId,
+        redemption.walletAddress,
+        redemption.shareAmount
+      );
+
+      console.log(`✅ Redeemed ${redemption.shareAmount} shXRP → ${fxrpReceived} FXRP`);
+
+      await storage.updateRedemption(redemptionId, {
+        fxrpRedeemed: fxrpReceived,
+        vaultRedeemTxHash,
+        sharesRedeemedAt: new Date(),
+        status: "redeemed_fxrp"
+      });
+
+      // Step 3: Redeem FXRP → XRP via FAssets
+      console.log(`⏳ Requesting FXRP → XRP redemption...`);
+      await storage.updateRedemptionStatus(redemptionId, "redeeming_fxrp", {});
+      
+      const redemptionTxHash = await bridgeService.redeemFxrpToXrp(
+        redemptionId,
+        fxrpReceived,
+        redemption.walletAddress
+      );
+
+      console.log(`✅ FAssets redemption requested: ${redemptionTxHash}`);
+      console.log(`   Request submitted to AssetManager`);
+      console.log(`   Agent will send XRP to: ${redemption.walletAddress}`);
+      console.log(`   ⏳ Waiting for FAssets agent payment...`);
+
+      // Retrieve updated redemption to get AssetManager details
+      const updatedRedemption = await storage.getRedemptionById(redemptionId);
+      
+      // Mark as awaiting agent payment (Phase 2 will be handled by XRPL listener)
+      await storage.updateRedemptionStatus(redemptionId, "awaiting_proof", {
+        fxrpRedeemedAt: new Date(),
+      });
+      
+      console.log(`✅ Redemption phase 1 complete (shXRP → FXRP → Redemption Request)`);
+      console.log(`   Status: awaiting_proof`);
+      console.log(`   Request ID: ${updatedRedemption?.redemptionRequestId || 'pending'}`);
+      console.log(`   Next: FAssets agent will send XRP, then proof confirmation will occur`);
+      console.log(``);
+      console.log(`⚠️  NOTE: Position and transaction records will be updated after full completion`);
+      console.log(`   User's position shares remain unchanged until XRP is received`);
+      console.log(`   This ensures data integrity if agent payment fails or stalls`);
+
+      console.log(`\n✅ Background withdrawal ${redemptionId} phase 1 completed`);
+      
+    } catch (error) {
+      console.error(`❌ Background withdrawal ${redemptionId} failed:`, error);
+      await storage.updateRedemption(redemptionId, {
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : "Unknown error"
+      });
+      throw error;
+    }
+  }
+
+  // Automated withdrawal flow: shXRP → FXRP → XRP (Async version)
   app.post("/api/withdrawals", async (req, res) => {
     const { positionId, shareAmount, userAddress } = req.body;
 
@@ -1102,8 +1211,8 @@ export async function registerRoutes(
         });
       }
 
-      // Step 2: Create redemption record
-      console.log("⏳ Step 1: Creating redemption record...");
+      // Step 2: Create redemption record with status="pending"
+      console.log("⏳ Creating redemption record...");
       const redemption = await storage.createRedemption({
         positionId,
         walletAddress: userAddress,
@@ -1130,76 +1239,17 @@ export async function registerRoutes(
 
       console.log(`✅ Redemption record created: ${redemption.id}`);
 
-      // Step 3: Redeem shXRP shares → FXRP
-      console.log("⏳ Step 2: Redeeming shXRP shares for FXRP...");
-      await storage.updateRedemptionStatus(redemption.id, "redeeming_shares", {});
-
-      // Get VaultService from the main application context
-      // Note: VaultService needs to be passed to registerRoutes
-      const vaultService = (bridgeService as any).config?.vaultService;
-      if (!vaultService) {
-        throw new Error("VaultService not available");
-      }
-
-      const { fxrpReceived, txHash: vaultRedeemTxHash } = await vaultService.redeemShares(
-        position.vaultId,
-        userAddress,
-        shareAmount
-      );
-
-      console.log(`✅ Redeemed ${shareAmount} shXRP → ${fxrpReceived} FXRP`);
-
-      await storage.updateRedemptionStatus(redemption.id, "redeemed_fxrp", {
-        fxrpRedeemed: fxrpReceived,
-        fxrpRedeemedAt: new Date(),
-        vaultRedeemTxHash,
-      });
-
-      // Step 4: Redeem FXRP → XRP via FAssets
-      console.log("⏳ Step 3: Requesting FXRP → XRP redemption via FAssets...");
-      const redemptionTxHash = await bridgeService.redeemFxrpToXrp(
-        redemption.id,
-        fxrpReceived,
-        userAddress // Original depositor's XRPL wallet
-      );
-
-      console.log(`✅ FAssets redemption requested: ${redemptionTxHash}`);
-      console.log(`   FAssets agent will send XRP to: ${userAddress}`);
-
-      // Step 5: Update position (reduce shares)
-      const remainingShares = (positionShares - requestedShares).toString();
-      if (parseFloat(remainingShares) <= 0) {
-        // Delete position if all shares redeemed
-        await storage.deletePosition(positionId);
-        console.log(`✅ Position ${positionId} fully redeemed and deleted`);
-      } else {
-        // Update position with remaining shares
-        // Note: We'll need to implement updatePosition in storage
-        console.log(`   Remaining shares: ${remainingShares}`);
-      }
-
-      // Create transaction record for withdrawal
-      await storage.createTransaction({
-        vaultId: position.vaultId,
-        positionId: positionId,
-        type: "withdraw",
-        amount: shareAmount,
-        rewards: "0",
-        status: "completed",
-        txHash: vaultRedeemTxHash,
-        network: "coston2",
-      });
-
-      console.log(`✅ Transaction record created for withdrawal`);
-
-      // Return success response
-      res.json({
-        success: true,
+      // Step 3: Return immediately with redemption ID
+      res.json({ 
+        success: true, 
         redemptionId: redemption.id,
-        fxrpReceived,
-        status: "redeeming_fxrp",
-        message: `Withdrawal initiated. FAssets agent will send ${fxrpReceived} XRP to ${userAddress}. Track status with redemptionId.`,
-        txHash: redemptionTxHash,
+        status: "pending",
+        message: "Withdrawal initiated. Processing in background."
+      });
+
+      // Step 4: Process redemption in background (don't await!)
+      processRedemptionBackground(redemption.id).catch(error => {
+        console.error(`Background redemption ${redemption.id} failed:`, error);
       });
 
     } catch (error) {

@@ -11,6 +11,7 @@ export interface IStorage {
   getPositions(walletAddress?: string): Promise<Position[]>;
   getPosition(id: string): Promise<Position | undefined>;
   createPosition(position: InsertPosition): Promise<Position>;
+  updatePosition(id: string, updates: Partial<Position>): Promise<Position>;
   deletePosition(id: string): Promise<boolean>;
   
   getTransactions(limit?: number): Promise<Transaction[]>;
@@ -169,6 +170,17 @@ export class DatabaseStorage implements IStorage {
 
   async createPosition(insertPosition: InsertPosition): Promise<Position> {
     const [position] = await db.insert(positions).values(insertPosition).returning();
+    return position;
+  }
+
+  async updatePosition(id: string, updates: Partial<Position>): Promise<Position> {
+    const [position] = await db.update(positions)
+      .set(updates)
+      .where(eq(positions.id, id))
+      .returning();
+    if (!position) {
+      throw new Error(`Position ${id} not found`);
+    }
     return position;
   }
 
