@@ -1588,6 +1588,59 @@ export async function registerRoutes(
     }
   });
 
+  // Admin endpoint: Recover stuck FXRP by minting missing shXRP shares
+  app.post("/api/admin/recover-stuck-fxrp", async (req, res) => {
+    try {
+      console.log('\n🔧 [RECOVERY] Starting stuck FXRP recovery...\n');
+      
+      // Access FlareClient from bridgeService config (passed during registerRoutes)
+      const flareClient = (bridgeService as any).config.flareClient as FlareClient;
+      const vaultService = (bridgeService as any).config.vaultService;
+      
+      // Check current FXRP balance in smart account
+      const smartAccountAddress = flareClient.getSignerAddress();
+      const fxrpBalance = await flareClient.getFXRPBalance();
+      
+      console.log(`📊 Smart Account: ${smartAccountAddress}`);
+      console.log(`💵 FXRP Balance: ${fxrpBalance} FXRP`);
+      
+      if (parseFloat(fxrpBalance) === 0) {
+        return res.json({ 
+          success: true, 
+          message: "No stuck FXRP found. Nothing to recover.",
+          fxrpBalance: "0"
+        });
+      }
+      
+      // Mint shXRP shares from stuck FXRP
+      console.log(`\n💡 Found ${fxrpBalance} FXRP to mint into shXRP`);
+      
+      // Use VaultService to mint shares (includes approval + deposit)
+      const result = await vaultService.mintShares(
+        "default-vault", // Vault ID from database
+        fxrpBalance      // All available FXRP
+      );
+      
+      console.log(`✅ Recovery complete!`);
+      console.log(`   shXRP Minted: ${result.sharesMinted}`);
+      console.log(`   Transaction: ${result.txHash}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Stuck FXRP successfully minted into shXRP",
+        fxrpDeposited: fxrpBalance,
+        sharesMinted: result.sharesMinted,
+        txHash: result.txHash
+      });
+    } catch (error) {
+      console.error("Recovery error:", error);
+      res.status(500).json({ 
+        error: "Failed to recover stuck FXRP",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
