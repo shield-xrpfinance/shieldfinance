@@ -1631,6 +1631,126 @@ export async function registerRoutes(
     }
   });
 
+  // Admin endpoint: Query vault deposit events for reconciliation
+  app.get("/api/admin/vault-events", async (req, res) => {
+    try {
+      console.log('\n📜 [VAULT EVENTS] Querying historical deposit/mint events...\n');
+      
+      const flareClient = (bridgeService as any).config.flareClient as FlareClient;
+      const smartAccountAddress = flareClient.getSignerAddress();
+      const vaultAddress = getVaultAddress();
+      const provider = flareClient.provider;
+      
+      // Create vault contract instance with events
+      const VAULT_ABI = [
+        'event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)',
+        'event Transfer(address indexed from, address indexed to, uint256 value)',
+        'function decimals() view returns (uint8)'
+      ];
+      const vault = new ethers.Contract(vaultAddress, VAULT_ABI, provider);
+      const decimals = await vault.decimals();
+      
+      console.log(`Vault: ${vaultAddress}`);
+      console.log(`Smart Account: ${smartAccountAddress}`);
+      console.log(`Decimals: ${decimals}\n`);
+      
+      // Query Deposit events (ERC-4626) - these show FXRP deposited and shXRP minted
+      const currentBlockBigInt = await provider.getBlockNumber();
+      const currentBlock = Number(currentBlockBigInt); // Convert BigInt to number
+      // Vault deployed on Nov 12, 2025 - query last 2000 blocks (about 4 days on Flare)
+      const fromBlock = Math.max(0, currentBlock - 2000);
+      const CHUNK_SIZE = 30; // Flare RPC max blocks per query
+      
+      console.log(`Querying blocks ${fromBlock} to ${currentBlock} in chunks of ${CHUNK_SIZE}...`);
+      
+      // Helper to query events in chunks
+      async function queryEventsInChunks(filter: any, from: number, to: number): Promise<any[]> {
+        const allEvents: any[] = [];
+        for (let start = from; start <= to; start += CHUNK_SIZE) {
+          const end = Math.min(start + CHUNK_SIZE - 1, to);
+          try {
+            const events = await vault.queryFilter(filter, start, end);
+            allEvents.push(...events);
+            console.log(`  Queried blocks ${start}-${end}: ${events.length} events`);
+          } catch (err: any) {
+            console.warn(`  Failed blocks ${start}-${end}: ${err.message}`);
+          }
+        }
+        return allEvents;
+      }
+      
+      const depositFilter = vault.filters.Deposit(null, smartAccountAddress);
+      const depositEvents = await queryEventsInChunks(depositFilter, fromBlock, currentBlock);
+      
+      // Query Transfer events where from=0x0 (minting) to smart account
+      const mintFilter = vault.filters.Transfer(ethers.ZeroAddress, smartAccountAddress);
+      const mintEvents = await queryEventsInChunks(mintFilter, fromBlock, currentBlock);
+      
+      console.log(`Found ${depositEvents.length} Deposit events`);
+      console.log(`Found ${mintEvents.length} Mint events\n`);
+      
+      // Process events (convert all BigInts to strings for JSON serialization)
+      const deposits = await Promise.all(depositEvents.map(async (event: any) => {
+        const block = await event.getBlock();
+        return {
+          type: 'Deposit',
+          blockNumber: Number(event.blockNumber), // Convert BigInt to number
+          timestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
+          txHash: event.transactionHash,
+          sender: event.args.sender,
+          owner: event.args.owner,
+          fxrpDeposited: ethers.formatUnits(event.args.assets, decimals),
+          sharesMinted: ethers.formatUnits(event.args.shares, decimals)
+        };
+      }));
+      
+      const mints = await Promise.all(mintEvents.map(async (event: any) => {
+        const block = await event.getBlock();
+        return {
+          type: 'Mint',
+          blockNumber: Number(event.blockNumber), // Convert BigInt to number
+          timestamp: new Date(Number(block.timestamp) * 1000).toISOString(),
+          txHash: event.transactionHash,
+          to: event.args.to,
+          sharesMinted: ethers.formatUnits(event.args.value, decimals)
+        };
+      }));
+      
+      // Combine and sort by block number
+      const allEvents = [...deposits, ...mints].sort((a, b) => a.blockNumber - b.blockNumber);
+      
+      // Calculate totals
+      const totalSharesFromDeposits = deposits.reduce((sum, e) => sum + parseFloat(e.sharesMinted), 0);
+      const totalSharesFromMints = mints.reduce((sum, e) => sum + parseFloat(e.sharesMinted), 0);
+      
+      const summary = {
+        vaultAddress,
+        smartAccountAddress,
+        decimals: Number(decimals),
+        blockRange: { from: Number(fromBlock), to: Number(currentBlock) }, // Convert BigInts
+        eventCounts: {
+          deposits: depositEvents.length,
+          mints: mintEvents.length,
+          total: allEvents.length
+        },
+        totals: {
+          sharesFromDeposits: totalSharesFromDeposits,
+          sharesFromMints: totalSharesFromMints
+        },
+        events: allEvents
+      };
+      
+      res.json(summary);
+      
+    } catch (error: any) {
+      console.error('❌ [VAULT EVENTS] Error:', error);
+      res.status(500).json({ 
+        error: 'Failed to query vault events',
+        details: error.message 
+      });
+    }
+  });
+
   // Admin endpoint: Generate diagnostic snapshot of current system state
   app.get("/api/admin/diagnostic-snapshot", async (req, res) => {
     try {
