@@ -562,13 +562,15 @@ export async function registerRoutes(
         return res.status(400).json({ error: "This endpoint is only for XRP deposits. Use POST /api/positions for other assets." });
       }
 
-      // Create bridge record
+      // Create bridge record with 30-minute expiration
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
       const bridge = await storage.createBridge({
         vaultId,
         walletAddress,
         xrpAmount: amount,
         fxrpExpected: amount, // 1:1 for now
         status: 'pending',
+        expiresAt,
       });
 
       // Reserve collateral and get agent address (fast, no delays)
@@ -1639,8 +1641,9 @@ export async function registerRoutes(
     try {
       const { walletAddress, vaultId, xrpAmount, xrplTxHash } = req.body;
       
-      // Create bridge request
+      // Create bridge request with 30-minute expiration
       const requestId = `bridge-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
       const bridge = await storage.createBridge({
         requestId,
         walletAddress,
@@ -1657,6 +1660,7 @@ export async function registerRoutes(
         bridgeStartedAt: null,
         fxrpReceivedAt: null,
         completedAt: null,
+        expiresAt,
         errorMessage: null,
         retryCount: 0,
       });

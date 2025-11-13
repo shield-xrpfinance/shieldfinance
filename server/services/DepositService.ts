@@ -28,8 +28,9 @@ export class DepositService {
     console.log(`🎯 Processing deposit: ${deposit.amount} XRP for vault ${vaultId}`);
 
     try {
-      // Step 1: Create bridge request
+      // Step 1: Create bridge request with 30-minute expiration
       const requestId = `bridge-${Date.now()}-${Math.random().toString(36).substring(7)}`;
+      const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
       const bridge = await this.config.storage.createBridge({
         requestId,
         walletAddress: deposit.walletAddress,
@@ -45,6 +46,7 @@ export class DepositService {
         bridgeStartedAt: null,
         fxrpReceivedAt: null,
         completedAt: null,
+        expiresAt,
         errorMessage: null,
         retryCount: 0,
       });

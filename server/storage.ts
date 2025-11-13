@@ -33,6 +33,7 @@ export interface IStorage {
   getBridgeByRequestId(requestId: string): Promise<SelectXrpToFxrpBridge | undefined>;
   getBridgesByWallet(walletAddress: string): Promise<SelectXrpToFxrpBridge[]>;
   getBridgeByAgentAddress(agentAddress: string): Promise<SelectXrpToFxrpBridge | undefined>;
+  getBridgesByStatus(statuses: string[]): Promise<SelectXrpToFxrpBridge[]>;
   getPendingBridges(): Promise<SelectXrpToFxrpBridge[]>;
   getStuckBridges(): Promise<SelectXrpToFxrpBridge[]>;
   getRecoverableBridges(): Promise<SelectXrpToFxrpBridge[]>;
@@ -407,6 +408,26 @@ export class DatabaseStorage implements IStorage {
   async getBridgeByAgentAddress(agentAddress: string): Promise<SelectXrpToFxrpBridge | undefined> {
     return db.query.xrpToFxrpBridges.findFirst({
       where: eq(xrpToFxrpBridges.agentUnderlyingAddress, agentAddress),
+      orderBy: desc(xrpToFxrpBridges.createdAt),
+    });
+  }
+
+  async getBridgesByStatus(statuses: string[]): Promise<SelectXrpToFxrpBridge[]> {
+    if (statuses.length === 0) {
+      return [];
+    }
+    
+    if (statuses.length === 1) {
+      return db.query.xrpToFxrpBridges.findMany({
+        where: eq(xrpToFxrpBridges.status, statuses[0] as any),
+        orderBy: desc(xrpToFxrpBridges.createdAt),
+      });
+    }
+
+    // For multiple statuses, use IN operator via sql template
+    const statusConditions = statuses.map(s => `'${s}'`).join(',');
+    return db.query.xrpToFxrpBridges.findMany({
+      where: sql`${xrpToFxrpBridges.status}::text IN (${sql.raw(statusConditions)})`,
       orderBy: desc(xrpToFxrpBridges.createdAt),
     });
   }

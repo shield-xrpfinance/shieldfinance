@@ -147,6 +147,45 @@ app.use((req, res, next) => {
         console.log(`⚠️  No bridge found for agent ${payment.agentAddress}`);
         return;
       }
+
+      // Viability Check 1: Check if bridge is in terminal state
+      const terminalStates = ['completed', 'cancelled', 'failed', 'vault_mint_failed'];
+      if (terminalStates.includes(bridge.status)) {
+        console.warn(`⚠️  Rejecting payment for bridge in terminal state`, {
+          bridgeId: bridge.id,
+          status: bridge.status,
+          agentAddress: payment.agentAddress,
+          txHash: payment.txHash
+        });
+        return;
+      }
+
+      // Viability Check 2: Check if bridge is expired
+      if (bridge.expiresAt && new Date() > bridge.expiresAt) {
+        console.warn(`⚠️  Rejecting payment for expired bridge`, {
+          bridgeId: bridge.id,
+          expiresAt: bridge.expiresAt.toISOString(),
+          currentTime: new Date().toISOString(),
+          agentAddress: payment.agentAddress,
+          txHash: payment.txHash
+        });
+        
+        // Mark bridge as cancelled if not already
+        if (!terminalStates.includes(bridge.status)) {
+          await storage.updateBridge(bridge.id, {
+            status: 'cancelled',
+            cancelledAt: new Date(),
+            cancellationReason: 'expired'
+          });
+        }
+        
+        // Unsubscribe from agent address to save resources
+        if (bridge.agentUnderlyingAddress) {
+          await xrplListener.removeAgentAddress(bridge.agentUnderlyingAddress);
+        }
+        
+        return;
+      }
       
       // Validate payment reference (memo) matches
       if (!payment.memo || !bridge.paymentReference) {

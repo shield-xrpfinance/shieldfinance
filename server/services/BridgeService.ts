@@ -16,6 +16,9 @@ export interface BridgeServiceConfig {
   demoMode?: boolean;
 }
 
+// Bridge expiration constant - 30 minutes default
+const EXPIRATION_MINUTES = 30;
+
 /**
  * BridgeService handles XRP → FXRP conversion via FAssets protocol.
  * 
@@ -35,6 +38,7 @@ export class BridgeService {
   private fassetsClient: FAssetsClient | null;
   private xrplListener: XRPLDepositListener | null = null;
   private xrplListenerSet: boolean = false;
+  private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor(config: BridgeServiceConfig) {
     this.config = config;
@@ -51,6 +55,9 @@ export class BridgeService {
       this.fassetsClient = null;
       console.log("⚠️  BridgeService running in DEMO MODE - FAssets integration not active");
     }
+
+    // Start cleanup scheduler
+    this.startCleanupScheduler();
   }
 
   get demoMode(): boolean {
@@ -68,6 +75,126 @@ export class BridgeService {
     this.xrplListener = listener;
     this.xrplListenerSet = true;
     console.log("✅ XRPL listener registered with BridgeService");
+  }
+
+  /**
+   * Start background cleanup scheduler to auto-expire bridges.
+   * Runs on startup and every 5 minutes.
+   */
+  private startCleanupScheduler(): void {
+    // Run cleanup immediately on startup
+    this.cleanupExpiredBridges().catch(error => {
+      console.error("❌ Initial cleanup error:", error);
+    });
+
+    // Schedule cleanup every 5 minutes
+    this.cleanupInterval = setInterval(async () => {
+      try {
+        await this.cleanupExpiredBridges();
+      } catch (error) {
+        console.error("❌ Cleanup scheduler error:", error);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    console.log("✅ Bridge cleanup scheduler started (runs every 5 minutes)");
+  }
+
+  /**
+   * Cleanup expired bridges by marking them as cancelled.
+   * Runs every 5 minutes via cleanup scheduler.
+   */
+  private async cleanupExpiredBridges(): Promise<void> {
+    try {
+      // Get bridges in active statuses that could expire
+      const activeBridges = await this.config.storage.getBridgesByStatus([
+        'pending',
+        'bridging',
+        'awaiting_payment',
+        'xrpl_confirmed',
+        'generating_proof',
+        'proof_generated',
+        'fdc_proof_generated'
+      ]);
+
+      if (activeBridges.length === 0) {
+        console.log("🧹 Cleanup: No active bridges to check");
+        return;
+      }
+
+      const now = new Date();
+      let expiredCount = 0;
+
+      for (const bridge of activeBridges) {
+        // Skip if no expiry set
+        if (!bridge.expiresAt) continue;
+
+        // Check if expired
+        if (now > bridge.expiresAt) {
+          // Use idempotent update - only update if still in non-terminal state
+          const currentBridge = await this.config.storage.getBridgeById(bridge.id);
+          if (!currentBridge) continue;
+
+          // Double-check status hasn't changed to terminal
+          if (['completed', 'cancelled', 'failed'].includes(currentBridge.status)) {
+            continue;
+          }
+
+          // Mark as cancelled with expiration reason
+          await this.config.storage.updateBridge(bridge.id, {
+            status: 'cancelled',
+            cancelledAt: now,
+            cancellationReason: 'expired'
+          });
+
+          // Unsubscribe from XRPL listener if agent address exists
+          if (bridge.agentUnderlyingAddress && this.xrplListener) {
+            await this.xrplListener.removeAgentAddress(bridge.agentUnderlyingAddress);
+          }
+
+          expiredCount++;
+          console.log(`🧹 Marked bridge ${bridge.id} as expired (expiresAt: ${bridge.expiresAt.toISOString()})`);
+        }
+      }
+
+      if (expiredCount > 0) {
+        console.log(`🧹 Cleanup: Marked ${expiredCount} bridge(s) as expired`);
+      } else {
+        console.log(`🧹 Cleanup: Checked ${activeBridges.length} active bridge(s), none expired`);
+      }
+    } catch (error) {
+      console.error("❌ Error during bridge cleanup:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Check if a bridge is expired.
+   * @param bridge - Bridge to check
+   * @returns true if bridge is expired, false otherwise
+   */
+  private isBridgeExpired(bridge: SelectXrpToFxrpBridge): boolean {
+    if (!bridge.expiresAt) return false;
+    return new Date() > bridge.expiresAt;
+  }
+
+  /**
+   * Check if a bridge is in a terminal state.
+   * @param bridge - Bridge to check
+   * @returns true if bridge is in terminal state, false otherwise
+   */
+  private isBridgeTerminal(bridge: SelectXrpToFxrpBridge): boolean {
+    return ['completed', 'cancelled', 'failed', 'vault_mint_failed'].includes(bridge.status);
+  }
+
+  /**
+   * Stop the cleanup scheduler (for graceful shutdown).
+   */
+  stopCleanupScheduler(): void {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+      this.cleanupInterval = null;
+      console.log("✅ Bridge cleanup scheduler stopped");
+    }
   }
 
   /**
@@ -434,6 +561,23 @@ export class BridgeService {
     
     const bridge = await this.config.storage.getBridgeById(bridgeId);
     if (!bridge) throw new Error("Bridge not found");
+    
+    // Check if bridge is expired
+    if (this.isBridgeExpired(bridge)) {
+      const errorMsg = `Bridge ${bridgeId} has expired (expiresAt: ${bridge.expiresAt?.toISOString()})`;
+      console.warn(`⚠️ ${errorMsg}`);
+      await this.config.storage.updateBridge(bridgeId, {
+        status: 'cancelled',
+        cancelledAt: new Date(),
+        cancellationReason: 'expired'
+      });
+      throw new Error(errorMsg);
+    }
+
+    // Check if bridge is in terminal state
+    if (this.isBridgeTerminal(bridge)) {
+      throw new Error(`Bridge ${bridgeId} is in terminal state: ${bridge.status}. Cannot process minting.`);
+    }
     
     if (!bridge.collateralReservationId) {
       throw new Error("No collateral reservation found for this bridge");
