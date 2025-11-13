@@ -1,17 +1,16 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Position, Vault, Escrow } from "@shared/schema";
+import type { Position, Vault } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import PortfolioTable from "@/components/PortfolioTable";
-import PendingRequestsTable from "@/components/PendingRequestsTable";
 import WithdrawModal from "@/components/WithdrawModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import EmptyState from "@/components/EmptyState";
-import { PortfolioStatsSkeleton, PortfolioTableSkeleton, PendingRequestsSkeleton } from "@/components/skeletons/PortfolioSkeleton";
-import { TrendingUp, Coins, Gift, Clock, Package } from "lucide-react";
+import { PortfolioStatsSkeleton, PortfolioTableSkeleton } from "@/components/skeletons/PortfolioSkeleton";
+import { TrendingUp, Coins, Gift, Package } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
@@ -21,7 +20,7 @@ export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
   const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
-  const [pendingAction, setPendingAction] = useState<{ type: "withdraw" | "claim"; positionId: string; amount: string; asset: string; vaultName: string } | null>(null);
+  const [pendingAction, setPendingAction] = useState<{ type: "claim"; positionId: string; amount: string; asset: string; vaultName: string } | null>(null);
   const [selectedPosition, setSelectedPosition] = useState<{
     id: string;
     vaultName: string;
@@ -47,45 +46,6 @@ export default function Portfolio() {
 
   const { data: vaults = [] } = useQuery<Vault[]>({
     queryKey: ["/api/vaults"],
-  });
-
-  const { data: escrows = [] } = useQuery<Escrow[]>({
-    queryKey: ["/api/escrows", address],
-    queryFn: async () => {
-      if (!address) return [];
-      const response = await fetch(`/api/escrows?walletAddress=${encodeURIComponent(address)}`);
-      if (!response.ok) throw new Error('Failed to fetch escrows');
-      return response.json();
-    },
-    enabled: !!address,
-  });
-
-  interface WithdrawalRequest {
-    id: string;
-    walletAddress: string;
-    vaultId: string;
-    positionId: string | null;
-    type: string;
-    amount: string;
-    asset: string;
-    status: string;
-    network: string;
-    requestedAt: string;
-    processedAt: string | null;
-    txHash: string | null;
-    rejectionReason: string | null;
-  }
-
-  const { data: withdrawalRequests = [] } = useQuery<WithdrawalRequest[]>({
-    queryKey: ["/api/withdrawal-requests", address],
-    queryFn: async () => {
-      if (!address) return [];
-      const response = await fetch(`/api/withdrawal-requests?walletAddress=${encodeURIComponent(address)}`);
-      if (!response.ok) throw new Error('Failed to fetch withdrawal requests');
-      return response.json();
-    },
-    enabled: !!address,
-    refetchInterval: 5000, // Refresh every 5 seconds to show status updates
   });
 
   const getVaultById = (vaultId: string) => vaults.find((v) => v.id === vaultId);
@@ -118,16 +78,6 @@ export default function Portfolio() {
   const avgApy = formattedPositions.length > 0 
     ? formattedPositions.reduce((sum, pos) => sum + parseFloat(pos.apy), 0) / formattedPositions.length
     : 0;
-
-  const deleteMutation = useMutation({
-    mutationFn: async ({ positionId, network, txHash }: { positionId: string; network: string; txHash?: string }) => {
-      const res = await apiRequest("POST", `/api/positions/${positionId}/withdraw`, { network, txHash });
-      return await res.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
-    },
-  });
 
   const claimMutation = useMutation({
     mutationFn: async ({ positionId, network, txHash }: { positionId: string; network: string; txHash?: string }) => {
@@ -210,39 +160,36 @@ export default function Portfolio() {
     const vaultId = formattedPositions.find((p) => p.id === selectedPosition.id)?.vaultId || "";
 
     try {
-      const response = await fetch("/api/withdrawal-requests", {
+      const response = await fetch("/api/withdrawals", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          amount: amount,
-          asset: assetSymbol,
-          userAddress: address,
-          network: network,
           positionId: selectedPosition.id,
-          vaultId: vaultId,
+          shareAmount: amount,
         }),
       });
 
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || "Failed to create withdrawal request");
+        throw new Error(data.error || "Failed to process withdrawal");
       }
 
       setWithdrawModalOpen(false);
       
-      // Invalidate withdrawal requests cache to show the new request immediately
-      queryClient.invalidateQueries({ queryKey: ["/api/withdrawal-requests"] });
+      // Invalidate positions and redemptions cache to reflect the update
+      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/redemptions"] });
       
       toast({
-        title: "Withdrawal Request Submitted",
-        description: "A vault operator will review and approve your withdrawal request shortly.",
+        title: "Withdrawal Processing",
+        description: `Your withdrawal is being processed automatically. XRP will be sent to your XRPL wallet (${address.slice(0, 8)}...${address.slice(-6)}) shortly.`,
       });
     } catch (error) {
-      console.error("Error creating withdrawal request:", error);
+      console.error("Error processing withdrawal:", error);
       toast({
         title: "Withdrawal Failed",
-        description: error instanceof Error ? error.message : "Failed to create withdrawal request. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to process withdrawal. Please try again.",
         variant: "destructive",
       });
     }
@@ -252,13 +199,7 @@ export default function Portfolio() {
     if (!pendingAction) return;
 
     try {
-      if (pendingAction.type === "withdraw") {
-        await deleteMutation.mutateAsync({ positionId: pendingAction.positionId, network, txHash });
-        toast({
-          title: "Withdrawal Successful",
-          description: `Successfully withdrew ${pendingAction.amount} ${pendingAction.asset} from ${pendingAction.vaultName} on ${network}`,
-        });
-      } else if (pendingAction.type === "claim") {
+      if (pendingAction.type === "claim") {
         await claimMutation.mutateAsync({ positionId: pendingAction.positionId, network, txHash });
         toast({
           title: "Rewards Claimed",
@@ -313,15 +254,6 @@ export default function Portfolio() {
     );
   }
 
-  // Create vault names map for PendingRequestsTable
-  const vaultNames = vaults.reduce((acc, vault) => {
-    acc[vault.id] = vault.name;
-    return acc;
-  }, {} as Record<string, string>);
-
-  // Count pending requests
-  const pendingRequestsCount = withdrawalRequests.filter(r => r.status === "pending").length;
-
   return (
     <div className="space-y-8">
       <div>
@@ -331,7 +263,7 @@ export default function Portfolio() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-3">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
@@ -394,27 +326,6 @@ export default function Portfolio() {
             )}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
-            <Clock className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            {positionsLoading ? (
-              <Skeleton className="h-9 w-32" />
-            ) : (
-              <>
-                <div className="text-3xl font-bold font-mono tabular-nums text-chart-4">
-                  {pendingRequestsCount}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Awaiting approval
-                </p>
-              </>
-            )}
-          </CardContent>
-        </Card>
       </div>
 
       <div className="space-y-4">
@@ -461,32 +372,9 @@ export default function Portfolio() {
         ) : (
           <PortfolioTable
             positions={formattedPositions}
-            escrows={escrows}
             network={network}
             onWithdraw={handleWithdraw}
             onClaim={handleClaim}
-          />
-        )}
-      </div>
-
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-2xl font-semibold">Pending Requests</h2>
-          <p className="text-sm text-muted-foreground">
-            Track your withdrawal and claim requests
-          </p>
-        </div>
-
-        {positionsLoading ? (
-          <div className="space-y-3">
-            <Skeleton className="h-12 w-full" />
-            <Skeleton className="h-12 w-full" />
-          </div>
-        ) : (
-          <PendingRequestsTable
-            requests={withdrawalRequests}
-            vaultNames={vaultNames}
-            network={network}
           />
         )}
       </div>
@@ -499,7 +387,6 @@ export default function Portfolio() {
           asset={selectedPosition.asset}
           depositedAmount={selectedPosition.depositedAmount}
           rewards={selectedPosition.rewards}
-          escrow={escrows.find((e) => e.positionId === selectedPosition.id)}
           network={network}
           onConfirm={handleConfirmWithdraw}
         />

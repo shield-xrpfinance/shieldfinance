@@ -141,6 +141,14 @@ export class VaultService {
 
   /**
    * Redeem vault shares (burn shXRP → receive FXRP)
+   * 
+   * @param vaultId - Vault identifier from database
+   * @param userAddress - User's XRP wallet address (for position tracking)
+   * @param shareAmount - shXRP shares to redeem in decimal format (e.g., "20.000000" for 20 shares)
+   * @returns FXRP amount received (decimal string with 6 decimals)
+   * 
+   * ERC-4626 redeem() burns shares and returns underlying assets (FXRP).
+   * The function signature is: redeem(uint256 shares, address receiver, address owner)
    */
   async redeemShares(
     vaultId: string,
@@ -149,7 +157,75 @@ export class VaultService {
   ): Promise<string> {
     console.log(`🔥 Redeeming ${shareAmount} shXRP shares for ${userAddress}`);
 
-    // TODO: Implement ERC-4626 redeem
-    return `0x${Date.now().toString(16)}`;
+    // Get vault details from database
+    const vault = await this.config.storage.getVault(vaultId);
+    if (!vault) throw new Error("Vault not found");
+
+    // Get vault contract address from deployment file
+    const vaultContractAddress = this.getVaultAddress();
+
+    try {
+      // Get vault contract with ERC-4626 ABI
+      const vaultContract = this.config.flareClient.getShXRPVault(vaultContractAddress) as any;
+
+      // Get smart account address (shares are held here in custodial model)
+      const smartAccountAddress = this.config.flareClient.getSignerAddress();
+      console.log(`  Redeeming shares from smart account: ${smartAccountAddress}`);
+      console.log(`  User's XRP wallet (position owner): ${userAddress}`);
+
+      // Parse share amount to contract units (shXRP uses same decimals as FXRP: 6)
+      const shareAmountRaw = ethers.parseUnits(shareAmount, 6);
+      
+      // Call ERC-4626 redeem: redeem(shares, receiver, owner)
+      // - shares: amount of shXRP to burn
+      // - receiver: address to receive FXRP (smart account)
+      // - owner: address that owns the shares (smart account)
+      const redeemTx = await vaultContract.redeem(
+        shareAmountRaw,
+        smartAccountAddress, // Receiver of FXRP
+        smartAccountAddress  // Owner of shares
+      );
+
+      const receipt = await redeemTx.wait();
+      console.log(`✅ Shares redeemed: ${receipt.hash}`);
+
+      // Parse Withdraw event to get actual FXRP received
+      // ERC-4626 Withdraw event: Withdraw(address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)
+      const withdrawEventSignature = ethers.id("Withdraw(address,address,address,uint256,uint256)");
+      
+      let fxrpReceived = "0";
+      for (const log of receipt.logs) {
+        if (log.topics[0] === withdrawEventSignature) {
+          // Parse the Withdraw event
+          // topics[1] = caller, topics[2] = receiver, topics[3] = owner
+          // data contains: assets (FXRP received) and shares (shXRP burned)
+          const iface = new ethers.Interface([
+            "event Withdraw(address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)"
+          ]);
+          const parsed = iface.parseLog({ topics: log.topics, data: log.data });
+          
+          if (parsed) {
+            // Extract assets (FXRP received)
+            const assetsRaw = parsed.args.assets;
+            fxrpReceived = ethers.formatUnits(assetsRaw, 6); // FXRP uses 6 decimals
+            
+            console.log(`✅ Parsed Withdraw event:`);
+            console.log(`   shXRP burned: ${ethers.formatUnits(parsed.args.shares, 6)}`);
+            console.log(`   FXRP received: ${fxrpReceived}`);
+            
+            break;
+          }
+        }
+      }
+
+      if (fxrpReceived === "0") {
+        throw new Error("Failed to parse Withdraw event - could not determine FXRP received");
+      }
+
+      return fxrpReceived;
+    } catch (error) {
+      console.error("Vault redeem error:", error);
+      throw error;
+    }
   }
 }

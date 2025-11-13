@@ -1,4 +1,4 @@
-import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, firelightPositions, compoundingRuns } from "@shared/schema";
+import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFxrpToXrpRedemption, type SelectFxrpToXrpRedemption, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, fxrpToXrpRedemptions, firelightPositions, compoundingRuns } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
 
@@ -37,6 +37,12 @@ export interface IStorage {
   getRecoverableBridges(): Promise<SelectXrpToFxrpBridge[]>;
   updateBridge(id: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
   updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
+  
+  createRedemption(redemption: InsertFxrpToXrpRedemption): Promise<SelectFxrpToXrpRedemption>;
+  getRedemptionById(id: string): Promise<SelectFxrpToXrpRedemption | undefined>;
+  getRedemptionsByWallet(walletAddress: string): Promise<SelectFxrpToXrpRedemption[]>;
+  updateRedemption(id: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void>;
+  updateRedemptionStatus(id: string, status: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void>;
   
   createFirelightPosition(position: InsertFirelightPosition): Promise<SelectFirelightPosition>;
   getFirelightPositionByVault(vaultId: string): Promise<SelectFirelightPosition | undefined>;
@@ -449,6 +455,34 @@ export class DatabaseStorage implements IStorage {
     await db.update(xrpToFxrpBridges)
       .set({ status: status as any, ...updates, completedAt: status === 'completed' ? new Date() : undefined })
       .where(eq(xrpToFxrpBridges.id, id));
+  }
+
+  async createRedemption(redemption: InsertFxrpToXrpRedemption): Promise<SelectFxrpToXrpRedemption> {
+    const [created] = await db.insert(fxrpToXrpRedemptions).values(redemption).returning();
+    return created;
+  }
+
+  async getRedemptionById(id: string): Promise<SelectFxrpToXrpRedemption | undefined> {
+    return db.query.fxrpToXrpRedemptions.findFirst({ where: eq(fxrpToXrpRedemptions.id, id) });
+  }
+
+  async getRedemptionsByWallet(walletAddress: string): Promise<SelectFxrpToXrpRedemption[]> {
+    return db.query.fxrpToXrpRedemptions.findMany({
+      where: eq(fxrpToXrpRedemptions.walletAddress, walletAddress),
+      orderBy: desc(fxrpToXrpRedemptions.createdAt),
+    });
+  }
+
+  async updateRedemption(id: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void> {
+    await db.update(fxrpToXrpRedemptions)
+      .set(updates)
+      .where(eq(fxrpToXrpRedemptions.id, id));
+  }
+
+  async updateRedemptionStatus(id: string, status: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void> {
+    await db.update(fxrpToXrpRedemptions)
+      .set({ status: status as any, ...updates, completedAt: status === 'completed' ? new Date() : undefined })
+      .where(eq(fxrpToXrpRedemptions.id, id));
   }
 
   async createFirelightPosition(position: InsertFirelightPosition): Promise<SelectFirelightPosition> {

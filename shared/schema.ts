@@ -21,6 +21,19 @@ export const bridgeStatusEnum = pgEnum("bridge_status", [
   "failed"
 ]);
 
+// Redemption status enum for FXRP → XRP redemptions (withdrawal flow)
+export const redemptionStatusEnum = pgEnum("redemption_status", [
+  "pending",              // Withdrawal request created
+  "redeeming_shares",     // Burning shXRP shares via ERC-4626 redeem()
+  "redeemed_fxrp",        // FXRP recovered from vault
+  "redeeming_fxrp",       // FAssets redemption in progress
+  "awaiting_proof",       // Waiting for FDC attestation proof
+  "xrpl_payout",          // Sending XRP to depositor's wallet
+  "completed",            // XRP successfully sent to depositor
+  "awaiting_liquidity",   // Queued - not enough FXRP in vault
+  "failed"                // Redemption failed
+]);
+
 export const vaults = pgTable("vaults", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -151,6 +164,45 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   retryCount: integer("retry_count").notNull().default(0),
 });
 
+// FXRP → XRP Redemptions (Withdrawal flow)
+export const fxrpToXrpRedemptions = pgTable("fxrp_to_xrp_redemptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  positionId: varchar("position_id").notNull().references(() => positions.id),
+  walletAddress: text("wallet_address").notNull(), // Original depositor's XRPL wallet
+  vaultId: varchar("vault_id").notNull().references(() => vaults.id),
+  
+  // Amounts
+  shareAmount: decimal("share_amount", { precision: 18, scale: 6 }).notNull(), // shXRP shares to redeem
+  fxrpRedeemed: decimal("fxrp_redeemed", { precision: 18, scale: 6 }), // FXRP received from vault
+  xrpSent: decimal("xrp_sent", { precision: 18, scale: 6 }), // XRP sent to depositor
+  
+  // Status machine
+  status: redemptionStatusEnum("status").notNull().default("pending"),
+  
+  // Transaction hashes
+  vaultRedeemTxHash: text("vault_redeem_tx_hash"), // Flare TX: ERC-4626 redeem()
+  fassetsRedemptionTxHash: text("fassets_redemption_tx_hash"), // Flare TX: FAssets redemption request
+  xrplPayoutTxHash: text("xrpl_payout_tx_hash"), // XRPL TX: Payment to depositor
+  
+  // FAssets redemption details (mirroring bridge fields)
+  redemptionRequestId: varchar("redemption_request_id"),
+  agentVaultAddress: varchar("agent_vault_address"),
+  fdcAttestationTxHash: varchar("fdc_attestation_tx_hash"),
+  fdcProofHash: varchar("fdc_proof_hash"),
+  fdcProofData: text("fdc_proof_data"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  sharesRedeemedAt: timestamp("shares_redeemed_at"),
+  fxrpRedeemedAt: timestamp("fxrp_redeemed_at"),
+  xrplPayoutAt: timestamp("xrpl_payout_at"),
+  completedAt: timestamp("completed_at"),
+  
+  // Error handling
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").notNull().default(0),
+});
+
 export const firelightPositions = pgTable("firelight_positions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   vaultId: varchar("vault_id").notNull().references(() => vaults.id),
@@ -218,6 +270,11 @@ export const insertXrpToFxrpBridgeSchema = createInsertSchema(xrpToFxrpBridges).
   createdAt: true,
 });
 
+export const insertFxrpToXrpRedemptionSchema = createInsertSchema(fxrpToXrpRedemptions).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertFirelightPositionSchema = createInsertSchema(firelightPositions).omit({
   id: true,
   depositedAt: true,
@@ -243,6 +300,8 @@ export type InsertEscrow = z.infer<typeof insertEscrowSchema>;
 export type Escrow = typeof escrows.$inferSelect;
 export type InsertXrpToFxrpBridge = z.infer<typeof insertXrpToFxrpBridgeSchema>;
 export type SelectXrpToFxrpBridge = typeof xrpToFxrpBridges.$inferSelect;
+export type InsertFxrpToXrpRedemption = z.infer<typeof insertFxrpToXrpRedemptionSchema>;
+export type SelectFxrpToXrpRedemption = typeof fxrpToXrpRedemptions.$inferSelect;
 export type InsertFirelightPosition = z.infer<typeof insertFirelightPositionSchema>;
 export type SelectFirelightPosition = typeof firelightPositions.$inferSelect;
 export type InsertCompoundingRun = z.infer<typeof insertCompoundingRunSchema>;

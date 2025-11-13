@@ -297,6 +297,81 @@ export class FAssetsClient {
     return receipt.hash;
   }
 
+  async requestRedemption(
+    fxrpAmount: string,
+    receiverUnderlyingAddress: string
+  ): Promise<{ requestId: bigint; txHash: string; firstUnderlyingBlock: bigint; lastUnderlyingBlock: bigint; lastUnderlyingTimestamp: bigint }> {
+    const assetManager = await this.getAssetManager();
+    
+    // Calculate lots based on FXRP amount
+    const lots = await this.calculateLots(fxrpAmount);
+    
+    console.log(`\n📝 Requesting redemption:`);
+    console.log(`   FXRP Amount: ${fxrpAmount}`);
+    console.log(`   Lots: ${lots}`);
+    console.log(`   Receiver XRPL Address: ${receiverUnderlyingAddress}`);
+    
+    // Get FXRP token and approve AssetManager to burn it
+    const fxrpToken = await this.config.flareClient.getFXRPToken() as any;
+    const assetManagerAddress = await this.getAssetManagerAddress();
+    const decimals = await this.getAssetDecimals();
+    const fxrpAmountRaw = ethers.parseUnits(fxrpAmount, decimals);
+    
+    console.log(`   Approving AssetManager to burn ${fxrpAmount} FXRP...`);
+    const approveTx = await fxrpToken.approve(assetManagerAddress, fxrpAmountRaw);
+    await approveTx.wait();
+    console.log(`   ✅ Approval granted`);
+    
+    // Request redemption
+    // Function signature: redeem(uint256 lots, address payable executor, string memory receiverUnderlyingAddress)
+    console.log(`   Requesting redemption from AssetManager...`);
+    const tx = await assetManager.redeem(
+      lots,
+      ethers.ZeroAddress, // No executor (we'll handle confirmation ourselves)
+      receiverUnderlyingAddress // XRPL address to receive XRP
+    );
+    
+    const receipt = await tx.wait();
+    console.log(`✅ Redemption requested: ${receipt.hash}`);
+    
+    // Parse RedemptionRequested event
+    const redemptionEvent = this.parseRedemptionRequestedEvent(receipt);
+    
+    console.log('\n📝 Redemption Request Details:');
+    console.log(`   Request ID: ${redemptionEvent.requestId}`);
+    console.log(`   Redeemer: ${redemptionEvent.redeemer}`);
+    console.log(`   Receiver XRPL Address: ${redemptionEvent.receiverUnderlyingAddress}`);
+    console.log(`   Amount (UBA): ${redemptionEvent.valueUBA}`);
+    console.log(`   Fee (UBA): ${redemptionEvent.feeUBA}`);
+    console.log(`   First underlying block: ${redemptionEvent.firstUnderlyingBlock}`);
+    console.log(`   Last underlying block: ${redemptionEvent.lastUnderlyingBlock}`);
+    console.log(`   Last underlying timestamp: ${redemptionEvent.lastUnderlyingTimestamp}`);
+    
+    return {
+      requestId: redemptionEvent.requestId,
+      txHash: receipt.hash,
+      firstUnderlyingBlock: redemptionEvent.firstUnderlyingBlock,
+      lastUnderlyingBlock: redemptionEvent.lastUnderlyingBlock,
+      lastUnderlyingTimestamp: redemptionEvent.lastUnderlyingTimestamp,
+    };
+  }
+
+  async confirmRedemptionPayment(
+    proof: any,
+    requestId: bigint
+  ): Promise<string> {
+    const assetManager = await this.getAssetManager();
+    
+    console.log(`\n✅ Confirming redemption payment:`);
+    console.log(`   Request ID: ${requestId}`);
+    
+    const tx = await assetManager.confirmRedemptionPayment(proof, requestId);
+    const receipt = await tx.wait();
+    
+    console.log(`✅ Redemption payment confirmed: ${receipt.hash}`);
+    return receipt.hash;
+  }
+
   async calculateLots(xrpAmount: string): Promise<number> {
     const assetManager = await this.getAssetManager();
     const lotSize = await assetManager.lotSize();
@@ -346,5 +421,23 @@ export class FAssetsClient {
     }
     
     throw new Error("CollateralReserved event not found in transaction");
+  }
+
+  private parseRedemptionRequestedEvent(receipt: any): any {
+    const AssetManagerABI = this.getAssetManagerABI();
+    const iface = new ethers.Interface(AssetManagerABI);
+    
+    for (const log of receipt.logs) {
+      try {
+        const parsed = iface.parseLog(log);
+        if (parsed?.name === "RedemptionRequested") {
+          return parsed.args;
+        }
+      } catch (e) {
+        continue;
+      }
+    }
+    
+    throw new Error("RedemptionRequested event not found in transaction");
   }
 }

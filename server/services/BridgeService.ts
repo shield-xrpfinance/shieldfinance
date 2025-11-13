@@ -1046,6 +1046,193 @@ export class BridgeService {
   }
 
   /**
+   * Redeem FXRP to XRP via FAssets protocol (reverse of minting flow)
+   * 
+   * @param redemptionId - Redemption record ID
+   * @param fxrpAmount - Amount of FXRP to redeem (decimal string, e.g., "20.000000")
+   * @param receiverXrplAddress - XRPL wallet address to receive XRP
+   * @returns Transaction hash of FAssets redemption request
+   * 
+   * Flow:
+   * 1. Request redemption from AssetManager (burns FXRP, creates redemption request)
+   * 2. FAssets agent sends XRP to receiverXrplAddress
+   * 3. Generate FDC attestation proof for agent's payment
+   * 4. Confirm redemption payment to release agent's collateral
+   */
+  async redeemFxrpToXrp(
+    redemptionId: string,
+    fxrpAmount: string,
+    receiverXrplAddress: string
+  ): Promise<string> {
+    console.log(`\n🔄 Starting FXRP → XRP redemption`);
+    console.log(`   Redemption ID: ${redemptionId}`);
+    console.log(`   FXRP Amount: ${fxrpAmount}`);
+    console.log(`   Receiver XRPL Address: ${receiverXrplAddress}`);
+
+    if (this._demoMode) {
+      return await this.executeFAssetsRedemptionDemo(redemptionId, fxrpAmount, receiverXrplAddress);
+    }
+
+    if (!this.fassetsClient) {
+      throw new Error("FAssetsClient not initialized. This should never happen in production mode.");
+    }
+
+    try {
+      // Step 1: Request redemption from AssetManager
+      console.log("⏳ Step 1: Requesting FXRP redemption from AssetManager...");
+      
+      const redemptionRequest = await this.fassetsClient.requestRedemption(
+        fxrpAmount,
+        receiverXrplAddress
+      );
+
+      // Update redemption status with redemption details
+      await this.config.storage.updateRedemptionStatus(redemptionId, "redeeming_fxrp", {
+        fassetsRedemptionTxHash: redemptionRequest.txHash,
+        redemptionRequestId: redemptionRequest.requestId.toString(),
+      });
+
+      console.log(`✅ Redemption requested from FAssets`);
+      console.log(`   Request ID: ${redemptionRequest.requestId}`);
+      console.log(`   TX Hash: ${redemptionRequest.txHash}`);
+      console.log(`   Agent will send XRP to: ${receiverXrplAddress}`);
+      console.log("");
+      console.log("   ⏳ Waiting for FAssets agent to send XRP...");
+      console.log("   After agent payment, executeFassetsRedemptionPayment() will be called");
+
+      return redemptionRequest.txHash;
+    } catch (error) {
+      console.error("Error requesting FAssets redemption:", error);
+      await this.config.storage.updateRedemptionStatus(redemptionId, "failed", {
+        errorMessage: error instanceof Error ? error.message : "Unknown error during redemption request",
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Execute FAssets redemption payment confirmation with FDC proof
+   * This is called after the FAssets agent sends XRP to the user
+   * 
+   * @param redemptionId - Redemption record ID
+   * @param xrplTxHash - XRPL transaction hash of agent's payment
+   * @returns Transaction hash of redemption payment confirmation
+   */
+  async executeFassetsRedemptionPayment(
+    redemptionId: string,
+    xrplTxHash: string
+  ): Promise<string> {
+    console.log(`\n🔐 Confirming FAssets redemption payment`);
+    console.log(`   Redemption ID: ${redemptionId}`);
+    console.log(`   XRPL TX Hash: ${xrplTxHash}`);
+
+    const redemption = await this.config.storage.getRedemptionById(redemptionId);
+    if (!redemption) {
+      throw new Error(`Redemption ${redemptionId} not found`);
+    }
+
+    if (!redemption.redemptionRequestId) {
+      throw new Error(`Redemption ${redemptionId} does not have a request ID`);
+    }
+
+    if (!this.fassetsClient) {
+      throw new Error("FAssetsClient not initialized");
+    }
+
+    try {
+      // Update status to indicate we're awaiting proof
+      await this.config.storage.updateRedemptionStatus(redemptionId, "awaiting_proof", {
+        xrplPayoutTxHash: xrplTxHash,
+        xrplPayoutAt: new Date(),
+      });
+
+      // Generate FDC attestation proof for the XRP payment
+      console.log("⏳ Generating FDC attestation proof for XRP payment...");
+      const proof = await generateFDCProof(xrplTxHash, this.config.network);
+
+      console.log(`✅ FDC proof generated`);
+      console.log(`   Voting Round: ${proof.data.votingRound}`);
+
+      // Update redemption with proof data
+      await this.config.storage.updateRedemption(redemptionId, {
+        fdcProofHash: proof.merkleProof[0],
+        fdcProofData: JSON.stringify(proof),
+      });
+
+      // Confirm redemption payment to AssetManager
+      console.log("⏳ Confirming redemption payment to AssetManager...");
+      const confirmTxHash = await this.fassetsClient.confirmRedemptionPayment(
+        proof,
+        BigInt(redemption.redemptionRequestId)
+      );
+
+      console.log(`✅ Redemption payment confirmed: ${confirmTxHash}`);
+
+      // Update redemption to completed
+      await this.config.storage.updateRedemptionStatus(redemptionId, "completed", {
+        fdcAttestationTxHash: confirmTxHash,
+      });
+
+      return confirmTxHash;
+    } catch (error) {
+      console.error("Error confirming redemption payment:", error);
+      await this.config.storage.updateRedemptionStatus(redemptionId, "failed", {
+        errorMessage: error instanceof Error ? error.message : "Unknown error during redemption confirmation",
+      });
+      throw error;
+    }
+  }
+
+  /**
+   * Demo mode: Simulate FXRP redemption without actual FAssets interaction
+   */
+  private async executeFAssetsRedemptionDemo(
+    redemptionId: string,
+    fxrpAmount: string,
+    receiverXrplAddress: string
+  ): Promise<string> {
+    console.log("\n⚠️  DEMO MODE: Simulating FXRP → XRP redemption");
+    console.log("   (No actual FAssets protocol interaction)");
+    console.log("");
+
+    // Simulate redemption request
+    const demoRedemptionRequestId = `demo-redemption-${Date.now()}`;
+    const demoTxHash = `0xDEMOREDEMPTION${Date.now().toString(16)}`;
+
+    await this.config.storage.updateRedemptionStatus(redemptionId, "redeeming_fxrp", {
+      fassetsRedemptionTxHash: demoTxHash,
+      redemptionRequestId: demoRedemptionRequestId,
+    });
+
+    console.log("   [1/3] Redemption requested from AssetManager...");
+    await new Promise(resolve => setTimeout(resolve, 1500));
+
+    // Simulate agent sending XRP
+    console.log("   [2/3] Agent sending XRP to depositor...");
+    const demoXrplTxHash = `DEMO-XRPL-PAYOUT-${Date.now().toString(16)}`;
+    await this.config.storage.updateRedemptionStatus(redemptionId, "xrpl_payout", {
+      xrplPayoutTxHash: demoXrplTxHash,
+      xrplPayoutAt: new Date(),
+    });
+    await new Promise(resolve => setTimeout(resolve, 2000));
+
+    // Simulate redemption confirmation
+    console.log("   [3/3] Confirming redemption payment...");
+    await this.config.storage.updateRedemptionStatus(redemptionId, "completed", {
+      fdcProofHash: `0xDEMOPROOF${Date.now().toString(16)}`,
+      fdcAttestationTxHash: `0xDEMOCONFIRM${Date.now().toString(16)}`,
+    });
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    console.log("   ✅ Demo redemption completed successfully");
+    console.log("");
+    console.log("   To enable real FAssets:");
+    console.log("   - Set DEMO_MODE=false environment variable");
+
+    return demoTxHash;
+  }
+
+  /**
    * Check bridge status and retry if needed
    */
   async processPendingBridges(): Promise<void> {

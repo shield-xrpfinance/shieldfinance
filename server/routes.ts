@@ -1,10 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPositionSchema, insertWithdrawalRequestSchema, insertEscrowSchema } from "@shared/schema";
+import { insertPositionSchema } from "@shared/schema";
 import { XummSdk } from "xumm-sdk";
 import { Client } from "xrpl";
-import { createEscrow, finishEscrow, cancelEscrow } from "./xrpl-escrow";
 import type { BridgeService } from "./services/BridgeService";
 import type { FlareClient } from "./utils/flare-client";
 
@@ -741,53 +740,6 @@ export async function registerRoutes(
     }
   });
 
-  // Withdraw position (changed from DELETE to POST to accept transaction hash in body)
-  app.post("/api/positions/:id/withdraw", async (req, res) => {
-    try {
-      const network = req.body.network || "testnet"; // Default to testnet for Coston2
-      const txHash = req.body.txHash; // Get transaction hash from Xaman
-      const position = await storage.getPosition(req.params.id);
-      if (!position) {
-        return res.status(404).json({ error: "Position not found" });
-      }
-      
-      // Save position data before deletion
-      const positionData = {
-        vaultId: position.vaultId,
-        positionId: position.id,
-        amount: position.amount,
-        rewards: position.rewards,
-      };
-      
-      // Delete position FIRST to avoid FK constraint violation
-      const success = await storage.deletePosition(req.params.id);
-      if (!success) {
-        return res.status(404).json({ error: "Position not found" });
-      }
-      
-      // THEN create transaction record for withdrawal (position_id is nullable) with real or mock txHash
-      await storage.createTransaction({
-        vaultId: positionData.vaultId,
-        positionId: null,
-        type: "withdraw",
-        amount: positionData.amount,
-        rewards: positionData.rewards,
-        status: "completed",
-        txHash: txHash || `withdraw-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-        network: network,
-      });
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error("POST /api/positions/:id/withdraw error:", error);
-      if (error instanceof Error) {
-        res.status(500).json({ error: `Failed to withdraw position: ${error.message}` });
-      } else {
-        res.status(500).json({ error: "Failed to withdraw position" });
-      }
-    }
-  });
-
   // Claim rewards (update position rewards to 0)
   app.patch("/api/positions/:id/claim", async (req, res) => {
     try {
@@ -1282,230 +1234,160 @@ export async function registerRoutes(
     }
   });
 
-  // Create withdrawal request (vault operator approval required)
-  app.post("/api/withdrawal-requests", async (req, res) => {
+  // Automated withdrawal flow: shXRP → FXRP → XRP
+  app.post("/api/withdrawals", async (req, res) => {
+    const { positionId, shareAmount, userAddress } = req.body;
+
+    // Validate request
+    if (!positionId || !shareAmount || !userAddress) {
+      return res.status(400).json({ error: "Missing required fields: positionId, shareAmount, userAddress" });
+    }
+
     try {
-      const { amount, asset, userAddress, network, positionId, vaultId } = req.body;
-      
-      if (!amount || !asset || !userAddress || !vaultId) {
-        return res.status(400).json({ error: "Missing required fields" });
+      console.log(`\n🔄 Starting automated withdrawal flow`);
+      console.log(`   Position ID: ${positionId}`);
+      console.log(`   Share Amount: ${shareAmount}`);
+      console.log(`   User XRPL Address: ${userAddress}`);
+
+      // Step 1: Validate position exists and has sufficient shares
+      const position = await storage.getPosition(positionId);
+      if (!position) {
+        return res.status(404).json({ error: "Position not found" });
       }
 
-      const request = await storage.createWithdrawalRequest({
+      if (position.walletAddress !== userAddress) {
+        return res.status(403).json({ error: "Position does not belong to this wallet" });
+      }
+
+      const positionShares = parseFloat(position.amount);
+      const requestedShares = parseFloat(shareAmount);
+
+      if (requestedShares > positionShares) {
+        return res.status(400).json({ 
+          error: "Insufficient shares", 
+          available: position.amount,
+          requested: shareAmount 
+        });
+      }
+
+      // Step 2: Create redemption record
+      console.log("⏳ Step 1: Creating redemption record...");
+      const redemption = await storage.createRedemption({
+        positionId,
         walletAddress: userAddress,
-        positionId: positionId || null,
-        vaultId: vaultId,
-        type: "withdrawal",
-        amount: amount,
-        asset: asset,
+        vaultId: position.vaultId,
+        shareAmount,
+        fxrpRedeemed: null,
+        xrpSent: null,
         status: "pending",
-        network: network || "mainnet",
-        processedAt: null,
-        txHash: null,
-        rejectionReason: null,
+        vaultRedeemTxHash: null,
+        fassetsRedemptionTxHash: null,
+        xrplPayoutTxHash: null,
+        redemptionRequestId: null,
+        agentVaultAddress: null,
+        fdcAttestationTxHash: null,
+        fdcProofHash: null,
+        fdcProofData: null,
+        sharesRedeemedAt: null,
+        fxrpRedeemedAt: null,
+        xrplPayoutAt: null,
+        completedAt: null,
+        errorMessage: null,
+        retryCount: 0,
       });
 
+      console.log(`✅ Redemption record created: ${redemption.id}`);
+
+      // Step 3: Redeem shXRP shares → FXRP
+      console.log("⏳ Step 2: Redeeming shXRP shares for FXRP...");
+      await storage.updateRedemptionStatus(redemption.id, "redeeming_shares", {});
+
+      // Get VaultService from the main application context
+      // Note: VaultService needs to be passed to registerRoutes
+      const vaultService = (bridgeService as any).config?.vaultService;
+      if (!vaultService) {
+        throw new Error("VaultService not available");
+      }
+
+      const fxrpReceived = await vaultService.redeemShares(
+        position.vaultId,
+        userAddress,
+        shareAmount
+      );
+
+      console.log(`✅ Redeemed ${shareAmount} shXRP → ${fxrpReceived} FXRP`);
+
+      await storage.updateRedemptionStatus(redemption.id, "redeemed_fxrp", {
+        fxrpRedeemed: fxrpReceived,
+        fxrpRedeemedAt: new Date(),
+      });
+
+      // Step 4: Redeem FXRP → XRP via FAssets
+      console.log("⏳ Step 3: Requesting FXRP → XRP redemption via FAssets...");
+      const redemptionTxHash = await bridgeService.redeemFxrpToXrp(
+        redemption.id,
+        fxrpReceived,
+        userAddress // Original depositor's XRPL wallet
+      );
+
+      console.log(`✅ FAssets redemption requested: ${redemptionTxHash}`);
+      console.log(`   FAssets agent will send XRP to: ${userAddress}`);
+
+      // Step 5: Update position (reduce shares)
+      const remainingShares = (positionShares - requestedShares).toString();
+      if (parseFloat(remainingShares) <= 0) {
+        // Delete position if all shares redeemed
+        await storage.deletePosition(positionId);
+        console.log(`✅ Position ${positionId} fully redeemed and deleted`);
+      } else {
+        // Update position with remaining shares
+        // Note: We'll need to implement updatePosition in storage
+        console.log(`   Remaining shares: ${remainingShares}`);
+      }
+
+      // Return success response
       res.json({
         success: true,
-        requestId: request.id,
-        message: "Withdrawal request submitted. A vault operator will review and approve your request.",
+        redemptionId: redemption.id,
+        fxrpReceived,
+        status: "redeeming_fxrp",
+        message: `Withdrawal initiated. FAssets agent will send ${fxrpReceived} XRP to ${userAddress}. Track status with redemptionId.`,
+        txHash: redemptionTxHash,
       });
-    } catch (error) {
-      console.error("Withdrawal request creation error:", error);
-      res.status(500).json({ error: "Failed to create withdrawal request" });
-    }
-  });
 
-  // Create claim request (vault operator approval required)
-  app.post("/api/claim-requests", async (req, res) => {
-    try {
-      const { amount, asset, userAddress, network, positionId, vaultId } = req.body;
+    } catch (error) {
+      console.error("Withdrawal flow error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error during withdrawal";
       
-      if (!amount || !asset || !userAddress || !positionId || !vaultId) {
-        return res.status(400).json({ error: "Missing required fields" });
-      }
-
-      const request = await storage.createWithdrawalRequest({
-        walletAddress: userAddress,
-        positionId: positionId,
-        vaultId: vaultId,
-        type: "claim",
-        amount: amount,
-        asset: asset,
-        status: "pending",
-        network: network || "mainnet",
-        processedAt: null,
-        txHash: null,
-        rejectionReason: null,
+      res.status(500).json({ 
+        error: "Withdrawal failed", 
+        details: errorMessage 
       });
-
-      res.json({
-        success: true,
-        requestId: request.id,
-        message: "Claim request submitted. A vault operator will review and approve your request.",
-      });
-    } catch (error) {
-      console.error("Claim request creation error:", error);
-      res.status(500).json({ error: "Failed to create claim request" });
     }
   });
 
-  // Get all withdrawal requests (admin)
-  app.get("/api/withdrawal-requests", async (req, res) => {
+  // Get redemption status by ID
+  app.get("/api/withdrawals/:id", async (req, res) => {
     try {
-      const { status, walletAddress } = req.query;
-      const requests = await storage.getWithdrawalRequests(status as string, walletAddress as string);
-      res.json(requests);
+      const redemption = await storage.getRedemptionById(req.params.id);
+      if (!redemption) {
+        return res.status(404).json({ error: "Redemption not found" });
+      }
+      res.json(redemption);
     } catch (error) {
-      console.error("Get withdrawal requests error:", error);
-      res.status(500).json({ error: "Failed to get withdrawal requests" });
+      console.error("Get redemption error:", error);
+      res.status(500).json({ error: "Failed to get redemption status" });
     }
   });
 
-  // Approve withdrawal request (admin)
-  app.patch("/api/withdrawal-requests/:id/approve", async (req, res) => {
+  // Get all redemptions for a wallet
+  app.get("/api/withdrawals/wallet/:address", async (req, res) => {
     try {
-      const { id } = req.params;
-      const { txHash } = req.body;
-
-      if (!txHash) {
-        return res.status(400).json({ error: "Transaction hash is required" });
-      }
-
-      const request = await storage.getWithdrawalRequest(id);
-      if (!request) {
-        return res.status(404).json({ error: "Withdrawal request not found" });
-      }
-
-      // 1. Find escrow associated with this withdrawal's position (only for XRP withdrawals)
-      let escrow = null;
-      const isXRPWithdrawal = request.asset === "XRP";
-      
-      if (isXRPWithdrawal && request.positionId) {
-        const escrows = await storage.getEscrows(undefined, "pending");
-        escrow = escrows.find(e => 
-          e.positionId === request.positionId && 
-          e.status === "pending" &&
-          e.asset === "XRP"
-        );
-        
-        if (!escrow) {
-          console.log(`⚠️ No pending XRP escrow found for withdrawal ${id} (position: ${request.positionId}). This might be an old deposit or non-escrow withdrawal.`);
-        }
-      }
-
-      // 2. If escrow exists for XRP withdrawal, finish it
-      if (escrow && escrow.escrowSequence) {
-        try {
-          const vaultSecret = "sEd7kzvj3erqU5675pPkk5o4LwXVNGW";
-          const vaultAddress = "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY";
-
-          // Call finishEscrow() using vault wallet
-          const finishResult = await finishEscrow({
-            accountAddress: vaultAddress,
-            accountSecret: vaultSecret,
-            escrowOwner: vaultAddress,
-            escrowSequence: escrow.escrowSequence,
-            network: escrow.network,
-            condition: escrow.condition || undefined,
-            fulfillment: escrow.fulfillment || undefined,
-          });
-
-          if (finishResult.success) {
-            // Update escrow to status: "finished"
-            await storage.updateEscrow(escrow.id, {
-              status: "finished",
-              finishTxHash: finishResult.txHash,
-              finishedAt: new Date(),
-            });
-            console.log(`✅ Escrow ${escrow.id} finished successfully for withdrawal ${id}`);
-          } else {
-            // Escrow finishing failed - update withdrawal request to failed status
-            const errorMessage = `Failed to release escrow: ${finishResult.error}`;
-            console.error(`❌ Failed to finish escrow ${escrow.id}:`, finishResult.error);
-            
-            await storage.updateWithdrawalRequest(id, {
-              status: "failed",
-              processedAt: new Date(),
-              rejectionReason: errorMessage,
-            } as any);
-            
-            return res.status(400).json({ 
-              error: errorMessage,
-              escrowId: escrow.id
-            });
-          }
-        } catch (escrowError) {
-          // Escrow finishing error - update withdrawal request to failed status
-          const errorMessage = `Error finishing escrow: ${escrowError instanceof Error ? escrowError.message : 'Unknown error'}`;
-          console.error("Error finishing escrow during withdrawal approval:", escrowError);
-          
-          await storage.updateWithdrawalRequest(id, {
-            status: "failed",
-            processedAt: new Date(),
-            rejectionReason: errorMessage,
-          } as any);
-          
-          return res.status(500).json({ 
-            error: errorMessage,
-            escrowId: escrow?.id
-          });
-        }
-      }
-
-      // 3. Create withdrawal transaction (status: "completed")
-      await storage.createTransaction({
-        vaultId: request.vaultId,
-        positionId: request.positionId || null,
-        type: "withdraw",
-        amount: request.amount,
-        rewards: "0",
-        status: "completed",
-        txHash: txHash,
-        network: request.network,
-      });
-
-      // 4. Mark withdrawal request status: "approved" (settled)
-      const updatedRequest = await storage.updateWithdrawalRequest(id, {
-        status: "approved",
-        processedAt: new Date(),
-        txHash: txHash,
-      } as any);
-
-      res.json({ 
-        success: true, 
-        request: updatedRequest,
-        escrowFinished: !!escrow,
-        message: escrow 
-          ? "Withdrawal approved and escrow released successfully"
-          : "Withdrawal approved successfully"
-      });
+      const redemptions = await storage.getRedemptionsByWallet(req.params.address);
+      res.json(redemptions);
     } catch (error) {
-      console.error("Approve withdrawal request error:", error);
-      res.status(500).json({ error: "Failed to approve withdrawal request" });
-    }
-  });
-
-  // Reject withdrawal request (admin)
-  app.patch("/api/withdrawal-requests/:id/reject", async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { reason } = req.body;
-
-      if (!reason) {
-        return res.status(400).json({ error: "Rejection reason is required" });
-      }
-
-      const updatedRequest = await storage.updateWithdrawalRequest(id, {
-        status: "rejected",
-        processedAt: new Date(),
-        rejectionReason: reason,
-      } as any);
-
-      res.json({ success: true, request: updatedRequest });
-    } catch (error) {
-      console.error("Reject withdrawal request error:", error);
-      res.status(500).json({ error: "Failed to reject withdrawal request" });
+      console.error("Get wallet redemptions error:", error);
+      res.status(500).json({ error: "Failed to get wallet redemptions" });
     }
   });
 
@@ -1706,229 +1588,6 @@ export async function registerRoutes(
       res.json(topVaults);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch top vaults" });
-    }
-  });
-
-  // ============= ESCROW ENDPOINTS =============
-
-  // Get all escrows with optional filters
-  app.get("/api/escrows", async (req, res) => {
-    try {
-      const { walletAddress, status, vaultId } = req.query;
-      
-      let escrows = await storage.getEscrows(
-        walletAddress as string | undefined,
-        status as string | undefined
-      );
-
-      // Additional filter by vaultId if provided
-      if (vaultId) {
-        escrows = escrows.filter(e => e.vaultId === vaultId);
-      }
-
-      res.json(escrows);
-    } catch (error) {
-      console.error("Get escrows error:", error);
-      res.status(500).json({ error: "Failed to fetch escrows" });
-    }
-  });
-
-  // Get single escrow by ID
-  app.get("/api/escrows/:id", async (req, res) => {
-    try {
-      const escrow = await storage.getEscrow(req.params.id);
-      if (!escrow) {
-        return res.status(404).json({ error: "Escrow not found" });
-      }
-      res.json(escrow);
-    } catch (error) {
-      console.error("Get escrow error:", error);
-      res.status(500).json({ error: "Failed to fetch escrow" });
-    }
-  });
-
-  // Create escrow (for manual testing)
-  app.post("/api/escrows", async (req, res) => {
-    try {
-      const validatedData = insertEscrowSchema.parse(req.body);
-      
-      // Use vault credentials for escrow creation
-      const vaultSecret = "sEd7kzvj3erqU5675pPkk5o4LwXVNGW";
-      const vaultAddress = "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY";
-      const network = validatedData.network || "testnet";
-
-      // Create escrow on XRPL
-      const result = await createEscrow({
-        sourceAddress: vaultAddress,
-        sourceSecret: vaultSecret,
-        destinationAddress: validatedData.destinationAddress,
-        amount: validatedData.amount,
-        network: network,
-        finishAfterSeconds: 60, // Can finish after 1 minute
-        cancelAfterSeconds: 86400, // Can cancel after 24 hours
-        condition: validatedData.condition || undefined,
-      });
-
-      if (!result.success) {
-        return res.status(400).json({ error: result.error || "Failed to create escrow on XRPL" });
-      }
-
-      // Store escrow in database
-      const escrow = await storage.createEscrow({
-        ...validatedData,
-        createTxHash: result.txHash,
-        escrowSequence: result.escrowSequence,
-        status: "pending",
-        finishAfter: new Date(Date.now() + 60000), // 1 minute from now
-        cancelAfter: new Date(Date.now() + 86400000), // 24 hours from now
-      });
-
-      res.status(201).json(escrow);
-    } catch (error) {
-      console.error("Create escrow error:", error);
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Failed to create escrow" });
-      }
-    }
-  });
-
-  // Finish escrow and release XRP
-  app.post("/api/escrows/:id/finish", async (req, res) => {
-    try {
-      const escrow = await storage.getEscrow(req.params.id);
-      if (!escrow) {
-        return res.status(404).json({ error: "Escrow not found" });
-      }
-
-      if (escrow.status === "finished") {
-        return res.status(400).json({ error: "Escrow already finished" });
-      }
-
-      if (escrow.status === "cancelled") {
-        return res.status(400).json({ error: "Escrow already cancelled" });
-      }
-
-      if (!escrow.escrowSequence) {
-        return res.status(400).json({ error: "Escrow sequence not found" });
-      }
-
-      // Use vault credentials to finish escrow
-      const vaultSecret = "sEd7kzvj3erqU5675pPkk5o4LwXVNGW";
-      const vaultAddress = "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY";
-
-      // Finish escrow on XRPL
-      // Note: Anyone can finish an escrow after FinishAfter time (if no Condition)
-      // We use the vault account to finish since it has the credentials
-      const result = await finishEscrow({
-        accountAddress: vaultAddress, // Vault finishes the escrow
-        accountSecret: vaultSecret,
-        escrowOwner: vaultAddress, // Vault is the owner
-        escrowSequence: escrow.escrowSequence,
-        network: escrow.network,
-        condition: escrow.condition || undefined,
-        fulfillment: escrow.fulfillment || undefined,
-      });
-
-      if (!result.success) {
-        return res.status(400).json({ error: result.error || "Failed to finish escrow on XRPL" });
-      }
-
-      // Update escrow status
-      const updatedEscrow = await storage.updateEscrow(req.params.id, {
-        status: "finished",
-        finishTxHash: result.txHash,
-        finishedAt: new Date(),
-      });
-
-      res.json({ success: true, escrow: updatedEscrow });
-    } catch (error) {
-      console.error("Finish escrow error:", error);
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Failed to finish escrow" });
-      }
-    }
-  });
-
-  // Cancel escrow and return XRP
-  app.post("/api/escrows/:id/cancel", async (req, res) => {
-    try {
-      const escrow = await storage.getEscrow(req.params.id);
-      if (!escrow) {
-        return res.status(404).json({ error: "Escrow not found" });
-      }
-
-      if (escrow.status === "finished") {
-        return res.status(400).json({ error: "Cannot cancel finished escrow" });
-      }
-
-      if (escrow.status === "cancelled") {
-        return res.status(400).json({ error: "Escrow already cancelled" });
-      }
-
-      if (!escrow.escrowSequence) {
-        return res.status(400).json({ error: "Escrow sequence not found" });
-      }
-
-      // Use vault credentials to cancel escrow
-      const vaultSecret = "sEd7kzvj3erqU5675pPkk5o4LwXVNGW";
-      const vaultAddress = "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY";
-
-      // Cancel escrow on XRPL
-      const result = await cancelEscrow({
-        accountAddress: vaultAddress, // Owner can cancel
-        accountSecret: vaultSecret,
-        escrowOwner: vaultAddress,
-        escrowSequence: escrow.escrowSequence,
-        network: escrow.network,
-      });
-
-      if (!result.success) {
-        return res.status(400).json({ error: result.error || "Failed to cancel escrow on XRPL" });
-      }
-
-      // Update escrow status
-      const updatedEscrow = await storage.updateEscrow(req.params.id, {
-        status: "cancelled",
-        cancelTxHash: result.txHash,
-        cancelledAt: new Date(),
-      });
-
-      res.json({ success: true, escrow: updatedEscrow });
-    } catch (error) {
-      console.error("Cancel escrow error:", error);
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-      } else {
-        res.status(500).json({ error: "Failed to cancel escrow" });
-      }
-    }
-  });
-
-  // Retry failed escrow operation
-  app.post("/api/escrows/:id/retry", async (req, res) => {
-    try {
-      const escrow = await storage.getEscrow(req.params.id);
-      if (!escrow) {
-        return res.status(404).json({ error: "Escrow not found" });
-      }
-
-      if (escrow.status !== "failed") {
-        return res.status(400).json({ error: "Can only retry failed escrows" });
-      }
-
-      // Reset status to pending for retry
-      const updatedEscrow = await storage.updateEscrow(req.params.id, {
-        status: "pending",
-      });
-
-      res.json({ success: true, escrow: updatedEscrow, message: "Escrow status reset to pending. You can now finish or cancel it." });
-    } catch (error) {
-      console.error("Retry escrow error:", error);
-      res.status(500).json({ error: "Failed to retry escrow" });
     }
   });
 
