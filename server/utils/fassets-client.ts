@@ -322,17 +322,23 @@ export class FAssetsClient {
     await approveTx.wait();
     console.log(`   ✅ Approval granted`);
     
-    // Request redemption by manually encoding function data to bypass ENS validation
+    // Request redemption by manually constructing calldata to bypass ALL ethers validation
     // CORRECT Function signature: redeem(uint256 _lots, string _redeemerUnderlyingAddressString, address payable _executor)
-    console.log(`   Requesting redemption from AssetManager (manually encoding to bypass ENS)...`);
+    console.log(`   Requesting redemption from AssetManager (manually constructing calldata)...`);
     
     try {
-      // Manually encode the function call with correct parameter order
-      const data = assetManager.interface.encodeFunctionData('redeem', [
-        lots,                      // Parameter 1: Number of lots to redeem
-        receiverUnderlyingAddress, // Parameter 2: XRPL address as string (not validated!)
-        ethers.ZeroAddress        // Parameter 3: Executor address (we handle confirmation ourselves)
-      ]);
+      // Get function selector for redeem(uint256,string,address)
+      const functionSignature = 'redeem(uint256,string,address)';
+      const functionSelector = ethers.id(functionSignature).slice(0, 10); // First 4 bytes (8 hex chars + 0x)
+      
+      // Manually encode parameters using defaultAbiCoder - bypasses type validation
+      const encodedParams = ethers.AbiCoder.defaultAbiCoder().encode(
+        ['uint256', 'string', 'address'],  // Types
+        [lots, receiverUnderlyingAddress, ethers.ZeroAddress]  // Values
+      );
+      
+      // Combine selector + encoded params
+      const data = functionSelector + encodedParams.slice(2); // Remove 0x from encodedParams
       
       // Get signer and send raw transaction
       const signer = this.config.flareClient.getContractSigner();
