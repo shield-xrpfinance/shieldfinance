@@ -70,51 +70,89 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### ✅ AUTOMATED WITHDRAWAL FLOW IMPLEMENTED (November 13, 2025)
+### ✅ ASYNC WITHDRAWAL FLOW - PHASE 1 COMPLETE (November 13, 2025)
 
-**Overview**: Implemented fully automated shXRP → FXRP → XRP redemption flow that returns XRP directly to the original depositor's XRPL wallet. No manual operator approval required.
+**Overview**: Implemented async withdrawal flow (Phase 1) with ENS resolution fix, background processing, and real-time status tracking. Withdrawals progress to "Awaiting Proof" status where they wait for XRPL payment listener (Phase 2) and FDC proof confirmation (Phase 3).
 
-**Architecture**:
-1. **Database Schema**:
-   - Created `fxrpToXrpRedemptions` table with status machine tracking
+**Phase 1 Implementation (Complete):**
+
+1. **ENS Resolution Fix**:
+   - Fixed "network does not support ENS" error when calling AssetManager.redeem()
+   - Solution: Use populateTransaction() to manually encode redemption call
+   - File: server/utils/fassets-client.ts
+
+2. **Async Architecture**:
+   - POST /api/withdrawals returns < 1 second with redemption ID
+   - Background worker processes redemption asynchronously (35+ seconds)
+   - Atomic claim mechanism: Conditional UPDATE WHERE status='pending' prevents race conditions
+   - Files: server/routes.ts, server/storage.ts
+
+3. **Database Schema**:
+   - Created `fxrpToXrpRedemptions` table with status state machine
    - Status states: pending → redeeming_shares → redeemed_fxrp → redeeming_fxrp → awaiting_proof → xrpl_payout → completed
    - Tracks complete redemption lifecycle with idempotent operations
+   - File: shared/schema.ts
 
-2. **Backend Services**:
-   - VaultService.redeemShares(): Burns shXRP tokens via ERC-4626 redeem() and returns FXRP to smart account
-   - BridgeService.redeemFxrpToXrp(): Orchestrates FAssets redemption to convert FXRP back to XRP
-   - FAssetsClient: Implements redemption request and payment proof generation using FDC attestations
-   - POST /api/withdrawals: Single endpoint that orchestrates the entire automated flow
+4. **Backend Services**:
+   - VaultService.redeemShares(): Burns shXRP tokens via ERC-4626 redeem() → receives FXRP
+   - BridgeService.redeemFxrpToXrp(): Requests FAssets redemption for FXRP amount
+   - FAssetsClient: Implements redemption request workflow
+   - POST /api/withdrawals: Async endpoint with background processing
+   - GET /api/withdrawals/wallet/:address: Status polling endpoint
 
-3. **Frontend Updates**:
-   - Portfolio: Withdrawal button triggers automated flow via POST /api/withdrawals
-   - WithdrawModal: Shows clear messaging that XRP will be sent to user's XRPL wallet automatically
-   - Removed all manual approval UI (Admin page, withdrawal requests, escrow displays)
+5. **Frontend Updates**:
+   - Portfolio: Withdrawal button triggers async flow, returns immediately
+   - WithdrawModal: Loading states, toast with redemption ID
+   - Real-time status display: Polling every 5 seconds for active redemptions
+   - Status labels for all 9 states with color-coded badges
+   - Cache invalidation using correct query key: ["/api/withdrawals/wallet", address]
+   - Files: client/src/pages/Portfolio.tsx, client/src/components/WithdrawModal.tsx
 
-4. **Code Cleanup**:
-   - Removed Admin page and all approval-based endpoints
-   - Removed 10+ legacy API endpoints (withdrawal-requests, escrow CRUD)
-   - Removed Xaman-based withdrawal flow (Xaman only used for deposits now)
-   - Cleaned up all escrow and manual approval code from frontend
+6. **Data Integrity**:
+   - Position balance updates deferred until Phase 3 completion
+   - Transaction records deferred until Phase 3 completion
+   - Prevents user balance loss if redemption fails mid-process
+   - Idempotent background processing with retry safety
 
-**Withdrawal Flow**:
-1. User clicks "Withdraw" in Portfolio → WithdrawModal opens
+**Current Withdrawal Flow (Phase 1):**
+1. User clicks "Withdraw" → WithdrawModal opens
 2. User enters shXRP amount → clicks Confirm
-3. Frontend calls POST /api/withdrawals with {positionId, shareAmount}
-4. Backend automatically:
+3. Frontend calls POST /api/withdrawals → Returns redemption ID immediately
+4. Background worker processes asynchronously:
    - Validates position and share amount
    - Burns shXRP tokens via vault.redeem() → receives FXRP
    - Requests FAssets redemption for FXRP amount
-   - Generates FDC proof of redemption payment
-   - Confirms redemption payment on FAssets contract
-   - XRP sent to original depositor's XRPL wallet
-5. No user signature required (fully automated)
+   - Updates status through: pending → redeeming_shares → redeemed_fxrp → redeeming_fxrp
+   - **Stops at "Awaiting Proof"** (waiting for Phases 2/3)
+5. Frontend polls status every 5 seconds and displays progress
+6. User sees real-time status updates without page refresh
 
-**Security**:
-- Custodial model: Smart account holds assets, positions table tracks user ownership
-- Only position owner can withdraw (validated by userAddress in positions table)
-- ERC-4626 standard ensures correct share-to-asset conversion
-- Idempotent operations with retry logic for crash recovery
+**Phases 2/3 (Pending Implementation):**
+- **Phase 2 - XRPL Payment Listener**:
+  - Monitor XRPL for agent payment to user's wallet
+  - Detect when FAssets agent sends XRP redemption
+  - Trigger Phase 3 confirmation job when payment detected
+  
+- **Phase 3 - FDC Proof & Completion**:
+  - Generate FDC attestation proof of XRPL payment
+  - Submit proof to FAssets contract to confirm redemption
+  - Update position balances and create transaction records
+  - Transition status: awaiting_proof → xrpl_payout → completed
+
+**Security & Production Notes**:
+- ✅ Custodial model: Smart account holds assets, positions table tracks user ownership
+- ✅ Only position owner can withdraw (validated by userAddress in positions table)
+- ✅ ERC-4626 standard ensures correct share-to-asset conversion
+- ✅ Atomic claim prevents duplicate processing and race conditions
+- ✅ Idempotent operations with retry logic for crash recovery
+- ⚠️ Withdrawals will remain in "Awaiting Proof" status until Phases 2/3 implemented
+- ⚠️ Manual operator intervention or future automation required to complete payouts
+
+**Deployment Status**:
+- Phase 1 approved for production deployment
+- User communication should explain "Awaiting Proof" means waiting for agent payment detection
+- Operational runbook should cover completing payouts manually if needed
+- Phases 2/3 prioritized as high-impact follow-up milestone
 
 ### Recent Changes (November 12, 2025)
 
