@@ -1148,14 +1148,14 @@ export class BridgeService {
 
       // Generate FDC attestation proof for the XRP payment
       console.log("⏳ Generating FDC attestation proof for XRP payment...");
-      const proof = await generateFDCProof(xrplTxHash, this.config.network);
+      const proof = await generateFDCProof(xrplTxHash, this.config.network, this.config.flareClient);
 
       console.log(`✅ FDC proof generated`);
-      console.log(`   Voting Round: ${proof.data.votingRound}`);
+      console.log(`   Voting Round: ${proof.votingRoundId}`);
 
       // Update redemption with proof data
       await this.config.storage.updateRedemption(redemptionId, {
-        fdcProofHash: proof.merkleProof[0],
+        fdcProofHash: proof.attestationTxHash,
         fdcProofData: JSON.stringify(proof),
       });
 

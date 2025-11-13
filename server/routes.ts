@@ -546,190 +546,22 @@ export async function registerRoutes(
       // 2. Create pending position
       const position = await storage.createPosition(validatedData);
       
-      // 3. Check if this is an XRP vault (only create escrows for XRP deposits)
-      const vaultAssets = vault.asset.split(",").map(a => a.trim());
-      const isXRPVault = vaultAssets.includes("XRP");
+      // 3. Create transaction record for deposit
+      await storage.createTransaction({
+        vaultId: position.vaultId,
+        positionId: position.id,
+        type: "deposit",
+        amount: position.amount,
+        rewards: "0",
+        status: "completed",
+        txHash: txHash || `deposit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        network: network,
+      });
       
-      if (isXRPVault) {
-        // XRP Vault: Create escrow to lock funds
-        // 3a. Create transaction record with "initiated" status
-        const transaction = await storage.createTransaction({
-          vaultId: position.vaultId,
-          positionId: position.id,
-          type: "deposit",
-          amount: position.amount,
-          rewards: "0",
-          status: "initiated",
-          txHash: txHash || `deposit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-          network: network,
-        });
-        
-        try {
-          // 4. Create escrow using vault credentials
-          const vaultSecret = "sEd7kzvj3erqU5675pPkk5o4LwXVNGW";
-          const vaultAddress = "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY";
-          
-          // Use 6-decimal precision for XRP amounts
-          const escrowAmount = depositAmount.toFixed(6);
-          
-          const escrowResult = await createEscrow({
-            sourceAddress: vaultAddress,
-            sourceSecret: vaultSecret,
-            destinationAddress: validatedData.walletAddress,
-            amount: escrowAmount,
-            network: network,
-            finishAfterSeconds: 60, // Can finish after 1 minute
-            cancelAfterSeconds: 86400, // Can cancel after 24 hours
-          });
-          
-          if (!escrowResult.success) {
-            // Create failed escrow record for tracking
-            await storage.createEscrow({
-              positionId: position.id,
-              vaultId: position.vaultId,
-              walletAddress: validatedData.walletAddress,
-              destinationAddress: validatedData.walletAddress,
-              amount: escrowAmount,
-              asset: "XRP",
-              status: "failed",
-              network: network,
-              createTxHash: null,
-              escrowSequence: null,
-              finishAfter: null,
-              cancelAfter: null,
-              finishTxHash: null,
-              cancelTxHash: null,
-              condition: null,
-              fulfillment: null,
-              finishedAt: null,
-              cancelledAt: null,
-            });
-            
-            // Rollback: Update transaction status to failed
-            await storage.createTransaction({
-              vaultId: position.vaultId,
-              positionId: position.id,
-              type: "deposit",
-              amount: position.amount,
-              rewards: "0",
-              status: "failed",
-              txHash: txHash || `deposit-failed-${Date.now()}`,
-              network: network,
-            });
-            
-            console.error(`❌ Escrow creation failed for position ${position.id}: ${escrowResult.error}`);
-            
-            return res.status(400).json({ 
-              error: "Failed to create XRPL escrow. Please ensure the vault has sufficient funds and try again.",
-              details: escrowResult.error,
-              positionId: position.id
-            });
-          }
-          
-          // 5. Store escrow record with status "pending"
-          const escrow = await storage.createEscrow({
-            positionId: position.id,
-            vaultId: position.vaultId,
-            walletAddress: validatedData.walletAddress,
-            destinationAddress: validatedData.walletAddress,
-            amount: escrowAmount,
-            asset: "XRP",
-            status: "pending",
-            network: network,
-            createTxHash: escrowResult.txHash,
-            escrowSequence: escrowResult.escrowSequence,
-            finishAfter: new Date(Date.now() + 60000), // 1 minute from now
-            cancelAfter: new Date(Date.now() + 86400000), // 24 hours from now
-            finishTxHash: null,
-            cancelTxHash: null,
-            condition: null,
-            fulfillment: null,
-            finishedAt: null,
-            cancelledAt: null,
-          });
-          
-          // 6. Update transaction to "pending_settlement"
-          await storage.createTransaction({
-            vaultId: position.vaultId,
-            positionId: position.id,
-            type: "deposit",
-            amount: position.amount,
-            rewards: "0",
-            status: "pending_settlement",
-            txHash: escrowResult.txHash || txHash,
-            network: network,
-          });
-          
-          console.log(`✅ XRP deposit with escrow created successfully. Position: ${position.id}, Escrow: ${escrow.id}`);
-          
-          res.status(201).json({ 
-            position, 
-            escrow,
-            message: "XRP deposit successful. Funds are held in escrow and can be withdrawn after the lock period."
-          });
-        } catch (escrowError) {
-          console.error("Escrow creation exception during XRP deposit:", escrowError);
-          
-          // Create failed escrow record for tracking
-          try {
-            await storage.createEscrow({
-              positionId: position.id,
-              vaultId: position.vaultId,
-              walletAddress: validatedData.walletAddress,
-              destinationAddress: validatedData.walletAddress,
-              amount: validatedData.amount,
-              asset: "XRP",
-              status: "failed",
-              network: network,
-              createTxHash: null,
-              escrowSequence: null,
-              finishAfter: null,
-              cancelAfter: null,
-              finishTxHash: null,
-              cancelTxHash: null,
-              condition: null,
-              fulfillment: null,
-              finishedAt: null,
-              cancelledAt: null,
-            });
-          } catch (dbError) {
-            console.error("Failed to create failed escrow record:", dbError);
-          }
-          
-          // Rollback: Mark transaction as failed
-          await storage.createTransaction({
-            vaultId: position.vaultId,
-            positionId: position.id,
-            type: "deposit",
-            amount: position.amount,
-            rewards: "0",
-            status: "failed",
-            txHash: txHash || `deposit-failed-${Date.now()}`,
-            network: network,
-          });
-          
-          throw escrowError;
-        }
-      } else {
-        // Non-XRP Vault (RLUSD/USDC): No escrow needed, mark as completed
-        console.log(`💰 Non-XRP deposit (${vault.asset}) - skipping escrow creation`);
-        
-        await storage.createTransaction({
-          vaultId: position.vaultId,
-          positionId: position.id,
-          type: "deposit",
-          amount: position.amount,
-          rewards: "0",
-          status: "completed",
-          txHash: txHash || `deposit-${Date.now()}-${Math.random().toString(36).substring(7)}`,
-          network: network,
-        });
-        
-        res.status(201).json({ 
-          position,
-          message: `${vault.asset} deposit successful.`
-        });
-      }
+      res.status(201).json({ 
+        position,
+        message: `${vault.asset} deposit successful.`
+      });
     } catch (error) {
       console.error("Deposit error:", error);
       if (error instanceof Error) {
