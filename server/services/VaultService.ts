@@ -129,6 +129,20 @@ export class VaultService {
 
       console.log(`✅ Position created: ${position.id}`);
 
+      // Create transaction record for deposit
+      await this.config.storage.createTransaction({
+        vaultId,
+        positionId: position.id,
+        type: "deposit",
+        amount: fxrpAmount,
+        rewards: "0",
+        status: "completed",
+        txHash: receipt.hash,
+        network: "coston2",
+      });
+
+      console.log(`✅ Transaction record created for deposit`);
+
       return {
         vaultMintTxHash: receipt.hash,
         positionId: position.id,
@@ -145,7 +159,7 @@ export class VaultService {
    * @param vaultId - Vault identifier from database
    * @param userAddress - User's XRP wallet address (for position tracking)
    * @param shareAmount - shXRP shares to redeem in decimal format (e.g., "20.000000" for 20 shares)
-   * @returns FXRP amount received (decimal string with 6 decimals)
+   * @returns Object containing fxrpReceived and txHash
    * 
    * ERC-4626 redeem() burns shares and returns underlying assets (FXRP).
    * The function signature is: redeem(uint256 shares, address receiver, address owner)
@@ -154,7 +168,7 @@ export class VaultService {
     vaultId: string,
     userAddress: string,
     shareAmount: string
-  ): Promise<string> {
+  ): Promise<{ fxrpReceived: string; txHash: string }> {
     console.log(`🔥 Redeeming ${shareAmount} shXRP shares for ${userAddress}`);
 
     // Get vault details from database
@@ -222,7 +236,10 @@ export class VaultService {
         throw new Error("Failed to parse Withdraw event - could not determine FXRP received");
       }
 
-      return fxrpReceived;
+      return {
+        fxrpReceived,
+        txHash: receipt.hash,
+      };
     } catch (error) {
       console.error("Vault redeem error:", error);
       throw error;

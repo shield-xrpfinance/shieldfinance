@@ -1309,7 +1309,7 @@ export async function registerRoutes(
         throw new Error("VaultService not available");
       }
 
-      const fxrpReceived = await vaultService.redeemShares(
+      const { fxrpReceived, txHash: vaultRedeemTxHash } = await vaultService.redeemShares(
         position.vaultId,
         userAddress,
         shareAmount
@@ -1320,6 +1320,7 @@ export async function registerRoutes(
       await storage.updateRedemptionStatus(redemption.id, "redeemed_fxrp", {
         fxrpRedeemed: fxrpReceived,
         fxrpRedeemedAt: new Date(),
+        vaultRedeemTxHash,
       });
 
       // Step 4: Redeem FXRP → XRP via FAssets
@@ -1344,6 +1345,20 @@ export async function registerRoutes(
         // Note: We'll need to implement updatePosition in storage
         console.log(`   Remaining shares: ${remainingShares}`);
       }
+
+      // Create transaction record for withdrawal
+      await storage.createTransaction({
+        vaultId: position.vaultId,
+        positionId: positionId,
+        type: "withdraw",
+        amount: shareAmount,
+        rewards: "0",
+        status: "completed",
+        txHash: vaultRedeemTxHash,
+        network: "coston2",
+      });
+
+      console.log(`✅ Transaction record created for withdrawal`);
 
       // Return success response
       res.json({
