@@ -187,6 +187,27 @@ export class BridgeService {
   }
 
   /**
+   * Check if a bridge is active and can accept payments.
+   * A bridge is active if it is NOT in a terminal state AND NOT expired.
+   * 
+   * @param bridge - Bridge to check
+   * @returns true if bridge is active, false otherwise
+   */
+  public isBridgeActive(bridge: SelectXrpToFxrpBridge): boolean {
+    // Bridge is NOT active if it's in a terminal state
+    if (this.isBridgeTerminal(bridge)) {
+      return false;
+    }
+    
+    // Bridge is NOT active if it's expired
+    if (this.isBridgeExpired(bridge)) {
+      return false;
+    }
+    
+    return true;
+  }
+
+  /**
    * Stop the cleanup scheduler (for graceful shutdown).
    */
   stopCleanupScheduler(): void {

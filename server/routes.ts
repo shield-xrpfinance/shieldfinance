@@ -428,10 +428,17 @@ export async function registerRoutes(
   app.post("/api/bridges/:id/cancel", async (req, res) => {
     try {
       const { id: bridgeId } = req.params;
-      const { walletAddress } = req.body;
+      const { walletAddress, signedTxBlob } = req.body;
 
       if (!walletAddress) {
         return res.status(400).json({ error: "Missing required field: walletAddress" });
+      }
+
+      if (!signedTxBlob) {
+        return res.status(400).json({ 
+          error: "Missing required field: signedTxBlob",
+          message: "Please sign the cancellation request with your wallet"
+        });
       }
 
       console.log(`🚫 Cancellation requested for bridge ${bridgeId} by ${walletAddress}`);
@@ -442,10 +449,7 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Bridge not found" });
       }
 
-      // 2. Verify wallet ownership
-      // TODO: Add signature verification - currently vulnerable to wallet spoofing
-      // Frontend should sign a message with timestamp and bridgeId, backend verifies signature
-      // Example: verifyXRPLSignature(walletAddress, signature, message)
+      // 2. Verify wallet ownership matches bridge
       if (bridge.walletAddress !== walletAddress) {
         return res.status(403).json({ 
           error: "Unauthorized - you can only cancel your own deposits",
@@ -454,7 +458,137 @@ export async function registerRoutes(
         });
       }
 
-      // 3. Check if bridge is already in a terminal state
+      // 3. Verify XRPL signature using verify-xrpl-signature library
+      let verificationResult;
+      try {
+        const { verifySignature } = await import("verify-xrpl-signature");
+        verificationResult = verifySignature(signedTxBlob);
+        
+        if (!verificationResult.signatureValid) {
+          return res.status(401).json({ 
+            error: "Invalid signature",
+            message: "The signed transaction could not be verified"
+          });
+        }
+
+        // Verify the signer matches the wallet address
+        if (verificationResult.signedBy !== walletAddress) {
+          return res.status(401).json({ 
+            error: "Signature mismatch",
+            message: `Transaction was signed by ${verificationResult.signedBy}, but expected ${walletAddress}`,
+            signedBy: verificationResult.signedBy,
+            expected: walletAddress
+          });
+        }
+
+        console.log(`✅ Signature cryptographically verified for wallet ${walletAddress}`);
+      } catch (signatureError) {
+        console.error("Signature verification error:", signatureError);
+        return res.status(401).json({ 
+          error: "Signature verification failed",
+          message: signatureError instanceof Error ? signatureError.message : "Unable to verify signature"
+        });
+      }
+
+      // 4. Decode and verify transaction content to prevent replay attacks
+      try {
+        const { decode } = await import("ripple-binary-codec");
+        const decodedTx = decode(signedTxBlob) as any;
+        
+        // Verify it's a SignIn transaction
+        if (decodedTx.TransactionType !== "SignIn") {
+          return res.status(400).json({ 
+            error: "Invalid transaction type",
+            message: `Expected SignIn transaction, got ${decodedTx.TransactionType}`
+          });
+        }
+
+        // Extract and decode memo
+        if (!decodedTx.Memos || decodedTx.Memos.length === 0) {
+          return res.status(400).json({ 
+            error: "Missing memo",
+            message: "SignIn transaction must include cancellation message in memo"
+          });
+        }
+
+        const memoData = decodedTx.Memos[0]?.Memo?.MemoData;
+        if (!memoData) {
+          return res.status(400).json({ 
+            error: "Invalid memo format",
+            message: "Memo data is missing"
+          });
+        }
+
+        // Decode hex memo data to string
+        const cancelMessage = Buffer.from(memoData, 'hex').toString('utf8');
+        console.log(`📝 Decoded cancel message: ${cancelMessage}`);
+
+        // Verify canonical format: cancel:{bridgeId}:{timestamp}
+        const expectedPrefix = `cancel:${bridgeId}:`;
+        if (!cancelMessage.startsWith(expectedPrefix)) {
+          return res.status(400).json({ 
+            error: "Invalid cancel message format",
+            message: `Message must start with 'cancel:${bridgeId}:'`,
+            received: cancelMessage.substring(0, 50)
+          });
+        }
+
+        // Extract and verify timestamp
+        const parts = cancelMessage.split(':');
+        if (parts.length !== 3 || parts[0] !== 'cancel' || parts[1] !== bridgeId) {
+          return res.status(400).json({ 
+            error: "Malformed cancel message",
+            message: "Expected format: cancel:{bridgeId}:{timestamp}",
+            received: cancelMessage
+          });
+        }
+
+        const messageTimestamp = parseInt(parts[2]);
+        const now = Date.now();
+        const fiveMinutes = 5 * 60 * 1000;
+
+        if (isNaN(messageTimestamp) || messageTimestamp > now || (now - messageTimestamp) > fiveMinutes) {
+          return res.status(400).json({ 
+            error: "Expired cancellation request",
+            message: "Cancellation must be signed within the last 5 minutes",
+            signedAt: new Date(messageTimestamp).toISOString(),
+            expiresAfter: "5 minutes"
+          });
+        }
+
+        console.log(`✅ Transaction content verified`);
+        console.log(`   Transaction type: ${decodedTx.TransactionType}`);
+        console.log(`   Bridge ID: ${parts[1]}`);
+        console.log(`   Timestamp: ${new Date(messageTimestamp).toISOString()}`);
+        console.log(`   Age: ${Math.round((now - messageTimestamp) / 1000)}s`);
+        
+        // 5. Check for replay attacks by tracking used cancel messages
+        // In production, store nonces in database/Redis with TTL
+        const usedNoncesKey = `cancel-nonces-${bridgeId}`;
+        const globalNonces = (global as any)[usedNoncesKey] || new Set<string>();
+        
+        if (globalNonces.has(cancelMessage)) {
+          return res.status(400).json({ 
+            error: "Duplicate cancellation request",
+            message: "This signature has already been used to cancel this bridge",
+            detail: "Replay attack prevented"
+          });
+        }
+        
+        // Store nonce to prevent reuse
+        globalNonces.add(cancelMessage);
+        (global as any)[usedNoncesKey] = globalNonces;
+        
+        console.log(`✅ Nonce validated - first use of this signature`);
+      } catch (decodeError) {
+        console.error("Transaction decode error:", decodeError);
+        return res.status(400).json({ 
+          error: "Failed to decode transaction",
+          message: decodeError instanceof Error ? decodeError.message : "Invalid transaction blob"
+        });
+      }
+
+      // 6. Check if bridge is already in a terminal state
       if (["completed", "cancelled", "failed"].includes(bridge.status)) {
         return res.status(400).json({ 
           error: `Cannot cancel bridge in '${bridge.status}' status`,
@@ -462,7 +596,7 @@ export async function registerRoutes(
         });
       }
 
-      // 4. Check if bridge has already started minting (point of no return)
+      // 7. Check if bridge has already started minting (point of no return)
       if (["minting", "vault_minting", "vault_minted"].includes(bridge.status)) {
         return res.status(400).json({ 
           error: "Cannot cancel bridge - minting has already started",
@@ -471,7 +605,7 @@ export async function registerRoutes(
         });
       }
 
-      // 5. Check if bridge is expired
+      // 8. Check if bridge is expired
       if (bridge.expiresAt && new Date() > bridge.expiresAt) {
         return res.status(400).json({ 
           error: "Bridge has already expired",
@@ -480,7 +614,7 @@ export async function registerRoutes(
         });
       }
 
-      // 6. Cancel the bridge
+      // 9. Cancel the bridge
       await storage.updateBridge(bridgeId, {
         status: "cancelled",
         cancelledAt: new Date(),
@@ -848,6 +982,8 @@ export async function registerRoutes(
       // Xumm SDK stores signed status in meta.signed
       const signed = payload.meta?.signed || false;
       const account = payload.response?.account || null;
+      const signedTxBlob = payload.response?.hex || null; // Get signed transaction blob
+      const cancelled = payload.meta?.cancelled || false;
 
       // Auto-cleanup: Cancel payload after it's been resolved (signed, cancelled, or expired)
       if (payload.meta?.resolved) {
@@ -864,10 +1000,97 @@ export async function registerRoutes(
       res.json({
         signed,
         account,
+        signedTxBlob,
+        cancelled,
         demo: false
       });
     } catch (error) {
       res.status(500).json({ error: "Failed to get payload status" });
+    }
+  });
+
+  // Create Xaman SignIn request for bridge cancellation
+  // Server controls the canonical message to prevent forgery
+  app.post("/api/bridges/:id/cancel-request", async (req, res) => {
+    try {
+      const { id: bridgeId } = req.params;
+      const { walletAddress } = req.body;
+
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Missing required field: walletAddress" });
+      }
+
+      // Get bridge to verify ownership
+      const bridge = await storage.getBridgeById(bridgeId);
+      if (!bridge) {
+        return res.status(404).json({ error: "Bridge not found" });
+      }
+
+      if (bridge.walletAddress !== walletAddress) {
+        return res.status(403).json({ 
+          error: "Unauthorized - you can only cancel your own deposits"
+        });
+      }
+
+      // Server creates canonical message (prevents client forgery)
+      const timestamp = Date.now().toString();
+      const canonicalMessage = `cancel:${bridgeId}:${timestamp}`;
+
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
+
+      if (!apiKey || !apiSecret || apiKey.length === 0 || apiSecret.length === 0) {
+        console.warn("Xaman credentials not configured - falling back to demo mode");
+        return res.json({
+          uuid: `demo-cancel-${bridgeId}-${timestamp}`,
+          message: canonicalMessage,
+          qrUrl: "demo",
+          deepLink: "",
+          demo: true
+        });
+      }
+
+      const xumm = new XummSdk(apiKey, apiSecret);
+
+      // Create SignIn transaction with canonical cancellation message in memo
+      const payload = await xumm.payload?.create({
+        TransactionType: "SignIn",
+        Memos: [
+          {
+            Memo: {
+              MemoData: Buffer.from(canonicalMessage).toString("hex").toUpperCase(),
+              MemoType: Buffer.from("cancellation").toString("hex").toUpperCase(),
+              MemoFormat: Buffer.from("text/plain").toString("hex").toUpperCase(),
+            },
+          },
+        ],
+      });
+
+      if (!payload) {
+        throw new Error("Failed to create Xaman SignIn payload");
+      }
+
+      console.log(`🔐 Created server-controlled cancel request for bridge ${bridgeId}`);
+      console.log(`   Canonical message: ${canonicalMessage}`);
+      console.log(`   Payload UUID: ${payload.uuid}`);
+
+      res.json({
+        uuid: payload.uuid,
+        message: canonicalMessage, // Return canonical message for client display
+        qrUrl: payload.refs?.qr_png,
+        deepLink: payload.next?.always,
+        demo: false
+      });
+    } catch (error) {
+      console.error("Cancel request creation error:", error);
+      const timestamp = Date.now().toString();
+      res.json({
+        uuid: `demo-cancel-${req.params.id}-${timestamp}`,
+        message: `cancel:${req.params.id}:${timestamp}`,
+        qrUrl: "demo",
+        deepLink: "",
+        demo: true
+      });
     }
   });
 

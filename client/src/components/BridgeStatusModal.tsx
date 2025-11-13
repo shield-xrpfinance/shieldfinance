@@ -7,6 +7,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -21,9 +31,11 @@ import {
   XCircle,
   Info,
   RefreshCw,
-  Send
+  Send,
+  Ban
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import { differenceInSeconds } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useWallet } from "@/lib/walletContext";
@@ -84,8 +96,11 @@ export default function BridgeStatusModal({
   const [xamanQrUrl, setXamanQrUrl] = useState<string | null>(null);
   const [xamanDeepLink, setXamanDeepLink] = useState<string | null>(null);
   const [showXamanModal, setShowXamanModal] = useState(false);
+  const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [isCancelling, setIsCancelling] = useState(false);
+  const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const { toast } = useToast();
-  const { requestPayment, provider, isConnected } = useWallet();
+  const { requestPayment, provider, isConnected, walletAddress } = useWallet();
 
   useEffect(() => {
     if (!open || !bridgeId) {
@@ -101,8 +116,8 @@ export default function BridgeStatusModal({
         const data = await response.json();
         setBridge(data);
 
-        // Stop polling if bridge is completed, failed, or timed out
-        const terminalStates = ["completed", "vault_minted", "failed", "vault_mint_failed", "fdc_timeout"];
+        // Stop polling if bridge is completed, failed, timed out, or cancelled
+        const terminalStates = ["completed", "vault_minted", "failed", "vault_mint_failed", "fdc_timeout", "cancelled"];
         if (terminalStates.includes(data.status)) {
           shouldContinuePolling = false;
         }
@@ -133,6 +148,35 @@ export default function BridgeStatusModal({
       clearInterval(interval);
     };
   }, [open, bridgeId, toast, retryCount]);
+
+  // Countdown timer effect
+  useEffect(() => {
+    if (!bridge?.expiresAt) {
+      setRemainingSeconds(null);
+      return;
+    }
+
+    const updateCountdown = () => {
+      const expiryDate = new Date(bridge.expiresAt);
+      const now = new Date();
+      const seconds = differenceInSeconds(expiryDate, now);
+      
+      if (seconds <= 0) {
+        setRemainingSeconds(0);
+        return;
+      }
+      
+      setRemainingSeconds(seconds);
+    };
+
+    // Update immediately
+    updateCountdown();
+
+    // Update every second
+    const interval = setInterval(updateCountdown, 1000);
+
+    return () => clearInterval(interval);
+  }, [bridge?.expiresAt]);
 
   const handleCopyAddress = () => {
     if (bridge?.agentUnderlyingAddress) {
@@ -273,6 +317,98 @@ export default function BridgeStatusModal({
       variant: "destructive",
     });
     setShowXamanModal(false);
+  };
+
+  const handleCancelDeposit = async () => {
+    if (!bridge || !walletAddress) {
+      toast({
+        title: "Error",
+        description: "Bridge or wallet not available",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCancelling(true);
+    setShowCancelDialog(false);
+
+    try {
+      console.log("Requesting server-controlled cancel payload...");
+      
+      // Request server to create canonical cancel payload (prevents message forgery)
+      const payloadResponse = await fetch(`/api/bridges/${bridge.id}/cancel-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          walletAddress,
+        }),
+      });
+
+      if (!payloadResponse.ok) {
+        throw new Error("Failed to create signature request");
+      }
+
+      const payloadData = await payloadResponse.json();
+      
+      // Open Xaman for signing
+      console.log("Opening Xaman for signature...");
+      if (payloadData.deepLink) {
+        window.open(payloadData.deepLink, "_blank");
+      }
+
+      // Poll for signature result
+      let signedTxBlob: string | null = null;
+      const maxAttempts = 60; // 60 seconds timeout
+      
+      for (let i = 0; i < maxAttempts; i++) {
+        await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+        
+        const statusResponse = await fetch(`/api/wallet/xaman/payload/${payloadData.uuid}`);
+        const statusData = await statusResponse.json();
+        
+        if (statusData.signed && statusData.signedTxBlob) {
+          signedTxBlob = statusData.signedTxBlob;
+          console.log("✅ Xaman signature received");
+          break;
+        } else if (statusData.cancelled) {
+          throw new Error("Signature request cancelled in Xaman");
+        }
+      }
+
+      if (!signedTxBlob) {
+        throw new Error("Signature request timed out - please try again");
+      }
+
+      // Send cancellation request with signed transaction blob
+      const response = await apiRequest("POST", `/api/bridges/${bridge.id}/cancel`, {
+        walletAddress,
+        signedTxBlob,
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        toast({
+          title: "Deposit Cancelled",
+          description: "Your deposit request has been cancelled successfully",
+        });
+
+        // Invalidate query cache and refresh bridge status
+        queryClient.invalidateQueries({ queryKey: ["/api/bridges", bridge.id] });
+        setRetryCount(prev => prev + 1);
+      } else {
+        throw new Error(result.error || "Failed to cancel deposit");
+      }
+    } catch (error) {
+      console.error("Error cancelling deposit:", error);
+      toast({
+        title: "Cancellation Failed",
+        description: error instanceof Error ? error.message : "Failed to cancel deposit",
+        variant: "destructive",
+      });
+    } finally {
+      setIsCancelling(false);
+    }
   };
 
   if (!bridge) {
@@ -454,6 +590,42 @@ export default function BridgeStatusModal({
               <AlertDescription>
                 <p className="font-medium">Bridge Operation Failed</p>
                 <p className="text-sm mt-1">{bridge.errorMessage || "An error occurred during the bridge process. Please contact support."}</p>
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {/* Countdown Timer - only show for active bridges */}
+          {bridge.status !== "completed" && bridge.status !== "vault_minted" && 
+           bridge.status !== "failed" && bridge.status !== "vault_mint_failed" && 
+           bridge.status !== "cancelled" && remainingSeconds !== null && (
+            <Alert 
+              variant={remainingSeconds > 300 ? "default" : "destructive"} 
+              className={remainingSeconds > 300 ? "border-blue-500/50 bg-blue-500/10" : ""}
+              data-testid="alert-countdown"
+            >
+              <Clock className="h-4 w-4" />
+              <AlertDescription>
+                <div className="flex items-center justify-between">
+                  <span className="font-medium">
+                    {remainingSeconds > 0 ? "Time Remaining" : "Expired"}
+                  </span>
+                  <span className="font-mono font-bold text-lg" data-testid="text-countdown">
+                    {remainingSeconds > 0 
+                      ? `${Math.floor(remainingSeconds / 60)}:${(remainingSeconds % 60).toString().padStart(2, '0')}`
+                      : "00:00"
+                    }
+                  </span>
+                </div>
+                {remainingSeconds <= 300 && remainingSeconds > 0 && (
+                  <p className="text-xs mt-1">
+                    This deposit request will expire soon. Please complete payment or cancel.
+                  </p>
+                )}
+                {remainingSeconds === 0 && (
+                  <p className="text-xs mt-1">
+                    This deposit request has expired and will be automatically cancelled.
+                  </p>
+                )}
               </AlertDescription>
             </Alert>
           )}
@@ -640,7 +812,39 @@ export default function BridgeStatusModal({
           )}
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="flex-col gap-2 sm:flex-col">
+          {/* Cancel Deposit Button */}
+          {bridge.status !== "completed" && 
+           bridge.status !== "vault_minted" && 
+           bridge.status !== "cancelled" &&
+           bridge.status !== "failed" &&
+           bridge.status !== "vault_mint_failed" &&
+           bridge.status !== "minting" &&
+           bridge.status !== "vault_minting" &&
+           remainingSeconds !== null &&
+           remainingSeconds > 0 &&
+           isConnected && (
+            <Button
+              onClick={() => setShowCancelDialog(true)}
+              variant="destructive"
+              className="w-full"
+              disabled={isCancelling || remainingSeconds === 0}
+              data-testid="button-cancel-deposit"
+            >
+              {isCancelling ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                <>
+                  <Ban className="h-4 w-4 mr-2" />
+                  Cancel Deposit
+                </>
+              )}
+            </Button>
+          )}
+
           <Button
             onClick={() => onOpenChange(false)}
             variant={(bridge.status === "completed" || bridge.status === "vault_minted") ? "default" : "outline"}
@@ -664,6 +868,38 @@ export default function BridgeStatusModal({
         title="Send XRP Payment"
         description="Scan the QR code with your Xaman wallet to send the XRP payment"
       />
+
+      {/* Cancel Confirmation Dialog */}
+      <AlertDialog open={showCancelDialog} onOpenChange={setShowCancelDialog}>
+        <AlertDialogContent data-testid="dialog-cancel-confirmation">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Deposit?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this deposit request? This action cannot be undone.
+              {bridge && remainingSeconds !== null && remainingSeconds > 0 && (
+                <div className="mt-3 p-3 bg-muted rounded-md">
+                  <p className="text-sm font-medium text-foreground">Time remaining: {Math.floor(remainingSeconds / 60)}:{(remainingSeconds % 60).toString().padStart(2, '0')}</p>
+                  <p className="text-xs mt-1">
+                    You can still complete the payment within this time, or cancel now to stop this deposit request.
+                  </p>
+                </div>
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-confirmation-no">
+              Keep Deposit
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleCancelDeposit}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-cancel-confirmation-yes"
+            >
+              Yes, Cancel Deposit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Dialog>
   );
 }
