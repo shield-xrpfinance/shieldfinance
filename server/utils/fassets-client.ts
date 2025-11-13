@@ -401,8 +401,8 @@ export class FAssetsClient {
     
     console.log(`\n🔍 Querying redemption request ${requestId}...`);
     
-    // Query the redemption request from contract
-    const request = await assetManager.getRedemptionRequest(requestId);
+    // Query the redemption request from contract using correct method name
+    const request = await assetManager.redemptionRequestInfo(requestId);
     
     console.log(`✅ Redemption request details:`);
     console.log(`   Agent Vault: ${request.agentVault}`);
