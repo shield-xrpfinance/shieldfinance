@@ -67,7 +67,7 @@ export function AppSidebar() {
             <Coins className="h-6 w-6 text-primary-foreground" />
           </div>
           <div>
-            <h2 className="font-bold text-lg">XRP Stake</h2>
+            <h2 className="font-bold text-lg">Shield Finance</h2>
             <p className="text-xs text-muted-foreground">Liquid Protocol</p>
           </div>
         </div>
