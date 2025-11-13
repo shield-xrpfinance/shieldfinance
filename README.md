@@ -27,9 +27,9 @@ This project enables users to:
 - Automated reward calculation and compounding
 
 ### 🔄 Transaction System
-- Secure deposit workflow with success modals
-- Request-based withdrawal approval system
-- Claim rewards functionality
+- Automated XRP to FXRP bridging via FAssets protocol
+- ERC-4626 compliant vault deposits and withdrawals
+- Gasless transactions using Etherspot smart accounts
 - Complete transaction history and analytics
 
 ### 📊 Dashboard Features
@@ -76,7 +76,7 @@ This project enables users to:
 - **Tooling**: 
   - Hardhat Toolbox (ethers.js v6, testing, verification)
   - Contract verification on Flare block explorers
-- **XRPL Escrow System**: Standard XRPL escrow transactions (EscrowCreate, EscrowFinish, EscrowCancel)
+- **FAssets Bridge**: Cross-chain XRP to FXRP conversion using Flare Data Connector attestations
 
 ## 📦 Installation
 
@@ -109,9 +109,9 @@ FLARE_COSTON2_RPC_URL=https://coston2-api.flare.network/ext/C/rpc
 FLARE_MAINNET_RPC_URL=https://flare-api.flare.network/ext/C/rpc
 FLARE_API_KEY=your-flare-api-key-here
 
-# Frontend Contract Addresses (Deployed on Coston2 - November 9, 2025)
+# Frontend Contract Addresses (Deployed on Coston2 - November 12, 2025)
 VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
-VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
+VITE_SHXRP_VAULT_ADDRESS=0x8fe09217445e90DA692D29F30859dafA4eb281d1
 ```
 
 > **Note**: See `.env.example` for a complete list with descriptions. For detailed deployment instructions, refer to [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) and the "How to Deploy to Testnet" section below.
@@ -185,9 +185,9 @@ VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 - Blockchain transaction hashes
 
 **withdrawal_requests**
-- Pending withdrawal requests
-- Vault operator approval queue
-- Claim requests
+- Withdrawal transaction tracking
+- Redemption status monitoring
+- Historical withdrawal records
 
 **vault_metrics_daily**
 - Historical performance data
@@ -232,17 +232,22 @@ npx hardhat compile
 tsx scripts/deploy-direct.ts
 ```
 
-**Deployment Status**: ✅ Successfully deployed on November 9, 2025
+**Deployment Status**: ✅ Successfully deployed on November 12, 2025
 
 **Deployed Contracts (Coston2 Testnet)**:
 - **ShieldToken**: [`0x07F943F173a6bE5EC63a8475597d28aAA6B24992`](https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992)
   - Total Supply: 100,000,000 SHIELD
   - Treasury Allocation: 10,000,000 SHIELD
 
-- **Shield XRP Vault**: [`0xd8d78DA41473D28eB013e161232192ead2cc745A`](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
-  - Initial Exchange Rate: 1.0 shXRP per XRP
+- **ShXRP Vault (ERC-4626)**: [`0x8fe09217445e90DA692D29F30859dafA4eb281d1`](https://coston2-explorer.flare.network/address/0x8fe09217445e90DA692D29F30859dafA4eb281d1)
+  - ERC-4626 compliant tokenized vault
+  - Minimum deposit: 0.01 FXRP
+  - Decimal precision: 6
 
-**Deployment info saved to**: `deployments/coston2-deployment.json`
+- **Smart Account (Etherspot)**: [`0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd`](https://coston2-explorer.flare.network/address/0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd)
+  - ERC-4337 smart account for gasless transactions
+
+**Deployment info saved to**: `deployments/coston2-1762979303762.json`
 
 ### Step 2: Verify Contracts (Optional)
 
@@ -252,8 +257,8 @@ Verify your deployed contracts on Flare block explorer:
 # Verify ShieldToken (Coston2)
 npx hardhat verify --network coston2 0x07F943F173a6bE5EC63a8475597d28aAA6B24992 "0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d"
 
-# Verify Shield XRP Vault (Coston2)
-npx hardhat verify --network coston2 0xd8d78DA41473D28eB013e161232192ead2cc745A
+# Verify ShXRP Vault (Coston2)
+npx hardhat verify --network coston2 0x8fe09217445e90DA692D29F30859dafA4eb281d1
 ```
 
 ### Step 3: Update Frontend Configuration - ✅ COMPLETED
@@ -263,33 +268,35 @@ After deployment, update your frontend `.env` with the contract addresses:
 ```bash
 # Add these to your Replit Secrets (for Coston2 testnet)
 VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
-VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
+VITE_SHXRP_VAULT_ADDRESS=0x8fe09217445e90DA692D29F30859dafA4eb281d1
 ```
 
-### Step 4: Configure Vault Operator - ⏳ PENDING
+### Step 4: Configure Smart Account - ✅ COMPLETED
 
-The Shield XRP Vault contract needs an operator to mint/burn shXRP:
+The Etherspot smart account is automatically initialized by the backend:
 
 ```bash
-# Using Hardhat console
-npx hardhat console --network coston2
+# Smart account address (ERC-4337)
+0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd
 
-# Add operator address
-const vault = await ethers.getContractAt("Shield XRP Vault", "0xd8d78DA41473D28eB013e161232192ead2cc745A");
-await vault.addOperator("<OPERATOR_ADDRESS>");
+# No manual configuration needed
+# Backend initializes on startup using Etherspot Prime SDK
 ```
 
 ### Step 5: Test the Integration
 
 1. **Test Deposit Flow**:
    - Connect wallet to your dApp
-   - Initiate deposit to vault address
-   - XRP is locked using XRPL escrow transactions
-   - Operator mints shXRP on Flare
+   - Send XRP to monitored XRPL address
+   - Automated FAssets bridge converts XRP → FXRP
+   - FXRP deposited into ERC-4626 vault
+   - User receives shXRP tokens (gasless via smart account)
 
 2. **Test Withdrawal Flow**:
-   - Request withdrawal (burns shXRP)
-   - Operator releases XRP from escrow using EscrowFinish
+   - Initiate withdrawal from dashboard
+   - Smart account executes ERC-4626 redeem()
+   - shXRP tokens burned, FXRP returned to user
+   - Transaction is gasless via Etherspot paymaster
 
 ### Production Deployment
 
@@ -357,34 +364,35 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 - **Treasury**: 10,000,000 SHIELD (10% allocation)
 - **Features**: Burnable, Mintable (owner-controlled), Transferable ownership
 
-### Shield XRP Vault (shXRP)
-- **Type**: Liquid staking vault for XRP
+### ShXRP Vault (ERC-4626)
+- **Type**: ERC-4626 compliant tokenized vault
 - **Symbol**: shXRP (Shield XRP)
-- **Initial Exchange Rate**: 1:1 (shXRP:XRP)
+- **Asset**: FXRP (wrapped XRP on Flare Network)
 - **Key Features**:
-  - Operator-controlled minting/burning for security
-  - Reward distribution updates exchange rate
-  - Minimum deposit: 0.01 XRP
+  - Standard ERC-4626 deposit/redeem functions
+  - Automated yield compounding via Firelight.finance
+  - Minimum deposit: 0.01 FXRP (10000 units with 6 decimals)
+  - Decimal precision: 6 (matches FXRP token)
   - ReentrancyGuard protection
-  - Event emission for transparency
+  - Gasless transactions via Etherspot smart accounts
 
-### XRPL Escrow System
-- **Purpose**: Secure XRP deposits using standard XRPL escrow functionality
-- **Transactions**: EscrowCreate, EscrowFinish, EscrowCancel
-- **Function**: Locks XRP in trustless escrow, releases upon operator approval
+### FAssets Bridge Integration
+- **Purpose**: Cross-chain bridge converting XRP to FXRP on Flare Network
+- **Protocol**: Flare FAssets with FDC attestation proofs
+- **Flow**: XRP deposits → Automated minting → FXRP in ERC-4626 vault
 
 **Deployment Info**: See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for testnet/mainnet deployment instructions.
 
 ## 🔒 Security Features
 
-- **Request-Based Withdrawals**: All withdrawals require vault operator approval
-- **Operator-Controlled Minting**: Only approved operators can mint/burn shXRP tokens
+- **ERC-4626 Standard Compliance**: Industry-standard tokenized vault implementation
+- **Smart Account Security**: ERC-4337 compliant smart accounts via Etherspot Prime SDK
 - **ReentrancyGuard Protection**: Smart contracts protected against reentrancy attacks
+- **Automated Bridge Verification**: FDC attestation proofs verify cross-chain transactions
 - **Secure Key Management**: Environment-based secret storage
-- **Session Management**: PostgreSQL-backed sessions with secure cookies
 - **Transaction Verification**: All blockchain transactions verified on-chain
-- **XRP Address Validation**: Client and server-side validation
-- **XRPL Hash Verification**: Every shXRP mint requires valid XRPL transaction hash
+- **Minimum Deposit Enforcement**: 0.01 FXRP minimum prevents dust attacks
+- **Double-Mint Prevention**: Idempotent bridge operations with unique transaction tracking
 
 ## 🌐 Network Support
 
@@ -460,15 +468,33 @@ npx hardhat verify --network coston2 <ADDRESS> "<CONSTRUCTOR>"   # Verify contra
 
 For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
 
-## 📊 Vault System
+## 📊 Liquid Staking System
 
-All deposits are routed to the vault address:
-```
-rpC7sRSUcK6F1nPb9E5U8z8bz5ee5mFEjC
-```
+### Deposit Flow
+1. **User sends XRP** to monitored XRPL address: `r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY`
+2. **Automated FAssets bridge** converts XRP → FXRP on Flare Network
+3. **FXRP deposited** into ERC-4626 vault contract
+4. **User receives shXRP** liquid staking tokens representing their position
 
-**Why Approval Required?**
-Users don't have direct access to the vault's private key for security. All withdrawals must be approved and executed by vault operators through the Admin dashboard.
+### Smart Contracts (Flare Coston2 Testnet)
+- **ShXRP Vault**: [`0x8fe09217445e90DA692D29F30859dafA4eb281d1`](https://coston2-explorer.flare.network/address/0x8fe09217445e90DA692D29F30859dafA4eb281d1)
+  - ERC-4626 compliant tokenized vault
+  - Minimum deposit: 0.01 FXRP
+  - Decimal precision: 6 (matches FXRP)
+  
+- **Smart Account**: [`0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd`](https://coston2-explorer.flare.network/address/0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd)
+  - ERC-4337 smart account via Etherspot Prime SDK
+  - Enables gasless transactions for users
+  - Manages vault deposits and withdrawals
+
+### Withdrawal Flow
+Users can withdraw anytime through the vault's standard ERC-4626 `redeem()` function:
+1. **User initiates withdrawal** from dashboard
+2. **Smart account executes** ERC-4626 redeem transaction (gasless)
+3. **FXRP returned** to user's Flare wallet
+4. **shXRP tokens burned** maintaining proper accounting
+
+No manual approvals required - all withdrawals are automated and instant via smart contracts.
 
 ## 🤝 Contributing
 

@@ -1,150 +1,211 @@
-# Transaction Signing with Xaman
+# Transaction Signing in Shield Yield Vaults
 
-All blockchain transactions (deposits, withdrawals, reward claims) use Xaman for secure signing.
+The platform uses a hybrid transaction signing approach optimized for security and user experience.
 
-## How It Works
+## Overview
 
-### Transaction Flow
+### XRP Deposits (XRPL Side)
+Users sign XRP payment transactions using **Xaman** wallet to transfer funds to the monitored deposit address. These transactions trigger the automated FAssets bridge.
 
-1. **User initiates action** (deposit, withdraw, claim)
-2. **Backend creates Xaman payload** with transaction details
-3. **QR code modal displays** with Xaman's native QR PNG
-4. **User scans QR code** with Xaman mobile app
-5. **User reviews transaction** in Xaman app
-6. **User approves** or rejects transaction
-7. **Frontend polls** for signature confirmation
-8. **Transaction hash** retrieved and stored
-9. **Backend records** transaction in database
+### FXRP Withdrawals (Flare Side)
+Withdrawals are executed via **ERC-4626 standard contracts** using Etherspot smart accounts, enabling **gasless transactions** with no user signing required.
 
-### Xaman Payload Creation
+## Deposit Flow
 
-For each transaction type, the backend creates a specific XRPL transaction:
+### 1. User Initiates Deposit
 
-**Deposit:**
+User selects vault and amount in the dashboard.
+
+### 2. Xaman Payment Request
+
+Backend creates XRPL payment transaction:
+
 ```typescript
 {
   TransactionType: "Payment",
-  Destination: vaultAddress,
-  Amount: {
-    currency: assetSymbol,
-    value: amount,
-    issuer: issuerAddress
-  }
+  Destination: "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY",
+  Amount: xrpAmount // in drops
 }
 ```
 
-**Withdrawal:**
-```typescript
-{
-  TransactionType: "Payment",
-  Destination: userAddress,
-  Amount: {
-    currency: assetSymbol,
-    value: amount,
-    issuer: issuerAddress
-  }
-}
-```
+### 3. QR Code Display
 
-### QR Code Display
-
-The modal shows Xaman's actual QR code PNG image:
-
-- **NOT regenerated**: Uses Xaman's official QR URL
-- **Direct from Xaman API**: `payload.refs.qr_png`
+Modal shows Xaman's official QR code:
+- **Source**: Xaman API (`payload.refs.qr_png`)
 - **Scannable**: Works with Xaman mobile app
-- **Deep linking**: Alternative deep link for desktop users
+- **Deep Link**: Alternative for desktop users
 
-## Transaction Types
+### 4. User Signs Transaction
 
-### Deposits
+User scans QR code with Xaman app and approves the payment.
 
-**Purpose**: Transfer assets from user wallet to vault
+### 5. Automated Bridge Execution
 
-**Process:**
-1. User selects vault and amount
-2. Backend generates deposit payment payload
-3. User signs with Xaman
-4. Transaction submitted to XRPL
-5. Position created in database
-6. Transaction recorded with hash
+Once XRPL payment is confirmed:
+1. **XRPL Listener** detects incoming payment
+2. **FAssets Bridge** initiates XRP → FXRP conversion
+3. **FDC Attestation** generates proof of XRPL payment
+4. **Minting** executes on Flare Network
+5. **Vault Deposit** FXRP deposited into ERC-4626 vault
+6. **shXRP Issued** User receives liquid staking tokens
 
-### Withdrawals
+### 6. Position Created
 
-**Purpose**: Return assets from vault to user wallet
+Backend records position in database with transaction hash.
 
-**Process:**
-1. User initiates withdrawal from position
-2. Backend generates withdrawal payment payload
-3. User signs with Xaman
-4. Assets returned to user wallet
-5. Position updated in database
-6. Transaction recorded with hash
+## Withdrawal Flow
 
-### Reward Claims
+### 1. User Initiates Withdrawal
 
-**Purpose**: Claim accrued staking rewards
+User selects amount to withdraw from their position.
 
-**Process:**
-1. User claims rewards from position
-2. Backend generates claim payment payload
-3. User signs with Xaman
-4. Rewards sent to user wallet
-5. Position rewards reset
-6. Transaction recorded with hash
+### 2. Smart Account Execution
 
-## Polling Mechanism
+**No user signing required!** The Etherspot smart account:
+1. Calls vault's ERC-4626 `redeem()` function
+2. Burns user's shXRP tokens
+3. Returns FXRP to user's Flare wallet
 
-After QR code is displayed, frontend polls for transaction status:
+### 3. Gasless Transaction
+
+- **Paymaster Sponsorship**: Transaction fees covered by platform
+- **ERC-4337 Standard**: Smart account abstraction
+- **Instant Execution**: No waiting for user approval
+
+### 4. FXRP Returned
+
+User receives FXRP in their connected Flare wallet immediately.
+
+## Transaction Types Comparison
+
+| Action | Chain | Signing Method | User Approval | Gas Fees |
+|--------|-------|----------------|---------------|----------|
+| **Deposit** | XRPL | Xaman QR Code | Required | Paid by user (~0.00001 XRP) |
+| **Withdraw** | Flare | Smart Account | Not required | Paid by platform (gasless) |
+
+## Xaman Integration Details
+
+### Payload Creation
+
+For XRP deposits, the backend generates Xaman payloads:
+
+```typescript
+const payload = await xummSdk.payload.create({
+  txjson: {
+    TransactionType: "Payment",
+    Destination: vaultAddress,
+    Amount: amountInDrops.toString()
+  }
+});
+```
+
+### Polling Mechanism
+
+Frontend polls for signature confirmation:
 
 ```typescript
 // Poll every 2 seconds for up to 5 minutes
 const pollInterval = 2000;
 const maxAttempts = 150;
 
-// Check Xaman payload status
 const checkStatus = async (uuid: string) => {
   const response = await fetch(`/api/wallet/xaman/status/${uuid}`);
   const data = await response.json();
   
   if (data.signed) {
-    return data.txHash;
+    return data.txHash; // XRPL transaction hash
   }
   
   return null;
 };
 ```
 
-## Transaction Hash Persistence
+### Transaction Hash Persistence
 
-Every transaction stores its blockchain hash:
-
+Every XRP deposit stores its XRPL transaction hash:
 - **Verifiable**: Hash can be checked on XRPL explorer
-- **Auditable**: Complete transaction history
-- **Traceable**: Links frontend actions to blockchain events
+- **Bridge Tracking**: Links to FAssets bridge record
+- **Audit Trail**: Complete deposit history
+
+## Smart Account Details
+
+### ERC-4337 Implementation
+
+- **Provider**: Etherspot Prime SDK
+- **Smart Account**: `0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd`
+- **Features**: 
+  - Gasless transactions via paymaster
+  - Batch operations support
+  - Social recovery capabilities
+
+### Vault Interaction
+
+Smart account interacts with ERC-4626 vault:
+
+```solidity
+// Withdraw example (simplified)
+function withdraw(uint256 shares) external {
+  vault.redeem(shares, msg.sender, msg.sender);
+  // User receives FXRP, shXRP burned automatically
+}
+```
 
 ## Error Handling
 
-The system handles various error scenarios:
-
-- **User rejects**: Modal closes, no transaction recorded
+### XRP Deposits
+- **User Rejects**: Modal closes, no transaction recorded
 - **Timeout**: After 5 minutes, polling stops
-- **Network errors**: Graceful fallback with error messages
-- **Invalid transactions**: Xaman validates before signing
+- **Network Errors**: Graceful fallback with error messages
+- **Invalid Amount**: Xaman validates before signing
+
+### FXRP Withdrawals
+- **Insufficient Balance**: Frontend validation prevents submission
+- **Contract Error**: Smart account reverts, user notified
+- **Network Issues**: Retry mechanism with user notification
 
 ## Demo Mode Behavior
 
-When API keys are not configured:
-
-- Mock QR codes displayed
-- Simulated signing process
+When `DEMO_MODE=true`:
+- Mock QR codes displayed for deposits
+- Simulated bridge progression
 - Demo transaction hashes generated
 - No actual blockchain transactions
 
 ## Security Features
 
-✅ **User approval required**: Every transaction must be approved  
-✅ **Transaction details shown**: Users see exact amounts before signing  
-✅ **Network validation**: Ensures correct network (mainnet/testnet)  
-✅ **No private key exposure**: Signing happens in Xaman app  
-✅ **Hash verification**: Every transaction has verifiable hash
+✅ **Xaman Security**:
+- User approval required for every deposit
+- Transaction details shown before signing
+- No private key exposure (signing in Xaman app)
+- Network validation (mainnet/testnet)
+
+✅ **Smart Account Security**:
+- ERC-4337 standard compliance
+- Paymaster whitelisting
+- ReentrancyGuard on vault contracts
+- Minimum withdrawal limits
+
+✅ **Bridge Security**:
+- FDC attestation proofs verify XRPL payments
+- Idempotent operations prevent double-minting
+- Automatic reconciliation for stuck bridges
+
+## Best Practices
+
+### For Users
+1. **Verify Amounts**: Double-check deposit amounts in Xaman before signing
+2. **Save Transaction Hashes**: Keep XRPL transaction hashes for reference
+3. **Check Balances**: Monitor shXRP balance after deposits complete
+4. **Test Small First**: Try small deposits on testnet before large amounts
+
+### For Developers
+1. **Polling Cleanup**: Always clear polling intervals on unmount
+2. **Error Feedback**: Provide clear error messages for failed transactions
+3. **Transaction Tracking**: Store all transaction hashes in database
+4. **Network Switching**: Ensure correct XRPL network (mainnet/testnet)
+
+## Related Documentation
+
+- [Wallet Integration](./wallet-integration.md) - Connecting Xaman wallet
+- [FAssets Integration](../../FASSETS_INTEGRATION.md) - Bridge configuration
+- [Smart Accounts](../../SMART_ACCOUNTS.md) - ERC-4337 implementation details

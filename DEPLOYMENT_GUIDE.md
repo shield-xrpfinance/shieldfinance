@@ -2,7 +2,7 @@
 
 ## ✅ Deployment Status
 
-**Smart contracts successfully deployed to Flare Coston2 Testnet on November 9, 2025**
+**Smart contracts successfully deployed to Flare Coston2 Testnet on November 12, 2025**
 
 ### Deployed Contracts
 
@@ -11,9 +11,16 @@
   - Total Supply: 100,000,000 SHIELD
   - Treasury Allocation: 10,000,000 SHIELD
 
-- **Shield XRP Vault (shXRP)**: `0xd8d78DA41473D28eB013e161232192ead2cc745A`
-  - [View on Explorer](https://coston2-explorer.flare.network/address/0xd8d78DA41473D28eB013e161232192ead2cc745A)
-  - Initial Exchange Rate: 1.0 shXRP per XRP
+- **ShXRP Vault (ERC-4626)**: `0x8fe09217445e90DA692D29F30859dafA4eb281d1`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0x8fe09217445e90DA692D29F30859dafA4eb281d1)
+  - ERC-4626 compliant tokenized vault
+  - Minimum deposit: 0.01 FXRP (10000 units with 6 decimals)
+  - Decimal precision: 6 (matches FXRP)
+
+- **Smart Account (Etherspot)**: `0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd)
+  - ERC-4337 smart account for gasless transactions
+  - Manages vault deposits and withdrawals
 
 ## Commands Summary
 
@@ -39,8 +46,8 @@ tsx scripts/deploy-direct.ts
 # ShieldToken (Coston2 Testnet)
 npx hardhat verify --network coston2 0x07F943F173a6bE5EC63a8475597d28aAA6B24992 "0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d"
 
-# Shield XRP Vault (Coston2 Testnet)
-npx hardhat verify --network coston2 0xd8d78DA41473D28eB013e161232192ead2cc745A
+# ShXRP Vault (Coston2 Testnet)
+npx hardhat verify --network coston2 0x8fe09217445e90DA692D29F30859dafA4eb281d1
 ```
 
 ### 5. Combined Testnet Deployment
@@ -60,7 +67,7 @@ TREASURY_ADDRESS=your-treasury-address-here
 
 # Frontend (deployed addresses for Coston2 testnet)
 VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
-VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
+VITE_SHXRP_VAULT_ADDRESS=0x8fe09217445e90DA692D29F30859dafA4eb281d1
 ```
 
 ## Testnet Faucets
@@ -77,13 +84,14 @@ VITE_SHXRP_VAULT_ADDRESS=0xd8d78DA41473D28eB013e161232192ead2cc745A
 
 ## Contract Addresses
 
-### Coston2 Testnet (Deployed November 9, 2025)
+### Coston2 Testnet (Deployed November 12, 2025)
 
 ```
 ShieldToken (Coston2): 0x07F943F173a6bE5EC63a8475597d28aAA6B24992
-Shield XRP Vault (Coston2): 0xd8d78DA41473D28eB013e161232192ead2cc745A
+ShXRP Vault (Coston2): 0x8fe09217445e90DA692D29F30859dafA4eb281d1
+Smart Account (Etherspot): 0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd
+FXRP Token: 0x0b6A3645c240605887a5532109323A3E12273dc7
 Deployer Address: 0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D
-Treasury Address: 0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d
 ```
 
 ### Mainnet (Not Yet Deployed)
@@ -106,149 +114,178 @@ Shield XRP Vault (Flare): TBD
 ## Next Steps After Deployment
 
 1. ✅ Update `.env` with contract addresses
-2. ✅ Configure vault operator using Hardhat console
-3. ✅ Test deposit flow on testnet
-4. ✅ Test withdrawal flow on testnet
+2. ✅ Initialize Etherspot smart account (automatic on backend startup)
+3. ✅ Test deposit flow on testnet (XRP → FXRP → shXRP)
+4. ✅ Test withdrawal flow on testnet (redeem shXRP → FXRP)
 5. ✅ Audit smart contracts before mainnet
 
-## FXRP Yield Strategy
+## Liquid Staking Architecture
 
 ### Overview
 
-The Shield XRP Vault now integrates with Flare's FXRP DeFi ecosystem to generate 5-7% APY through automated yield strategies.
+The ShXRP Vault implements an **automated liquid staking system** using the FAssets bridge to convert XRP into yield-bearing FXRP tokens on Flare Network.
 
 ### How It Works
 
-1. **FXRP Integration**: Vault accepts FXRP (wrapped XRP on Flare) for yield generation
-2. **SparkDEX LP Staking**: FXRP is paired with WFLR in liquidity pools
-3. **Reward Harvesting**: Earns trading fees + SPARK token emissions
-4. **Auto-Compounding**: Rewards are swapped to FXRP and reinvested to increase shXRP exchange rate
+1. **XRP Deposit**: Users send XRP to monitored XRPL address `r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY`
+2. **FAssets Bridge**: Automated conversion of XRP → FXRP using Flare Data Connector attestations
+3. **Vault Deposit**: FXRP deposited into ERC-4626 compliant vault
+4. **shXRP Minted**: Users receive liquid staking tokens representing their position
+5. **Yield Generation**: FXRP deposited into Firelight.finance lending protocol
+6. **Auto-Compounding**: Interest automatically reinvested to increase vault exchange rate
 
-### Yield Flow
+### System Flow
 
 ```
-User Deposits XRP → XRPL Escrow → Mint shXRP
-             ↓
-Operator Stakes FXRP in SparkDEX LP (FXRP/WFLR)
-             ↓
-Earn Yield: Trading Fees + SPARK Emissions
-             ↓
-Auto-Compound (Daily): Claim → Swap to FXRP → Update Exchange Rate
-             ↓
-shXRP holders benefit from increased exchange rate
+User Sends XRP (XRPL)
+        ↓
+XRPL Listener Detects Payment
+        ↓
+FAssets Bridge: XRP → FXRP (Automated)
+        ↓
+FXRP Deposited to ERC-4626 Vault
+        ↓
+shXRP Tokens Minted to User (Gasless via Etherspot)
+        ↓
+FXRP Deposited to Firelight.finance
+        ↓
+Yield Auto-Compounds → Exchange Rate Increases
 ```
 
-### Contract Addresses (Coston2 Testnet)
+### Key Components (Coston2 Testnet)
 
 ```bash
-# ShXRPVault Dependencies
-FXRP Token: 0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3
-SparkDEX Router V2: 0x4a1E5A90e9943467FAd1acea1E7F0e5e88472a1e
-WFLR Token: 0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d
+# XRPL Side
+XRP Deposit Address: r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY
+
+# Flare Side
+ShXRP Vault (ERC-4626): 0x8fe09217445e90DA692D29F30859dafA4eb281d1
+FXRP Token: 0x0b6A3645c240605887a5532109323A3E12273dc7
+Smart Account (ERC-4337): 0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd
 ```
 
-### Yield Functions
+### ERC-4626 Vault Functions
 
-The ShXRPVault contract provides these operator-controlled yield functions:
+The ShXRPVault implements standard ERC-4626 functions:
 
 ```solidity
-// Deposit FXRP to vault for yield generation
-depositFXRP(uint256 amount)
+// Deposit FXRP and receive shXRP (called by smart account)
+function deposit(uint256 assets, address receiver) external returns (uint256 shares)
 
-// Stake FXRP in SparkDEX LP pool (FXRP/WFLR)
-stakeInDeFi(uint256 fxrpAmount, uint256 flrAmount)
+// Withdraw FXRP by redeeming shXRP (standard ERC-4626)
+function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets)
 
-// Withdraw from LP pool
-withdrawFromLP(uint256 lpAmount)
-
-// Swap tokens to FXRP (e.g., WFLR, SPARK → FXRP)
-swapToFXRP(address tokenIn, uint256 amountIn)
-
-// Claim rewards and auto-compound
-claimAndCompound()
-
-// Simulate rewards for testnet demo
-simulateRewards(uint256 rewardAmount)
+// View functions
+function totalAssets() external view returns (uint256)  // Total FXRP in vault
+function convertToShares(uint256 assets) external view returns (uint256)
+function convertToAssets(uint256 shares) external view returns (uint256)
 ```
 
-### Automation with Gelato
+### Withdrawal Process
 
-The `scripts/compound.ts` script can be automated using Gelato Network for daily compounding:
+Withdrawals use the **standard ERC-4626 redeem function** - no manual operator approval required:
 
-```bash
-# Manual execution (testnet)
-tsx scripts/compound.ts
+1. User initiates withdrawal from dashboard
+2. Smart account calls `vault.redeem(shares, userAddress, userAddress)`
+3. Vault burns shXRP tokens
+4. FXRP transferred to user's Flare wallet
+5. Transaction is **gasless** via Etherspot paymaster
 
-# Production: Deploy to Gelato for automated daily execution
-```
+### Yield Generation
 
-### Testnet vs Production
+FXRP deposits automatically earn yield through **Firelight.finance** integration:
 
-**Testnet (Current):**
-- Uses `simulateRewards()` to demonstrate compounding
-- Manual operator calls for testing
-- Displays projected 5-7% APY in frontend
+- **Current APY**: ~5-7% on FXRP deposits
+- **Compounding**: Interest automatically reinvested
+- **Exchange Rate**: shXRP value increases as yield compounds
+- **Withdrawal**: Users can redeem shXRP for FXRP anytime
 
-**Production (When DeFi Protocols Launch):**
-- Integration with Kinetic Markets/Enosys lending pools
-- Real SPARK token harvesting from LP staking
-- Automated daily compounding via Gelato
-- Oracle-based FXRP/XRP value conversion
+### Production Features
+
+**Current (Coston2 Testnet):**
+- ERC-4626 standard vault implementation
+- Automated FAssets bridging (XRP → FXRP)
+- Firelight.finance yield integration
+- Gasless transactions via Etherspot smart accounts
+
+**Upcoming:**
+- Additional yield sources (SparkDEX, Kinetic Markets)
+- Mainnet deployment on Flare Network
+- Enhanced APY through multi-protocol strategies
 
 ### Setup Instructions
 
-1. **Deploy ShXRPVault with FXRP Integration:**
+1. **Deploy ShXRPVault (ERC-4626):**
 ```bash
-tsx scripts/deploy-direct.ts
-# Automatically passes FXRP, SparkRouter, WFLR addresses
+# See latest deployment in deployments/coston2-*.json
+# Current vault: 0x8fe09217445e90DA692D29F30859dafA4eb281d1
 ```
 
-2. **Enable Yield Generation:**
+2. **Initialize Smart Account:**
 ```bash
-# Call on deployed ShXRPVault contract
-setYieldEnabled(true)
+# Smart account automatically initialized by Etherspot Prime SDK
+# Address: 0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd
 ```
 
-3. **Set LP Token Address:**
+3. **Configure Environment:**
 ```bash
-# After first LP stake, get FXRP/WFLR LP token address from SparkDEX
-setLPToken(0x...)
+# Required secrets
+OPERATOR_PRIVATE_KEY=your-operator-key
+ETHERSPOT_BUNDLER_API_KEY=your-bundler-key
+VITE_SHXRP_VAULT_ADDRESS=0x8fe09217445e90DA692D29F30859dafA4eb281d1
 ```
 
-4. **Configure Gelato Automation (Optional):**
+4. **Start Application:**
 ```bash
-# Set OPERATOR_PRIVATE_KEY in environment
-# Deploy compound.ts script to Gelato for daily execution
+npm run dev
+# Backend automatically monitors XRPL deposits
+# FAssets bridge runs in production mode (DEMO_MODE=false)
 ```
 
 ### Yield Sources
 
 | Platform | Type | APY | Status |
 |----------|------|-----|--------|
-| **SparkDEX LP** | Liquidity Provision | 3-5% | ✅ Integrated |
-| **Kinetic Markets** | Lending | ~5% | 🚧 Coming Soon |
-| **Enosys Loans** | CDP Collateral | Variable | 🚧 Coming Soon |
+| **Firelight.finance** | FXRP Lending | 5-7% | ✅ Active |
+| **SparkDEX LP** | Liquidity Provision | 3-5% | 🚧 Planned |
+| **Kinetic Markets** | Money Market | Variable | 🚧 Planned |
 
 ### Security Features
 
-- **Operator-Only Functions**: All yield operations require operator authorization
-- **SafeERC20**: Secure token transfers and approvals
-- **Separated Accounting**: FXRP yields tracked separately from XRP backing
-- **LP Token Tracking**: Full transparency of staked liquidity positions
-- **Allowance Revocation**: Router approvals revoked after each transaction
+- **ERC-4626 Standard**: Industry-standard tokenized vault implementation
+- **Smart Account (ERC-4337)**: Etherspot Prime SDK for secure, gasless transactions
+- **ReentrancyGuard**: Protection against reentrancy attacks
+- **Minimum Deposits**: 0.01 FXRP minimum prevents dust attacks
+- **FDC Attestations**: Flare Data Connector verifies XRPL transactions
+- **Idempotent Operations**: Double-mint prevention with unique transaction tracking
+- **Automated Reconciliation**: System automatically recovers stuck bridges
 
-### Monitoring Yield
+### Monitoring System
 
-Check current vault state:
+Check vault and bridge status:
+
+**Vault Metrics:**
 ```solidity
-// View exchange rate (increases with compounded rewards)
-vault.exchangeRate()
+// View total assets in vault (ERC-4626)
+vault.totalAssets()
 
-// View total FXRP in vault
-vault.totalFXRPInVault()
+// View exchange rate (shares to assets)
+vault.convertToAssets(1e6)  // 1 shXRP → X FXRP
 
-// View total LP tokens staked
-vault.totalLPStaked()
+// View user's position
+vault.balanceOf(userAddress)
+```
+
+**Bridge Status:**
+```bash
+# Check bridge records in database
+GET /api/bridges?status=completed
+
+# Monitor XRPL deposits
+GET /api/deposits?walletAddress=<address>
+
+# View Firelight positions
+GET /api/firelight/positions
 ```
 
 ---
