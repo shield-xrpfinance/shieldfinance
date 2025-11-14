@@ -132,6 +132,19 @@ export async function registerRoutes(
     res.status(httpStatus).json(status);
   });
 
+  // Readiness guard middleware - Return 503 for /api/* routes if services not ready
+  app.use("/api", (req, res, next) => {
+    if (!readinessRegistry.allCriticalServicesReady()) {
+      const status = readinessRegistry.getStatus();
+      return res.status(503).json({
+        error: "Service temporarily unavailable",
+        message: "System is initializing. Please try again in a few moments.",
+        services: status.services
+      });
+    }
+    next();
+  });
+
   // Get all vaults
   app.get("/api/vaults", async (_req, res) => {
     try {
