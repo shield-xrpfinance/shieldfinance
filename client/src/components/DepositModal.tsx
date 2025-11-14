@@ -21,6 +21,7 @@ import ConnectWalletModal from "./ConnectWalletModal";
 import XamanSigningModal from "./XamanSigningModal";
 import { MultiAssetIcon } from "@/components/AssetIcon";
 import type { PaymentRequest } from "@shared/schema";
+import { calculateLotRounding, type LotRoundingResult, LOT_SIZE } from "@shared/lotRounding";
 
 interface DepositModalProps {
   open: boolean;
@@ -47,6 +48,14 @@ export default function DepositModal({
   const [xamanSigningModalOpen, setXamanSigningModalOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
+  const [xrpLotRounding, setXrpLotRounding] = useState<LotRoundingResult | null>(null);
+  const [xrpValidationError, setXrpValidationError] = useState<string | null>(null);
+  
+  // Store validated amounts from Step 1 for Step 2 confirmation
+  const [validatedAmounts, setValidatedAmounts] = useState<{ [key: string]: string }>({});
+  
+  // Helper to sanitize numeric inputs (removes commas and whitespace)
+  const sanitizeNumericInput = (value: string) => value.replace(/[\s,]+/g, "");
   
   // Initialize info expanded state based on screen size (desktop: expanded, mobile: collapsed)
   const [infoExpanded, setInfoExpanded] = useState(() => {
@@ -72,6 +81,8 @@ export default function DepositModal({
     if (open) {
       setAmounts({});
       setStep(1);
+      setXrpLotRounding(null);
+      setXrpValidationError(null);
     }
   }, [open]);
 
@@ -91,7 +102,11 @@ export default function DepositModal({
 
   const totalValue = Object.entries(amounts).reduce((sum, [asset, amount]) => {
     if (!amount) return sum;
-    const val = parseFloat(amount.replace(/,/g, ""));
+    // For XRP, use rounded amount if available
+    if (asset === "XRP" && xrpLotRounding) {
+      return sum + parseFloat(xrpLotRounding.roundedAmount);
+    }
+    const val = parseFloat(sanitizeNumericInput(amount));
     return sum + val;
   }, 0);
 
@@ -107,24 +122,85 @@ export default function DepositModal({
 
   const handleContinue = () => {
     if (step === 1 && Object.keys(amounts).length > 0) {
-      // Validate amounts against available balances
-      for (const [asset, amount] of Object.entries(amounts)) {
-        const numAmount = parseFloat(amount.replace(/,/g, ""));
-        const availableBalance = availableBalances[asset] || 0;
-        
-        if (numAmount > availableBalance) {
+      // Filter out empty amounts and validate against available balances (defensive sanitization)
+      const validAmounts = Object.entries(amounts)
+        .map(([asset, amt]) => [asset, sanitizeNumericInput(amt)] as [string, string])
+        .filter(([_, amt]) => amt && !isNaN(parseFloat(amt)) && parseFloat(amt) > 0);
+      
+      // Guard: Require at least one valid positive amount
+      if (validAmounts.length === 0) {
+        toast({
+          title: "No Amount Entered",
+          description: "Please enter at least one deposit amount greater than 0.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Recompute XRP lot rounding for validation (ensures fresh calculation)
+      let currentXrpRounding: LotRoundingResult | null = null;
+      const xrpEntry = validAmounts.find(([asset]) => asset === "XRP");
+      if (xrpEntry && depositAssets.includes("XRP")) {
+        try {
+          currentXrpRounding = calculateLotRounding(xrpEntry[1]);
+          // Synchronize state with fresh calculation
+          setXrpLotRounding(currentXrpRounding);
+          setXrpValidationError(null);
+        } catch (error) {
+          setXrpLotRounding(null);
+          setXrpValidationError(error instanceof Error ? error.message : "Invalid amount");
           toast({
-            title: "Insufficient Balance",
-            description: `You only have ${availableBalance.toFixed(2)} ${asset} available. Cannot deposit ${numAmount.toFixed(2)} ${asset}.`,
+            title: "Invalid XRP Amount",
+            description: error instanceof Error ? error.message : "Invalid amount",
             variant: "destructive",
           });
           return;
         }
       }
+      
+      // Build validated amounts map for confirmation
+      const validatedMap: { [key: string]: string } = {};
+      for (const [asset, amount] of validAmounts) {
+        // For XRP, use rounded amount; for others, use sanitized amount
+        const validAmount = asset === "XRP" && currentXrpRounding
+          ? currentXrpRounding.roundedAmount
+          : amount;
+        const availableBalance = availableBalances[asset] || 0;
+        
+        // Validate balance against validated amount
+        if (parseFloat(validAmount) > availableBalance) {
+          toast({
+            title: "Insufficient Balance",
+            description: `You only have ${availableBalance.toFixed(2)} ${asset} available. Cannot deposit ${parseFloat(validAmount).toFixed(2)} ${asset}.`,
+            variant: "destructive",
+          });
+          return;
+        }
+        
+        validatedMap[asset] = validAmount;
+      }
+      
+      // Store validated amounts for Step 2 confirmation
+      setValidatedAmounts(validatedMap);
       setStep(2);
     } else if (step === 2) {
-      onConfirm(amounts);
+      // Revalidate balances using stored validated amounts
+      for (const [asset, validAmount] of Object.entries(validatedAmounts)) {
+        const availableBalance = availableBalances[asset] || 0;
+        if (parseFloat(validAmount) > availableBalance) {
+          toast({
+            title: "Insufficient Balance",
+            description: `Balance changed. You only have ${availableBalance.toFixed(2)} ${asset} available. Cannot deposit ${parseFloat(validAmount).toFixed(2)} ${asset}.`,
+            variant: "destructive",
+          });
+          return;
+        }
+      }
+      
+      // Use stored validated amounts for confirmation
+      onConfirm(validatedAmounts);
       setAmounts({});
+      setValidatedAmounts({});
       setStep(1);
       onOpenChange(false);
     }
@@ -137,12 +213,43 @@ export default function DepositModal({
   };
 
   const setAssetAmount = (asset: string, value: string) => {
-    setAmounts((prev) => ({ ...prev, [asset]: value }));
+    // Sanitize input before storing in state (removes commas and whitespace)
+    const sanitizedValue = sanitizeNumericInput(value);
+    
+    // If empty, delete the key instead of storing empty string
+    if (!sanitizedValue || sanitizedValue.trim() === "") {
+      setAmounts((prev) => {
+        const { [asset]: _, ...rest } = prev;
+        return rest;
+      });
+      
+      // Clear XRP lot rounding if applicable
+      if (asset === "XRP" && depositAssets.includes("XRP")) {
+        setXrpLotRounding(null);
+        setXrpValidationError(null);
+      }
+      return;
+    }
+    
+    // Store sanitized non-empty value
+    setAmounts((prev) => ({ ...prev, [asset]: sanitizedValue }));
+    
+    // Calculate lot rounding for XRP deposits
+    if (asset === "XRP" && depositAssets.includes("XRP")) {
+      try {
+        const roundingResult = calculateLotRounding(sanitizedValue);
+        setXrpLotRounding(roundingResult);
+        setXrpValidationError(null);
+      } catch (error) {
+        setXrpLotRounding(null);
+        setXrpValidationError(error instanceof Error ? error.message : "Invalid amount");
+      }
+    }
   };
 
   const hasValidAmount = Object.values(amounts).some(
-    (amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0
-  );
+    (amt) => amt && parseFloat(sanitizeNumericInput(amt)) > 0
+  ) && !xrpValidationError;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -272,20 +379,54 @@ export default function DepositModal({
                       variant="ghost"
                       size="sm"
                       className="h-auto p-0 text-xs"
-                      onClick={() => setAssetAmount(asset, availableBalances[asset]?.toString() || "0")}
+                      onClick={() => {
+                        const balance = availableBalances[asset] || 0;
+                        // For XRP, pre-round down to largest whole lot
+                        if (asset === "XRP" && depositAssets.includes("XRP")) {
+                          const lots = Math.floor(balance / LOT_SIZE);
+                          const roundedMax = lots * LOT_SIZE;
+                          setAssetAmount(asset, roundedMax.toString());
+                        } else {
+                          setAssetAmount(asset, balance.toString());
+                        }
+                      }}
                       data-testid={`button-max-${asset}`}
                       disabled={balancesLoading || !availableBalances[asset]}
                     >
                       Max
                     </Button>
                   </div>
+                  
+                  {asset === "XRP" && xrpValidationError && (
+                    <p className="text-xs text-destructive mt-2" data-testid="error-xrp-validation">
+                      {xrpValidationError}
+                    </p>
+                  )}
+                  
+                  {asset === "XRP" && xrpLotRounding && xrpLotRounding.needsRounding && (
+                    <div className="mt-2 p-2 rounded-md bg-muted/50 border border-muted" data-testid="warning-lot-rounding">
+                      <p className="text-xs text-muted-foreground">
+                        <Info className="h-3 w-3 inline mr-1" />
+                        <span className="font-medium">Lot Rounding:</span> {xrpLotRounding.requestedAmount} XRP → {xrpLotRounding.roundedAmount} XRP ({xrpLotRounding.lots} lot{xrpLotRounding.lots !== 1 ? 's' : ''})
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        FAssets requires deposits in {LOT_SIZE} XRP lots. Your deposit will be rounded up by {xrpLotRounding.shortfall.toFixed(6)} XRP.
+                      </p>
+                    </div>
+                  )}
                 </div>
               ))}
 
               {!balancesLoading && (
                 <div className="space-y-1.5 p-3 rounded-md bg-muted/50 sm:space-y-2 sm:p-4">
+                  {isXRPDeposit && xrpLotRounding && xrpLotRounding.needsRounding && (
+                    <div className="flex items-center justify-between text-xs sm:text-sm pb-1">
+                      <span className="text-muted-foreground">Requested Amount</span>
+                      <span className="font-mono">{xrpLotRounding.requestedAmount} XRP</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-muted-foreground">Deposit Amount</span>
+                    <span className="text-muted-foreground">Deposit Amount{isXRPDeposit && xrpLotRounding && xrpLotRounding.needsRounding ? ' (Rounded)' : ''}</span>
                     <span className="font-semibold font-mono">{totalValue.toFixed(2)} XRP</span>
                   </div>
                   {isXRPDeposit && mintingFee > 0 && (
@@ -310,12 +451,33 @@ export default function DepositModal({
           {step === 2 && (
             <div className="space-y-3 sm:space-y-4">
               <div className="space-y-2 p-3 rounded-md border sm:space-y-3 sm:p-4">
-                {Object.entries(amounts).filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0).map(([asset, amount]) => (
-                  <div key={asset} className="flex items-center justify-between">
-                    <span className="text-xs sm:text-sm text-muted-foreground">{asset} Deposit</span>
-                    <span className="font-semibold font-mono text-sm sm:text-base">{amount} {asset}</span>
-                  </div>
-                ))}
+                {Object.entries(amounts).filter(([_, amt]) => amt && parseFloat(amt.replace(/,/g, "")) > 0).map(([asset, amount]) => {
+                  // For XRP, always use rounded value if available
+                  const displayAmount = asset === "XRP" && xrpLotRounding 
+                    ? xrpLotRounding.roundedAmount 
+                    : amount;
+                  const showRoundingInfo = asset === "XRP" && xrpLotRounding && xrpLotRounding.needsRounding;
+                  
+                  return (
+                    <div key={asset}>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs sm:text-sm text-muted-foreground">{asset} Deposit</span>
+                        {showRoundingInfo ? (
+                          <span className="font-semibold font-mono text-sm sm:text-base">
+                            {xrpLotRounding.requestedAmount} → {displayAmount} {asset}
+                          </span>
+                        ) : (
+                          <span className="font-semibold font-mono text-sm sm:text-base">{displayAmount} {asset}</span>
+                        )}
+                      </div>
+                      {showRoundingInfo && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          ({xrpLotRounding.lots} lot{xrpLotRounding.lots !== 1 ? 's' : ''} of {LOT_SIZE} XRP each)
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
                 {isXRPDeposit && mintingFee > 0 && (
                   <div className="flex items-center justify-between">
                     <span className="text-xs sm:text-sm text-muted-foreground">

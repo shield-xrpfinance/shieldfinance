@@ -11,7 +11,7 @@ import WithdrawModal from "@/components/WithdrawModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import EmptyState from "@/components/EmptyState";
 import { PortfolioStatsSkeleton, PortfolioTableSkeleton } from "@/components/skeletons/PortfolioSkeleton";
-import { TrendingUp, Coins, Gift, Package } from "lucide-react";
+import { TrendingUp, Coins, Gift, Package, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
@@ -414,6 +414,7 @@ export default function Portfolio() {
                   const statusBadgeVariant = 
                     redemption.status === "completed" ? "default" :
                     redemption.status === "failed" ? "destructive" :
+                    redemption.status === "awaiting_proof" || redemption.status === "awaiting_liquidity" ? "outline" :
                     "secondary";
                   
                   const statusLabel = 
@@ -421,21 +422,26 @@ export default function Portfolio() {
                     redemption.status === "redeeming_shares" ? "Redeeming Shares" :
                     redemption.status === "redeemed_fxrp" ? "FXRP Redeemed" :
                     redemption.status === "redeeming_fxrp" ? "Requesting Redemption" :
-                    redemption.status === "awaiting_proof" ? "Awaiting Proof" :
-                    redemption.status === "xrpl_payout" ? "Sending XRP" :
+                    redemption.status === "awaiting_proof" ? "Awaiting Payment" :
+                    redemption.status === "xrpl_payout" ? "Confirming Payment" :
                     redemption.status === "completed" ? "Completed" :
                     redemption.status === "awaiting_liquidity" ? "Queued (Low Liquidity)" :
                     redemption.status === "failed" ? "Failed" :
                     `Unknown (${redemption.status})`;
+                  
+                  const isActive = !["completed", "failed"].includes(redemption.status);
 
                   return (
                     <div 
                       key={redemption.id}
-                      className="flex items-center justify-between p-4 rounded-md border"
+                      className={`flex items-center justify-between p-4 rounded-md border ${isActive ? 'bg-accent/5' : ''}`}
                       data-testid={`redemption-${redemption.id}`}
                     >
                       <div className="flex-1">
                         <div className="flex items-center gap-3">
+                          {isActive && (
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          )}
                           <Badge variant={statusBadgeVariant} data-testid={`status-${redemption.id}`}>
                             {statusLabel}
                           </Badge>
@@ -446,10 +452,18 @@ export default function Portfolio() {
                         <div className="mt-2 space-y-1">
                           <p className="text-sm font-medium">
                             Amount: {parseFloat(redemption.shareAmount).toFixed(6)} shXRP
+                            {redemption.xrpSent && (
+                              <span className="text-muted-foreground"> → {parseFloat(redemption.xrpSent).toFixed(6)} XRP</span>
+                            )}
                           </p>
                           {redemption.errorMessage && (
                             <p className="text-sm text-destructive">
                               Error: {redemption.errorMessage}
+                            </p>
+                          )}
+                          {redemption.xrplPayoutTxHash && (
+                            <p className="text-xs text-muted-foreground">
+                              TX: {redemption.xrplPayoutTxHash.slice(0, 16)}...
                             </p>
                           )}
                         </div>
