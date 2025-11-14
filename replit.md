@@ -79,6 +79,14 @@ Preferred communication style: Simple, everyday language.
 - No manual migration files needed - Replit's publishing system reads schema directly
 - Changes are safely applied to production database on deployment
 
+**Schema Sync Troubleshooting**:
+If publishing fails with `"Failed to validate database migrations"` showing `ALTER TABLE ADD COLUMN` for a column that already exists:
+- **Root Cause**: Schema tracking desync between Drizzle's metadata and actual database state
+- **Solution**: Run `npm run db:push --force` to forcefully sync schema tracking
+- **What it does**: Updates Drizzle's internal migration tracking without altering table structure
+- **When safe**: When the column exists in both dev/production databases but tracking is out of sync
+- **Effect**: Eliminates phantom migrations and allows publishing to proceed
+
 **Fast Server Startup (<1 second)**:
 - HTTP server starts immediately after storage initialization (port 5000)
 - Blockchain services (FlareClient, XRPL, FAssets) initialize asynchronously in background
