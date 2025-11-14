@@ -5,11 +5,36 @@ import { BridgeStatus } from "@/components/BridgeStatus";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2, History, ArrowDownToLine, ArrowUpFromLine, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
-import type { SelectXrpToFxrpBridge, Vault } from "@shared/schema";
+import { format } from "date-fns";
+import type { SelectXrpToFxrpBridge, Vault, BridgeHistoryEntry } from "@shared/schema";
+
+// Helper to convert snake_case status to human-readable format
+function formatStatus(status: string): string {
+  return status
+    .split('_')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// Map status to badge variant (explicit mapping, not based on completedAt)
+function getStatusVariant(status: string): "default" | "destructive" | "secondary" {
+  // Success states - green badge
+  if (status === "completed" || status === "vault_minted") {
+    return "default";
+  }
+  // Failure state - red badge  
+  if (status === "failed") {
+    return "destructive";
+  }
+  // All in-progress states - gray badge
+  // (pending, redeeming_shares, redeemed_fxrp, redeeming_fxrp, awaiting_proof, xrpl_payout, etc.)
+  return "secondary";
+}
 
 export default function BridgeTracking() {
   const { address } = useWallet();
@@ -28,6 +53,11 @@ export default function BridgeTracking() {
 
   const { data: vaults, isLoading: isLoadingVaults } = useQuery<Vault[]>({
     queryKey: ["/api/vaults"],
+  });
+
+  const { data: history, isLoading: isLoadingHistory } = useQuery<BridgeHistoryEntry[]>({
+    queryKey: [`/api/bridge-history/${address}`],
+    enabled: !!address,
   });
 
   // Memoize vault lookup map for performance
@@ -152,7 +182,7 @@ export default function BridgeTracking() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3" data-testid="tabs-bridge-tracking">
+        <TabsList className="grid w-full grid-cols-4" data-testid="tabs-bridge-tracking">
           <TabsTrigger value="active" data-testid="tab-active">
             <Activity className="h-4 w-4 mr-2" />
             Active ({activeBridges.length})
@@ -164,6 +194,10 @@ export default function BridgeTracking() {
           <TabsTrigger value="failed" data-testid="tab-failed">
             <XCircle className="h-4 w-4 mr-2" />
             Failed ({failedBridges.length})
+          </TabsTrigger>
+          <TabsTrigger value="history" data-testid="tab-history">
+            <History className="h-4 w-4 mr-2" />
+            History ({history?.length || 0})
           </TabsTrigger>
         </TabsList>
 
@@ -302,6 +336,116 @@ export default function BridgeTracking() {
                   onSendPayment={() => handleSendPayment(bridge)}
                   isVaultsLoading={isLoadingVaults}
                 />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-6">
+          {!address ? (
+            <NotConnectedMessage />
+          ) : isLoadingHistory ? (
+            <LoadingMessage />
+          ) : !history || history.length === 0 ? (
+            <Card>
+              <CardContent className="flex flex-col items-center justify-center py-12">
+                <History className="h-12 w-12 text-muted-foreground mb-4" />
+                <p className="text-center text-muted-foreground font-medium" data-testid="text-no-history">
+                  No bridge history
+                </p>
+                <p className="text-center text-sm text-muted-foreground mt-2">
+                  Your deposits and withdrawals will appear here
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {history.map((entry) => (
+                <Card key={entry.id} data-testid={`card-history-${entry.id}`}>
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3 flex-1">
+                        <div className="mt-0.5">
+                          {entry.type === "deposit" ? (
+                            <ArrowDownToLine className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <ArrowUpFromLine className="h-5 w-5 text-blue-500" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge 
+                              variant={entry.type === "deposit" ? "default" : "secondary"}
+                              data-testid={`badge-type-${entry.type}`}
+                            >
+                              {entry.type === "deposit" ? "Deposit" : "Withdrawal"}
+                            </Badge>
+                            <Badge 
+                              variant={getStatusVariant(entry.status)}
+                              data-testid={`badge-status-${entry.status}`}
+                            >
+                              {formatStatus(entry.status)}
+                            </Badge>
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(entry.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                            {entry.completedAt && (
+                              <span className="block mt-1">
+                                Completed: {format(new Date(entry.completedAt), "MMM d, h:mm a")}
+                              </span>
+                            )}
+                          </p>
+                          {entry.errorMessage && (
+                            <p className="text-sm text-destructive mt-1">
+                              {entry.errorMessage}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="font-semibold" data-testid={`text-amount-${entry.id}`}>
+                          {parseFloat(entry.amount).toFixed(6)} XRP
+                        </p>
+                        <div className="flex gap-2 mt-2">
+                          {entry.xrplTxHash && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              data-testid={`button-xrpl-explorer-${entry.id}`}
+                            >
+                              <a
+                                href={`https://testnet.xrpl.org/transactions/${entry.xrplTxHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                XRPL
+                              </a>
+                            </Button>
+                          )}
+                          {entry.flareTxHash && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              asChild
+                              data-testid={`button-flare-explorer-${entry.id}`}
+                            >
+                              <a
+                                href={`https://coston2-explorer.flare.network/tx/${entry.flareTxHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="h-3 w-3 mr-1" />
+                                Flare
+                              </a>
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
             </div>
           )}

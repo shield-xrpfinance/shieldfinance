@@ -1,6 +1,10 @@
 import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFxrpToXrpRedemption, type SelectFxrpToXrpRedemption, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, fxrpToXrpRedemptions, firelightPositions, compoundingRuns } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, gte, lte } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, gt } from "drizzle-orm";
+
+// Redemption expiry: FAssets redemptions typically complete within hours
+// 24h provides safety margin while preventing old expired redemptions from matching
+const REDEMPTION_AWAITING_PROOF_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export interface IStorage {
   getVaults(): Promise<Vault[]>;
@@ -532,12 +536,17 @@ export class DatabaseStorage implements IStorage {
     agentAddress: string,
     amountDrops: string
   ): Promise<SelectFxrpToXrpRedemption | null> {
+    // Calculate expiry cutoff (24h ago)
+    const cutoffDate = new Date(Date.now() - REDEMPTION_AWAITING_PROOF_TTL_MS);
+    
     // Find redemptions awaiting proof that match the payment details
+    // Only consider redemptions created within the last 24 hours to avoid matching expired requests
     const redemptions = await db.query.fxrpToXrpRedemptions.findMany({
       where: and(
         eq(fxrpToXrpRedemptions.status, "awaiting_proof"),
         eq(fxrpToXrpRedemptions.walletAddress, userAddress),
-        eq(fxrpToXrpRedemptions.agentUnderlyingAddress, agentAddress)
+        eq(fxrpToXrpRedemptions.agentUnderlyingAddress, agentAddress),
+        gt(fxrpToXrpRedemptions.createdAt, cutoffDate)
       ),
       orderBy: desc(fxrpToXrpRedemptions.createdAt),
     });
@@ -575,7 +584,8 @@ export class DatabaseStorage implements IStorage {
     console.log(`   User: ${userAddress}`);
     console.log(`   Agent: ${agentAddress}`);
     console.log(`   Amount: ${amountDrops} XRP (${amountUBA} UBA)`);
-    console.log(`   Checked ${redemptions.length} awaiting_proof redemption(s)`);
+    console.log(`   Checked ${redemptions.length} awaiting_proof redemption(s) created after ${cutoffDate.toISOString()}`);
+    console.log(`   Note: Redemptions older than ${REDEMPTION_AWAITING_PROOF_TTL_MS / (60 * 60 * 1000)}h are automatically excluded`);
 
     return null;
   }

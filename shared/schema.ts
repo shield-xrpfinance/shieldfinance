@@ -332,3 +332,18 @@ export interface PaymentRequest {
   memo: string;
   network: "mainnet" | "testnet";
 }
+
+// Unified bridge history entry (deposits + withdrawals)
+// Note: Dates are serialized as ISO strings by JSON, not Date objects
+export interface BridgeHistoryEntry {
+  id: string;
+  type: "deposit" | "withdrawal";
+  walletAddress: string;
+  amount: string; // Always populated, never null
+  status: string;
+  xrplTxHash: string | null;
+  flareTxHash: string | null;
+  createdAt: string; // ISO date string
+  completedAt: string | null; // ISO date string or null
+  errorMessage: string | null;
+}

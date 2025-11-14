@@ -1869,6 +1869,57 @@ export async function registerRoutes(
     }
   });
 
+  // Unified bridge history (deposits + withdrawals)
+  app.get("/api/bridge-history/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      
+      // Fetch deposits
+      const deposits = await storage.getBridgesByWallet(walletAddress);
+      
+      // Fetch withdrawals
+      const withdrawals = await storage.getRedemptionsByWallet(walletAddress);
+      
+      // Normalize deposits to unified format
+      const depositHistory = deposits.map(bridge => ({
+        id: bridge.id,
+        type: "deposit" as const,
+        walletAddress: bridge.walletAddress,
+        amount: bridge.xrpAmount,
+        status: bridge.status,
+        xrplTxHash: bridge.xrplTxHash,
+        flareTxHash: bridge.flareTxHash || bridge.vaultMintTxHash,
+        createdAt: bridge.createdAt,
+        completedAt: bridge.completedAt,
+        errorMessage: bridge.errorMessage,
+      }));
+      
+      // Normalize withdrawals to unified format
+      const withdrawalHistory = withdrawals.map(redemption => ({
+        id: redemption.id,
+        type: "withdrawal" as const,
+        walletAddress: redemption.walletAddress,
+        // Ensure amount is always a valid string (never undefined/null)
+        amount: redemption.xrpSent || redemption.fxrpRedeemed || redemption.shareAmount || "0",
+        status: redemption.status,
+        xrplTxHash: redemption.xrplPayoutTxHash,
+        flareTxHash: redemption.vaultRedeemTxHash || redemption.fassetsRedemptionTxHash,
+        createdAt: redemption.createdAt,
+        completedAt: redemption.completedAt,
+        errorMessage: redemption.errorMessage,
+      }));
+      
+      // Combine and sort by date (newest first)
+      const combined = [...depositHistory, ...withdrawalHistory]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      res.json(combined);
+    } catch (error) {
+      console.error("Failed to fetch bridge history:", error);
+      res.status(500).json({ error: "Failed to fetch bridge history" });
+    }
+  });
+
   // Manual bridge trigger (for testing)
   app.post("/api/bridges/process", async (req, res) => {
     try {
