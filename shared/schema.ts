@@ -127,6 +127,7 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   positionId: varchar("position_id").references(() => positions.id),
   
   xrpAmount: decimal("xrp_amount", { precision: 18, scale: 6 }).notNull(),
+  requestedXrpAmount: decimal("requested_xrp_amount", { precision: 18, scale: 6 }), // User's original input before lot rounding
   fxrpExpected: decimal("fxrp_expected", { precision: 18, scale: 6 }).notNull(),
   fxrpReceived: decimal("fxrp_received", { precision: 18, scale: 6 }),
   
