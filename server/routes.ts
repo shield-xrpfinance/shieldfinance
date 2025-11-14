@@ -696,13 +696,17 @@ export async function registerRoutes(
         return res.status(400).json({ error: "This endpoint is only for XRP deposits. Use POST /api/positions for other assets." });
       }
 
+      // Calculate lot-rounded amount BEFORE creating bridge
+      const lotCalculation = await bridgeService.calculateLotRoundedAmount(amount);
+
       // Create bridge record with 30-minute expiration
       const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes from now
       const bridge = await storage.createBridge({
         vaultId,
         walletAddress,
-        xrpAmount: amount,
-        fxrpExpected: amount, // 1:1 for now
+        xrpAmount: lotCalculation.roundedAmount, // Lot-rounded amount (used for bridge)
+        requestedXrpAmount: lotCalculation.requestedAmount, // Always store user's original input for audit trail
+        fxrpExpected: lotCalculation.roundedAmount, // 1:1 for now
         status: 'pending',
         expiresAt,
       });
@@ -740,7 +744,7 @@ export async function registerRoutes(
         });
       }
 
-      // Return bridge info with payment request and fee breakdown
+      // Return bridge info with payment request, fee breakdown, and lot rounding info
       res.json({
         success: true,
         bridgeId: bridge.id,
@@ -752,6 +756,12 @@ export async function registerRoutes(
           feeAmount: feeAmountXRP,
           totalAmount: totalAmountXRP,
           feePercentage: `${feePercentage}%`,
+        },
+        lotRounding: {
+          requestedAmount: lotCalculation.requestedAmount,
+          roundedAmount: lotCalculation.roundedAmount,
+          lots: lotCalculation.lots,
+          needsRounding: lotCalculation.needsRounding,
         },
         message: "Bridge initiated. Please send payment to complete the bridge.",
         demo: bridgeService.demoMode,

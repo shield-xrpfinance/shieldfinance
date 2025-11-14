@@ -464,6 +464,54 @@ export class FAssetsClient {
     return lotsNumber;
   }
 
+  async calculateLotRoundedAmount(requestedAmount: string): Promise<{ requestedAmount: string; roundedAmount: string; lots: number; needsRounding: boolean; shortfall: number }> {
+    const assetManager = await this.getAssetManager();
+    const lotSize = await assetManager.lotSize();
+    const decimals = await assetManager.assetMintingDecimals();
+    
+    const requestedUBA = ethers.parseUnits(requestedAmount, Number(decimals));
+    
+    // Calculate lots (ceiling division)
+    const lots = (requestedUBA + lotSize - BigInt(1)) / lotSize;
+    const lotsNumber = Number(lots);
+    
+    // Check minimum
+    if (lotsNumber < 1) {
+      const minAmount = ethers.formatUnits(lotSize, Number(decimals));
+      throw new Error(
+        `Amount too small. Minimum deposit is ${minAmount} XRP (1 lot). ` +
+        `Please increase your deposit amount.`
+      );
+    }
+    
+    // Calculate rounded amount (lots * lotSize)
+    const roundedUBA = BigInt(lotsNumber) * lotSize;
+    const roundedAmount = ethers.formatUnits(roundedUBA, Number(decimals));
+    
+    // Check if rounding occurred
+    const needsRounding = requestedUBA !== roundedUBA;
+    
+    // Calculate shortfall (how much extra user will pay)
+    const shortfallUBA = roundedUBA - requestedUBA;
+    const shortfall = Number(ethers.formatUnits(shortfallUBA, Number(decimals)));
+    
+    console.log(`📊 Lot calculation:`);
+    console.log(`   Requested: ${requestedAmount} XRP`);
+    console.log(`   Lot size: ${ethers.formatUnits(lotSize, Number(decimals))} XRP`);
+    console.log(`   Lots needed: ${lotsNumber}`);
+    console.log(`   Rounded to: ${roundedAmount} XRP`);
+    console.log(`   Rounding required: ${needsRounding ? 'Yes' : 'No'}`);
+    console.log(`   Shortfall: ${shortfall} XRP`);
+    
+    return {
+      requestedAmount,
+      roundedAmount,
+      lots: lotsNumber,
+      needsRounding,
+      shortfall,
+    };
+  }
+
   async getAssetDecimals(): Promise<number> {
     const assetManager = await this.getAssetManager();
     return Number(await assetManager.assetMintingDecimals());

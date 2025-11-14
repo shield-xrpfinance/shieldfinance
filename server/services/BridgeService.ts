@@ -219,6 +219,45 @@ export class BridgeService {
   }
 
   /**
+   * Calculate lot-rounded amount for XRP deposits.
+   * FAssets protocol requires deposits in whole "lots" - if user requests a non-multiple,
+   * the amount must be rounded up to the nearest lot boundary.
+   * 
+   * @param requestedAmount - User's requested XRP amount as string
+   * @returns Object with requested amount, rounded amount, lots, and needsRounding flag
+   */
+  async calculateLotRoundedAmount(requestedAmount: string): Promise<{
+    requestedAmount: string;
+    roundedAmount: string;
+    lots: number;
+    needsRounding: boolean;
+    shortfall: number;
+  }> {
+    if (this._demoMode) {
+      // Demo mode: Use shared lot calculation logic
+      const { calculateLotRounding } = await import("../../shared/lotRounding");
+      const result = calculateLotRounding(requestedAmount);
+      
+      console.log(`📊 [DEMO] Lot calculation:`);
+      console.log(`   Requested: ${result.requestedAmount} XRP`);
+      console.log(`   Lot size: 10 XRP`);
+      console.log(`   Lots needed: ${result.lots}`);
+      console.log(`   Rounded to: ${result.roundedAmount} XRP`);
+      console.log(`   Rounding required: ${result.needsRounding ? 'Yes' : 'No'}`);
+      console.log(`   Shortfall: ${result.shortfall} XRP`);
+      
+      return result;
+    } else {
+      // Production mode: Delegate to FAssetsClient
+      if (!this.fassetsClient) {
+        throw new Error("FAssetsClient not initialized in production mode");
+      }
+      
+      return await this.fassetsClient.calculateLotRoundedAmount(requestedAmount);
+    }
+  }
+
+  /**
    * Parse actual minted FXRP amount from transaction receipt by analyzing Transfer events.
    * 
    * FXRP uses 6 decimals (not 18 like typical ERC20s), so we need to use formatUnits(value, 6).
