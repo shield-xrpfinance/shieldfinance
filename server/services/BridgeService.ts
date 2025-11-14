@@ -42,10 +42,31 @@ export class BridgeService {
 
   constructor(config: BridgeServiceConfig) {
     this.config = config;
-    this._demoMode = config.demoMode ?? (config.network === "coston2");
+    
+    // CRITICAL FIX: Remove network-based fallback that auto-enabled demo mode on coston2
+    // Demo mode must be explicitly set to prevent blockchain/database mismatches
+    if (config.demoMode === undefined) {
+      throw new Error(
+        "BridgeService requires explicit demoMode configuration. " +
+        "Set demoMode: false for production or demoMode: true for testing. " +
+        "Never rely on default values for critical mode switches."
+      );
+    }
+    
+    this._demoMode = config.demoMode;
+    
+    // Validate demo mode doesn't use production secrets
+    if (this._demoMode && config.flareClient) {
+      console.warn("⚠️  DEMO MODE with live FlareClient - blockchain calls may still execute!");
+      console.warn("⚠️  Consider using mock adapters for true demo mode.");
+    }
     
     // Only initialize FAssetsClient when in production mode
     if (!this._demoMode) {
+      if (!config.flareClient) {
+        throw new Error("Production mode requires FlareClient to be initialized");
+      }
+      
       this.fassetsClient = new FAssetsClient({
         network: config.network,
         flareClient: config.flareClient,
@@ -53,7 +74,9 @@ export class BridgeService {
       console.log("✅ BridgeService initialized with FAssets integration");
     } else {
       this.fassetsClient = null;
-      console.log("⚠️  BridgeService running in DEMO MODE - FAssets integration not active");
+      console.log("📍 BridgeService initialized in DEMO MODE (using simulated FAssets operations)");
+      console.warn("⚠️  All blockchain transactions will use mock data");
+      console.warn("⚠️  Do NOT use demo mode with real user funds!");
     }
 
     // Start cleanup scheduler

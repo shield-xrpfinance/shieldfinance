@@ -82,7 +82,15 @@ app.use((req, res, next) => {
   await flareClient.initialize();
 
   // Initialize services (note: bridgeService needs xrplListener, so we create it after listener is initialized)
-  const demoMode = process.env.DEMO_MODE !== "false"; // Default to true unless explicitly set to false
+  // CRITICAL: Default to PRODUCTION mode to ensure blockchain transactions create database records
+  // Only enable demo mode when explicitly set to "true" for testing
+  const demoMode = process.env.DEMO_MODE === "true";
+  
+  // Startup validation: Warn if running in production with demo mode enabled
+  if (demoMode) {
+    console.warn("⚠️  DEMO MODE ENABLED - This should only be used for testing!");
+    console.warn("⚠️  Set DEMO_MODE=false or remove it from environment to run in production.");
+  }
 
   const vaultService = new VaultService({
     storage,
