@@ -70,9 +70,9 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-### ✅ ASYNC WITHDRAWAL FLOW - PHASE 1 COMPLETE (November 13, 2025)
+### ✅ FULLY AUTOMATED WITHDRAWAL SYSTEM - ALL PHASES COMPLETE (November 14, 2025)
 
-**Overview**: Implemented async withdrawal flow (Phase 1) with ENS resolution fix, background processing, and real-time status tracking. Withdrawals progress to "Awaiting Proof" status where they wait for XRPL payment listener (Phase 2) and FDC proof confirmation (Phase 3).
+**Overview**: Complete async withdrawal automation with ENS resolution fix, background processing, XRPL payment detection, FDC proof generation, and real-time status tracking. Withdrawals now complete automatically from user initiation to XRP payout without manual intervention.
 
 **Phase 1 Implementation (Complete):**
 
@@ -114,45 +114,60 @@ Preferred communication style: Simple, everyday language.
    - Prevents user balance loss if redemption fails mid-process
    - Idempotent background processing with retry safety
 
-**Current Withdrawal Flow (Phase 1):**
+**Current Withdrawal Flow:**
 1. User clicks "Withdraw" → WithdrawModal opens
 2. User enters shXRP amount → clicks Confirm
 3. Frontend calls POST /api/withdrawals → Returns redemption ID immediately
-4. Background worker processes asynchronously:
+4. Background worker (Phase 1) processes asynchronously:
    - Validates position and share amount
    - Burns shXRP tokens via vault.redeem() → receives FXRP
    - Requests FAssets redemption for FXRP amount
    - Updates status through: pending → redeeming_shares → redeemed_fxrp → redeeming_fxrp
-   - **Stops at "Awaiting Proof"** (waiting for Phases 2/3)
-5. Frontend polls status every 5 seconds and displays progress
-6. User sees real-time status updates without page refresh
+   - Transitions to "awaiting_proof" and subscribes XRPL listener
+5. Frontend polls status every 5 seconds and displays real-time progress
+6. XRPL listener (Phase 2) automatically detects agent payment
+7. Auto-completion (Phase 3) generates FDC proof, confirms on-chain, updates balance
+8. User receives XRP in original wallet, withdrawal marked complete
 
-**Phases 2/3 (Pending Implementation):**
-- **Phase 2 - XRPL Payment Listener**:
-  - Monitor XRPL for agent payment to user's wallet
-  - Detect when FAssets agent sends XRP redemption
-  - Trigger Phase 3 confirmation job when payment detected
-  
-- **Phase 3 - FDC Proof & Completion**:
-  - Generate FDC attestation proof of XRPL payment
-  - Submit proof to FAssets contract to confirm redemption
-  - Update position balances and create transaction records
-  - Transition status: awaiting_proof → xrpl_payout → completed
+**Phase 2 - XRPL Payment Detection (COMPLETE):**
+- ✅ XRPLDepositListener monitors user XRPL addresses for incoming payments
+- ✅ Startup recovery: loadPendingRedemptions() loads all "awaiting_proof" redemptions on server start
+- ✅ Real-time monitoring: subscribeUserForRedemption() registers user addresses after redemption request
+- ✅ Payment matching: getRedemptionByMatch() matches payments by userAddress + agentAddress + amount
+- ✅ Event handler: handleRedemptionPayment() triggers completion flow when payment detected
+- ✅ Files: server/listeners/XRPLDepositListener.ts, server/services/BridgeService.ts:1334-1343
 
-**Security & Production Notes**:
+**Phase 3 - FDC Proof & Auto-Completion (COMPLETE):**
+- ✅ processRedemptionConfirmation() orchestrates complete finalization workflow
+- ✅ Generates FDC attestation proof via generateFDCProofForRedemption()
+- ✅ Confirms redemption payment on FAssets contract via confirmRedemptionPayment()
+- ✅ Updates position balance (deducts withdrawn shXRP)
+- ✅ Creates withdrawal transaction record for user history
+- ✅ Marks redemption status as "completed"
+- ✅ Unsubscribes user address from listener (cleanup)
+- ✅ Files: server/services/BridgeService.ts:1656-1764
+
+**Complete Automated Withdrawal Flow:**
+1. User clicks "Withdraw" → POST /api/withdrawals creates redemption (status: pending)
+2. processRedemptionBackground() burns shXRP → receives FXRP (status: redeeming_shares → redeemed_fxrp)
+3. redeemFxrpToXrp() requests FAssets redemption, populates agent address, subscribes XRPL listener (status: redeeming_fxrp → awaiting_proof)
+4. XRPLDepositListener detects agent→user XRP payment automatically
+5. processRedemptionConfirmation() generates FDC proof, confirms on-chain, updates position, creates transaction (status: xrpl_payout → completed)
+6. User receives XRP in original XRPL wallet, position balance updated automatically
+
+**Security & Production Notes:**
 - ✅ Custodial model: Smart account holds assets, positions table tracks user ownership
 - ✅ Only position owner can withdraw (validated by userAddress in positions table)
 - ✅ ERC-4626 standard ensures correct share-to-asset conversion
 - ✅ Atomic claim prevents duplicate processing and race conditions
 - ✅ Idempotent operations with retry logic for crash recovery
-- ⚠️ Withdrawals will remain in "Awaiting Proof" status until Phases 2/3 implemented
-- ⚠️ Manual operator intervention or future automation required to complete payouts
+- ✅ Full automation: withdrawals complete without manual intervention
+- ✅ Startup recovery: pending redemptions automatically loaded and monitored on server restart
 
-**Deployment Status**:
-- Phase 1 approved for production deployment
-- User communication should explain "Awaiting Proof" means waiting for agent payment detection
-- Operational runbook should cover completing payouts manually if needed
-- Phases 2/3 prioritized as high-impact follow-up milestone
+**Deployment Status:**
+- ✅ ALL PHASES (1/2/3) PRODUCTION-READY
+- ✅ Withdrawal automation fully operational
+- ✅ Architect approved for production deployment (November 14, 2025)
 
 ### Recent Changes (November 12, 2025)
 
