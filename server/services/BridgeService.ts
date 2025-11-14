@@ -1319,19 +1319,32 @@ export class BridgeService {
       
       const redemptionDetails = await this.fassetsClient.getRedemptionRequest(redemptionRequest.requestId);
       
+      // Step 3: Get agent's actual XRPL address (who will send the payment)
+      console.log("⏳ Step 3: Querying agent's underlying XRPL address...");
+      const agentXrplAddress = await this.fassetsClient.getAgentUnderlyingAddress(redemptionDetails.agentVault);
+      
       console.log(`✅ Agent assigned to redemption:`);
       console.log(`   Agent Vault (Flare): ${redemptionDetails.agentVault}`);
-      console.log(`   Agent XRPL Address: ${redemptionDetails.paymentAddress}`);
+      console.log(`   Agent XRPL Address: ${agentXrplAddress}`);
+      console.log(`   Receiver XRPL Address: ${redemptionDetails.paymentAddress}`);
       
-      // Calculate expected XRP amount in drops for matching (FXRP and XRP both use 6 decimals)
-      const expectedXrpDrops = ethers.parseUnits(fxrpAmount, 6).toString();
+      // Calculate net XRP amount after fees (what agent actually sends)
+      // FAssets agents deduct feeUBA from valueUBA before sending XRP
+      const netAmountUBA = redemptionDetails.valueUBA - redemptionDetails.feeUBA;
+      const expectedXrpDrops = netAmountUBA.toString();
+      
+      console.log(`📊 Redemption payment calculation:`);
+      console.log(`   Gross amount (UBA): ${redemptionDetails.valueUBA} (${ethers.formatUnits(redemptionDetails.valueUBA, 6)} XRP)`);
+      console.log(`   Fee (UBA): ${redemptionDetails.feeUBA} (${ethers.formatUnits(redemptionDetails.feeUBA, 6)} XRP)`);
+      console.log(`   Net amount (UBA): ${netAmountUBA} (${ethers.formatUnits(netAmountUBA, 6)} XRP)`);
+      console.log(`   Expecting agent to send: ${ethers.formatUnits(netAmountUBA, 6)} XRP`);
       
       // Update redemption status with redemption details AND agent info
       await this.config.storage.updateRedemptionStatus(redemptionId, "redeeming_fxrp", {
         fassetsRedemptionTxHash: redemptionRequest.txHash,
         redemptionRequestId: redemptionRequest.requestId.toString(),
         agentVaultAddress: redemptionDetails.agentVault,
-        agentUnderlyingAddress: redemptionDetails.paymentAddress,
+        agentUnderlyingAddress: agentXrplAddress, // Agent who sends XRP
         expectedXrpDrops: expectedXrpDrops,
       });
 
@@ -1451,8 +1464,17 @@ export class BridgeService {
     const demoTxHash = `0xDEMOREDEMPTION${Date.now().toString(16)}`;
     const demoAgentAddress = `rDEMOAgent${Date.now().toString(36)}`;
     
-    // Calculate expected XRP amount in drops for matching (FXRP and XRP both use 6 decimals)
-    const expectedXrpDrops = ethers.parseUnits(fxrpAmount, 6).toString();
+    // Calculate net XRP amount after fees (simulating FAssets fee deduction)
+    // Simulate 0.5% fee (typical FAssets redemption fee)
+    const grossAmountUBA = ethers.parseUnits(fxrpAmount, 6);
+    const feeUBA = grossAmountUBA / BigInt(200); // 0.5% fee
+    const netAmountUBA = grossAmountUBA - feeUBA;
+    const expectedXrpDrops = netAmountUBA.toString();
+    
+    console.log(`📊 [DEMO] Redemption payment calculation:`);
+    console.log(`   Gross amount (UBA): ${grossAmountUBA} (${ethers.formatUnits(grossAmountUBA, 6)} XRP)`);
+    console.log(`   Fee (UBA): ${feeUBA} (${ethers.formatUnits(feeUBA, 6)} XRP)`);
+    console.log(`   Net amount (UBA): ${netAmountUBA} (${ethers.formatUnits(netAmountUBA, 6)} XRP)`);
 
     await this.config.storage.updateRedemptionStatus(redemptionId, "redeeming_fxrp", {
       fassetsRedemptionTxHash: demoTxHash,

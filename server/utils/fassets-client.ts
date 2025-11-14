@@ -421,6 +421,23 @@ export class FAssetsClient {
     };
   }
 
+  /**
+   * Get agent's underlying XRPL address from agent vault address
+   * This is the address that will actually send the XRP payment
+   */
+  async getAgentUnderlyingAddress(agentVaultAddress: string): Promise<string> {
+    const assetManager = await this.getAssetManager();
+    
+    console.log(`\n🔍 Querying agent vault ${agentVaultAddress}...`);
+    
+    // Get agent info from AssetManager
+    const agentInfo = await assetManager.getAgentInfo(agentVaultAddress);
+    
+    console.log(`✅ Agent underlying address: ${agentInfo.underlyingAddress}`);
+    
+    return agentInfo.underlyingAddress;
+  }
+
   async confirmRedemptionPayment(
     proof: any,
     requestId: bigint

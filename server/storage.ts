@@ -542,18 +542,40 @@ export class DatabaseStorage implements IStorage {
       orderBy: desc(fxrpToXrpRedemptions.createdAt),
     });
 
-    // Match on exact amount (convert drops to decimal string with 6 decimals)
-    // amountDrops is already formatted as XRP (e.g., "100.5")
-    // We need to match against xrpSent field
+    // Convert amountDrops (decimal string like "29.85") to raw UBA units for comparison
+    // amountDrops is formatted as XRP with up to 6 decimals (e.g., "29.85")
+    // expectedXrpDrops is stored as raw UBA units (e.g., "29850000")
+    // Use parseUnits for exact decimal-to-UBA conversion (avoids floating-point precision errors)
+    const { parseUnits } = await import("ethers");
+    const amountUBA = parseUnits(amountDrops, 6).toString();
+
     for (const redemption of redemptions) {
-      if (!redemption.xrpSent) continue;
+      // Primary match: Use expectedXrpDrops (net amount after fees)
+      // This is the correct field that accounts for FAssets redemption fees
+      if (redemption.expectedXrpDrops) {
+        if (redemption.expectedXrpDrops === amountUBA) {
+          console.log(`✅ Matched redemption ${redemption.id} using expectedXrpDrops`);
+          console.log(`   Expected: ${redemption.expectedXrpDrops} UBA (${parseFloat(redemption.expectedXrpDrops) / 1_000_000} XRP)`);
+          console.log(`   Received: ${amountUBA} UBA (${amountDrops} XRP)`);
+          return redemption;
+        }
+      }
       
-      // Compare amounts with exact match (no tolerance)
-      // Both should be decimal strings with up to 6 decimals
-      if (redemption.xrpSent === amountDrops) {
+      // Fallback: Match against xrpSent for backwards compatibility
+      // This handles old redemptions created before the fee fix
+      if (redemption.xrpSent && redemption.xrpSent === amountDrops) {
+        console.log(`✅ Matched redemption ${redemption.id} using xrpSent (legacy)`);
+        console.log(`   Expected: ${redemption.xrpSent} XRP`);
+        console.log(`   Received: ${amountDrops} XRP`);
         return redemption;
       }
     }
+
+    console.log(`❌ No matching redemption found for payment:`);
+    console.log(`   User: ${userAddress}`);
+    console.log(`   Agent: ${agentAddress}`);
+    console.log(`   Amount: ${amountDrops} XRP (${amountUBA} UBA)`);
+    console.log(`   Checked ${redemptions.length} awaiting_proof redemption(s)`);
 
     return null;
   }
