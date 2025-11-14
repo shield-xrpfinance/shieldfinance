@@ -13,63 +13,95 @@ export declare namespace VaultController {
     }
 
   export interface VaultControllerInterface extends Interface {
-    getFunction(nameOrSignature: "COMPOUNDER_ROLE" | "DEFAULT_ADMIN_ROLE" | "OPERATOR_ROLE" | "addCompounder" | "addOperator" | "bridgeRequests" | "createBridgeRequest" | "deregisterVault" | "executeCompound" | "getBridgeRequest" | "getRoleAdmin" | "getVaultCount" | "grantRole" | "hasRole" | "lastCompoundTime" | "minCompoundInterval" | "registerVault" | "registeredVaults" | "removeCompounder" | "removeOperator" | "renounceRole" | "revokeRole" | "setMinCompoundInterval" | "supportsInterface" | "updateBridgeStatus" | "vaultList"): FunctionFragment;
+    getFunction(nameOrSignature: "BUFFER_TARGET_BPS" | "COMPOUNDER_ROLE" | "DEFAULT_ADMIN_ROLE" | "FIRELIGHT_TARGET_BPS" | "KINETIC_TARGET_BPS" | "OPERATOR_ROLE" | "_calculateDeploymentAmountsExternal" | "addCompounder" | "addOperator" | "bridgeRequests" | "createBridgeRequest" | "deployToStrategies" | "deregisterStrategy" | "deregisterVault" | "executeCompound" | "getBridgeRequest" | "getCurrentAllocation" | "getRoleAdmin" | "getStrategyCount" | "getTargetAllocation" | "getVaultCount" | "grantRole" | "hasRole" | "lastCompoundTime" | "minCompoundInterval" | "needsRebalancing" | "rebalanceVault" | "registerStrategy" | "registerVault" | "registeredStrategies" | "registeredVaults" | "removeCompounder" | "removeOperator" | "renounceRole" | "revokeRole" | "setMinCompoundInterval" | "strategyList" | "strategyNames" | "supportsInterface" | "updateBridgeStatus" | "vaultList" | "withdrawFromStrategies"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "BridgeRequestCreated" | "BridgeStatusUpdated" | "CompoundExecuted" | "OperatorAdded" | "OperatorRemoved" | "RoleAdminChanged" | "RoleGranted" | "RoleRevoked" | "VaultDeregistered" | "VaultRegistered"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "BridgeRequestCreated" | "BridgeStatusUpdated" | "CompoundExecuted" | "OperatorAdded" | "OperatorRemoved" | "RoleAdminChanged" | "RoleGranted" | "RoleRevoked" | "StrategyDeployed" | "StrategyDeregistered" | "StrategyRegistered" | "StrategyWithdrawn" | "VaultDeregistered" | "VaultRebalanced" | "VaultRegistered"): EventFragment;
 
-    encodeFunctionData(functionFragment: 'COMPOUNDER_ROLE', values?: undefined): string;
+    encodeFunctionData(functionFragment: 'BUFFER_TARGET_BPS', values?: undefined): string;
+encodeFunctionData(functionFragment: 'COMPOUNDER_ROLE', values?: undefined): string;
 encodeFunctionData(functionFragment: 'DEFAULT_ADMIN_ROLE', values?: undefined): string;
+encodeFunctionData(functionFragment: 'FIRELIGHT_TARGET_BPS', values?: undefined): string;
+encodeFunctionData(functionFragment: 'KINETIC_TARGET_BPS', values?: undefined): string;
 encodeFunctionData(functionFragment: 'OPERATOR_ROLE', values?: undefined): string;
+encodeFunctionData(functionFragment: '_calculateDeploymentAmountsExternal', values: [BigNumberish, BigNumberish, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'addCompounder', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'addOperator', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'bridgeRequests', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'createBridgeRequest', values: [AddressLike, AddressLike, BigNumberish, string]): string;
+encodeFunctionData(functionFragment: 'deployToStrategies', values: [AddressLike, BigNumberish]): string;
+encodeFunctionData(functionFragment: 'deregisterStrategy', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'deregisterVault', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'executeCompound', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'getBridgeRequest', values: [BytesLike]): string;
+encodeFunctionData(functionFragment: 'getCurrentAllocation', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'getRoleAdmin', values: [BytesLike]): string;
+encodeFunctionData(functionFragment: 'getStrategyCount', values?: undefined): string;
+encodeFunctionData(functionFragment: 'getTargetAllocation', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getVaultCount', values?: undefined): string;
 encodeFunctionData(functionFragment: 'grantRole', values: [BytesLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'hasRole', values: [BytesLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'lastCompoundTime', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'minCompoundInterval', values?: undefined): string;
+encodeFunctionData(functionFragment: 'needsRebalancing', values: [AddressLike, BigNumberish]): string;
+encodeFunctionData(functionFragment: 'rebalanceVault', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'registerStrategy', values: [AddressLike, string]): string;
 encodeFunctionData(functionFragment: 'registerVault', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'registeredStrategies', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'registeredVaults', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'removeCompounder', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'removeOperator', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'renounceRole', values: [BytesLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'revokeRole', values: [BytesLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'setMinCompoundInterval', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'strategyList', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'strategyNames', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'supportsInterface', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'updateBridgeStatus', values: [BytesLike, BigNumberish, string]): string;
 encodeFunctionData(functionFragment: 'vaultList', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'withdrawFromStrategies', values: [AddressLike, BigNumberish]): string;
 
-    decodeFunctionResult(functionFragment: 'COMPOUNDER_ROLE', data: BytesLike): Result;
+    decodeFunctionResult(functionFragment: 'BUFFER_TARGET_BPS', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'COMPOUNDER_ROLE', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'DEFAULT_ADMIN_ROLE', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'FIRELIGHT_TARGET_BPS', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'KINETIC_TARGET_BPS', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'OPERATOR_ROLE', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: '_calculateDeploymentAmountsExternal', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'addCompounder', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'addOperator', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'bridgeRequests', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'createBridgeRequest', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'deployToStrategies', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'deregisterStrategy', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'deregisterVault', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'executeCompound', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getBridgeRequest', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getCurrentAllocation', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getRoleAdmin', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getStrategyCount', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'getTargetAllocation', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getVaultCount', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'grantRole', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'hasRole', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'lastCompoundTime', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'minCompoundInterval', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'needsRebalancing', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'rebalanceVault', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'registerStrategy', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registerVault', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'registeredStrategies', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'registeredVaults', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'removeCompounder', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'removeOperator', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceRole', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'revokeRole', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setMinCompoundInterval', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'strategyList', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'strategyNames', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'supportsInterface', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'updateBridgeStatus', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'vaultList', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'withdrawFromStrategies', data: BytesLike): Result;
   }
 
   
@@ -169,10 +201,70 @@ decodeFunctionResult(functionFragment: 'vaultList', data: BytesLike): Result;
 
   
 
+    export namespace StrategyDeployedEvent {
+      export type InputTuple = [vault: AddressLike, strategy: AddressLike, amount: BigNumberish];
+      export type OutputTuple = [vault: string, strategy: string, amount: bigint];
+      export interface OutputObject {vault: string, strategy: string, amount: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace StrategyDeregisteredEvent {
+      export type InputTuple = [strategy: AddressLike];
+      export type OutputTuple = [strategy: string];
+      export interface OutputObject {strategy: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace StrategyRegisteredEvent {
+      export type InputTuple = [strategy: AddressLike, name: string];
+      export type OutputTuple = [strategy: string, name: string];
+      export interface OutputObject {strategy: string, name: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace StrategyWithdrawnEvent {
+      export type InputTuple = [vault: AddressLike, strategy: AddressLike, amount: BigNumberish];
+      export type OutputTuple = [vault: string, strategy: string, amount: bigint];
+      export interface OutputObject {vault: string, strategy: string, amount: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace VaultDeregisteredEvent {
       export type InputTuple = [vault: AddressLike];
       export type OutputTuple = [vault: string];
       export interface OutputObject {vault: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace VaultRebalancedEvent {
+      export type InputTuple = [vault: AddressLike, bufferBefore: BigNumberish, bufferAfter: BigNumberish, kineticBefore: BigNumberish, kineticAfter: BigNumberish, firelightBefore: BigNumberish, firelightAfter: BigNumberish];
+      export type OutputTuple = [vault: string, bufferBefore: bigint, bufferAfter: bigint, kineticBefore: bigint, kineticAfter: bigint, firelightBefore: bigint, firelightAfter: bigint];
+      export interface OutputObject {vault: string, bufferBefore: bigint, bufferAfter: bigint, kineticBefore: bigint, kineticAfter: bigint, firelightBefore: bigint, firelightAfter: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -227,6 +319,14 @@ decodeFunctionResult(functionFragment: 'vaultList', data: BytesLike): Result;
 
     
     
+    BUFFER_TARGET_BPS: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
+    
     COMPOUNDER_ROLE: TypedContractMethod<
       [],
       [string],
@@ -243,9 +343,33 @@ decodeFunctionResult(functionFragment: 'vaultList', data: BytesLike): Result;
     
 
     
+    FIRELIGHT_TARGET_BPS: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
+    
+    KINETIC_TARGET_BPS: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
+    
     OPERATOR_ROLE: TypedContractMethod<
       [],
       [string],
+      'view'
+    >
+    
+
+    
+    _calculateDeploymentAmountsExternal: TypedContractMethod<
+      [deployableAmount: BigNumberish, kineticCurrent: BigNumberish, firelightCurrent: BigNumberish, totalAssets: BigNumberish, ],
+      [[bigint, bigint] & {kineticAmount: bigint, firelightAmount: bigint }],
       'view'
     >
     
@@ -283,6 +407,22 @@ decodeFunctionResult(functionFragment: 'vaultList', data: BytesLike): Result;
     
 
     
+    deployToStrategies: TypedContractMethod<
+      [vault: AddressLike, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    deregisterStrategy: TypedContractMethod<
+      [strategy: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     deregisterVault: TypedContractMethod<
       [vault: AddressLike, ],
       [void],
@@ -307,9 +447,33 @@ decodeFunctionResult(functionFragment: 'vaultList', data: BytesLike): Result;
     
 
     
+    getCurrentAllocation: TypedContractMethod<
+      [vault: AddressLike, ],
+      [[bigint, bigint, bigint, bigint] & {bufferAmount: bigint, kineticAmount: bigint, firelightAmount: bigint, totalAssets: bigint }],
+      'view'
+    >
+    
+
+    
     getRoleAdmin: TypedContractMethod<
       [role: BytesLike, ],
       [string],
+      'view'
+    >
+    
+
+    
+    getStrategyCount: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
+    
+    getTargetAllocation: TypedContractMethod<
+      [totalAssets: BigNumberish, ],
+      [[bigint, bigint, bigint] & {bufferTarget: bigint, kineticTarget: bigint, firelightTarget: bigint }],
       'view'
     >
     
@@ -355,10 +519,42 @@ decodeFunctionResult(functionFragment: 'vaultList', data: BytesLike): Result;
     
 
     
+    needsRebalancing: TypedContractMethod<
+      [vault: AddressLike, thresholdBps: BigNumberish, ],
+      [boolean],
+      'view'
+    >
+    
+
+    
+    rebalanceVault: TypedContractMethod<
+      [vault: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    registerStrategy: TypedContractMethod<
+      [strategy: AddressLike, name: string, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     registerVault: TypedContractMethod<
       [vault: AddressLike, ],
       [void],
       'nonpayable'
+    >
+    
+
+    
+    registeredStrategies: TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
+      'view'
     >
     
 
@@ -411,6 +607,22 @@ decodeFunctionResult(functionFragment: 'vaultList', data: BytesLike): Result;
     
 
     
+    strategyList: TypedContractMethod<
+      [arg0: BigNumberish, ],
+      [string],
+      'view'
+    >
+    
+
+    
+    strategyNames: TypedContractMethod<
+      [arg0: AddressLike, ],
+      [string],
+      'view'
+    >
+    
+
+    
     supportsInterface: TypedContractMethod<
       [interfaceId: BytesLike, ],
       [boolean],
@@ -434,10 +646,23 @@ decodeFunctionResult(functionFragment: 'vaultList', data: BytesLike): Result;
     >
     
 
+    
+    withdrawFromStrategies: TypedContractMethod<
+      [vault: AddressLike, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >
+    
+
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
 
-    getFunction(nameOrSignature: 'COMPOUNDER_ROLE'): TypedContractMethod<
+    getFunction(nameOrSignature: 'BUFFER_TARGET_BPS'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'COMPOUNDER_ROLE'): TypedContractMethod<
       [],
       [string],
       'view'
@@ -447,9 +672,24 @@ getFunction(nameOrSignature: 'DEFAULT_ADMIN_ROLE'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'FIRELIGHT_TARGET_BPS'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'KINETIC_TARGET_BPS'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
 getFunction(nameOrSignature: 'OPERATOR_ROLE'): TypedContractMethod<
       [],
       [string],
+      'view'
+    >;
+getFunction(nameOrSignature: '_calculateDeploymentAmountsExternal'): TypedContractMethod<
+      [deployableAmount: BigNumberish, kineticCurrent: BigNumberish, firelightCurrent: BigNumberish, totalAssets: BigNumberish, ],
+      [[bigint, bigint] & {kineticAmount: bigint, firelightAmount: bigint }],
       'view'
     >;
 getFunction(nameOrSignature: 'addCompounder'): TypedContractMethod<
@@ -472,6 +712,16 @@ getFunction(nameOrSignature: 'createBridgeRequest'): TypedContractMethod<
       [string],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'deployToStrategies'): TypedContractMethod<
+      [vault: AddressLike, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'deregisterStrategy'): TypedContractMethod<
+      [strategy: AddressLike, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'deregisterVault'): TypedContractMethod<
       [vault: AddressLike, ],
       [void],
@@ -487,9 +737,24 @@ getFunction(nameOrSignature: 'getBridgeRequest'): TypedContractMethod<
       [VaultController.BridgeRequestStructOutput],
       'view'
     >;
+getFunction(nameOrSignature: 'getCurrentAllocation'): TypedContractMethod<
+      [vault: AddressLike, ],
+      [[bigint, bigint, bigint, bigint] & {bufferAmount: bigint, kineticAmount: bigint, firelightAmount: bigint, totalAssets: bigint }],
+      'view'
+    >;
 getFunction(nameOrSignature: 'getRoleAdmin'): TypedContractMethod<
       [role: BytesLike, ],
       [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getStrategyCount'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'getTargetAllocation'): TypedContractMethod<
+      [totalAssets: BigNumberish, ],
+      [[bigint, bigint, bigint] & {bufferTarget: bigint, kineticTarget: bigint, firelightTarget: bigint }],
       'view'
     >;
 getFunction(nameOrSignature: 'getVaultCount'): TypedContractMethod<
@@ -517,10 +782,30 @@ getFunction(nameOrSignature: 'minCompoundInterval'): TypedContractMethod<
       [bigint],
       'view'
     >;
+getFunction(nameOrSignature: 'needsRebalancing'): TypedContractMethod<
+      [vault: AddressLike, thresholdBps: BigNumberish, ],
+      [boolean],
+      'view'
+    >;
+getFunction(nameOrSignature: 'rebalanceVault'): TypedContractMethod<
+      [vault: AddressLike, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'registerStrategy'): TypedContractMethod<
+      [strategy: AddressLike, name: string, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'registerVault'): TypedContractMethod<
       [vault: AddressLike, ],
       [void],
       'nonpayable'
+    >;
+getFunction(nameOrSignature: 'registeredStrategies'): TypedContractMethod<
+      [arg0: AddressLike, ],
+      [boolean],
+      'view'
     >;
 getFunction(nameOrSignature: 'registeredVaults'): TypedContractMethod<
       [arg0: AddressLike, ],
@@ -552,6 +837,16 @@ getFunction(nameOrSignature: 'setMinCompoundInterval'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'strategyList'): TypedContractMethod<
+      [arg0: BigNumberish, ],
+      [string],
+      'view'
+    >;
+getFunction(nameOrSignature: 'strategyNames'): TypedContractMethod<
+      [arg0: AddressLike, ],
+      [string],
+      'view'
+    >;
 getFunction(nameOrSignature: 'supportsInterface'): TypedContractMethod<
       [interfaceId: BytesLike, ],
       [boolean],
@@ -567,6 +862,11 @@ getFunction(nameOrSignature: 'vaultList'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'withdrawFromStrategies'): TypedContractMethod<
+      [vault: AddressLike, amount: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >;
 
     getEvent(key: 'BridgeRequestCreated'): TypedContractEvent<BridgeRequestCreatedEvent.InputTuple, BridgeRequestCreatedEvent.OutputTuple, BridgeRequestCreatedEvent.OutputObject>;
 getEvent(key: 'BridgeStatusUpdated'): TypedContractEvent<BridgeStatusUpdatedEvent.InputTuple, BridgeStatusUpdatedEvent.OutputTuple, BridgeStatusUpdatedEvent.OutputObject>;
@@ -576,7 +876,12 @@ getEvent(key: 'OperatorRemoved'): TypedContractEvent<OperatorRemovedEvent.InputT
 getEvent(key: 'RoleAdminChanged'): TypedContractEvent<RoleAdminChangedEvent.InputTuple, RoleAdminChangedEvent.OutputTuple, RoleAdminChangedEvent.OutputObject>;
 getEvent(key: 'RoleGranted'): TypedContractEvent<RoleGrantedEvent.InputTuple, RoleGrantedEvent.OutputTuple, RoleGrantedEvent.OutputObject>;
 getEvent(key: 'RoleRevoked'): TypedContractEvent<RoleRevokedEvent.InputTuple, RoleRevokedEvent.OutputTuple, RoleRevokedEvent.OutputObject>;
+getEvent(key: 'StrategyDeployed'): TypedContractEvent<StrategyDeployedEvent.InputTuple, StrategyDeployedEvent.OutputTuple, StrategyDeployedEvent.OutputObject>;
+getEvent(key: 'StrategyDeregistered'): TypedContractEvent<StrategyDeregisteredEvent.InputTuple, StrategyDeregisteredEvent.OutputTuple, StrategyDeregisteredEvent.OutputObject>;
+getEvent(key: 'StrategyRegistered'): TypedContractEvent<StrategyRegisteredEvent.InputTuple, StrategyRegisteredEvent.OutputTuple, StrategyRegisteredEvent.OutputObject>;
+getEvent(key: 'StrategyWithdrawn'): TypedContractEvent<StrategyWithdrawnEvent.InputTuple, StrategyWithdrawnEvent.OutputTuple, StrategyWithdrawnEvent.OutputObject>;
 getEvent(key: 'VaultDeregistered'): TypedContractEvent<VaultDeregisteredEvent.InputTuple, VaultDeregisteredEvent.OutputTuple, VaultDeregisteredEvent.OutputObject>;
+getEvent(key: 'VaultRebalanced'): TypedContractEvent<VaultRebalancedEvent.InputTuple, VaultRebalancedEvent.OutputTuple, VaultRebalancedEvent.OutputObject>;
 getEvent(key: 'VaultRegistered'): TypedContractEvent<VaultRegisteredEvent.InputTuple, VaultRegisteredEvent.OutputTuple, VaultRegisteredEvent.OutputObject>;
 
     filters: {
@@ -613,8 +918,28 @@ getEvent(key: 'VaultRegistered'): TypedContractEvent<VaultRegisteredEvent.InputT
       RoleRevoked: TypedContractEvent<RoleRevokedEvent.InputTuple, RoleRevokedEvent.OutputTuple, RoleRevokedEvent.OutputObject>;
     
 
+      'StrategyDeployed(address,address,uint256)': TypedContractEvent<StrategyDeployedEvent.InputTuple, StrategyDeployedEvent.OutputTuple, StrategyDeployedEvent.OutputObject>;
+      StrategyDeployed: TypedContractEvent<StrategyDeployedEvent.InputTuple, StrategyDeployedEvent.OutputTuple, StrategyDeployedEvent.OutputObject>;
+    
+
+      'StrategyDeregistered(address)': TypedContractEvent<StrategyDeregisteredEvent.InputTuple, StrategyDeregisteredEvent.OutputTuple, StrategyDeregisteredEvent.OutputObject>;
+      StrategyDeregistered: TypedContractEvent<StrategyDeregisteredEvent.InputTuple, StrategyDeregisteredEvent.OutputTuple, StrategyDeregisteredEvent.OutputObject>;
+    
+
+      'StrategyRegistered(address,string)': TypedContractEvent<StrategyRegisteredEvent.InputTuple, StrategyRegisteredEvent.OutputTuple, StrategyRegisteredEvent.OutputObject>;
+      StrategyRegistered: TypedContractEvent<StrategyRegisteredEvent.InputTuple, StrategyRegisteredEvent.OutputTuple, StrategyRegisteredEvent.OutputObject>;
+    
+
+      'StrategyWithdrawn(address,address,uint256)': TypedContractEvent<StrategyWithdrawnEvent.InputTuple, StrategyWithdrawnEvent.OutputTuple, StrategyWithdrawnEvent.OutputObject>;
+      StrategyWithdrawn: TypedContractEvent<StrategyWithdrawnEvent.InputTuple, StrategyWithdrawnEvent.OutputTuple, StrategyWithdrawnEvent.OutputObject>;
+    
+
       'VaultDeregistered(address)': TypedContractEvent<VaultDeregisteredEvent.InputTuple, VaultDeregisteredEvent.OutputTuple, VaultDeregisteredEvent.OutputObject>;
       VaultDeregistered: TypedContractEvent<VaultDeregisteredEvent.InputTuple, VaultDeregisteredEvent.OutputTuple, VaultDeregisteredEvent.OutputObject>;
+    
+
+      'VaultRebalanced(address,uint256,uint256,uint256,uint256,uint256,uint256)': TypedContractEvent<VaultRebalancedEvent.InputTuple, VaultRebalancedEvent.OutputTuple, VaultRebalancedEvent.OutputObject>;
+      VaultRebalanced: TypedContractEvent<VaultRebalancedEvent.InputTuple, VaultRebalancedEvent.OutputTuple, VaultRebalancedEvent.OutputObject>;
     
 
       'VaultRegistered(address)': TypedContractEvent<VaultRegisteredEvent.InputTuple, VaultRegisteredEvent.OutputTuple, VaultRegisteredEvent.OutputObject>;
