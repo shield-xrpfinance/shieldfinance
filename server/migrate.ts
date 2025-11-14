@@ -13,10 +13,7 @@ async function runMigrations() {
   console.log('🔄 Running database migrations...');
   
   try {
-    const db = drizzle({
-      connection: DATABASE_URL,
-      ws: ws
-    });
+    const db = drizzle(DATABASE_URL!, { ws });
 
     await migrate(db, { migrationsFolder: './migrations' });
     

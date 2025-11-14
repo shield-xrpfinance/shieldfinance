@@ -9,6 +9,7 @@ import { YieldService } from "./services/YieldService";
 import { CompoundingService } from "./services/CompoundingService";
 import { VaultService } from "./services/VaultService";
 import { DepositService } from "./services/DepositService";
+import { readinessRegistry } from "./services/ReadinessRegistry";
 
 const app = express();
 
@@ -54,382 +55,434 @@ app.use((req, res, next) => {
   next();
 });
 
-(async () => {
-  await storage.initializeVaults();
-  
-  // Initialize Flare Network client with Smart Account (ERC-4337)
-  // Requires ETHERSPOT_BUNDLER_API_KEY from https://developer.etherspot.io
+/**
+ * Async service initialization with retry logic
+ * Initializes services in background without blocking HTTP server
+ */
+async function initializeServices() {
+  console.log("🔄 Initializing services asynchronously...");
+
+  // Validate required environment variables
   if (!process.env.ETHERSPOT_BUNDLER_API_KEY) {
-    console.error('❌ ETHERSPOT_BUNDLER_API_KEY is required for smart account functionality');
-    console.error('   Get your API key from: https://dashboard.etherspot.io');
-    console.error('   Add to .env file: ETHERSPOT_BUNDLER_API_KEY=your_key_here');
-    process.exit(1);
+    const error = 'ETHERSPOT_BUNDLER_API_KEY is required for smart account functionality. Get your API key from: https://dashboard.etherspot.io';
+    readinessRegistry.setError('flareClient', error);
+    console.error('❌', error);
+    return; // Don't crash server, just mark service as failed
   }
   
   if (!process.env.OPERATOR_PRIVATE_KEY) {
-    console.error('❌ OPERATOR_PRIVATE_KEY is required');
-    process.exit(1);
+    const error = 'OPERATOR_PRIVATE_KEY is required';
+    readinessRegistry.setError('flareClient', error);
+    console.error('❌', error);
+    return; // Don't crash server, just mark service as failed
   }
-  
-  const flareClient = new FlareClient({
-    network: "coston2",
-    privateKey: process.env.OPERATOR_PRIVATE_KEY,
-    bundlerApiKey: process.env.ETHERSPOT_BUNDLER_API_KEY,
-    enablePaymaster: process.env.ENABLE_PAYMASTER === "true",
-  });
 
-  // Initialize smart account
-  await flareClient.initialize();
-
-  // Initialize services (note: bridgeService needs xrplListener, so we create it after listener is initialized)
-  // CRITICAL: Default to PRODUCTION mode to ensure blockchain transactions create database records
-  // Only enable demo mode when explicitly set to "true" for testing
   const demoMode = process.env.DEMO_MODE === "true";
   
-  // Startup validation: Warn if running in production with demo mode enabled
   if (demoMode) {
     console.warn("⚠️  DEMO MODE ENABLED - This should only be used for testing!");
     console.warn("⚠️  Set DEMO_MODE=false or remove it from environment to run in production.");
   }
 
-  const vaultService = new VaultService({
-    storage,
-    flareClient,
-  });
+  // Step 1: Initialize FlareClient with retry logic
+  let flareClient: FlareClient | undefined;
+  try {
+    flareClient = await initializeFlareClientWithRetry({
+      network: "coston2",
+      privateKey: process.env.OPERATOR_PRIVATE_KEY!,
+      bundlerApiKey: process.env.ETHERSPOT_BUNDLER_API_KEY!,
+      enablePaymaster: process.env.ENABLE_PAYMASTER === "true",
+    });
+    readinessRegistry.setReady('flareClient');
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    readinessRegistry.setError('flareClient', errorMsg);
+    console.error('❌ FlareClient initialization failed:', errorMsg);
+    // Don't return - try to initialize other services even if FlareClient fails
+  }
 
-  const yieldService = new YieldService({
-    storage,
-    flareClient,
-    firelightVaultAddress: "0x...", // TODO: Add from config
-  });
+  // Step 2: Initialize services in parallel (where possible)
+  let vaultService: VaultService | undefined;
+  let yieldService: YieldService | undefined;
+  let compoundingService: CompoundingService | undefined;
 
-  const compoundingService = new CompoundingService({
-    storage,
-    flareClient,
-    vaultControllerAddress: "0x...", // TODO: Add from deployment
-    minCompoundAmount: "1.0", // Minimum 1 FXRP before compounding
-  });
-
-  // Two-phase initialization to eliminate temporal dead zone
-  // Phase 1: Create services without circular dependencies
-  
-  // Create XRPL listener without callbacks
-  const xrplListener = new XRPLDepositListener({
-    network: "testnet",
-    vaultAddress: "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY", // Optional vault monitoring
-    storage,
-    onDeposit: async (deposit) => {
-      // Handle direct vault deposits if needed
-      console.log(`📥 Direct vault deposit detected: ${deposit.amount} XRP from ${deposit.walletAddress}`);
-    },
-  });
-  
-  // Create bridge service without listener reference
-  // In demo mode, don't pass FlareClient to prevent real blockchain calls
-  const bridgeService = new BridgeService({
-    network: "coston2",
-    storage,
-    flareClient: demoMode ? undefined : flareClient, // Only pass FlareClient in production mode
-    vaultService: demoMode ? undefined : vaultService, // Only pass VaultService in production mode
-    operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY || "",
-    demoMode,
-  });
-
-  console.log(`🌉 BridgeService initialized (${bridgeService.demoMode ? 'DEMO MODE' : 'PRODUCTION MODE'})`);
-
-  // Phase 2: Wire up the circular dependencies
-  
-  // Register listener with bridge service (for agent address registration)
-  bridgeService.setXrplListener(xrplListener);
-  
-  // Register agent payment handler with listener (now that bridgeService exists)
-  xrplListener.setAgentPaymentHandler(async (payment) => {
-    console.log(`🔗 FAssets agent payment detected: ${payment.amount} XRP to ${payment.agentAddress}`);
-    console.log(`   TX: ${payment.txHash}`);
-    console.log(`   Memo: ${payment.memo || '(none)'}`);
-    
+  if (flareClient) {
     try {
-      // Find the bridge waiting for this agent payment
-      const bridge = await storage.getBridgeByAgentAddress(payment.agentAddress);
-      
-      if (!bridge) {
-        console.log(`⚠️  No bridge found for agent ${payment.agentAddress}`);
-        return;
+      // These services can be initialized in parallel since they don't depend on each other
+      const [vault, yield_, compounding] = await Promise.allSettled([
+        Promise.resolve(new VaultService({ storage, flareClient })),
+        Promise.resolve(new YieldService({
+          storage,
+          flareClient,
+          firelightVaultAddress: "0x...", // TODO: Add from config
+        })),
+        Promise.resolve(new CompoundingService({
+          storage,
+          flareClient,
+          vaultControllerAddress: "0x...", // TODO: Add from deployment
+          minCompoundAmount: "1.0",
+        })),
+      ]);
+
+      if (vault.status === 'fulfilled') {
+        vaultService = vault.value;
+        readinessRegistry.setReady('vaultService');
+      } else {
+        readinessRegistry.setError('vaultService', vault.reason?.message || 'Initialization failed');
       }
 
-      // Viability Check 1: Check if bridge is in terminal state
-      const terminalStates = ['completed', 'cancelled', 'failed', 'vault_mint_failed'];
-      if (terminalStates.includes(bridge.status)) {
-        console.warn(`⚠️  Rejecting payment for bridge in terminal state`, {
-          bridgeId: bridge.id,
-          status: bridge.status,
-          agentAddress: payment.agentAddress,
-          txHash: payment.txHash
-        });
-        return;
+      if (yield_.status === 'fulfilled') {
+        yieldService = yield_.value;
+        readinessRegistry.setReady('yieldService');
+      } else {
+        readinessRegistry.setError('yieldService', yield_.reason?.message || 'Initialization failed');
       }
 
-      // Viability Check 2: Check if bridge is expired
-      if (bridge.expiresAt && new Date() > bridge.expiresAt) {
-        console.warn(`⚠️  Rejecting payment for expired bridge`, {
-          bridgeId: bridge.id,
-          expiresAt: bridge.expiresAt.toISOString(),
-          currentTime: new Date().toISOString(),
-          agentAddress: payment.agentAddress,
-          txHash: payment.txHash
-        });
-        
-        // Mark bridge as cancelled if not already
-        if (!terminalStates.includes(bridge.status)) {
-          await storage.updateBridge(bridge.id, {
-            status: 'cancelled',
-            cancelledAt: new Date(),
-            cancellationReason: 'expired'
-          });
-        }
-        
-        // Unsubscribe from agent address to save resources
-        if (bridge.agentUnderlyingAddress) {
-          await xrplListener.removeAgentAddress(bridge.agentUnderlyingAddress);
-        }
-        
-        return;
+      if (compounding.status === 'fulfilled') {
+        compoundingService = compounding.value;
+        readinessRegistry.setReady('compoundingService');
+      } else {
+        readinessRegistry.setError('compoundingService', compounding.reason?.message || 'Initialization failed');
       }
-      
-      // Validate payment reference (memo) matches
-      if (!payment.memo || !bridge.paymentReference) {
-        console.log(`⚠️  Payment validation failed: missing memo or payment reference`);
-        console.log(`   Payment memo: ${payment.memo || '(none)'}`);
-        console.log(`   Expected reference: ${bridge.paymentReference || '(none)'}`);
-        console.log(`   Skipping payment - incorrect reference`);
-        return;
-      }
-      
-      if (payment.memo !== bridge.paymentReference) {
-        console.log(`⚠️  Payment reference mismatch for bridge ${bridge.id}`);
-        console.log(`   Received memo: ${payment.memo}`);
-        console.log(`   Expected reference: ${bridge.paymentReference}`);
-        console.log(`   Skipping payment - incorrect reference`);
-        return;
-      }
-      
-      // Validate exact amount matches (reservedValueUBA + reservedFeeUBA)
-      if (!bridge.reservedValueUBA || !bridge.reservedFeeUBA) {
-        console.log(`⚠️  Bridge ${bridge.id} missing reserved amounts`);
-        console.log(`   Cannot validate payment amount`);
-        return;
-      }
-      
-      // Calculate expected amount in drops (UBA) - use BigInt for precision
-      const expectedDrops = BigInt(bridge.reservedValueUBA) + BigInt(bridge.reservedFeeUBA);
-      
-      // Convert payment amount (XRP string) to drops without floating point
-      // XRP has 6 decimal places, so 1 XRP = 1,000,000 drops
-      let receivedDrops: bigint;
-      try {
-        // Trim whitespace and split on decimal point
-        const trimmedAmount = payment.amount.trim();
-        const parts = trimmedAmount.split('.');
-        
-        // Reject malformed amounts with multiple decimal points (e.g., "5..1")
-        if (parts.length > 2) {
-          throw new Error('Multiple decimal points not allowed');
-        }
-        
-        const [rawIntegerPart = '0', fractionalPart = ''] = parts;
-        
-        // Normalize integer part (treat empty string as "0" for amounts like ".5")
-        const integerPart = rawIntegerPart || '0';
-        
-        // Validate format (digits only)
-        if (!/^\d+$/.test(integerPart) || (fractionalPart && !/^\d+$/.test(fractionalPart))) {
-          throw new Error('Invalid number format');
-        }
-        
-        // XRP allows max 6 decimal places
-        if (fractionalPart.length > 6) {
-          throw new Error('Too many decimal places (max 6 for XRP)');
-        }
-        
-        // Pad fractional part to 6 digits and combine
-        const paddedFractional = fractionalPart.padEnd(6, '0');
-        const dropsString = integerPart + paddedFractional;
-        receivedDrops = BigInt(dropsString);
-        
-        // Validate non-zero positive amount
-        if (receivedDrops <= BigInt(0)) {
-          throw new Error('Amount must be positive');
-        }
-      } catch (error) {
-        console.log(`⚠️  Invalid payment amount for bridge ${bridge.id}: ${payment.amount}`);
-        console.log(`   Error: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        console.log(`   Skipping payment - invalid amount format`);
-        return;
-      }
-      
-      // Compare amounts in drops (exact match required)
-      if (receivedDrops !== expectedDrops) {
-        console.log(`❌ Payment amount mismatch for bridge ${bridge.id}`);
-        console.log(`   Received: ${receivedDrops} drops (${payment.amount} XRP)`);
-        console.log(`   Expected: ${expectedDrops} drops`);
-        console.log(`   Difference: ${receivedDrops - expectedDrops} drops`);
-        console.log(`   Marking bridge as failed with mismatch details...`);
-        
-        // Mark bridge as failed with detailed mismatch information
-        await storage.updateBridge(bridge.id, {
-          status: 'failed',
-          failureCode: 'amount_mismatch',
-          receivedAmountDrops: receivedDrops.toString(),
-          expectedAmountDrops: expectedDrops.toString(),
-          xrplTxHash: payment.txHash,
-          xrplConfirmedAt: new Date(),
-          errorMessage: `Payment amount mismatch: received ${receivedDrops} drops (${payment.amount} XRP), expected ${expectedDrops} drops`
-        });
-        
-        console.log(`✅ Bridge ${bridge.id} marked as failed - amount_mismatch`);
-        console.log(`   User can now cancel and retry with correct amount`);
-        return;
-      }
-      
-      // Allow processing if:
-      // 1. Status is awaiting_payment (normal flow)
-      // 2. Status is xrpl_confirmed BUT no FDC proof yet (recovery/retry from manual reconciliation or duplicate detection)
-      const canProcess = 
-        bridge.status === "awaiting_payment" || 
-        (bridge.status === "xrpl_confirmed" && !bridge.fdcProofData);
-      
-      if (!canProcess) {
-        console.log(`⏭️  Bridge ${bridge.id} already processed (status: ${bridge.status}, has proof: ${!!bridge.fdcProofData})`);
-        return;
-      }
-      
-      console.log(`✅ Payment validated successfully for bridge ${bridge.id}`);
-      console.log(`   Payment reference: ${payment.memo}`);
-      console.log(`   Amount: ${payment.amount} XRP (${receivedDrops} drops)`);
-      console.log(`   Executing minting with proof...`);
-      
-      // Execute minting with the detected transaction
-      await bridgeService.executeMintingWithProof(bridge.id, payment.txHash);
-      
-      console.log(`🎉 Bridge ${bridge.id} completed successfully!`);
     } catch (error) {
-      console.error(`❌ Error completing bridge for agent ${payment.agentAddress}:`, error);
+      console.error('❌ Service initialization error:', error);
     }
-  });
-  
-  // Register redemption payment handler with listener (Phase 3: agent→user payment detection)
-  xrplListener.setRedemptionPaymentHandler(async (payment) => {
-    await bridgeService.handleRedemptionPayment(payment);
-  });
-  
-  // Start listener last (after all wiring is complete)
-  await xrplListener.start();
+  } else {
+    // FlareClient failed, mark dependent services as unavailable
+    readinessRegistry.setError('vaultService', 'FlareClient unavailable');
+    readinessRegistry.setError('yieldService', 'FlareClient unavailable');
+    readinessRegistry.setError('compoundingService', 'FlareClient unavailable');
+  }
 
-  // Re-register pending bridges with XRPL listener (for restart recovery)
-  if (!demoMode) {
-    const pendingBridges = await storage.getPendingBridges();
-    console.log(`🔄 Found ${pendingBridges.length} pending bridge(s) to monitor`);
-    
-    let successCount = 0;
-    let failureCount = 0;
-    
-    for (const bridge of pendingBridges) {
-      if (bridge.agentUnderlyingAddress) {
-        try {
-          await xrplListener.addAgentAddress(bridge.agentUnderlyingAddress);
-          console.log(`   ✅ Re-monitoring agent: ${bridge.agentUnderlyingAddress} (Bridge: ${bridge.id})`);
-          successCount++;
-        } catch (error) {
-          console.error(`   ❌ Failed to re-monitor agent ${bridge.agentUnderlyingAddress} (Bridge: ${bridge.id}):`, error);
-          failureCount++;
-        }
-      }
-    }
-    
-    console.log(`📊 Reconciliation complete: ${successCount} successful, ${failureCount} failed`);
-    if (failureCount > 0) {
-      console.warn(`⚠️  Warning: ${failureCount} pending bridge(s) not monitored. Manual intervention may be required.`);
-    }
+  // Step 3: Initialize XRPL Listener and BridgeService (have circular dependencies)
+  let xrplListener: XRPLDepositListener | undefined;
+  let bridgeService: BridgeService | undefined;
 
-    // Automatic recovery: Resume FDC proof generation for stuck bridges
-    console.log(`🔍 Checking for stuck bridges at xrpl_confirmed without FDC proofs...`);
-    const stuckBridges = await storage.getStuckBridges();
+  try {
+    // Create XRPL listener without callbacks
+    xrplListener = new XRPLDepositListener({
+      network: "testnet",
+      vaultAddress: "r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY",
+      storage,
+      onDeposit: async (deposit) => {
+        console.log(`📥 Direct vault deposit detected: ${deposit.amount} XRP from ${deposit.walletAddress}`);
+      },
+    });
     
-    if (stuckBridges.length > 0) {
-      console.log(`🔧 Found ${stuckBridges.length} stuck bridge(s) - resuming proof generation...`);
-      
-      for (const bridge of stuckBridges) {
-        try {
-          console.log(`   🔄 Resuming proof generation for bridge ${bridge.id} (TX: ${bridge.xrplTxHash})`);
-          // Resume proof generation in background (don't await to avoid blocking startup)
-          bridgeService.executeMintingWithProof(bridge.id, bridge.xrplTxHash!).catch((error) => {
-            console.error(`   ❌ Failed to resume proof generation for bridge ${bridge.id}:`, error);
-          });
-        } catch (error) {
-          console.error(`   ❌ Error initiating recovery for bridge ${bridge.id}:`, error);
-        }
-      }
-      
-      console.log(`✅ Automatic recovery initiated for ${stuckBridges.length} bridge(s)`);
-    } else {
-      console.log(`✅ No stuck bridges found`);
-    }
+    // Create bridge service
+    bridgeService = new BridgeService({
+      network: "coston2",
+      storage,
+      flareClient: demoMode ? undefined : flareClient,
+      vaultService: demoMode ? undefined : vaultService,
+      operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY || "",
+      demoMode,
+    });
 
-    // Automatic reconciliation: Recover all other failed/stuck bridges
-    const autoReconcileEnabled = process.env.AUTO_RECONCILE_ON_START !== "false"; // Default enabled
-    if (autoReconcileEnabled) {
-      // Run in background to avoid blocking server startup
-      bridgeService.reconcileRecoverableBridgesOnStartup().catch((error) => {
-        console.error(`❌ Startup reconciliation failed:`, error);
-      });
+    console.log(`🌉 BridgeService initialized (${bridgeService.demoMode ? 'DEMO MODE' : 'PRODUCTION MODE'})`);
+
+    // Wire up circular dependencies
+    bridgeService.setXrplListener(xrplListener);
+    
+    // Register agent payment handler
+    xrplListener.setAgentPaymentHandler(async (payment) => {
+      console.log(`🔗 FAssets agent payment detected: ${payment.amount} XRP to ${payment.agentAddress}`);
+      console.log(`   TX: ${payment.txHash}`);
+      console.log(`   Memo: ${payment.memo || '(none)'}`);
       
-      // Optional: Set up periodic reconciliation
-      const reconcileIntervalMinutes = process.env.AUTO_RECONCILE_INTERVAL_MINUTES 
-        ? parseInt(process.env.AUTO_RECONCILE_INTERVAL_MINUTES, 10) 
-        : undefined;
-      
-      if (reconcileIntervalMinutes && reconcileIntervalMinutes > 0) {
-        console.log(`⏰ Scheduling periodic reconciliation every ${reconcileIntervalMinutes} minute(s)`);
-        let reconciliationInProgress = false;
+      try {
+        const bridge = await storage.getBridgeByAgentAddress(payment.agentAddress);
         
-        setInterval(async () => {
-          // In-flight guard: Skip if previous reconciliation is still running
-          if (reconciliationInProgress) {
-            console.warn(`⏭️  [PERIODIC RECONCILIATION] Skipping - previous run still in progress`);
-            return;
+        if (!bridge) {
+          console.log(`⚠️  No bridge found for agent ${payment.agentAddress}`);
+          return;
+        }
+
+        const terminalStates = ['completed', 'cancelled', 'failed', 'vault_mint_failed'];
+        if (terminalStates.includes(bridge.status)) {
+          console.warn(`⚠️  Rejecting payment for bridge in terminal state`, {
+            bridgeId: bridge.id,
+            status: bridge.status,
+            agentAddress: payment.agentAddress,
+            txHash: payment.txHash
+          });
+          return;
+        }
+
+        if (bridge.expiresAt && new Date() > bridge.expiresAt) {
+          console.warn(`⚠️  Rejecting payment for expired bridge`, {
+            bridgeId: bridge.id,
+            expiresAt: bridge.expiresAt.toISOString(),
+            currentTime: new Date().toISOString(),
+            agentAddress: payment.agentAddress,
+            txHash: payment.txHash
+          });
+          
+          if (!terminalStates.includes(bridge.status)) {
+            await storage.updateBridge(bridge.id, {
+              status: 'cancelled',
+              cancelledAt: new Date(),
+              cancellationReason: 'expired'
+            });
           }
           
-          try {
-            reconciliationInProgress = true;
-            console.log(`\n⏰ [PERIODIC RECONCILIATION] Starting scheduled reconciliation...`);
-            await bridgeService.reconcileRecoverableBridgesOnStartup();
-          } catch (error) {
-            console.error(`❌ [PERIODIC RECONCILIATION] Failed:`, error);
-          } finally {
-            reconciliationInProgress = false;
+          if (bridge.agentUnderlyingAddress) {
+            await xrplListener.removeAgentAddress(bridge.agentUnderlyingAddress);
           }
-        }, reconcileIntervalMinutes * 60 * 1000);
+          
+          return;
+        }
+        
+        if (!payment.memo || !bridge.paymentReference) {
+          console.log(`⚠️  Payment validation failed: missing memo or payment reference`);
+          return;
+        }
+        
+        if (payment.memo !== bridge.paymentReference) {
+          console.log(`⚠️  Payment reference mismatch for bridge ${bridge.id}`);
+          return;
+        }
+        
+        if (!bridge.reservedValueUBA || !bridge.reservedFeeUBA) {
+          console.log(`⚠️  Bridge ${bridge.id} missing reserved amounts`);
+          return;
+        }
+        
+        const expectedDrops = BigInt(bridge.reservedValueUBA) + BigInt(bridge.reservedFeeUBA);
+        
+        let receivedDrops: bigint;
+        try {
+          const trimmedAmount = payment.amount.trim();
+          const parts = trimmedAmount.split('.');
+          
+          if (parts.length > 2) {
+            throw new Error('Multiple decimal points not allowed');
+          }
+          
+          const [rawIntegerPart = '0', fractionalPart = ''] = parts;
+          const integerPart = rawIntegerPart || '0';
+          
+          if (!/^\d+$/.test(integerPart) || (fractionalPart && !/^\d+$/.test(fractionalPart))) {
+            throw new Error('Invalid number format');
+          }
+          
+          if (fractionalPart.length > 6) {
+            throw new Error('Too many decimal places (max 6 for XRP)');
+          }
+          
+          const paddedFractional = fractionalPart.padEnd(6, '0');
+          const dropsString = integerPart + paddedFractional;
+          receivedDrops = BigInt(dropsString);
+          
+          if (receivedDrops <= BigInt(0)) {
+            throw new Error('Amount must be positive');
+          }
+        } catch (error) {
+          console.log(`⚠️  Invalid payment amount for bridge ${bridge.id}: ${payment.amount}`);
+          return;
+        }
+        
+        if (receivedDrops !== expectedDrops) {
+          console.log(`❌ Payment amount mismatch for bridge ${bridge.id}`);
+          
+          await storage.updateBridge(bridge.id, {
+            status: 'failed',
+            failureCode: 'amount_mismatch',
+            receivedAmountDrops: receivedDrops.toString(),
+            expectedAmountDrops: expectedDrops.toString(),
+            xrplTxHash: payment.txHash,
+            xrplConfirmedAt: new Date(),
+            errorMessage: `Payment amount mismatch: received ${receivedDrops} drops (${payment.amount} XRP), expected ${expectedDrops} drops`
+          });
+          
+          return;
+        }
+        
+        const canProcess = 
+          bridge.status === "awaiting_payment" || 
+          (bridge.status === "xrpl_confirmed" && !bridge.fdcProofData);
+        
+        if (!canProcess) {
+          console.log(`⏭️  Bridge ${bridge.id} already processed (status: ${bridge.status}, has proof: ${!!bridge.fdcProofData})`);
+          return;
+        }
+        
+        console.log(`✅ Payment validated successfully for bridge ${bridge.id}`);
+        await bridgeService!.executeMintingWithProof(bridge.id, payment.txHash);
+        console.log(`🎉 Bridge ${bridge.id} completed successfully!`);
+      } catch (error) {
+        console.error(`❌ Error completing bridge for agent ${payment.agentAddress}:`, error);
       }
-    } else {
-      console.log(`ℹ️  Automatic reconciliation disabled (AUTO_RECONCILE_ON_START=false)`);
+    });
+    
+    // Register redemption payment handler
+    xrplListener.setRedemptionPaymentHandler(async (payment) => {
+      await bridgeService!.handleRedemptionPayment(payment);
+    });
+    
+    // Start listener
+    await xrplListener.start();
+    readinessRegistry.setReady('xrplListener');
+    
+    // Mark bridge service as ready
+    readinessRegistry.setReady('bridgeService');
+
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    readinessRegistry.setError('xrplListener', errorMsg);
+    readinessRegistry.setError('bridgeService', errorMsg);
+    console.error('❌ XRPL/Bridge initialization failed:', errorMsg);
+  }
+
+  // Step 4: Re-register pending bridges (only in production mode)
+  if (!demoMode && bridgeService && xrplListener) {
+    try {
+      const pendingBridges = await storage.getPendingBridges();
+      console.log(`🔄 Found ${pendingBridges.length} pending bridge(s) to monitor`);
+      
+      let successCount = 0;
+      let failureCount = 0;
+      
+      for (const bridge of pendingBridges) {
+        if (bridge.agentUnderlyingAddress) {
+          try {
+            await xrplListener.addAgentAddress(bridge.agentUnderlyingAddress);
+            console.log(`   ✅ Re-monitoring agent: ${bridge.agentUnderlyingAddress} (Bridge: ${bridge.id})`);
+            successCount++;
+          } catch (error) {
+            console.error(`   ❌ Failed to re-monitor agent ${bridge.agentUnderlyingAddress} (Bridge: ${bridge.id}):`, error);
+            failureCount++;
+          }
+        }
+      }
+      
+      console.log(`📊 Reconciliation complete: ${successCount} successful, ${failureCount} failed`);
+
+      // Automatic recovery for stuck bridges
+      console.log(`🔍 Checking for stuck bridges at xrpl_confirmed without FDC proofs...`);
+      const stuckBridges = await storage.getStuckBridges();
+      
+      if (stuckBridges.length > 0) {
+        console.log(`🔧 Found ${stuckBridges.length} stuck bridge(s) - resuming proof generation...`);
+        
+        for (const bridge of stuckBridges) {
+          try {
+            console.log(`   🔄 Resuming proof generation for bridge ${bridge.id} (TX: ${bridge.xrplTxHash})`);
+            bridgeService.executeMintingWithProof(bridge.id, bridge.xrplTxHash!).catch((error) => {
+              console.error(`   ❌ Failed to resume proof generation for bridge ${bridge.id}:`, error);
+            });
+          } catch (error) {
+            console.error(`   ❌ Error initiating recovery for bridge ${bridge.id}:`, error);
+          }
+        }
+      }
+
+      // Automatic reconciliation on startup
+      const autoReconcileEnabled = process.env.AUTO_RECONCILE_ON_START !== "false";
+      if (autoReconcileEnabled) {
+        bridgeService.reconcileRecoverableBridgesOnStartup().catch((error) => {
+          console.error(`❌ Startup reconciliation failed:`, error);
+        });
+        
+        const reconcileIntervalMinutes = process.env.AUTO_RECONCILE_INTERVAL_MINUTES 
+          ? parseInt(process.env.AUTO_RECONCILE_INTERVAL_MINUTES, 10) 
+          : undefined;
+        
+        if (reconcileIntervalMinutes && reconcileIntervalMinutes > 0) {
+          console.log(`⏰ Scheduling periodic reconciliation every ${reconcileIntervalMinutes} minute(s)`);
+          let reconciliationInProgress = false;
+          
+          setInterval(async () => {
+            if (reconciliationInProgress) {
+              console.warn(`⏭️  [PERIODIC RECONCILIATION] Skipping - previous run still in progress`);
+              return;
+            }
+            
+            try {
+              reconciliationInProgress = true;
+              console.log(`\n⏰ [PERIODIC RECONCILIATION] Starting scheduled reconciliation...`);
+              await bridgeService!.reconcileRecoverableBridgesOnStartup();
+            } catch (error) {
+              console.error(`❌ [PERIODIC RECONCILIATION] Failed:`, error);
+            } finally {
+              reconciliationInProgress = false;
+            }
+          }, reconcileIntervalMinutes * 60 * 1000);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Bridge recovery failed:', error);
     }
   }
 
-  // Initialize deposit service (needs bridgeService)
-  const depositService = new DepositService({
-    storage,
-    bridgeService,
-    vaultService,
-    yieldService,
-  });
+  // Step 5: Initialize deposit service (needs bridgeService)
+  if (bridgeService && vaultService && yieldService) {
+    try {
+      new DepositService({
+        storage,
+        bridgeService,
+        vaultService,
+        yieldService,
+      });
+      readinessRegistry.setReady('depositService');
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      readinessRegistry.setError('depositService', errorMsg);
+    }
+  }
 
-  // Start compounding service (runs every hour)
-  // compoundingService.start(60);
+  console.log("✅ All services initialized");
+}
 
-  log("✅ All services initialized");
+/**
+ * Initialize FlareClient with exponential backoff retry
+ */
+async function initializeFlareClientWithRetry(config: {
+  network: string;
+  privateKey: string;
+  bundlerApiKey: string;
+  enablePaymaster: boolean;
+}, maxRetries = 5): Promise<FlareClient> {
+  let lastError: Error | undefined;
   
-  // Pass shared services to routes (ensures agent addresses are registered with listener)
-  const server = await registerRoutes(app, bridgeService);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`🔄 Initializing FlareClient (attempt ${attempt}/${maxRetries})...`);
+      
+      const client = new FlareClient(config as any);
+      await client.initialize();
+      
+      console.log(`✅ FlareClient initialized successfully`);
+      return client;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      console.error(`❌ FlareClient initialization attempt ${attempt} failed:`, lastError.message);
+      
+      if (attempt < maxRetries) {
+        const delayMs = Math.min(1000 * Math.pow(2, attempt - 1), 10000); // Exponential backoff, max 10s
+        console.log(`⏱️  Retrying in ${delayMs}ms...`);
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+      }
+    }
+  }
+  
+  throw new Error(`FlareClient initialization failed after ${maxRetries} attempts: ${lastError?.message}`);
+}
+
+(async () => {
+  // Step 1: Initialize storage (required, fast)
+  await storage.initializeVaults();
+  readinessRegistry.setReady('storage');
+  console.log("✅ Storage initialized");
+  
+  // Step 2: Start HTTP server immediately (before service initialization)
+  // Create a minimal bridge service for routes that is marked as not ready
+  const minimalBridgeService = {
+    demoMode: true,
+    // Add minimal stubs for methods called by routes
+  } as any;
+  
+  const server = await registerRoutes(app, minimalBridgeService);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -439,25 +492,26 @@ app.use((req, res, next) => {
     throw err;
   });
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
+  // Setup Vite before starting server
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
   server.listen({
     port,
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    log(`✅ HTTP server listening on port ${port}`);
+  });
+  
+  // Step 3: Initialize services asynchronously in background
+  // This doesn't block the HTTP server from responding to health checks
+  initializeServices().catch((error) => {
+    console.error("❌ Service initialization error:", error);
+    // Don't crash server, services will be marked as failed in readiness registry
   });
 })();

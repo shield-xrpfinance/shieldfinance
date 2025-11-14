@@ -12,6 +12,7 @@ import { eq, and } from "drizzle-orm";
 import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
+import { readinessRegistry } from "./services/ReadinessRegistry";
 
 /**
  * Get the latest deployed vault address from deployment files
@@ -117,6 +118,20 @@ export async function registerRoutes(
   app: Express,
   bridgeService: BridgeService
 ): Promise<Server> {
+  // Health check endpoints (must be first for fast startup verification)
+  
+  // Liveness probe - Always returns 200 OK if server is running
+  app.get("/healthz", (_req, res) => {
+    res.status(200).json({ status: "ok" });
+  });
+
+  // Readiness probe - Returns 200 only if all critical services are ready
+  app.get("/readyz", (_req, res) => {
+    const status = readinessRegistry.getStatus();
+    const httpStatus = status.ready ? 200 : 503;
+    res.status(httpStatus).json(status);
+  });
+
   // Get all vaults
   app.get("/api/vaults", async (_req, res) => {
     try {
