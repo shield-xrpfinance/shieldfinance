@@ -56,7 +56,7 @@ Preferred communication style: Simple, everyday language.
 - **Lucide React**: Icon library.
 
 ### Development & Deployment
-- **Drizzle Kit**: For database migrations.
+- **Drizzle ORM**: Database schema defined in `shared/schema.ts`. Replit automatically syncs schema changes to production using `drizzle-kit push` during publishing.
 - **esbuild**: For production server bundling.
 - **connect-pg-simple**: For PostgreSQL session store.
 - **Hardhat Toolbox**: Smart contract development tools.
@@ -68,3 +68,30 @@ Preferred communication style: Simple, everyday language.
     - **Data Availability API**: `ctn2-data-availability.flare.network` (Coston2), `flr-data-availability.flare.network` (mainnet).
     - **Verifier Service**: `fdc-verifiers-testnet.flare.network`.
     - **FdcHub Integration**: On-chain attestation submission workflow.
+
+## Publishing & Deployment
+
+### Production-Ready Publishing (November 14, 2025)
+
+**Database Schema Management**:
+- Replit automatically handles database migrations using `drizzle-kit push`
+- Schema is defined in `shared/schema.ts` and auto-synced during publishing
+- No manual migration files needed - Replit's publishing system reads schema directly
+- Changes are safely applied to production database on deployment
+
+**Fast Server Startup (<1 second)**:
+- HTTP server starts immediately after storage initialization (port 5000)
+- Blockchain services (FlareClient, XRPL, FAssets) initialize asynchronously in background
+- Health endpoints respond instantly while services finish initialization
+- Files: `server/index.ts`, `server/services/ReadinessRegistry.ts`
+
+**Dual Health Endpoints**:
+- `/healthz` - Liveness probe: Returns 200 OK instantly if HTTP server running
+- `/readyz` - Readiness probe: Returns 200 when all critical services ready (~5s)
+- API routes protected by readiness guards during initialization window
+
+**Key Files**:
+- `server/index.ts`: Async startup orchestration with retry/backoff
+- `server/routes.ts`: Health endpoints + API readiness middleware
+- `server/services/ReadinessRegistry.ts`: Per-service status tracking
+- `shared/schema.ts`: Database schema (automatically synced by Replit)
