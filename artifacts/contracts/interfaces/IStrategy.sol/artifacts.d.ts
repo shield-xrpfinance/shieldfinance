@@ -15,7 +15,7 @@ export interface IStrategy$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {};
   readonly inputSourceName: "project/contracts/interfaces/IStrategy.sol";
-  readonly buildInfoId: "solc-0_8_20-f75eed1a818db8f6ad865816462356728527a0ad";
+  readonly buildInfoId: "solc-0_8_20-19566f36ff9f8f48d6455f89164915a5df0e8d8a";
 };
 
 import "hardhat/types/artifacts";

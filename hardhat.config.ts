@@ -1,8 +1,10 @@
 import { HardhatUserConfig } from "hardhat/config";
-import "@nomicfoundation/hardhat-toolbox-mocha-ethers";
+import hardhatToolboxMochaEthers from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
+import "@nomicfoundation/hardhat-ethers";
 
 // Environment variables are already loaded by the application
 const config: HardhatUserConfig = {
+  plugins: [hardhatToolboxMochaEthers],
   solidity: {
     version: "0.8.20",
     settings: {
@@ -11,6 +13,12 @@ const config: HardhatUserConfig = {
         runs: 200,
       },
     },
+  },
+  mocha: {
+    require: ["ts-node/register"],
+    extensions: ["ts"],
+    spec: ["test/**/*.test.ts"],
+    timeout: 40000,
   },
   networks: {
     // Flare Coston2 Testnet

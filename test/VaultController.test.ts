@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
 import type { VaultController } from "../types/ethers-contracts";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -9,6 +9,12 @@ describe("VaultController", function () {
   let operator: SignerWithAddress;
   let compounder: SignerWithAddress;
   let user: SignerWithAddress;
+  let ethers: any;
+
+  before(async function () {
+    const hre = await network.connect({ network: "hardhat" });
+    ethers = hre.ethers;
+  });
 
   beforeEach(async function () {
     [owner, operator, compounder, user] = await ethers.getSigners();

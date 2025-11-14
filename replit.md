@@ -34,8 +34,11 @@ Preferred communication style: Simple, everyday language.
 - **Development Environment**: Hardhat.
 - **Standards**: OpenZeppelin Contracts (ERC-20, access control).
 - **Contracts**:
-    - `ShXRPVault.sol`: ERC-4626 tokenized vault for shXRP.
+    - `ShXRPVault.sol`: ERC-4626 tokenized vault for shXRP with multi-strategy support, buffer-aware withdrawals.
     - `VaultController.sol`: Orchestrates vault operations, role-based access control.
+    - `KineticStrategy.sol`: IStrategy implementation stub for Kinetic FXRP lending (5-6% APY).
+    - `FirelightStrategy.sol`: IStrategy implementation stub for Firelight stXRP staking (disabled, Q1 2026 launch).
+    - `MockStrategy.sol`: Test implementation for multi-strategy unit tests.
 
 ### Security Features
 - **Smart Contracts**: ERC-4626 standard, OpenZeppelin AccessControl, ReentrancyGuard.
@@ -103,3 +106,53 @@ If publishing fails with `"Failed to validate database migrations"` showing `ALT
 - `server/routes.ts`: Health endpoints + API readiness middleware
 - `server/services/ReadinessRegistry.ts`: Per-service status tracking
 - `shared/schema.ts`: Database schema (automatically synced by Replit)
+
+## Recent Progress (November 14, 2025)
+
+### Phase 1.8: Multi-Strategy Unit Tests ✅ COMPLETE
+- **23 comprehensive tests passing** covering all buffer-aware withdrawal edge cases
+- Test framework: Hardhat 3.0 with TypeScript/Mocha integration (fixed HHE1200 error)
+- MockStrategy contract: Full IStrategy implementation with 6-decimal FXRP math
+- Edge cases tested: ODD amounts, over-delivery, capped requests, strategy failures, proportional allocation
+- Files: `test/ShXRPVault.MultiStrategy.test.ts`, `contracts/test/MockStrategy.sol`
+
+### Phase 2.1: KineticStrategy Implementation ✅ COMPLETE (Stub)
+- **IStrategy compliant stub** for Kinetic FXRP lending integration
+- Accounting: `totalDeployedAmount` (principal) + `accumulatedYield` (yield) + `reportInitialized` flag
+- Pull-based deploy() pattern, yield-aware withdraw(), incremental report()
+- Events: DeployedToStrategy, WithdrawnFromStrategy, StrategyReport (interface compliant)
+- Configuration: setKineticConfig(cToken, comptroller) - needs actual Kinetic contract addresses
+- Testing: simulateYield(amount) function for unit tests
+- Status: Ready for Kinetic protocol integration when addresses available
+- File: `contracts/KineticStrategy.sol` (269 lines)
+
+### Phase 2.2: FirelightStrategy Implementation ✅ COMPLETE (Stub)
+- **Same accounting pattern** as KineticStrategy with added unstaking delay handling
+- Configured for Firelight stXRP staking (Q1 2026 launch)
+- Additional features: getStXRPToFXRPRate(), claimUnstaking(), UnstakingInitiated event
+- Status: Disabled by default until Firelight launches
+- File: `contracts/FirelightStrategy.sol` (324 lines)
+
+### Strategy Accounting Model (Finalized)
+```solidity
+// State Variables
+uint256 private totalDeployedAmount;  // Principal deposited
+uint256 private accumulatedYield;     // Yield earned
+uint256 private lastReportedAssets;   // Baseline for incremental reporting
+bool private reportInitialized;       // First-report flag
+
+// Operations
+deploy() → increment principal
+withdraw() → decrement yield first, then principal
+report() → if !initialized: seed baseline, return (0,0,assets)
+         → else: calculate incremental profit/loss, update baseline
+totalAssets() → return principal + yield
+```
+
+### Outstanding Work
+- **Task 11**: Deploy strategies to Coston2 testnet for integration testing
+- **Task 12**: Update VaultController with strategy coordination logic
+- **Configuration Needed**:
+  - Kinetic: cFXRP contract address, Comptroller address
+  - Firelight: Staking contract, stXRP token, oracle (Q1 2026)
+- **Legacy Tests**: 7 failing tests due to deprecated setFirelightVault() function (cleanup deferred)

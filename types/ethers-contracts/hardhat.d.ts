@@ -10,17 +10,41 @@ import * as Contracts from "./index.js";
 
 declare module "@nomicfoundation/hardhat-ethers/types" {
   interface HardhatEthersHelpers extends HardhatEthersHelpersBase {
-  getContractFactory(name: 'ShieldToken', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ShieldToken__factory>
-getContractFactory(name: 'StXRPVault', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.StXRPVault__factory>
+  getContractFactory(name: 'FirelightStrategy', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.FirelightStrategy__factory>
+getContractFactory(name: 'KineticStrategy', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.KineticStrategy__factory>
+getContractFactory(name: 'ShXRPVault', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ShXRPVault__factory>
+getContractFactory(name: 'ShieldToken', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ShieldToken__factory>
+getContractFactory(name: 'VaultController', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.VaultController__factory>
+getContractFactory(name: 'IStrategy', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IStrategy__factory>
+getContractFactory(name: 'MockERC20', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.MockERC20__factory>
+getContractFactory(name: 'MockStrategy', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.MockStrategy__factory>
 
-  getContractAt(name: 'ShieldToken', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ShieldToken>
-getContractAt(name: 'StXRPVault', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.StXRPVault>
+  getContractAt(name: 'FirelightStrategy', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.FirelightStrategy>
+getContractAt(name: 'KineticStrategy', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.KineticStrategy>
+getContractAt(name: 'ShXRPVault', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ShXRPVault>
+getContractAt(name: 'ShieldToken', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ShieldToken>
+getContractAt(name: 'VaultController', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.VaultController>
+getContractAt(name: 'IStrategy', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IStrategy>
+getContractAt(name: 'MockERC20', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.MockERC20>
+getContractAt(name: 'MockStrategy', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.MockStrategy>
 
-  deployContract(name: 'ShieldToken', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShieldToken>
-deployContract(name: 'StXRPVault', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.StXRPVault>
+  deployContract(name: 'FirelightStrategy', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.FirelightStrategy>
+deployContract(name: 'KineticStrategy', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.KineticStrategy>
+deployContract(name: 'ShXRPVault', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShXRPVault>
+deployContract(name: 'ShieldToken', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShieldToken>
+deployContract(name: 'VaultController', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.VaultController>
+deployContract(name: 'IStrategy', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IStrategy>
+deployContract(name: 'MockERC20', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MockERC20>
+deployContract(name: 'MockStrategy', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MockStrategy>
 
-  deployContract(name: 'ShieldToken', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShieldToken>
-deployContract(name: 'StXRPVault', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.StXRPVault>
+  deployContract(name: 'FirelightStrategy', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.FirelightStrategy>
+deployContract(name: 'KineticStrategy', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.KineticStrategy>
+deployContract(name: 'ShXRPVault', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShXRPVault>
+deployContract(name: 'ShieldToken', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShieldToken>
+deployContract(name: 'VaultController', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.VaultController>
+deployContract(name: 'IStrategy', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IStrategy>
+deployContract(name: 'MockERC20', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MockERC20>
+deployContract(name: 'MockStrategy', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MockStrategy>
 
     // default types
     getContractFactory(

@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { network } from "hardhat";
 import type { ShXRPVault, VaultController, MockERC20 } from "../types/ethers-contracts";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
@@ -11,6 +11,12 @@ describe("ShXRPVault (ERC-4626)", function () {
   let operator: SignerWithAddress;
   let user1: SignerWithAddress;
   let user2: SignerWithAddress;
+  let ethers: any;
+
+  before(async function () {
+    const hre = await network.connect({ network: "hardhat" });
+    ethers = hre.ethers;
+  });
 
   beforeEach(async function () {
     [owner, operator, user1, user2] = await ethers.getSigners();

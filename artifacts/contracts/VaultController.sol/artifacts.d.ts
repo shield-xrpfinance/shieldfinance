@@ -15,7 +15,7 @@ export interface VaultController$Type {
   readonly deployedLinkReferences: {};
   readonly immutableReferences: {};
   readonly inputSourceName: "project/contracts/VaultController.sol";
-  readonly buildInfoId: "solc-0_8_20-26f1b69c124958ff16329cda09de31ff54a70822";
+  readonly buildInfoId: "solc-0_8_20-19566f36ff9f8f48d6455f89164915a5df0e8d8a";
 };
 
 import "hardhat/types/artifacts";
