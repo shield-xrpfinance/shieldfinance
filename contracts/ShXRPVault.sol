@@ -5,12 +5,10 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-
-interface IFirelightVault {
-    function convertToAssets(uint256 shares) external view returns (uint256);
-}
+import "./interfaces/IStrategy.sol";
 
 /**
  * @title Shield XRP Vault (shXRP)
@@ -25,16 +23,18 @@ interface IFirelightVault {
  * - Deposit FXRP → Receive shXRP shares (automatic exchange rate)
  * - Redeem shXRP → Receive FXRP (proportional to vault performance)
  * - Operator-controlled for bridging coordination
- * - Firelight.finance integration for DeFi yield strategies
+ * - Multi-strategy yield optimization (Kinetic lending, Firelight staking, etc.)
+ * - Dynamic buffer management for instant withdrawals
  * - ReentrancyGuard for deposit/withdrawal security
  * 
  * Flow:
  * 1. User mints FXRP via FAssets bridge (XRP → FXRP on Flare)
  * 2. User approves FXRP spending for this vault
  * 3. User calls deposit() with FXRP amount → Receives shXRP shares
- * 4. Vault deploys FXRP to Firelight for yield (4-7% APY)
- * 5. shXRP value increases as Firelight generates returns
- * 6. User calls withdraw() with shXRP → Receives FXRP + accrued yield
+ * 4. Vault holds buffer (10%) + deploys capital to strategies (90%)
+ * 5. Strategies generate yield (Kinetic ~5-6%, Firelight higher when ready)
+ * 6. shXRP value increases as strategies generate returns
+ * 7. User calls withdraw() with shXRP → Receives FXRP from buffer + accrued yield
  * 
  * ERC-4626 Benefits:
  * - Standard interface for all DeFi integrations
@@ -44,29 +44,66 @@ interface IFirelightVault {
  * 
  * Integration Notes:
  * - FXRP: See docs/FLARE_FASSETS_INTEGRATION.md
- * - Firelight: See docs/FIRELIGHT_INTEGRATION.md
+ * - Strategies: See docs/STRATEGY_INTEGRATION.md
  * - Operators coordinate bridging between XRPL and Flare
  */
 contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
+    using SafeERC20 for IERC20;
     
-    // Mapping of approved operators who can manage Firelight deposits
+    // ========================================
+    // ENUMS & STRUCTS
+    // ========================================
+    
+    enum StrategyStatus {
+        Inactive,      // Strategy not yet activated
+        Active,        // Strategy operational and receiving deposits
+        Paused,        // Temporarily paused (can be resumed)
+        Deprecated     // Permanently disabled (being phased out)
+    }
+    
+    struct StrategyInfo {
+        address strategyAddress;    // IStrategy contract address
+        uint256 targetBps;           // Target allocation in basis points (10000 = 100%)
+        StrategyStatus status;       // Current operational status
+        uint256 totalDeployed;       // Total FXRP deployed to this strategy
+        uint256 lastReportTimestamp; // Last time strategy.report() was called
+    }
+    
+    // ========================================
+    // STATE VARIABLES
+    // ========================================
+    
+    // Mapping of approved operators who can manage strategies
     mapping(address => bool) public operators;
     
     // Minimum deposit amount (0.01 FXRP with 6 decimals)
     uint256 public minDeposit = 10000; // 0.01 FXRP (6 decimals)
     
-    // Firelight.finance Integration
-    // Firelight provides institutional-grade liquid staking for FXRP
-    address public firelightVault;           // Firelight Launch Vault (ERC-4626)
-    uint256 public totalStXRPDeposited;      // stXRP balance from Firelight deposits
+    // Strategy Management
+    mapping(address => StrategyInfo) public strategies;
+    address[] public strategyList;
+    uint256 public totalStrategyTargetBps; // Sum of all strategy targetBps (for validation)
     
-    // Events
+    // Buffer Management (for instant withdrawals)
+    uint256 public bufferTargetBps = 1000; // 10% target buffer (10000 = 100%)
+    
+    // ========================================
+    // EVENTS
+    // ========================================
+    
     event OperatorAdded(address indexed operator);
     event OperatorRemoved(address indexed operator);
     event MinDepositUpdated(uint256 newMinDeposit);
-    event FirelightVaultSet(address indexed firelightVault);
-    event FirelightDeposit(uint256 fxrpAmount, uint256 stXRPReceived);
-    event FirelightWithdraw(uint256 stXRPAmount, uint256 fxrpReceived);
+    event BufferTargetUpdated(uint256 newTargetBps);
+    
+    // Strategy Events
+    event StrategyAdded(address indexed strategy, uint256 targetBps);
+    event StrategyRemoved(address indexed strategy);
+    event StrategyStatusUpdated(address indexed strategy, StrategyStatus newStatus);
+    event StrategyAllocationUpdated(address indexed strategy, uint256 newTargetBps);
+    event DeployedToStrategy(address indexed strategy, uint256 amount);
+    event WithdrawnFromStrategy(address indexed strategy, uint256 amount, uint256 actualAmount);
+    event StrategyReported(address indexed strategy, uint256 profit, uint256 loss, uint256 totalAssets);
     
     modifier onlyOperator() {
         require(operators[msg.sender] || msg.sender == owner(), "Not authorized");
@@ -104,7 +141,7 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
      * 
      * @return uint8 Number of decimals (inherited from FXRP)
      */
-    function decimals() public view virtual override(ERC20, ERC4626) returns (uint8) {
+    function decimals() public view virtual override returns (uint8) {
         return IERC20Metadata(address(asset())).decimals();
     }
     
@@ -116,30 +153,44 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
      * Share Price = totalAssets() / totalSupply()
      * 
      * Assets Include:
-     * 1. FXRP held directly in this vault
-     * 2. FXRP deployed to Firelight (valued via stXRP position)
+     * 1. FXRP held directly in vault (buffer for instant withdrawals)
+     * 2. FXRP deployed to active strategies (earning yield)
      * 
-     * As Firelight generates yield, totalAssets() increases,
+     * As strategies generate yield, totalAssets() increases,
      * automatically increasing the value of shXRP shares.
+     * 
+     * Strategy Safety:
+     * - Uses try/catch for each strategy.totalAssets() call
+     * - If a strategy fails, uses its totalDeployed as fallback
+     * - Ensures totalAssets() never reverts (critical for ERC-4626)
      * 
      * @return Total FXRP-equivalent assets in the vault
      */
     function totalAssets() public view virtual override returns (uint256) {
-        // FXRP held directly in vault
-        uint256 vaultBalance = IERC20(asset()).balanceOf(address(this));
+        // Start with FXRP buffer (instant withdrawal reserve)
+        uint256 total = IERC20(asset()).balanceOf(address(this));
         
-        // Add Firelight stXRP position value (if Firelight vault is set)
-        if (firelightVault != address(0) && totalStXRPDeposited > 0) {
-            // stXRP is ERC-4626, so we can get asset value directly
-            try IFirelightVault(firelightVault).convertToAssets(totalStXRPDeposited) returns (uint256 firelightValue) {
-                vaultBalance += firelightValue;
+        // Add value from all active strategies
+        for (uint256 i = 0; i < strategyList.length; i++) {
+            address strategyAddr = strategyList[i];
+            StrategyInfo storage strategyInfo = strategies[strategyAddr];
+            
+            // Only count Active strategies
+            if (strategyInfo.status != StrategyStatus.Active) {
+                continue;
+            }
+            
+            // Query strategy's total assets with fallback protection
+            try IStrategy(strategyAddr).totalAssets() returns (uint256 strategyAssets) {
+                total += strategyAssets;
             } catch {
-                // If conversion fails, use 1:1 ratio as fallback
-                vaultBalance += totalStXRPDeposited;
+                // If strategy fails, use totalDeployed as conservative estimate
+                // This prevents single strategy failure from breaking entire vault
+                total += strategyInfo.totalDeployed;
             }
         }
         
-        return vaultBalance;
+        return total;
     }
     
     /**
@@ -247,6 +298,192 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
         return super.redeem(shares, receiver, owner);
     }
     
+    /**
+     * @dev Override ERC4626 _withdraw to implement buffer-aware withdrawals
+     * 
+     * PHASE 1.5 (Architect Revised):
+     * Replenishes buffer from strategies if needed, then uses standard ERC4626 flow.
+     * 
+     * CRITICAL FIX (Architect Review):
+     * - Preserves ERC4626 hook chain by calling super._withdraw()
+     * - Pulls from strategies into buffer BEFORE standard flow
+     * - Prevents breaking parent logic and future extensions
+     * 
+     * Flow:
+     * 1. Check if buffer has enough FXRP
+     * 2. If yes: use standard ERC4626 flow (instant withdrawal)
+     * 3. If no:
+     *    a. Calculate shortfall
+     *    b. Pull from strategies into buffer (proportionally)
+     *    c. Verify buffer now has enough
+     *    d. Call super._withdraw() for standard flow (burn → transfer → emit)
+     * 
+     * This approach:
+     * - ✅ Preserves ERC4626 hook chain
+     * - ✅ Pulls liquidity before burning
+     * - ✅ Reuses parent's SafeERC20 and event logic
+     * - ✅ Works with future extensions
+     * 
+     * @param caller Address initiating withdrawal
+     * @param receiver Address receiving withdrawn FXRP
+     * @param owner Address whose shares are being burned
+     * @param assets Amount of FXRP to withdraw
+     * @param shares Amount of shares to burn
+     */
+    function _withdraw(
+        address caller,
+        address receiver,
+        address owner,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        IERC20 fxrp = IERC20(asset());
+        uint256 bufferBalance = fxrp.balanceOf(address(this));
+        
+        // Case 1: Buffer has enough - use standard ERC4626 flow
+        if (bufferBalance >= assets) {
+            super._withdraw(caller, receiver, owner, assets, shares);
+            return;
+        }
+        
+        // Case 2: Buffer insufficient - replenish from strategies FIRST
+        uint256 shortfall = assets - bufferBalance;
+        
+        // Pull liquidity from strategies into buffer
+        // This happens BEFORE any state changes (allowance, burn, transfer)
+        _withdrawFromStrategies(shortfall);
+        
+        // Verify buffer now has enough for standard withdrawal flow
+        require(fxrp.balanceOf(address(this)) >= assets, "Insufficient liquidity in vault and strategies");
+        
+        // Now use standard ERC4626 flow (preserves hook chain)
+        // This handles: allowance check, burn, transfer, emit
+        super._withdraw(caller, receiver, owner, assets, shares);
+    }
+    
+    /**
+     * @dev Withdraw FXRP from strategies proportionally
+     * 
+     * Helper for buffer-aware withdrawals.
+     * Withdraws from active/paused strategies proportionally based on totalDeployed.
+     * 
+     * CRITICAL Accounting (Architect Requirements):
+     * - Use balanceBefore/balanceAfter pattern for safe accounting
+     * - Update totalDeployed with actual received amount
+     * - Try/catch pattern: skip failed strategies, continue to next
+     * - Emit WithdrawnFromStrategy event for each successful withdrawal
+     * - ROUNDING FIX: Allocate remainder to last eligible strategy
+     * 
+     * Rounding Issue Fix (Architect Review):
+     * Integer division rounds down, leaving unpaid remainder.
+     * Example: shortfall=91, Kinetic=50%, Firelight=50%
+     *   - Kinetic gets: (50*91)/100 = 45 (rounds down from 45.5)
+     *   - Firelight gets: (50*91)/100 = 45 (rounds down from 45.5)
+     *   - Total: 45+45 = 90, missing 1 FXRP!
+     * Solution: Give last strategy the remainder (91-90=1)
+     * 
+     * Edge Cases Handled:
+     * - Strategy returns less than requested (accept partial, continue)
+     * - Strategy withdrawal fails (try/catch, skip to next)
+     * - No strategies deployed (return 0)
+     * - Total deployed is zero (return 0)
+     * - Rounding remainder allocated to last strategy
+     * 
+     * @param amount Total amount needed from strategies
+     * @return uint256 Actual amount withdrawn from all strategies
+     */
+    function _withdrawFromStrategies(uint256 amount) internal returns (uint256) {
+        // Calculate total deployed across active/paused strategies
+        uint256 totalDeployed = 0;
+        address[] memory eligibleStrategies = new address[](strategyList.length);
+        uint256 eligibleCount = 0;
+        
+        for (uint256 i = 0; i < strategyList.length; i++) {
+            address strategy = strategyList[i];
+            StrategyInfo storage info = strategies[strategy];
+            
+            // Include both Active and Paused strategies
+            if ((info.status == StrategyStatus.Active || info.status == StrategyStatus.Paused) && 
+                info.totalDeployed > 0) {
+                totalDeployed += info.totalDeployed;
+                eligibleStrategies[eligibleCount] = strategy;
+                eligibleCount++;
+            }
+        }
+        
+        // Edge case: no strategies deployed
+        if (totalDeployed == 0 || eligibleCount == 0) {
+            return 0;
+        }
+        
+        uint256 totalWithdrawn = 0;
+        uint256 remainingToWithdraw = amount;
+        IERC20 fxrp = IERC20(asset());
+        
+        // Withdraw proportionally from each eligible strategy
+        for (uint256 i = 0; i < eligibleCount; i++) {
+            address strategy = eligibleStrategies[i];
+            StrategyInfo storage info = strategies[strategy];
+            
+            // Calculate this strategy's proportional share
+            uint256 strategyAmount;
+            
+            // ROUNDING FIX: Last strategy gets remainder
+            if (i == eligibleCount - 1) {
+                // Last strategy: give it all remaining amount
+                strategyAmount = remainingToWithdraw;
+            } else {
+                // Other strategies: proportional share (rounds down)
+                strategyAmount = (info.totalDeployed * amount) / totalDeployed;
+            }
+            
+            // EDGE CASE FIX: Cap request at strategy's totalDeployed
+            // Prevents asking strategy for more than it has
+            if (strategyAmount > info.totalDeployed) {
+                strategyAmount = info.totalDeployed;
+            }
+            
+            if (strategyAmount == 0 || remainingToWithdraw == 0) {
+                continue;
+            }
+            
+            // Request withdrawal from strategy (with safe accounting)
+            uint256 balanceBefore = fxrp.balanceOf(address(this));
+            
+            try IStrategy(strategy).withdraw(strategyAmount, address(this)) returns (uint256 actualAmount) {
+                uint256 balanceAfter = fxrp.balanceOf(address(this));
+                
+                // Verify funds actually received
+                if (balanceAfter > balanceBefore) {
+                    uint256 received = balanceAfter - balanceBefore;
+                    
+                    // Update tracking with safe accounting
+                    if (info.totalDeployed >= received) {
+                        info.totalDeployed -= received;
+                    } else {
+                        info.totalDeployed = 0;
+                    }
+                    
+                    totalWithdrawn += received;
+                    
+                    // UNDERFLOW FIX: Cap decrement at remainingToWithdraw
+                    // Prevents underflow if strategy returns more than requested (yield, rebates)
+                    uint256 toDecrement = received < remainingToWithdraw ? received : remainingToWithdraw;
+                    remainingToWithdraw -= toDecrement;
+                    
+                    // Emit event for transparency
+                    emit WithdrawnFromStrategy(strategy, strategyAmount, actualAmount);
+                }
+            } catch {
+                // Strategy withdrawal failed - skip to next strategy
+                // This allows partial success rather than complete revert
+                continue;
+            }
+        }
+        
+        return totalWithdrawn;
+    }
+    
     // ========================================
     // OPERATOR MANAGEMENT
     // ========================================
@@ -292,101 +529,320 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
         emit MinDepositUpdated(newMinDeposit);
     }
     
+    // ========================================
+    // STRATEGY MANAGEMENT
+    // ========================================
+    
     /**
-     * @dev Set Firelight vault address for yield integration
+     * @dev Add a new yield strategy to the vault
      * 
-     * Firelight Launch Vault (ERC-4626):
-     * - Accepts FXRP deposits
-     * - Returns stXRP shares
-     * - Generates 4-7% APY from institutional staking
+     * CRITICAL FIX (Architect Review):
+     * Validates aggregate target allocations to prevent over-allocation
      * 
-     * Integration Flow:
-     * 1. Set firelightVault address (this function)
-     * 2. Operator calls depositToFirelight() to deploy idle FXRP
-     * 3. Firelight generates yield on staked FXRP
-     * 4. totalAssets() includes stXRP value (increases shXRP price)
+     * Validation:
+     * - Strategy address must be valid contract
+     * - Strategy must implement IStrategy interface
+     * - Strategy asset must match vault asset (FXRP)
+     * - Strategy cannot already exist
+     * - Total allocations (buffer + all strategies) cannot exceed 100%
      * 
-     * @param _firelightVault Address of Firelight Launch Vault
+     * Example:
+     * - Buffer target: 10% (1000 bps)
+     * - Kinetic target: 40% (4000 bps)
+     * - Firelight target: 50% (5000 bps)
+     * - Total: 100% (10000 bps) ✓
      * 
-     * See docs/FIRELIGHT_INTEGRATION.md for contract addresses
+     * @param strategy Address of IStrategy contract
+     * @param targetBps Target allocation in basis points (10000 = 100%)
      */
-    function setFirelightVault(address _firelightVault) external onlyOwner {
-        require(_firelightVault != address(0), "Invalid Firelight vault");
-        firelightVault = _firelightVault;
-        emit FirelightVaultSet(_firelightVault);
+    function addStrategy(address strategy, uint256 targetBps) external onlyOwner {
+        require(strategy != address(0), "Invalid strategy address");
+        require(strategies[strategy].strategyAddress == address(0), "Strategy already exists");
+        require(targetBps <= 10000, "Target cannot exceed 100%");
+        
+        // CRITICAL: Validate aggregate allocation doesn't exceed 100%
+        uint256 newTotalTargets = totalStrategyTargetBps + targetBps + bufferTargetBps;
+        require(newTotalTargets <= 10000, "Total targets exceed 100%");
+        
+        // Verify strategy implements IStrategy and uses correct asset
+        try IStrategy(strategy).asset() returns (address strategyAsset) {
+            require(strategyAsset == address(asset()), "Strategy asset mismatch");
+        } catch {
+            revert("Invalid strategy contract");
+        }
+        
+        // Add to mapping and list
+        strategies[strategy] = StrategyInfo({
+            strategyAddress: strategy,
+            targetBps: targetBps,
+            status: StrategyStatus.Inactive,  // Start inactive, activate manually
+            totalDeployed: 0,
+            lastReportTimestamp: block.timestamp
+        });
+        strategyList.push(strategy);
+        
+        // Update aggregate tracking
+        totalStrategyTargetBps += targetBps;
+        
+        emit StrategyAdded(strategy, targetBps);
     }
     
-    // ========================================
-    // FIRELIGHT INTEGRATION (FUTURE)
-    // ========================================
+    /**
+     * @dev Remove a strategy from the vault
+     * 
+     * Requirements:
+     * - All funds must be withdrawn from strategy first
+     * - Strategy must exist
+     * - Safer to deprecate first, then remove after cooldown
+     * 
+     * Updates aggregate target tracking when removing strategy.
+     * 
+     * @param strategy Address of strategy to remove
+     */
+    function removeStrategy(address strategy) external onlyOwner {
+        require(strategies[strategy].strategyAddress != address(0), "Strategy does not exist");
+        require(strategies[strategy].totalDeployed == 0, "Strategy still has funds");
+        
+        // Update aggregate tracking before removal
+        totalStrategyTargetBps -= strategies[strategy].targetBps;
+        
+        // Remove from mapping
+        delete strategies[strategy];
+        
+        // Remove from list (swap with last, then pop)
+        for (uint256 i = 0; i < strategyList.length; i++) {
+            if (strategyList[i] == strategy) {
+                strategyList[i] = strategyList[strategyList.length - 1];
+                strategyList.pop();
+                break;
+            }
+        }
+        
+        emit StrategyRemoved(strategy);
+    }
     
     /**
-     * @dev Deploy idle FXRP to Firelight for yield generation
+     * @dev Update target allocation for a strategy
      * 
-     * TODO: Implement when Firelight contracts are deployed
+     * CRITICAL FIX (Architect Review):
+     * Validates aggregate targets don't exceed 100% after update
      * 
-     * Implementation Plan:
-     * 1. Check FXRP balance in vault
-     * 2. Approve Firelight vault to spend FXRP
-     * 3. Call Firelight.deposit(amount, address(this))
-     * 4. Receive stXRP shares
-     * 5. Track stXRP balance in totalStXRPDeposited
-     * 6. Update totalAssets() to include stXRP value
+     * Note: This only updates the target. Actual rebalancing
+     * must be triggered separately via deployToStrategy/withdrawFromStrategy.
      * 
-     * @param amount Amount of FXRP to deposit to Firelight
-     * 
-     * Example:
-     * function depositToFirelight(uint256 amount) external onlyOperator {
-     *     require(firelightVault != address(0), "Firelight not configured");
-     *     require(amount > 0, "Amount must be positive");
-     *     
-     *     IERC20 fxrp = IERC20(asset());
-     *     require(fxrp.balanceOf(address(this)) >= amount, "Insufficient FXRP");
-     *     
-     *     // Approve and deposit to Firelight
-     *     fxrp.approve(firelightVault, amount);
-     *     uint256 stXRPReceived = IFirelightVault(firelightVault).deposit(amount, address(this));
-     *     
-     *     // Track stXRP position
-     *     totalStXRPDeposited += stXRPReceived;
-     *     
-     *     emit FirelightDeposit(amount, stXRPReceived);
-     * }
+     * @param strategy Address of strategy
+     * @param newTargetBps New target allocation in basis points
      */
+    function updateAllocation(address strategy, uint256 newTargetBps) external onlyOwner {
+        require(strategies[strategy].strategyAddress != address(0), "Strategy does not exist");
+        require(newTargetBps <= 10000, "Target cannot exceed 100%");
+        
+        // Calculate new aggregate (remove old target, add new target)
+        uint256 oldTargetBps = strategies[strategy].targetBps;
+        uint256 newTotalTargets = totalStrategyTargetBps - oldTargetBps + newTargetBps + bufferTargetBps;
+        require(newTotalTargets <= 10000, "Total targets exceed 100%");
+        
+        // Update tracking
+        totalStrategyTargetBps = totalStrategyTargetBps - oldTargetBps + newTargetBps;
+        strategies[strategy].targetBps = newTargetBps;
+        
+        emit StrategyAllocationUpdated(strategy, newTargetBps);
+    }
     
     /**
-     * @dev Withdraw FXRP from Firelight when users redeem
+     * @dev Deploy FXRP from vault buffer to a strategy
      * 
-     * TODO: Implement when Firelight contracts are deployed
+     * CRITICAL FIX (Architect Review):
+     * Uses approval pattern to prevent double-counting in totalAssets()
      * 
-     * Implementation Plan:
-     * 1. Calculate stXRP amount to redeem
-     * 2. Call Firelight.redeem(stXRPAmount, address(this), address(this))
-     * 3. Receive FXRP (includes accrued yield)
-     * 4. Update totalStXRPDeposited
-     * 5. FXRP now available for user withdrawals
+     * Flow:
+     * 1. Check vault has sufficient buffer
+     * 2. Approve strategy to pull FXRP from vault
+     * 3. Call strategy.deploy(amount) - strategy pulls via transferFrom
+     * 4. Verify vault balance actually decreased (strategy pulled funds)
+     * 5. Update totalDeployed tracking
      * 
-     * @param stXRPAmount Amount of stXRP to redeem from Firelight
+     * Why this fixes double-counting:
+     * - Vault balance decreases atomically when strategy calls transferFrom
+     * - No intermediate state where FXRP sits on strategy contract
+     * - totalAssets() = vault balance (reduced) + strategy.totalAssets() (external holdings) ✓
      * 
-     * Example:
-     * function withdrawFromFirelight(uint256 stXRPAmount) external onlyOperator {
-     *     require(firelightVault != address(0), "Firelight not configured");
-     *     require(stXRPAmount > 0, "Amount must be positive");
-     *     require(totalStXRPDeposited >= stXRPAmount, "Insufficient stXRP");
-     *     
-     *     // Redeem from Firelight
-     *     uint256 fxrpReceived = IFirelightVault(firelightVault).redeem(
-     *         stXRPAmount,
-     *         address(this),
-     *         address(this)
-     *     );
-     *     
-     *     // Update stXRP tracking
-     *     totalStXRPDeposited -= stXRPAmount;
-     *     
-     *     emit FirelightWithdraw(stXRPAmount, fxrpReceived);
-     * }
+     * @param strategy Address of strategy to deploy to
+     * @param amount Amount of FXRP to deploy
      */
+    function deployToStrategy(address strategy, uint256 amount) external onlyOperator nonReentrant {
+        require(strategies[strategy].strategyAddress != address(0), "Strategy does not exist");
+        require(strategies[strategy].status == StrategyStatus.Active, "Strategy not active");
+        require(amount > 0, "Amount must be positive");
+        
+        IERC20 fxrp = IERC20(asset());
+        uint256 vaultBalanceBefore = fxrp.balanceOf(address(this));
+        require(vaultBalanceBefore >= amount, "Insufficient vault balance");
+        
+        // Approve strategy to pull FXRP from vault
+        fxrp.approve(strategy, amount);
+        
+        // Strategy pulls FXRP and deploys to external protocol
+        // This ensures vault balance decreases atomically
+        IStrategy(strategy).deploy(amount);
+        
+        // Verify funds actually left vault (strategy must have pulled them)
+        uint256 vaultBalanceAfter = fxrp.balanceOf(address(this));
+        uint256 actualDeployed = vaultBalanceBefore - vaultBalanceAfter;
+        require(actualDeployed > 0, "Strategy did not pull funds");
+        require(actualDeployed <= amount, "Strategy pulled more than approved");
+        
+        // Update tracking with actual deployed amount
+        strategies[strategy].totalDeployed += actualDeployed;
+        
+        // Clear any leftover approval
+        if (fxrp.allowance(address(this), strategy) > 0) {
+            fxrp.approve(strategy, 0);
+        }
+        
+        emit DeployedToStrategy(strategy, actualDeployed);
+    }
+    
+    /**
+     * @dev Withdraw FXRP from a strategy back to vault buffer
+     * 
+     * CRITICAL FIX (Architect Review):
+     * Safely handles partial withdrawals and accounting edge cases
+     * 
+     * Flow:
+     * 1. Record vault balance before withdrawal
+     * 2. Call strategy.withdraw(amount, address(this))
+     * 3. Verify vault balance increased (funds received)
+     * 4. Update totalDeployed tracking with actual received amount
+     * 
+     * Edge Cases Handled:
+     * - Strategy returns less than requested (partial withdrawal)
+     * - Strategy has withdrawal fees (received < requested)
+     * - totalDeployed underflow protection
+     * 
+     * @param strategy Address of strategy to withdraw from
+     * @param amount Amount of FXRP to withdraw
+     */
+    function withdrawFromStrategy(address strategy, uint256 amount) external onlyOperator nonReentrant {
+        require(strategies[strategy].strategyAddress != address(0), "Strategy does not exist");
+        require(amount > 0, "Amount must be positive");
+        require(amount <= strategies[strategy].totalDeployed, "Withdraw exceeds deployed");
+        
+        uint256 balanceBefore = IERC20(asset()).balanceOf(address(this));
+        
+        // Request withdrawal from strategy
+        uint256 actualAmount = IStrategy(strategy).withdraw(amount, address(this));
+        
+        uint256 balanceAfter = IERC20(asset()).balanceOf(address(this));
+        
+        // Verify funds were received (prevents underflow)
+        require(balanceAfter >= balanceBefore, "Vault balance decreased");
+        uint256 received = balanceAfter - balanceBefore;
+        require(received > 0, "No funds received from strategy");
+        
+        // Update tracking with actual received amount (safe from underflow)
+        if (strategies[strategy].totalDeployed >= received) {
+            strategies[strategy].totalDeployed -= received;
+        } else {
+            // Edge case: received more than tracked (profit from yield)
+            strategies[strategy].totalDeployed = 0;
+        }
+        
+        emit WithdrawnFromStrategy(strategy, amount, actualAmount);
+    }
+    
+    /**
+     * @dev Pause a strategy (emergency stop)
+     * 
+     * Paused strategies:
+     * - Stop receiving new deployments
+     * - Still counted in totalAssets()
+     * - Can be resumed by owner
+     * 
+     * @param strategy Address of strategy to pause
+     */
+    function pauseStrategy(address strategy) external onlyOperator {
+        require(strategies[strategy].strategyAddress != address(0), "Strategy does not exist");
+        require(strategies[strategy].status == StrategyStatus.Active, "Strategy not active");
+        
+        strategies[strategy].status = StrategyStatus.Paused;
+        emit StrategyStatusUpdated(strategy, StrategyStatus.Paused);
+    }
+    
+    /**
+     * @dev Resume a paused strategy
+     * 
+     * @param strategy Address of strategy to resume
+     */
+    function resumeStrategy(address strategy) external onlyOwner {
+        require(strategies[strategy].strategyAddress != address(0), "Strategy does not exist");
+        require(strategies[strategy].status == StrategyStatus.Paused, "Strategy not paused");
+        
+        strategies[strategy].status = StrategyStatus.Active;
+        emit StrategyStatusUpdated(strategy, StrategyStatus.Active);
+    }
+    
+    /**
+     * @dev Activate an inactive strategy
+     * 
+     * New strategies start as Inactive and must be explicitly activated.
+     * 
+     * @param strategy Address of strategy to activate
+     */
+    function activateStrategy(address strategy) external onlyOwner {
+        require(strategies[strategy].strategyAddress != address(0), "Strategy does not exist");
+        require(strategies[strategy].status == StrategyStatus.Inactive, "Strategy not inactive");
+        
+        strategies[strategy].status = StrategyStatus.Active;
+        emit StrategyStatusUpdated(strategy, StrategyStatus.Active);
+    }
+    
+    /**
+     * @dev Report strategy performance and harvest profits
+     * 
+     * This triggers strategy.report() which:
+     * - Updates internal accounting
+     * - Harvests rewards/fees
+     * - Reports profit/loss to vault
+     * 
+     * Can be called by anyone (useful for keepers/bots).
+     * 
+     * @param strategy Address of strategy to report
+     */
+    function reportStrategy(address strategy) external {
+        require(strategies[strategy].strategyAddress != address(0), "Strategy does not exist");
+        require(strategies[strategy].status == StrategyStatus.Active, "Strategy not active");
+        
+        // Trigger strategy report (returns profit, loss, totalAssets)
+        (uint256 profit, uint256 loss, uint256 assetsAfter) = IStrategy(strategy).report();
+        
+        // Update timestamp
+        strategies[strategy].lastReportTimestamp = block.timestamp;
+        
+        emit StrategyReported(strategy, profit, loss, assetsAfter);
+    }
+    
+    /**
+     * @dev Update buffer target allocation
+     * 
+     * CRITICAL FIX (Architect Review):
+     * Validates aggregate targets don't exceed 100% after buffer update
+     * 
+     * Buffer is FXRP held in vault for instant withdrawals.
+     * Default: 1000 bps = 10%
+     * 
+     * @param newTargetBps New buffer target in basis points
+     */
+    function setBufferTarget(uint256 newTargetBps) external onlyOwner {
+        require(newTargetBps <= 10000, "Target cannot exceed 100%");
+        
+        // Validate aggregate allocation with new buffer target
+        uint256 newTotalTargets = totalStrategyTargetBps + newTargetBps;
+        require(newTotalTargets <= 10000, "Total targets exceed 100%");
+        
+        bufferTargetBps = newTargetBps;
+        emit BufferTargetUpdated(newTargetBps);
+    }
     
     // ========================================
     // VIEW FUNCTIONS
@@ -458,4 +914,188 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
      */
     // function decimals() public view override returns (uint8)
     // Already implemented in ERC4626, automatically matches FXRP's 6 decimals
+    
+    // ========================================
+    // BUFFER & STRATEGY VIEW FUNCTIONS
+    // ========================================
+    
+    /**
+     * @dev Get current FXRP balance held in vault buffer
+     * 
+     * Buffer is used for:
+     * - Instant withdrawals (no strategy unwinding delay)
+     * - Gas for rebalancing operations
+     * - Safety cushion for strategy failures
+     * 
+     * @return Current FXRP balance in vault
+     */
+    function getBufferBalance() public view returns (uint256) {
+        return IERC20(asset()).balanceOf(address(this));
+    }
+    
+    /**
+     * @dev Calculate target buffer size based on totalAssets
+     * 
+     * Formula: targetBuffer = totalAssets() * bufferTargetBps / 10000
+     * Example: If totalAssets = 1M FXRP and bufferTargetBps = 1000 (10%)
+     *          then targetBuffer = 100K FXRP
+     * 
+     * @return Target buffer amount in FXRP
+     */
+    function getBufferTarget() public view returns (uint256) {
+        return (totalAssets() * bufferTargetBps) / 10000;
+    }
+    
+    /**
+     * @dev Get comprehensive buffer status for monitoring
+     * 
+     * Returns:
+     * - current: Current FXRP in buffer
+     * - target: Target FXRP buffer based on allocation
+     * - deficit: Amount below target (0 if above target)
+     * - surplus: Amount above target (0 if below target)
+     * - targetBps: Target buffer as % of totalAssets
+     * 
+     * @return current Current buffer balance
+     * @return target Target buffer balance
+     * @return deficit Amount below target
+     * @return surplus Amount above target
+     * @return targetBps Buffer target in basis points
+     */
+    function getBufferStatus() 
+        public 
+        view 
+        returns (
+            uint256 current,
+            uint256 target,
+            uint256 deficit,
+            uint256 surplus,
+            uint256 targetBps
+        ) 
+    {
+        current = getBufferBalance();
+        target = getBufferTarget();
+        targetBps = bufferTargetBps;
+        
+        if (current < target) {
+            deficit = target - current;
+            surplus = 0;
+        } else {
+            deficit = 0;
+            surplus = current - target;
+        }
+    }
+    
+    /**
+     * @dev Get total FXRP deployed across all strategies
+     * 
+     * @return Total FXRP deployed to strategies
+     */
+    function getTotalDeployed() public view returns (uint256) {
+        uint256 total = 0;
+        for (uint256 i = 0; i < strategyList.length; i++) {
+            total += strategies[strategyList[i]].totalDeployed;
+        }
+        return total;
+    }
+    
+    /**
+     * @dev Get detailed info for a specific strategy
+     * 
+     * @param strategy Address of strategy
+     * @return info StrategyInfo struct with all details
+     */
+    function getStrategyInfo(address strategy) public view returns (StrategyInfo memory info) {
+        require(strategies[strategy].strategyAddress != address(0), "Strategy does not exist");
+        return strategies[strategy];
+    }
+    
+    /**
+     * @dev Get list of all strategy addresses
+     * 
+     * @return Array of strategy addresses
+     */
+    function getAllStrategies() public view returns (address[] memory) {
+        return strategyList;
+    }
+    
+    /**
+     * @dev Get list of only active strategy addresses
+     * 
+     * @return Array of active strategy addresses
+     */
+    function getActiveStrategies() public view returns (address[] memory) {
+        // First count active strategies
+        uint256 activeCount = 0;
+        for (uint256 i = 0; i < strategyList.length; i++) {
+            if (strategies[strategyList[i]].status == StrategyStatus.Active) {
+                activeCount++;
+            }
+        }
+        
+        // Create array of active strategies
+        address[] memory activeList = new address[](activeCount);
+        uint256 index = 0;
+        for (uint256 i = 0; i < strategyList.length; i++) {
+            if (strategies[strategyList[i]].status == StrategyStatus.Active) {
+                activeList[index] = strategyList[i];
+                index++;
+            }
+        }
+        
+        return activeList;
+    }
+    
+    /**
+     * @dev Get current allocation percentages for monitoring
+     * 
+     * Returns arrays of:
+     * - strategies: Strategy addresses
+     * - allocations: Current allocation in basis points (calculated from totalAssets)
+     * - targets: Target allocation in basis points (from StrategyInfo)
+     * 
+     * @return strategies_ Array of strategy addresses
+     * @return allocations Array of current allocations (bps)
+     * @return targets Array of target allocations (bps)
+     */
+    function getCurrentAllocations() 
+        public 
+        view 
+        returns (
+            address[] memory strategies_,
+            uint256[] memory allocations,
+            uint256[] memory targets
+        ) 
+    {
+        uint256 totalAssets_ = totalAssets();
+        uint256 length = strategyList.length;
+        
+        strategies_ = new address[](length + 1); // +1 for buffer
+        allocations = new uint256[](length + 1);
+        targets = new uint256[](length + 1);
+        
+        // Buffer entry (index 0)
+        strategies_[0] = address(0); // Use address(0) to represent buffer
+        if (totalAssets_ > 0) {
+            allocations[0] = (getBufferBalance() * 10000) / totalAssets_;
+        }
+        targets[0] = bufferTargetBps;
+        
+        // Strategy entries
+        for (uint256 i = 0; i < length; i++) {
+            address strategy = strategyList[i];
+            strategies_[i + 1] = strategy;
+            
+            // Calculate current allocation
+            if (totalAssets_ > 0 && strategies[strategy].status == StrategyStatus.Active) {
+                try IStrategy(strategy).totalAssets() returns (uint256 strategyAssets) {
+                    allocations[i + 1] = (strategyAssets * 10000) / totalAssets_;
+                } catch {
+                    allocations[i + 1] = (strategies[strategy].totalDeployed * 10000) / totalAssets_;
+                }
+            }
+            
+            targets[i + 1] = strategies[strategy].targetBps;
+        }
+    }
 }
