@@ -10,10 +10,10 @@ import type { VaultService } from "./VaultService";
 export interface BridgeServiceConfig {
   network: "mainnet" | "coston2";
   storage: IStorage;
-  flareClient: FlareClient;
+  flareClient?: FlareClient; // Optional: undefined in demo mode to prevent real blockchain calls
   vaultService?: VaultService;
   operatorPrivateKey: string;
-  demoMode?: boolean;
+  demoMode: boolean; // Required: Must be explicitly set (no fallback defaults)
 }
 
 // Bridge expiration constant - 30 minutes default
@@ -42,27 +42,33 @@ export class BridgeService {
 
   constructor(config: BridgeServiceConfig) {
     this.config = config;
-    
-    // CRITICAL FIX: Remove network-based fallback that auto-enabled demo mode on coston2
-    // Demo mode must be explicitly set to prevent blockchain/database mismatches
-    if (config.demoMode === undefined) {
-      throw new Error(
-        "BridgeService requires explicit demoMode configuration. " +
-        "Set demoMode: false for production or demoMode: true for testing. " +
-        "Never rely on default values for critical mode switches."
-      );
-    }
-    
     this._demoMode = config.demoMode;
     
-    // Validate demo mode doesn't use production secrets
-    if (this._demoMode && config.flareClient) {
-      console.warn("⚠️  DEMO MODE with live FlareClient - blockchain calls may still execute!");
-      console.warn("⚠️  Consider using mock adapters for true demo mode.");
-    }
-    
-    // Only initialize FAssetsClient when in production mode
-    if (!this._demoMode) {
+    // Validate configuration based on mode
+    if (this._demoMode) {
+      // DEMO MODE: Block live clients to prevent real blockchain transactions
+      if (config.flareClient) {
+        throw new Error(
+          "DEMO MODE ERROR: Cannot use live FlareClient in demo mode. " +
+          "Demo mode must NOT receive FlareClient to prevent real blockchain transactions. " +
+          "Set demoMode=false for production OR omit FlareClient for demo mode."
+        );
+      }
+      
+      if (config.vaultService) {
+        throw new Error(
+          "DEMO MODE ERROR: Cannot use live VaultService in demo mode. " +
+          "Demo mode must NOT receive VaultService to prevent real blockchain transactions. " +
+          "Set demoMode=false for production OR omit VaultService for demo mode."
+        );
+      }
+      
+      this.fassetsClient = null;
+      console.log("📍 BridgeService initialized in DEMO MODE");
+      console.warn("⚠️  All blockchain transactions will use mock data");
+      console.warn("⚠️  Do NOT use demo mode with real user funds!");
+    } else {
+      // PRODUCTION MODE: Require live clients
       if (!config.flareClient) {
         throw new Error("Production mode requires FlareClient to be initialized");
       }
@@ -72,11 +78,6 @@ export class BridgeService {
         flareClient: config.flareClient,
       });
       console.log("✅ BridgeService initialized with FAssets integration");
-    } else {
-      this.fassetsClient = null;
-      console.log("📍 BridgeService initialized in DEMO MODE (using simulated FAssets operations)");
-      console.warn("⚠️  All blockchain transactions will use mock data");
-      console.warn("⚠️  Do NOT use demo mode with real user funds!");
     }
 
     // Start cleanup scheduler

@@ -125,11 +125,12 @@ app.use((req, res, next) => {
   });
   
   // Create bridge service without listener reference
+  // In demo mode, don't pass FlareClient to prevent real blockchain calls
   const bridgeService = new BridgeService({
     network: "coston2",
     storage,
-    flareClient,
-    vaultService,
+    flareClient: demoMode ? undefined : flareClient, // Only pass FlareClient in production mode
+    vaultService: demoMode ? undefined : vaultService, // Only pass VaultService in production mode
     operatorPrivateKey: process.env.OPERATOR_PRIVATE_KEY || "",
     demoMode,
   });
