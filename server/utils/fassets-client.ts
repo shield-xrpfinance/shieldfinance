@@ -539,15 +539,38 @@ export class FAssetsClient {
     // The ABI file is directly an array, not an object with an 'abi' property
     const iface = new ethers.Interface(AssetManagerABI);
     
-    for (const log of receipt.logs) {
+    console.log('\n🔍 Parsing CollateralReserved event from receipt:');
+    console.log(`   Transaction hash: ${receipt.hash || receipt.transactionHash}`);
+    console.log(`   Block number: ${receipt.blockNumber}`);
+    console.log(`   Number of logs: ${receipt.logs?.length || 0}`);
+    
+    // Log all event names found in receipt
+    const eventNames: string[] = [];
+    for (const log of receipt.logs || []) {
       try {
         const parsed = iface.parseLog(log);
-        if (parsed?.name === "CollateralReserved") {
-          return parsed.args;
+        if (parsed) {
+          eventNames.push(parsed.name);
+          if (parsed.name === "CollateralReserved") {
+            console.log(`   ✅ Found CollateralReserved event!`);
+            return parsed.args;
+          }
         }
       } catch (e) {
+        // Log doesn't match our ABI, skip it
         continue;
       }
+    }
+    
+    console.error('   ❌ CollateralReserved event not found');
+    console.error(`   Events found: ${eventNames.length > 0 ? eventNames.join(', ') : 'none'}`);
+    console.error(`   Raw logs count: ${receipt.logs?.length || 0}`);
+    
+    // If we have logs but no CollateralReserved, log first log for debugging
+    if (receipt.logs && receipt.logs.length > 0) {
+      console.error('   First log sample:');
+      console.error(`     address: ${receipt.logs[0].address}`);
+      console.error(`     topics: ${receipt.logs[0].topics?.length || 0} topics`);
     }
     
     throw new Error("CollateralReserved event not found in transaction");

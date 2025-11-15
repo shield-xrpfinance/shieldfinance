@@ -118,6 +118,7 @@ export class SmartAccountSigner implements ethers.Signer {
     const userOpReceipt = await this.smartAccountClient.waitForUserOpReceipt(userOpHash);
     
     console.log('✅ Transaction executed:', userOpReceipt.receipt.transactionHash);
+    console.log(`   Transaction included ${userOpReceipt.receipt.logs?.length || 0} log entries`);
     
     // Get the actual on-chain transaction
     const txHash = userOpReceipt.receipt.transactionHash;
@@ -132,6 +133,11 @@ export class SmartAccountSigner implements ethers.Signer {
     if (!response) {
       throw new Error(`Transaction ${txHash} not found after UserOp execution`);
     }
+
+    // CRITICAL FIX: Store the UserOp receipt so wait() can return it with logs
+    // The UserOp receipt contains the actual transaction logs that we need
+    // @ts-ignore - Adding custom property to TransactionResponse
+    response._userOpReceipt = userOpReceipt.receipt;
 
     return response;
   }
