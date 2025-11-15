@@ -788,10 +788,14 @@ export async function registerRoutes(
             });
           }
         } catch (error) {
-          console.error(`❌ [Background] Collateral reservation failed for bridge ${bridge.id}:`, error);
-          // Update bridge status to failed
+          const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+          console.error(`❌ [Background] Collateral reservation failed for bridge ${bridge.id}:`, errorMessage);
+          console.error('Full error details:', error);
+          
+          // Update bridge status to failed with error reason
           await storage.updateBridge(bridge.id, { 
             status: 'failed',
+            cancellationReason: `Collateral reservation failed: ${errorMessage}`,
           }).catch(updateErr => {
             console.error(`Failed to update bridge status to failed:`, updateErr);
           });
@@ -857,6 +861,7 @@ export async function registerRoutes(
         agentVaultAddress: bridge.agentVaultAddress,
         agentUnderlyingAddress: bridge.agentUnderlyingAddress,
         expiresAt: bridge.expiresAt,
+        error: bridge.status === 'failed' ? bridge.cancellationReason : undefined,
       });
     } catch (error) {
       console.error("Bridge status fetch error:", error);
