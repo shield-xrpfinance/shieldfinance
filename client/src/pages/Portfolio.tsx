@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Position, Vault } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import PortfolioTable from "@/components/PortfolioTable";
 import WithdrawModal from "@/components/WithdrawModal";
+import { WithdrawProgressModal, type WithdrawProgressStep } from "@/components/WithdrawProgressModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import EmptyState from "@/components/EmptyState";
 import { PortfolioStatsSkeleton, PortfolioTableSkeleton } from "@/components/skeletons/PortfolioSkeleton";
@@ -30,6 +31,15 @@ export default function Portfolio() {
     depositedAmount: string;
     rewards: string;
   } | null>(null);
+  
+  // Withdrawal progress modal state
+  const [withdrawProgressModalOpen, setWithdrawProgressModalOpen] = useState(false);
+  const [withdrawProgressStep, setWithdrawProgressStep] = useState<WithdrawProgressStep>('creating');
+  const [withdrawRedemptionId, setWithdrawRedemptionId] = useState<string | null>(null);
+  const [withdrawXrplTxHash, setWithdrawXrplTxHash] = useState<string | null>(null);
+  const [withdrawErrorMessage, setWithdrawErrorMessage] = useState<string | undefined>(undefined);
+  const withdrawPollingAbortControllerRef = useRef<AbortController | null>(null);
+  
   const { toast } = useToast();
   const { isConnected, address } = useWallet();
   const { network } = useNetwork();
@@ -176,8 +186,6 @@ export default function Portfolio() {
     if (!selectedPosition || !address) return;
 
     const assetSymbol = selectedPosition.asset?.split(",")[0] || "XRP";
-    const vaultId = formattedPositions.find((p) => p.id === selectedPosition.id)?.vaultId || "";
-
     setWithdrawalLoading(true);
     
     try {
@@ -197,16 +205,12 @@ export default function Portfolio() {
         throw new Error(data.error || "Failed to process withdrawal");
       }
 
+      // Close withdraw modal and show progress modal
       setWithdrawModalOpen(false);
+      setWithdrawRedemptionId(data.redemptionId);
+      setWithdrawProgressStep('creating');
+      setWithdrawProgressModalOpen(true);
       
-      // Invalidate positions and redemptions cache to reflect the update
-      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/wallet", address] });
-      
-      toast({
-        title: "Withdrawal Initiated",
-        description: `Withdrawal ID: ${data.redemptionId}. Your withdrawal is being processed automatically. Track status in the Withdrawals section below.`,
-      });
     } catch (error) {
       console.error("Error processing withdrawal:", error);
       toast({
@@ -252,6 +256,107 @@ export default function Portfolio() {
     });
     setPendingAction(null);
     setXamanPayload(null);
+  };
+
+  // Withdrawal status polling
+  useEffect(() => {
+    if (!withdrawRedemptionId || !withdrawProgressModalOpen) {
+      return;
+    }
+
+    const abortController = new AbortController();
+    withdrawPollingAbortControllerRef.current = abortController;
+    let timeoutId: NodeJS.Timeout | null = null;
+
+    const pollStatus = async () => {
+      try {
+        const response = await fetch(`/api/withdrawals/${withdrawRedemptionId}/status`, {
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch withdrawal status');
+
+        const data = await response.json();
+
+        // Update progress step from API response
+        setWithdrawProgressStep(data.currentStep);
+
+        // Store XRPL transaction hash if available
+        if (data.xrplTxHash) {
+          setWithdrawXrplTxHash(data.xrplTxHash);
+        }
+
+        // Store error message if failed
+        if (data.status === 'failed') {
+          setWithdrawErrorMessage(data.error || 'Withdrawal failed');
+          
+          // Show error toast
+          toast({
+            title: "Withdrawal Failed",
+            description: data.error || "An error occurred during withdrawal. Please try again.",
+            variant: "destructive",
+          });
+        }
+
+        // Stop polling if complete or failed
+        if (data.status === 'completed' || data.status === 'failed') {
+          // Invalidate queries to refresh data
+          queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/wallet", address] });
+          
+          // Show success toast for completion
+          if (data.status === 'completed') {
+            toast({
+              title: "Withdrawal Complete",
+              description: `Successfully sent ${data.xrpSent || data.amount} XRP to your wallet!`,
+            });
+          }
+          
+          return;
+        }
+
+        // Continue polling every 2 seconds
+        timeoutId = setTimeout(pollStatus, 2000);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Polling was aborted, this is expected
+          return;
+        }
+        console.error('Withdrawal polling error:', error);
+        
+        // Show error toast
+        toast({
+          title: "Status Update Failed",
+          description: "Unable to fetch withdrawal status. The withdrawal is still processing.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    // Start polling
+    pollStatus();
+
+    // Cleanup on unmount
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      abortController.abort();
+    };
+  }, [withdrawRedemptionId, withdrawProgressModalOpen, address, toast]);
+
+  // Handle withdrawal progress modal dismissal
+  const handleWithdrawProgressDismiss = () => {
+    setWithdrawProgressModalOpen(false);
+    setWithdrawRedemptionId(null);
+    setWithdrawXrplTxHash(null);
+    setWithdrawErrorMessage(undefined);
+    setWithdrawProgressStep('creating');
+    
+    // Abort any ongoing polling
+    if (withdrawPollingAbortControllerRef.current) {
+      withdrawPollingAbortControllerRef.current.abort();
+    }
   };
 
   if (!isConnected) {
@@ -462,9 +567,18 @@ export default function Portfolio() {
                             </p>
                           )}
                           {redemption.xrplPayoutTxHash && (
-                            <p className="text-xs text-muted-foreground">
-                              TX: {redemption.xrplPayoutTxHash.slice(0, 16)}...
-                            </p>
+                            <a
+                              href={`${network === 'mainnet' ? 'https://livenet.xrpl.org' : 'https://testnet.xrpl.org'}/transactions/${redemption.xrplPayoutTxHash}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                              data-testid={`link-xrpl-tx-${redemption.id}`}
+                            >
+                              View Transaction
+                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                              </svg>
+                            </a>
                           )}
                         </div>
                       </div>
@@ -508,6 +622,18 @@ export default function Portfolio() {
         description={pendingAction?.type === "claim" 
           ? "Scan the QR code with your Xaman wallet to claim your rewards"
           : "Scan the QR code with your Xaman wallet to complete the withdrawal"}
+      />
+
+      <WithdrawProgressModal
+        open={withdrawProgressModalOpen}
+        currentStep={withdrawProgressStep}
+        errorMessage={withdrawErrorMessage}
+        amount={selectedPosition?.depositedAmount}
+        vaultName={selectedPosition?.vaultName}
+        xrplTxHash={withdrawXrplTxHash || undefined}
+        network={network}
+        onOpenChange={setWithdrawProgressModalOpen}
+        onDismiss={handleWithdrawProgressDismiss}
       />
     </div>
   );

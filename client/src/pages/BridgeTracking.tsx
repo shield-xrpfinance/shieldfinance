@@ -15,7 +15,33 @@ import type { SelectXrpToFxrpBridge, Vault, BridgeHistoryEntry } from "@shared/s
 
 // Helper to convert snake_case status to human-readable format
 function formatStatus(status: string): string {
-  return status
+  // Provide user-friendly labels for common statuses
+  const statusLabels: Record<string, string> = {
+    // Deposit statuses
+    'pending': 'Creating Bridge',
+    'reserving_collateral': 'Reserving Collateral',
+    'awaiting_payment': 'Awaiting Payment',
+    'xrpl_confirmed': 'Payment Confirmed',
+    'generating_proof': 'Generating Proof',
+    'proof_generated': 'Proof Generated',
+    'minting': 'Minting FXRP',
+    'vault_minting': 'Depositing to Vault',
+    'vault_minted': 'Completed',
+    'completed': 'Completed',
+    'failed': 'Failed',
+    'cancelled': 'Cancelled',
+    
+    // Withdrawal statuses
+    'redeeming_shares': 'Redeeming Shares',
+    'redeemed_fxrp': 'FXRP Redeemed',
+    'redeeming_fxrp': 'Processing Redemption',
+    'awaiting_proof': 'Awaiting Payment',
+    'xrpl_payout': 'Sending XRP',
+    'awaiting_liquidity': 'Queued (Low Liquidity)',
+  };
+  
+  // Return mapped label or fallback to title case conversion
+  return statusLabels[status] || status
     .split('_')
     .map(word => word.charAt(0).toUpperCase() + word.slice(1))
     .join(' ');

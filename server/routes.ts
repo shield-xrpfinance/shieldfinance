@@ -1733,6 +1733,60 @@ export async function registerRoutes(
     }
   });
 
+  // Get withdrawal/redemption status for polling (mirrors deposit status endpoint)
+  app.get("/api/withdrawals/:redemptionId/status", async (req, res) => {
+    try {
+      const { redemptionId } = req.params;
+      
+      const redemption = await storage.getRedemptionById(redemptionId);
+      if (!redemption) {
+        return res.status(404).json({ error: "Withdrawal not found" });
+      }
+
+      // Calculate the XRP amount being withdrawn
+      const amount = redemption.xrpSent || redemption.fxrpRedeemed || redemption.shareAmount;
+
+      // Map redemption status to progress modal step
+      let currentStep: "creating" | "processing" | "sending" | "complete" | "error";
+      if (redemption.status === "failed") {
+        currentStep = "error";
+      } else if (redemption.status === "completed") {
+        currentStep = "complete";
+      } else if (redemption.status === "pending") {
+        currentStep = "creating";
+      } else if (redemption.status === "xrpl_payout") {
+        currentStep = "sending";
+      } else {
+        // Processing statuses: redeeming_shares, redeemed_fxrp, redeeming_fxrp, awaiting_proof, awaiting_liquidity
+        currentStep = "processing";
+      }
+
+      res.json({
+        success: true,
+        redemptionId: redemption.id,
+        status: redemption.status,
+        currentStep: currentStep,
+        amount: amount,
+        shareAmount: redemption.shareAmount,
+        fxrpRedeemed: redemption.fxrpRedeemed,
+        xrpSent: redemption.xrpSent,
+        xrplTxHash: redemption.xrplPayoutTxHash,
+        vaultRedeemTxHash: redemption.vaultRedeemTxHash,
+        fassetsRedemptionTxHash: redemption.fassetsRedemptionTxHash,
+        createdAt: redemption.createdAt,
+        completedAt: redemption.completedAt,
+        error: redemption.status === 'failed' ? redemption.errorMessage : undefined,
+      });
+    } catch (error) {
+      console.error("Withdrawal status fetch error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to fetch withdrawal status" });
+      }
+    }
+  });
+
   // Get all redemptions for a wallet
   app.get("/api/withdrawals/wallet/:address", async (req, res) => {
     try {
