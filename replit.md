@@ -162,6 +162,23 @@ totalAssets() → return principal + yield
 - **Status**: Production-ready, verified by architect, manual testing required (WalletConnect pairing needed)
 - **Files**: `server/services/BridgeService.ts` (lines 260-275), `client/src/pages/Dashboard.tsx`
 
+### Phase 2.4: Production Deployment Fix ✅ COMPLETE (November 15, 2025)
+- **Deployment Bug**: Production served stale code - deposit endpoint called missing method
+- **Root Cause Discovery**: Replit deploys from Git snapshots, not live workspace
+- **Secondary Issue**: Routes used stub `minimalBridgeService` instead of real instance
+- **Solution**: Module-level Proxy pattern in `server/index.ts`
+  - Added `realBridgeService` variable assigned after async initialization
+  - Created Proxy to forward calls to real service once ready
+  - Safe defaults: Returns `demoMode: true` during registration phase
+  - Method calls throw clear error if service not initialized
+- **Testing**: ✅ Server starts successfully, deposit endpoint works, lot rounding operational
+- **Architect Review**: Approved for production deployment
+- **Deployment Process**:
+  1. Commit changes to git (Replit deploys from commits)
+  2. Kill server with `kill 1` to force clean restart
+  3. Click Publish button in Replit UI
+- **Files**: `server/index.ts` (lines 20, 489-507, 685)
+
 ### Outstanding Work
 - **Task 11**: Deploy strategies to Coston2 testnet for integration testing
 - **Task 12**: Update VaultController with strategy coordination logic
