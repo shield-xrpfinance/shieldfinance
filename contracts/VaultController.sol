@@ -250,14 +250,35 @@ contract VaultController is AccessControl, ReentrancyGuard {
         totalAssets = bufferAmount + kineticAmount + firelightAmount;
     }
     
-    function getTargetAllocation(uint256 totalAssets) external pure returns (
+    function getTargetAllocation(address vault, uint256 totalAssets) external view returns (
         uint256 bufferTarget,
         uint256 kineticTarget,
         uint256 firelightTarget
     ) {
+        require(registeredVaults[vault], "Vault not registered");
+        
+        address kineticStrategy = _getStrategyAddress(vault, "Kinetic");
+        address firelightStrategy = _getStrategyAddress(vault, "Firelight");
+        
+        bool kineticActive = _isStrategyActive(vault, kineticStrategy);
+        bool firelightActive = _isStrategyActive(vault, firelightStrategy);
+        
         bufferTarget = (totalAssets * BUFFER_TARGET_BPS) / 10000;
-        kineticTarget = (totalAssets * KINETIC_TARGET_BPS) / 10000;
-        firelightTarget = (totalAssets * FIRELIGHT_TARGET_BPS) / 10000;
+        
+        if (kineticActive && firelightActive) {
+            kineticTarget = (totalAssets * KINETIC_TARGET_BPS) / 10000;
+            firelightTarget = (totalAssets * FIRELIGHT_TARGET_BPS) / 10000;
+        } else if (kineticActive && !firelightActive) {
+            kineticTarget = (totalAssets * (KINETIC_TARGET_BPS + FIRELIGHT_TARGET_BPS)) / 10000;
+            firelightTarget = 0;
+        } else if (!kineticActive && firelightActive) {
+            kineticTarget = 0;
+            firelightTarget = (totalAssets * (KINETIC_TARGET_BPS + FIRELIGHT_TARGET_BPS)) / 10000;
+        } else {
+            bufferTarget = totalAssets;
+            kineticTarget = 0;
+            firelightTarget = 0;
+        }
     }
     
     function needsRebalancing(
@@ -275,9 +296,8 @@ contract VaultController is AccessControl, ReentrancyGuard {
         
         if (totalAssets == 0) return false;
         
-        uint256 bufferTarget = (totalAssets * BUFFER_TARGET_BPS) / 10000;
-        uint256 kineticTarget = (totalAssets * KINETIC_TARGET_BPS) / 10000;
-        uint256 firelightTarget = (totalAssets * FIRELIGHT_TARGET_BPS) / 10000;
+        (uint256 bufferTarget, uint256 kineticTarget, uint256 firelightTarget) = 
+            this.getTargetAllocation(vault, totalAssets);
         
         uint256 bufferDeviation = _calculateDeviation(bufferAmount, bufferTarget, totalAssets);
         uint256 kineticDeviation = _calculateDeviation(kineticAmount, kineticTarget, totalAssets);
@@ -302,6 +322,28 @@ contract VaultController is AccessControl, ReentrancyGuard {
             return currentBps - targetBps;
         } else {
             return targetBps - currentBps;
+        }
+    }
+    
+    function _isStrategyActive(address vault, address strategy) internal view returns (bool) {
+        if (strategy == address(0)) return false;
+        
+        try ShXRPVault(vault).getStrategyInfo(strategy) returns (ShXRPVault.StrategyInfo memory info) {
+            return info.status == ShXRPVault.StrategyStatus.Active || 
+                   info.status == ShXRPVault.StrategyStatus.Paused;
+        } catch {
+            return false;
+        }
+    }
+    
+    function _getStrategyAddress(address vault, string memory name) internal view returns (address) {
+        address strategy = _getStrategyByName(name);
+        if (strategy == address(0)) return address(0);
+        
+        try ShXRPVault(vault).getStrategyInfo(strategy) returns (ShXRPVault.StrategyInfo memory) {
+            return strategy;
+        } catch {
+            return address(0);
         }
     }
     
@@ -341,6 +383,7 @@ contract VaultController is AccessControl, ReentrancyGuard {
      * @return firelightAmount Amount to deploy to Firelight
      */
     function _calculateDeploymentAmounts(
+        address vault,
         uint256 deployableAmount,
         uint256 kineticCurrent,
         uint256 firelightCurrent,
@@ -350,7 +393,7 @@ contract VaultController is AccessControl, ReentrancyGuard {
         uint256 firelightAmount
     ) {
         // Calculate targets
-        (, uint256 kineticTarget, uint256 firelightTarget) = this.getTargetAllocation(totalAssets);
+        (, uint256 kineticTarget, uint256 firelightTarget) = this.getTargetAllocation(vault, totalAssets);
         
         // Calculate deficits (can be negative)
         int256 kineticDeficit = int256(kineticTarget) - int256(kineticCurrent);
@@ -401,6 +444,7 @@ contract VaultController is AccessControl, ReentrancyGuard {
      * @dev External wrapper for _calculateDeploymentAmounts to enable try/catch
      */
     function _calculateDeploymentAmountsExternal(
+        address vault,
         uint256 deployableAmount,
         uint256 kineticCurrent,
         uint256 firelightCurrent,
@@ -410,6 +454,7 @@ contract VaultController is AccessControl, ReentrancyGuard {
         uint256 firelightAmount
     ) {
         return _calculateDeploymentAmounts(
+            vault,
             deployableAmount,
             kineticCurrent,
             firelightCurrent,
@@ -426,7 +471,7 @@ contract VaultController is AccessControl, ReentrancyGuard {
         (uint256 bufferCurrent, uint256 kineticCurrent, uint256 firelightCurrent, uint256 totalAssets) 
             = this.getCurrentAllocation(vault);
         
-        (uint256 bufferTarget, , ) = this.getTargetAllocation(totalAssets);
+        (uint256 bufferTarget, , ) = this.getTargetAllocation(vault, totalAssets);
         
         uint256 deployableAmount;
         if (bufferCurrent > bufferTarget) {
@@ -450,6 +495,7 @@ contract VaultController is AccessControl, ReentrancyGuard {
         
         // Calculate deployment amounts (may be less than deployableAmount)
         (uint256 kineticAmount, uint256 firelightAmount) = _calculateDeploymentAmounts(
+            vault,
             deployableAmount,
             kineticCurrent,
             firelightCurrent,
@@ -574,7 +620,7 @@ contract VaultController is AccessControl, ReentrancyGuard {
         (uint256 bufferCurrent, uint256 kineticCurrent, uint256 firelightCurrent, uint256 totalAssets) 
             = this.getCurrentAllocation(vault);
         
-        (uint256 bufferTarget, , ) = this.getTargetAllocation(totalAssets);
+        (uint256 bufferTarget, , ) = this.getTargetAllocation(vault, totalAssets);
         
         uint256 deployableAmount;
         if (bufferCurrent > bufferTarget) {
@@ -595,6 +641,7 @@ contract VaultController is AccessControl, ReentrancyGuard {
         uint256 firelightDeploy = 0;
         
         try this._calculateDeploymentAmountsExternal(
+            vault,
             deployableAmount,
             kineticCurrent,
             firelightCurrent,
@@ -628,8 +675,7 @@ contract VaultController is AccessControl, ReentrancyGuard {
         uint256 totalAssets
     ) internal {
         ShXRPVault vaultContract = ShXRPVault(vault);
-        uint256 kineticTarget = (totalAssets * KINETIC_TARGET_BPS) / 10000;
-        uint256 firelightTarget = (totalAssets * FIRELIGHT_TARGET_BPS) / 10000;
+        (, uint256 kineticTarget, uint256 firelightTarget) = this.getTargetAllocation(vault, totalAssets);
         
         if (firelightStrategy != address(0) && firelightBefore > firelightTarget) {
             uint256 withdrawAmount = firelightBefore - firelightTarget;
