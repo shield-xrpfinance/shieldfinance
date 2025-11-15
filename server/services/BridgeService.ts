@@ -281,6 +281,10 @@ export class BridgeService {
    * @returns Actual FXRP amount minted (human-readable string with 6 decimals)
    */
   private async parseActualMintedAmount(txHash: string): Promise<string> {
+    if (!this.config.flareClient) {
+      throw new Error("FlareClient not initialized - cannot parse minted amount");
+    }
+    
     const provider = this.config.flareClient.provider;
     const smartAccountAddress = this.config.flareClient.getSignerAddress();
     
