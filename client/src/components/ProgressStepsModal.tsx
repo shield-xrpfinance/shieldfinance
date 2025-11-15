@@ -1,0 +1,190 @@
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { CheckCircle2, Loader2, Circle } from "lucide-react";
+import { cn } from "@/lib/utils";
+
+export type ProgressStep = 'creating' | 'reserving' | 'ready' | 'error';
+
+interface ProgressStepsModalProps {
+  open: boolean;
+  currentStep: ProgressStep;
+  errorMessage?: string;
+  amount?: string;
+  vaultName?: string;
+  onOpenChange?: (open: boolean) => void;
+}
+
+interface StepConfig {
+  id: ProgressStep;
+  title: string;
+  description: string;
+}
+
+const steps: StepConfig[] = [
+  {
+    id: 'creating',
+    title: 'Creating Bridge',
+    description: 'Setting up your cross-chain deposit...',
+  },
+  {
+    id: 'reserving',
+    title: 'Reserving Collateral',
+    description: 'Connecting with FAssets agent on Flare Network...',
+  },
+  {
+    id: 'ready',
+    title: 'Ready for Payment',
+    description: 'Please approve the payment in your wallet',
+  },
+];
+
+export function ProgressStepsModal({
+  open,
+  currentStep,
+  errorMessage,
+  amount,
+  vaultName,
+  onOpenChange,
+}: ProgressStepsModalProps) {
+  const getCurrentStepIndex = () => {
+    if (currentStep === 'error') return -1;
+    return steps.findIndex(s => s.id === currentStep);
+  };
+
+  const currentStepIndex = getCurrentStepIndex();
+
+  const getStepStatus = (stepIndex: number): 'completed' | 'active' | 'pending' => {
+    if (currentStep === 'error') return 'pending';
+    if (stepIndex < currentStepIndex) return 'completed';
+    if (stepIndex === currentStepIndex) return 'active';
+    return 'pending';
+  };
+
+  const canDismiss = currentStep === 'error' || currentStep === 'ready';
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent 
+        className="sm:max-w-md" 
+        data-testid="dialog-progress-steps"
+        onPointerDownOutside={(e) => {
+          if (!canDismiss) {
+            e.preventDefault();
+          }
+        }}
+        onEscapeKeyDown={(e) => {
+          if (!canDismiss) {
+            e.preventDefault();
+          }
+        }}
+      >
+        <DialogHeader>
+          <DialogTitle className="text-center">
+            {currentStep === 'error' ? 'Bridge Creation Failed' : 'Preparing Your Deposit'}
+          </DialogTitle>
+          {amount && vaultName && (
+            <DialogDescription className="text-center">
+              {amount} XRP → {vaultName}
+            </DialogDescription>
+          )}
+        </DialogHeader>
+
+        {currentStep === 'error' ? (
+          <div className="py-6 text-center">
+            <div className="flex justify-center mb-4">
+              <div className="rounded-full bg-destructive/10 p-3">
+                <Circle className="h-8 w-8 text-destructive" />
+              </div>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {errorMessage || 'An error occurred while creating the bridge. Please try again.'}
+            </p>
+          </div>
+        ) : (
+          <div className="py-6 space-y-4" data-testid="progress-steps-container">
+            {steps.map((step, index) => {
+              const status = getStepStatus(index);
+              
+              return (
+                <div 
+                  key={step.id} 
+                  className="flex items-start gap-4"
+                  data-testid={`progress-step-${step.id}`}
+                >
+                  <div className="flex flex-col items-center">
+                    <div
+                      className={cn(
+                        "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all",
+                        status === 'completed' && "bg-green-100 dark:bg-green-900/20 border-green-600 dark:border-green-400",
+                        status === 'active' && "bg-primary/10 border-primary",
+                        status === 'pending' && "bg-muted border-muted-foreground/20"
+                      )}
+                    >
+                      {status === 'completed' && (
+                        <CheckCircle2 
+                          className="h-6 w-6 text-green-600 dark:text-green-400" 
+                          data-testid={`step-icon-${step.id}-completed`}
+                        />
+                      )}
+                      {status === 'active' && (
+                        <Loader2 
+                          className="h-6 w-6 text-primary animate-spin" 
+                          data-testid={`step-icon-${step.id}-active`}
+                        />
+                      )}
+                      {status === 'pending' && (
+                        <Circle 
+                          className="h-6 w-6 text-muted-foreground/40" 
+                          data-testid={`step-icon-${step.id}-pending`}
+                        />
+                      )}
+                    </div>
+                    
+                    {index < steps.length - 1 && (
+                      <div
+                        className={cn(
+                          "w-0.5 h-12 mt-2 transition-all",
+                          status === 'completed' ? "bg-green-600 dark:bg-green-400" : "bg-muted-foreground/20"
+                        )}
+                      />
+                    )}
+                  </div>
+
+                  <div className="flex-1 pt-1">
+                    <h4
+                      className={cn(
+                        "font-medium transition-colors",
+                        status === 'active' && "text-foreground",
+                        status === 'completed' && "text-green-600 dark:text-green-400",
+                        status === 'pending' && "text-muted-foreground"
+                      )}
+                      data-testid={`step-title-${step.id}`}
+                    >
+                      {step.title}
+                    </h4>
+                    <p
+                      className={cn(
+                        "text-sm transition-colors",
+                        status === 'active' && "text-muted-foreground",
+                        status === 'completed' && "text-muted-foreground/80",
+                        status === 'pending' && "text-muted-foreground/60"
+                      )}
+                      data-testid={`step-description-${step.id}`}
+                    >
+                      {step.description}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {currentStep === 'reserving' && (
+          <div className="text-center text-xs text-muted-foreground">
+            This may take up to 60 seconds...
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}

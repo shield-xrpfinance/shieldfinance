@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Vault as VaultType, Escrow } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -6,6 +6,7 @@ import VaultCard from "@/components/VaultCard";
 import DepositModal from "@/components/DepositModal";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
+import { ProgressStepsModal, type ProgressStep } from "@/components/ProgressStepsModal";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -33,6 +34,10 @@ export default function Vaults() {
   const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; apyLabel?: string | null; depositAssets: string[] } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("apy");
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [progressStep, setProgressStep] = useState<ProgressStep>('creating');
+  const [pollingBridgeId, setPollingBridgeId] = useState<string | null>(null);
+  const [progressErrorMessage, setProgressErrorMessage] = useState<string | undefined>(undefined);
   const { toast } = useToast();
   const { address, provider, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
@@ -52,6 +57,139 @@ export default function Vaults() {
     enabled: !!address,
   });
 
+  // Poll bridge status when pollingBridgeId is set
+  useEffect(() => {
+    if (!pollingBridgeId) return;
+
+    console.log("🔄 Starting status polling for bridgeId:", pollingBridgeId);
+    
+    let intervalId: NodeJS.Timeout | null = null;
+    let isPolling = true;
+    const abortController = new AbortController();
+
+    const pollStatus = async () => {
+      if (!isPolling) return;
+
+      try {
+        const response = await fetch(`/api/deposits/${pollingBridgeId}/status`, {
+          signal: abortController.signal
+        });
+        const data = await response.json();
+
+        console.log("📊 Poll response:", data);
+
+        if (!data.success) {
+          console.error("❌ Poll failed:", data.error);
+          return;
+        }
+
+        const status = data.status;
+
+        // Map backend status to progress step
+        if (status === "pending") {
+          setProgressStep('creating');
+        } else if (status === "reserving_collateral") {
+          setProgressStep('reserving');
+        } else if (status === "awaiting_payment") {
+          setProgressStep('ready');
+          
+          // Stop polling
+          isPolling = false;
+          if (intervalId !== null) {
+            clearInterval(intervalId);
+          }
+          setPollingBridgeId(null);
+
+          console.log("✅ Bridge ready for payment, auto-triggering payment...");
+
+          // Auto-trigger payment
+          if (data.paymentRequest && provider && (provider === "xaman" || walletConnectProvider)) {
+            try {
+              const paymentResult = await requestPayment(data.paymentRequest);
+              
+              console.log("=== PAYMENT REQUEST RESULT ===", paymentResult);
+              
+              if (paymentResult.success) {
+                if (provider === "xaman" && paymentResult.payloadUuid) {
+                  // Close progress modal, show Xaman signing modal
+                  setProgressModalOpen(false);
+                  setXamanPayload({
+                    uuid: paymentResult.payloadUuid,
+                    qrUrl: paymentResult.qrUrl || "",
+                    deepLink: paymentResult.deepLink || "",
+                  });
+                  setXamanSigningModalOpen(true);
+                } else if (provider === "walletconnect" && paymentResult.txHash) {
+                  setProgressModalOpen(false);
+                  toast({
+                    title: "Payment Submitted",
+                    description: `Transaction submitted: ${paymentResult.txHash}`,
+                  });
+                }
+              } else {
+                console.warn("⚠️ Payment request failed:", paymentResult.error);
+                setProgressModalOpen(false);
+                toast({
+                  title: "Payment Request Info",
+                  description: "Please manually send the payment to complete the bridge.",
+                });
+              }
+            } catch (paymentError) {
+              console.error("❌ Payment request exception:", paymentError);
+              setProgressModalOpen(false);
+              toast({
+                title: "Payment Request Failed",
+                description: "Please manually send the payment to complete the bridge.",
+              });
+            }
+          } else {
+            setProgressModalOpen(false);
+            toast({
+              title: "Bridge Ready",
+              description: "Bridge is ready for payment. Please complete the transaction.",
+            });
+          }
+        } else if (status === "failed") {
+          setProgressStep('error');
+          setProgressErrorMessage(data.error || "Failed to reserve collateral. Please try again.");
+          setProgressModalOpen(true);
+          
+          // Stop polling
+          isPolling = false;
+          if (intervalId !== null) {
+            clearInterval(intervalId);
+          }
+          setPollingBridgeId(null);
+
+          toast({
+            title: "Bridge Creation Failed",
+            description: data.error || "Failed to reserve collateral. Please try again.",
+            variant: "destructive",
+          });
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          console.log("🛑 Polling aborted");
+        } else {
+          console.error("❌ Polling error:", error);
+        }
+      }
+    };
+
+    // Start polling immediately, then every 2 seconds
+    pollStatus();
+    intervalId = setInterval(pollStatus, 2000);
+
+    // Cleanup on unmount or when pollingBridgeId changes
+    return () => {
+      isPolling = false;
+      abortController.abort();
+      if (intervalId !== null) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [pollingBridgeId, provider, walletConnectProvider, requestPayment, toast]);
+
   const formatCurrency = (value: string): string => {
     const num = parseFloat(value);
     if (num >= 1000000) {
@@ -60,6 +198,14 @@ export default function Vaults() {
       return `$${(num / 1000).toFixed(0)}K`;
     }
     return `$${num.toFixed(0)}`;
+  };
+
+  const handleCloseProgressModal = () => {
+    setProgressModalOpen(false);
+    setProgressStep('creating');
+    setPollingBridgeId(null);
+    setBridgeInfo(null);
+    setProgressErrorMessage(undefined);
   };
 
   const vaultEscrowStats = useMemo(() => {
@@ -188,7 +334,17 @@ export default function Vaults() {
       console.log("📍 XRP Deposit Flow - Starting bridge creation...");
       // Use bridge flow for XRP deposits
       try {
+        // Close deposit modal and show progress modal immediately
         setDepositModalOpen(false);
+        setProgressStep('creating');
+        setProgressModalOpen(true);
+        
+        // Store bridge info for the progress modal
+        setBridgeInfo({
+          bridgeId: '', // Will be set when response comes back
+          vaultName: selectedVault.name,
+          amount: totalAmount.toString(),
+        });
         
         console.log("📡 Calling POST /api/deposits with:", { 
           walletAddress: address,
@@ -213,8 +369,6 @@ export default function Vaults() {
         console.log("=== POST /api/deposits RESPONSE ===", {
           success: data.success,
           bridgeId: data.bridgeId,
-          paymentRequest: data.paymentRequest,
-          paymentRequestExists: !!data.paymentRequest,
           demo: data.demo,
         });
 
@@ -222,90 +376,19 @@ export default function Vaults() {
           throw new Error(data.error || "Failed to create deposit");
         }
 
-        // Show bridge status modal
+        // Update bridge info with the actual bridgeId
         setBridgeInfo({
           bridgeId: data.bridgeId,
           vaultName: selectedVault.name,
           amount: totalAmount.toString(),
         });
-        setBridgeStatusModalOpen(true);
 
-        console.log("=== CHECKING AUTO-TRIGGER CONDITIONS ===", {
-          paymentRequestExists: !!data.paymentRequest,
-          providerExists: !!provider,
-          providerType: provider,
-          walletConnectProviderExists: !!walletConnectProvider,
-        });
+        // Start polling for status updates
+        setPollingBridgeId(data.bridgeId);
 
-        // Auto-trigger payment request if available
-        if (data.paymentRequest && provider && (provider === "xaman" || walletConnectProvider)) {
-          console.log("✅ Auto-triggering payment request with:", data.paymentRequest);
-          try {
-            const paymentResult = await requestPayment(data.paymentRequest);
-            
-            console.log("=== PAYMENT REQUEST RESULT ===", paymentResult);
-            
-            if (paymentResult.success) {
-              if (provider === "xaman" && paymentResult.payloadUuid) {
-                // Show Xaman signing modal
-                setXamanPayload({
-                  uuid: paymentResult.payloadUuid,
-                  qrUrl: paymentResult.qrUrl || "",
-                  deepLink: paymentResult.deepLink || "",
-                });
-                setXamanSigningModalOpen(true);
-              } else if (provider === "walletconnect" && paymentResult.txHash) {
-                toast({
-                  title: "Payment Submitted",
-                  description: `Transaction submitted: ${paymentResult.txHash}`,
-                });
-              }
-            } else {
-              console.warn("⚠️ Payment request failed:", paymentResult.error);
-              toast({
-                title: "Payment Request Info",
-                description: "Please manually send the payment to complete the bridge. Details in the bridge status modal.",
-              });
-            }
-          } catch (paymentError) {
-            console.error("❌ Payment request exception:", paymentError);
-            toast({
-              title: "Payment Request Failed",
-              description: "Please manually send the payment to complete the bridge.",
-            });
-          }
-        } else {
-          console.log("❌ Auto-trigger skipped - missing conditions:", {
-            hasPaymentRequest: !!data.paymentRequest,
-            hasProvider: !!provider,
-            providerType: provider,
-            hasWalletConnectProvider: !!walletConnectProvider,
-            reason: !data.paymentRequest 
-              ? "No payment request" 
-              : !provider 
-                ? "No provider" 
-                : provider === "walletconnect" && !walletConnectProvider
-                  ? "WalletConnect provider not initialized"
-                  : "Unknown",
-          });
-          
-          if (provider === "walletconnect" && !walletConnectProvider) {
-            toast({
-              title: "Connection Issue",
-              description: "Your wallet connection is incomplete. Please reconnect your wallet and try again.",
-              variant: "destructive",
-            });
-          }
-        }
-
-        toast({
-          title: "Bridge Initiated",
-          description: data.demo 
-            ? "Demo bridge created successfully" 
-            : "Bridge created. Follow the instructions to complete your deposit.",
-        });
       } catch (error) {
         console.error("Bridge creation error:", error);
+        setProgressModalOpen(false);
         toast({
           title: "Deposit Failed",
           description: error instanceof Error ? error.message : "Failed to create bridge",
@@ -655,6 +738,19 @@ export default function Vaults() {
           </div>
         </DialogContent>
       </Dialog>
+
+      <ProgressStepsModal
+        open={progressModalOpen}
+        currentStep={progressStep}
+        amount={bridgeInfo?.amount}
+        vaultName={bridgeInfo?.vaultName}
+        errorMessage={progressErrorMessage}
+        onOpenChange={(open) => {
+          if (!open && (progressStep === 'error' || progressStep === 'ready')) {
+            handleCloseProgressModal();
+          }
+        }}
+      />
     </div>
   );
 }

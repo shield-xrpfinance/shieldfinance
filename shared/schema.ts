@@ -6,6 +6,7 @@ import { z } from "zod";
 // Bridge status enum for XRP → FXRP bridges
 export const bridgeStatusEnum = pgEnum("bridge_status", [
   "pending",
+  "reserving_collateral",
   "bridging", 
   "awaiting_payment",
   "xrpl_confirmed",

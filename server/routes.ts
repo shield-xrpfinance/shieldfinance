@@ -739,67 +739,131 @@ export async function registerRoutes(
         expiresAt,
       });
 
-      // Reserve collateral and get agent address (fast, no delays)
-      await bridgeService.reserveCollateralQuick(bridge.id);
+      // Get vault name for response
+      const vaultName = vault.name;
 
-      // Get updated bridge with agent address
-      const updatedBridge = await storage.getBridgeById(bridge.id);
-      if (!updatedBridge) {
-        throw new Error("Bridge not found after collateral reservation");
-      }
-
-      // Build payment request
-      const paymentRequest = bridgeService.buildPaymentRequest(updatedBridge);
-
-      // Calculate fee breakdown for UI display
-      const baseAmountXRP = updatedBridge.reservedValueUBA 
-        ? (Number(updatedBridge.reservedValueUBA) / 1_000_000).toFixed(6)
-        : bridge.xrpAmount;
-      const feeAmountXRP = updatedBridge.reservedFeeUBA
-        ? (Number(updatedBridge.reservedFeeUBA) / 1_000_000).toFixed(6)
-        : "0";
-      const totalAmountXRP = updatedBridge.totalAmountUBA
-        ? (Number(updatedBridge.totalAmountUBA) / 1_000_000).toFixed(6)
-        : bridge.xrpAmount;
-      const feePercentage = updatedBridge.mintingFeeBIPS
-        ? (Number(updatedBridge.mintingFeeBIPS) / 100).toFixed(2)
-        : "0.25";
-
-      // For demo mode, continue with rest of bridge simulation in background
-      if (bridgeService.demoMode) {
-        bridgeService.initiateBridge(bridge.id).catch(async (error) => {
-          console.error("Background bridge simulation error:", error);
-        });
-      }
-
-      // Return bridge info with payment request, fee breakdown, and lot rounding info
+      // Return immediately to frontend - collateral reservation will happen in background
       res.json({
         success: true,
         bridgeId: bridge.id,
         amount: bridge.xrpAmount,
-        status: updatedBridge.status,
-        paymentRequest,
-        feeBreakdown: {
-          baseAmount: baseAmountXRP,
-          feeAmount: feeAmountXRP,
-          totalAmount: totalAmountXRP,
-          feePercentage: `${feePercentage}%`,
-        },
+        status: 'pending',
+        vaultName,
         lotRounding: {
           requestedAmount: lotCalculation.requestedAmount,
           roundedAmount: lotCalculation.roundedAmount,
           lots: lotCalculation.lots,
           needsRounding: lotCalculation.needsRounding,
         },
-        message: "Bridge initiated. Please send payment to complete the bridge.",
+        message: "Bridge created. Reserving collateral...",
         demo: bridgeService.demoMode,
       });
+
+      // Start background job to reserve collateral (non-blocking)
+      void (async () => {
+        try {
+          console.log(`🔄 [Background] Starting collateral reservation for bridge ${bridge.id}`);
+          
+          // Update status to reserving_collateral
+          await storage.updateBridge(bridge.id, { status: 'reserving_collateral' });
+
+          // Reserve collateral (this is the slow part - ~60 seconds in production)
+          await bridgeService.reserveCollateralQuick(bridge.id);
+
+          // Get updated bridge
+          const updatedBridge = await storage.getBridgeById(bridge.id);
+          if (!updatedBridge) {
+            throw new Error("Bridge not found after collateral reservation");
+          }
+
+          // Update status to awaiting_payment
+          await storage.updateBridge(bridge.id, { status: 'awaiting_payment' });
+
+          console.log(`✅ [Background] Collateral reserved for bridge ${bridge.id}, status updated to awaiting_payment`);
+
+          // For demo mode, continue with rest of bridge simulation
+          if (bridgeService.demoMode) {
+            bridgeService.initiateBridge(bridge.id).catch(async (error) => {
+              console.error("Background bridge simulation error:", error);
+            });
+          }
+        } catch (error) {
+          console.error(`❌ [Background] Collateral reservation failed for bridge ${bridge.id}:`, error);
+          // Update bridge status to failed
+          await storage.updateBridge(bridge.id, { 
+            status: 'failed',
+          }).catch(updateErr => {
+            console.error(`Failed to update bridge status to failed:`, updateErr);
+          });
+        }
+      })();
+
     } catch (error) {
       console.error("Deposit error:", error);
       if (error instanceof Error) {
         res.status(400).json({ error: error.message });
       } else {
         res.status(500).json({ error: "Failed to create deposit" });
+      }
+    }
+  });
+
+  // Get deposit/bridge status for polling
+  app.get("/api/deposits/:bridgeId/status", async (req, res) => {
+    try {
+      const { bridgeId } = req.params;
+      
+      const bridge = await storage.getBridgeById(bridgeId);
+      if (!bridge) {
+        return res.status(404).json({ error: "Bridge not found" });
+      }
+
+      // Build payment request if collateral is reserved
+      let paymentRequest = null;
+      let feeBreakdown = null;
+
+      if (bridge.status === 'awaiting_payment' || bridge.status === 'bridging') {
+        paymentRequest = bridgeService.buildPaymentRequest(bridge);
+        
+        // Calculate fee breakdown
+        const baseAmountXRP = bridge.reservedValueUBA 
+          ? (Number(bridge.reservedValueUBA) / 1_000_000).toFixed(6)
+          : bridge.xrpAmount;
+        const feeAmountXRP = bridge.reservedFeeUBA
+          ? (Number(bridge.reservedFeeUBA) / 1_000_000).toFixed(6)
+          : "0";
+        const totalAmountXRP = bridge.totalAmountUBA
+          ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)
+          : bridge.xrpAmount;
+        const feePercentage = bridge.mintingFeeBIPS
+          ? (Number(bridge.mintingFeeBIPS) / 100).toFixed(2)
+          : "0.25";
+
+        feeBreakdown = {
+          baseAmount: baseAmountXRP,
+          feeAmount: feeAmountXRP,
+          totalAmount: totalAmountXRP,
+          feePercentage: `${feePercentage}%`,
+        };
+      }
+
+      res.json({
+        success: true,
+        bridgeId: bridge.id,
+        status: bridge.status,
+        amount: bridge.xrpAmount,
+        paymentRequest,
+        feeBreakdown,
+        agentVaultAddress: bridge.agentVaultAddress,
+        agentUnderlyingAddress: bridge.agentUnderlyingAddress,
+        expiresAt: bridge.expiresAt,
+      });
+    } catch (error) {
+      console.error("Bridge status fetch error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to fetch bridge status" });
       }
     }
   });
