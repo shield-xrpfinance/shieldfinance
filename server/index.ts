@@ -13,6 +13,9 @@ import { readinessRegistry } from "./services/ReadinessRegistry";
 
 const app = express();
 
+// Module-level reference to the real bridge service (assigned when initialized)
+let realBridgeService: BridgeService | null = null;
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown
@@ -180,6 +183,9 @@ async function initializeServices() {
     });
 
     console.log(`🌉 BridgeService initialized (${bridgeService.demoMode ? 'DEMO MODE' : 'PRODUCTION MODE'})`);
+
+    // Assign to module-level variable so proxy can forward to it
+    realBridgeService = bridgeService;
 
     // Wire up circular dependencies
     bridgeService.setXrplListener(xrplListener);
@@ -476,13 +482,28 @@ async function initializeFlareClientWithRetry(config: {
   console.log("✅ Storage initialized");
   
   // Step 2: Start HTTP server immediately (before service initialization)
-  // Create a minimal bridge service for routes that is marked as not ready
-  const minimalBridgeService = {
-    demoMode: true,
-    // Add minimal stubs for methods called by routes
-  } as any;
+  // Create a proxy that will forward to the real bridge service once initialized
+  const bridgeServiceProxy = new Proxy({} as BridgeService, {
+    get(target, prop) {
+      if (!realBridgeService) {
+        // Return safe defaults for properties accessed during route registration
+        if (prop === 'demoMode') return true; // Safe default until real service ready
+        
+        // For method calls, throw clear error
+        if (typeof prop === 'string' && prop !== 'constructor') {
+          throw new Error(`BridgeService.${prop} called before service initialization - please wait for /readyz to return 200`);
+        }
+        return undefined;
+      }
+      const value = (realBridgeService as any)[prop];
+      if (typeof value === 'function') {
+        return value.bind(realBridgeService);
+      }
+      return value;
+    }
+  });
   
-  const server = await registerRoutes(app, minimalBridgeService);
+  const server = await registerRoutes(app, bridgeServiceProxy);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
