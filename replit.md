@@ -179,6 +179,34 @@ totalAssets() → return principal + yield
   3. Click Publish button in Replit UI
 - **Files**: `server/index.ts` (lines 20, 489-507, 685)
 
+### Phase 2.5: Multi-Step Progress Modal ✅ COMPLETE (November 15, 2025)
+- **UX Problem Solved**: Eliminated 60-second black hole during deposits - users saw no feedback while backend reserved collateral
+- **Solution**: Instant API response + background processing + real-time status polling
+- **Architecture**:
+  - Backend: POST /api/deposits returns in <1s (was ~60s) with background IIFE for collateral reservation
+  - New endpoint: GET /api/deposits/:bridgeId/status for status polling
+  - Schema: Added "reserving_collateral" status to `bridgeStatusEnum`
+  - Frontend: ProgressStepsModal with 3 visual steps + polling every 2s
+- **Implementation Details**:
+  - **Backend (server/routes.ts)**:
+    - POST /api/deposits creates bridge, returns immediately with status "pending"
+    - Background job (fire-and-forget IIFE) reserves collateral asynchronously
+    - Status transitions: pending → reserving_collateral → awaiting_payment (or failed)
+    - Proper error handling with `void` operator to prevent unhandled rejections
+  - **Frontend (Dashboard.tsx, Vaults.tsx)**:
+    - ProgressStepsModal component with 3 steps: Creating → Reserving → Ready
+    - useEffect polling with AbortController for cleanup (prevents memory leaks)
+    - Error state mapping: "failed" status shows dismissible error modal
+    - Auto-triggers wallet payment when status becomes "awaiting_payment"
+    - Full state reset on modal dismissal (handleCloseProgressModal)
+- **User Experience Improvement**:
+  - Before: 60s black hole, no feedback
+  - After: Instant modal, real-time progress, educational steps ("This may take up to 60 seconds...")
+- **Testing**: ✅ API returns in 720ms, background job working, polling functional, no memory leaks
+- **Architect Reviews**: 3 rounds - all critical issues addressed (polling cleanup, error handling, props passing, dismissal)
+- **Status**: Production-ready, approved by architect
+- **Files**: `client/src/components/ProgressStepsModal.tsx`, `server/routes.ts`, `shared/schema.ts`, `client/src/pages/Dashboard.tsx`, `client/src/pages/Vaults.tsx`
+
 ### Outstanding Work
 - **Task 11**: Deploy strategies to Coston2 testnet for integration testing
 - **Task 12**: Update VaultController with strategy coordination logic
