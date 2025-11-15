@@ -149,6 +149,19 @@ report() → if !initialized: seed baseline, return (0,0,assets)
 totalAssets() → return principal + yield
 ```
 
+### Phase 2.3: Deposit Flow Fix ✅ COMPLETE (November 15, 2025)
+- **Production-Critical Bug Fixed**: Missing `calculateLotRoundedAmount` method in BridgeService
+- **Root Cause**: Backend route called `bridgeService.calculateLotRoundedAmount()` but method didn't exist
+- **Implementation**: Added method with dual-mode branching + double null guards
+  - Demo mode: Uses shared `calculateLotRounding()` helper for client/server consistency
+  - Production mode: Delegates to `FAssetsClient.calculateLotRoundedAmount()` for SDK-calibrated lot sizing
+  - Null Guard #1: Throws error if FAssetsClient not initialized
+  - Null Guard #2: Throws error if FAssetsClient returns null result
+- **Additional Fix**: Added comprehensive debug logging to Dashboard.tsx deposit handler (matching Vaults.tsx)
+- **Architect Reviews**: 3 rounds - addressed production delegation, null safety, and return type guarantees
+- **Status**: Production-ready, verified by architect, manual testing required (WalletConnect pairing needed)
+- **Files**: `server/services/BridgeService.ts` (lines 260-275), `client/src/pages/Dashboard.tsx`
+
 ### Outstanding Work
 - **Task 11**: Deploy strategies to Coston2 testnet for integration testing
 - **Task 12**: Update VaultController with strategy coordination logic
