@@ -29,7 +29,7 @@ export default function Dashboard() {
   const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; apyLabel?: string | null; depositAssets: string[] } | null>(null);
   const [successMessage, setSuccessMessage] = useState<{ title: string; description: string; txHash: string } | null>(null);
   const { toast } = useToast();
-  const { address, provider, walletConnectProvider } = useWallet();
+  const { address, provider, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
@@ -95,7 +95,18 @@ export default function Dashboard() {
   });
 
   const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
-    if (!selectedVault || !address) return;
+    console.log("=== handleConfirmDeposit CALLED ===", { 
+      amounts, 
+      provider, 
+      address, 
+      walletConnectProvider: !!walletConnectProvider,
+      walletConnectProviderSession: walletConnectProvider?.session ? "exists" : "missing",
+    });
+    
+    if (!selectedVault || !address) {
+      console.error("❌ Missing selectedVault or address:", { selectedVault: !!selectedVault, address });
+      return;
+    }
 
     const totalAmount = Object.values(amounts)
       .filter((amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
@@ -107,9 +118,17 @@ export default function Dashboard() {
     const isXRPDeposit = selectedVault.depositAssets.includes("XRP");
 
     if (isXRPDeposit) {
+      console.log("📍 XRP Deposit Flow - Starting bridge creation...");
       // Use bridge flow for XRP deposits
       try {
         setDepositModalOpen(false);
+        
+        console.log("📡 Calling POST /api/deposits with:", { 
+          walletAddress: address,
+          vaultId: selectedVault.id,
+          amount: totalAmount.toString(),
+          network,
+        });
         
         const response = await fetch("/api/deposits", {
           method: "POST",
@@ -124,6 +143,14 @@ export default function Dashboard() {
 
         const data = await response.json();
 
+        console.log("=== POST /api/deposits RESPONSE ===", {
+          success: data.success,
+          bridgeId: data.bridgeId,
+          paymentRequest: data.paymentRequest,
+          paymentRequestExists: !!data.paymentRequest,
+          demo: data.demo,
+        });
+
         if (!response.ok || !data.success) {
           throw new Error(data.error || "Failed to create deposit");
         }
@@ -135,6 +162,74 @@ export default function Dashboard() {
           amount: totalAmount.toString(),
         });
         setBridgeStatusModalOpen(true);
+
+        console.log("=== CHECKING AUTO-TRIGGER CONDITIONS ===", {
+          paymentRequestExists: !!data.paymentRequest,
+          providerExists: !!provider,
+          providerType: provider,
+          walletConnectProviderExists: !!walletConnectProvider,
+        });
+
+        // Auto-trigger payment request if available
+        if (data.paymentRequest && provider && (provider === "xaman" || walletConnectProvider)) {
+          console.log("✅ Auto-triggering payment request with:", data.paymentRequest);
+          try {
+            const paymentResult = await requestPayment(data.paymentRequest);
+            
+            console.log("=== PAYMENT REQUEST RESULT ===", paymentResult);
+            
+            if (paymentResult.success) {
+              if (provider === "xaman" && paymentResult.payloadUuid) {
+                // Show Xaman signing modal
+                setXamanPayload({
+                  uuid: paymentResult.payloadUuid,
+                  qrUrl: paymentResult.qrUrl || "",
+                  deepLink: paymentResult.deepLink || "",
+                });
+                setXamanSigningModalOpen(true);
+              } else if (provider === "walletconnect" && paymentResult.txHash) {
+                toast({
+                  title: "Payment Submitted",
+                  description: `Transaction submitted: ${paymentResult.txHash}`,
+                });
+              }
+            } else {
+              console.warn("⚠️ Payment request failed:", paymentResult.error);
+              toast({
+                title: "Payment Request Info",
+                description: "Please manually send the payment to complete the bridge. Details in the bridge status modal.",
+              });
+            }
+          } catch (paymentError) {
+            console.error("❌ Payment request exception:", paymentError);
+            toast({
+              title: "Payment Request Failed",
+              description: "Please manually send the payment to complete the bridge.",
+            });
+          }
+        } else {
+          console.log("❌ Auto-trigger skipped - missing conditions:", {
+            hasPaymentRequest: !!data.paymentRequest,
+            hasProvider: !!provider,
+            providerType: provider,
+            hasWalletConnectProvider: !!walletConnectProvider,
+            reason: !data.paymentRequest 
+              ? "No payment request" 
+              : !provider 
+                ? "No provider" 
+                : provider === "walletconnect" && !walletConnectProvider
+                  ? "WalletConnect provider not initialized"
+                  : "Unknown",
+          });
+          
+          if (provider === "walletconnect" && !walletConnectProvider) {
+            toast({
+              title: "Connection Issue",
+              description: "Your wallet connection is incomplete. Please reconnect your wallet and try again.",
+              variant: "destructive",
+            });
+          }
+        }
 
         toast({
           title: "Bridge Initiated",

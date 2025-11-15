@@ -6,6 +6,7 @@ import type { IStorage } from "../storage";
 import type { SelectXrpToFxrpBridge, PaymentRequest } from "../../shared/schema";
 import type { XRPLDepositListener, RedemptionPayment } from "../listeners/XRPLDepositListener";
 import type { VaultService } from "./VaultService";
+import { calculateLotRounding, type LotRoundingResult } from "../../shared/lotRounding";
 
 export interface BridgeServiceConfig {
   network: "mainnet" | "coston2";
@@ -247,37 +248,26 @@ export class BridgeService {
    * FAssets protocol requires deposits in whole "lots" - if user requests a non-multiple,
    * the amount must be rounded up to the nearest lot boundary.
    * 
+   * In production mode, delegates to FAssetsClient for SDK-calibrated lot sizing.
+   * In demo mode, uses shared helper for client/server consistency.
+   * 
    * @param requestedAmount - User's requested XRP amount as string
    * @returns Object with requested amount, rounded amount, lots, and needsRounding flag
    */
-  async calculateLotRoundedAmount(requestedAmount: string): Promise<{
-    requestedAmount: string;
-    roundedAmount: string;
-    lots: number;
-    needsRounding: boolean;
-    shortfall: number;
-  }> {
-    if (this._demoMode) {
-      // Demo mode: Use shared lot calculation logic
-      const { calculateLotRounding } = await import("../../shared/lotRounding");
-      const result = calculateLotRounding(requestedAmount);
-      
-      console.log(`📊 [DEMO] Lot calculation:`);
-      console.log(`   Requested: ${result.requestedAmount} XRP`);
-      console.log(`   Lot size: 10 XRP`);
-      console.log(`   Lots needed: ${result.lots}`);
-      console.log(`   Rounded to: ${result.roundedAmount} XRP`);
-      console.log(`   Rounding required: ${result.needsRounding ? 'Yes' : 'No'}`);
-      console.log(`   Shortfall: ${result.shortfall} XRP`);
-      
-      return result;
+  async calculateLotRoundedAmount(requestedAmount: string): Promise<LotRoundingResult> {
+    if (this.demoMode) {
+      // Demo mode: use shared helper for consistency with frontend
+      return calculateLotRounding(requestedAmount);
     } else {
-      // Production mode: Delegate to FAssetsClient
+      // Production mode: delegate to FAssetsClient for authoritative lot rounding
       if (!this.fassetsClient) {
-        throw new Error("FAssetsClient not initialized in production mode");
+        throw new Error("FAssetsClient not initialized - cannot calculate lot-rounded amount in production mode");
       }
-      
-      return await this.fassetsClient.calculateLotRoundedAmount(requestedAmount);
+      const result = await this.fassetsClient.calculateLotRoundedAmount(requestedAmount);
+      if (!result) {
+        throw new Error(`Failed to calculate lot-rounded amount for ${requestedAmount} XRP - FAssetsClient returned null`);
+      }
+      return result;
     }
   }
 
