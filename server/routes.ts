@@ -14,6 +14,7 @@ import fs from "fs";
 import path from "path";
 import { readinessRegistry } from "./services/ReadinessRegistry";
 import crypto from "crypto";
+import { generateFDCProof } from "./utils/fdc-proof";
 
 /**
  * Admin authentication middleware for operational endpoints
@@ -1761,6 +1762,102 @@ export async function registerRoutes(
       res.status(500).json({ 
         error: "Withdrawal failed", 
         details: errorMessage 
+      });
+    }
+  });
+
+  // Manual recovery: Force retry with explicit TX hash (ADMIN ONLY)
+  // IMPORTANT: This must be BEFORE the generic /api/withdrawals/:id route
+  app.post("/api/withdrawals/:redemptionId/force-retry", requireAdminAuth, async (req, res) => {
+    try {
+      const { redemptionId } = req.params;
+      const { txHash } = req.body;
+      
+      if (!txHash) {
+        return res.status(400).json({ error: "txHash required in request body" });
+      }
+      
+      console.log(`\n🔧 FORCE RETRY: Manual recovery for redemption ${redemptionId}`);
+      console.log(`   TX Hash: ${txHash}`);
+      
+      // Get redemption from database
+      const redemption = await storage.getRedemptionById(redemptionId);
+      if (!redemption) {
+        return res.status(404).json({ error: "Redemption not found" });
+      }
+      
+      console.log(`📊 Database state:`, {
+        status: redemption.status,
+        redemptionRequestId: redemption.redemptionRequestId,
+        xrplPayoutTxHash: redemption.xrplPayoutTxHash,
+        fdcProofData: redemption.fdcProofData ? "EXISTS" : "MISSING",
+        fdcAttestationTxHash: redemption.fdcAttestationTxHash
+      });
+      
+      // Check if we have request ID
+      if (!redemption.redemptionRequestId) {
+        return res.status(400).json({ 
+          error: "Redemption request ID not found in database" 
+        });
+      }
+      
+      let proof = redemption.fdcProofData ? JSON.parse(redemption.fdcProofData) : null;
+      
+      // If proof doesn't exist, generate it from TX hash
+      if (!proof) {
+        console.log(`⚠️  No FDC proof in database, generating new proof...`);
+        
+        // Get network and flareClient from bridgeService
+        const network = (bridgeService as any).config.network;
+        const flareClient = (bridgeService as any).config.flareClient;
+        
+        // Generate FDC proof
+        const fdcResult = await generateFDCProof(
+          txHash,
+          network,
+          flareClient
+        );
+        
+        proof = fdcResult.proof;
+        
+        // Store the proof in database
+        await storage.updateRedemption(redemptionId, {
+          fdcProofData: JSON.stringify(proof),
+          fdcAttestationTxHash: fdcResult.attestationTxHash,
+          fdcVotingRoundId: fdcResult.votingRoundId.toString()
+        });
+        
+        console.log(`✅ FDC proof generated and stored`);
+      } else {
+        console.log(`✅ Using existing FDC proof from database`);
+      }
+      
+      // Attempt to confirm payment on contract
+      const confirmTxHash = await bridgeService.confirmRedemptionPayment(
+        proof,
+        BigInt(redemption.redemptionRequestId)
+      );
+      
+      console.log(`✅ Redemption confirmed on contract: ${confirmTxHash}`);
+      
+      // Update redemption status to completed
+      await storage.updateRedemption(redemptionId, {
+        status: "completed",
+        confirmationTxHash: confirmTxHash
+      });
+      
+      return res.json({
+        success: true,
+        redemptionId,
+        confirmTxHash,
+        message: "Redemption successfully confirmed on contract"
+      });
+      
+    } catch (error: any) {
+      console.error("Force retry error:", error);
+      return res.status(500).json({ 
+        error: error.message,
+        details: error.stack
       });
     }
   });
