@@ -1862,6 +1862,100 @@ export async function registerRoutes(
     }
   });
 
+  // Debug: Check XRPL transaction details for redemption (ADMIN ONLY)
+  app.get("/api/withdrawals/:redemptionId/check-xrpl-tx", requireAdminAuth, async (req, res) => {
+    try {
+      const { redemptionId } = req.params;
+      
+      console.log(`\n🔍 XRPL TX CHECK for redemption ${redemptionId}`);
+      
+      // Get redemption from database
+      const redemption = await storage.getRedemptionById(redemptionId);
+      if (!redemption) {
+        return res.status(404).json({ error: "Redemption not found in database" });
+      }
+      
+      if (!redemption.xrplPayoutTxHash) {
+        return res.status(400).json({ 
+          error: "No XRPL payout TX hash found in database"
+        });
+      }
+      
+      // Use XRPL client to fetch transaction details
+      const { Client } = await import('xrpl');
+      const client = new Client('wss://testnet.xrpl-labs.com');
+      await client.connect();
+      
+      try {
+        const txResponse = await client.request({
+          command: 'tx',
+          transaction: redemption.xrplPayoutTxHash,
+          binary: false
+        });
+        
+        const tx: any = txResponse.result;
+        
+        // Extract key details
+        const amount = tx.Amount;
+        const destination = tx.Destination;
+        const deliveredAmount = tx.meta?.delivered_amount || amount;
+        
+        // Extract memo if present
+        let memo = null;
+        let memoHex = null;
+        if (tx.Memos && tx.Memos.length > 0 && tx.Memos[0].Memo) {
+          memoHex = tx.Memos[0].Memo.MemoData;
+          if (memoHex) {
+            memo = Buffer.from(memoHex, 'hex').toString('utf-8');
+          }
+        }
+        
+        // Convert amount to drops
+        const amountDrops = typeof amount === 'string' ? parseInt(amount) : amount;
+        const deliveredDrops = typeof deliveredAmount === 'string' ? parseInt(deliveredAmount) : deliveredAmount;
+        
+        await client.disconnect();
+        
+        return res.json({
+          redemptionId,
+          xrplTransaction: {
+            hash: redemption.xrplPayoutTxHash,
+            amount: amountDrops,
+            amountXRP: (amountDrops / 1000000).toFixed(6),
+            deliveredAmount: deliveredDrops,
+            deliveredXRP: (deliveredDrops / 1000000).toFixed(6),
+            destination,
+            memo,
+            memoHex,
+            validated: tx.validated
+          },
+          contractExpectations: {
+            valueUBA: "20000000",
+            feeUBA: "100000",
+            netExpectedDrops: 19900000,
+            netExpectedXRP: "19.9"
+          },
+          analysis: {
+            amountMatch: deliveredDrops === 19900000 ? "✅ MATCH" : `❌ MISMATCH (expected 19900000, got ${deliveredDrops})`,
+            memoPresent: memoHex ? "✅ YES" : "❌ NO"
+          }
+        });
+        
+      } finally {
+        if (client.isConnected()) {
+          await client.disconnect();
+        }
+      }
+      
+    } catch (error: any) {
+      console.error("Error checking XRPL transaction:", error);
+      return res.status(500).json({ 
+        error: error.message,
+        stack: error.stack 
+      });
+    }
+  });
+
   // Debug: Check on-chain redemption request status (ADMIN ONLY)
   // IMPORTANT: This must be BEFORE the generic /api/withdrawals/:id route
   app.get("/api/withdrawals/:redemptionId/check-contract-status", requireAdminAuth, async (req, res) => {
