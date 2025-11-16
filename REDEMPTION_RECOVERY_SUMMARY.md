@@ -35,16 +35,20 @@ SET
 WHERE id = '75806272-9bcb-4be9-8d45-d279b53939ea';
 ```
 
-#### 3. ✅ Manual Recovery Endpoints (CREATED)
-Created operational recovery tools for stuck redemptions:
+#### 3. ✅ Manual Recovery Endpoints (CREATED & SECURED)
+Created operational recovery tools for stuck redemptions with admin authentication:
 
-**POST /api/withdrawals/:redemptionId/retry**
+**POST /api/withdrawals/:redemptionId/retry** (Admin only)
 - Force retry redemption from current state
-- Requires: `{ "txHash": "XRPL_TX_HASH" }`
+- Requires: `X-Admin-Key` header + `{ "txHash": "XRPL_TX_HASH" }`
+- Returns 401 if header missing, 403 if invalid key
 
-**POST /api/withdrawals/:redemptionId/complete**
+**POST /api/withdrawals/:redemptionId/complete** (Admin only)
 - Force completion with known XRPL payment TX
-- Requires: `{ "txHash": "XRPL_TX_HASH" }`
+- Requires: `X-Admin-Key` header + `{ "txHash": "XRPL_TX_HASH" }`
+- Returns 401 if header missing, 403 if invalid key
+
+**Authentication**: Uses SHA-256 hash of SESSION_SECRET with timing-safe comparison to prevent brute-force attacks.
 
 ### Current Status
 
@@ -69,12 +73,23 @@ Send Coston2 FLR tokens to: `0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd`
 - Flare Testnet Faucet: https://faucet.flare.network/coston2
 
 #### 2. Retry Manual Completion
-Once the smart account is funded, retry:
+Once the smart account is funded, retry using the admin-authenticated endpoint:
+
+**Generate Admin Key** (one-time setup):
+```bash
+# The admin key is the SHA-256 hash of SESSION_SECRET
+echo -n "YOUR_SESSION_SECRET" | sha256sum
+```
+
+**Retry the withdrawal:**
 ```bash
 curl -X POST https://shyield.finance/api/withdrawals/75806272-9bcb-4be9-8d45-d279b53939ea/complete \
   -H "Content-Type: application/json" \
+  -H "X-Admin-Key: YOUR_ADMIN_KEY_HASH" \
   -d '{"txHash": "CC25D7EB2296AC505A8DD5D3393840C7FC61C4F0033E02EA9CD587AFB01F0248"}'
 ```
+
+**Security Note**: The admin endpoints are protected with header-based authentication using constant-time comparison to prevent timing attacks. Only operators with access to the SESSION_SECRET can generate the admin key.
 
 #### 3. Remaining Steps (Will Execute Automatically)
 - **Step 3/5**: Reduce shXRP position balance

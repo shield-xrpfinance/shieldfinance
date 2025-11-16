@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { insertPositionSchema } from "@shared/schema";
@@ -13,6 +13,52 @@ import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
 import { readinessRegistry } from "./services/ReadinessRegistry";
+import crypto from "crypto";
+
+/**
+ * Admin authentication middleware for operational endpoints
+ * Requires X-Admin-Key header matching hashed SESSION_SECRET
+ */
+const requireAdminAuth = (req: Request, res: Response, next: NextFunction) => {
+  const providedKey = req.headers['x-admin-key'];
+  
+  if (!providedKey || typeof providedKey !== 'string') {
+    return res.status(401).json({ 
+      error: "Unauthorized: X-Admin-Key header required" 
+    });
+  }
+  
+  const sessionSecret = process.env.SESSION_SECRET;
+  if (!sessionSecret) {
+    console.error("SESSION_SECRET not configured");
+    return res.status(500).json({ error: "Server configuration error" });
+  }
+  
+  // Use constant-time comparison to prevent timing attacks
+  const expectedKey = crypto
+    .createHash('sha256')
+    .update(sessionSecret)
+    .digest('hex');
+  
+  // Validate hex format and length (SHA-256 produces 64 hex chars)
+  if (providedKey.length !== 64 || !/^[0-9a-f]{64}$/i.test(providedKey)) {
+    console.warn(`⚠️  Invalid admin key format from ${req.ip}`);
+    return res.status(403).json({ error: "Forbidden: Invalid admin key format" });
+  }
+  
+  // Compare provided hex digest directly against expected (no double hashing)
+  if (!crypto.timingSafeEqual(
+    Buffer.from(expectedKey, 'hex'),
+    Buffer.from(providedKey.toLowerCase(), 'hex')
+  )) {
+    console.warn(`⚠️  Unauthorized admin access attempt from ${req.ip}`);
+    return res.status(403).json({ error: "Forbidden: Invalid admin key" });
+  }
+  
+  console.log(`✅ Admin authenticated from ${req.ip}`);  // Log successful access for audit
+  
+  next();
+};
 
 /**
  * Get the latest deployed vault address from deployment files
@@ -1798,8 +1844,8 @@ export async function registerRoutes(
     }
   });
 
-  // Manual retry for stuck redemptions
-  app.post("/api/withdrawals/:redemptionId/retry", async (req, res) => {
+  // Manual retry for stuck redemptions (ADMIN ONLY)
+  app.post("/api/withdrawals/:redemptionId/retry", requireAdminAuth, async (req, res) => {
     try {
       const { redemptionId } = req.params;
       
@@ -1844,8 +1890,8 @@ export async function registerRoutes(
     }
   });
 
-  // Manual retry with TX hash
-  app.post("/api/withdrawals/:redemptionId/complete", async (req, res) => {
+  // Manual retry with TX hash (ADMIN ONLY)
+  app.post("/api/withdrawals/:redemptionId/complete", requireAdminAuth, async (req, res) => {
     try {
       const { redemptionId } = req.params;
       const { txHash } = req.body;
