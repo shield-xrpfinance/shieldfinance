@@ -422,6 +422,74 @@ export class FAssetsClient {
   }
 
   /**
+   * Get comprehensive redemption request status including all available contract data
+   * Returns complete information to diagnose why confirmRedemptionPayment might fail
+   */
+  async getRedemptionRequestStatus(requestId: bigint): Promise<{
+    exists: boolean;
+    details?: {
+      agentVault: string;
+      valueUBA: bigint;
+      feeUBA: bigint;
+      firstUnderlyingBlock: bigint;
+      lastUnderlyingBlock: bigint;
+      lastUnderlyingTimestamp: bigint;
+      paymentAddress: string;
+      rawResponse: any;
+    };
+  }> {
+    const assetManager = await this.getAssetManager();
+    
+    console.log(`\n🔍 Querying full redemption request status for #${requestId}...`);
+    
+    try {
+      // Query the redemption request from contract
+      const request = await assetManager.redemptionRequestInfo(requestId);
+      
+      console.log(`📋 Full redemption request response:`, {
+        keys: Object.keys(request),
+        fullObject: JSON.stringify(request, (key, value) => 
+          typeof value === 'bigint' ? value.toString() : value
+        , 2)
+      });
+      
+      // Check if request exists (agentVault will be zero address if doesn't exist)
+      const exists = request.agentVault !== ethers.ZeroAddress;
+      
+      console.log(`✅ Redemption request ${exists ? 'EXISTS' : 'NOT FOUND'}`);
+      
+      if (exists) {
+        console.log(`   Agent Vault: ${request.agentVault}`);
+        console.log(`   Value UBA: ${request.valueUBA}`);
+        console.log(`   Fee UBA: ${request.feeUBA}`);
+        console.log(`   First Block: ${request.firstUnderlyingBlock}`);
+        console.log(`   Last Block: ${request.lastUnderlyingBlock}`);
+        console.log(`   Last Timestamp: ${request.lastUnderlyingTimestamp}`);
+        console.log(`   Payment Address: ${request.paymentAddress}`);
+      }
+      
+      return {
+        exists,
+        details: exists ? {
+          agentVault: request.agentVault,
+          valueUBA: request.valueUBA,
+          feeUBA: request.feeUBA,
+          firstUnderlyingBlock: request.firstUnderlyingBlock,
+          lastUnderlyingBlock: request.lastUnderlyingBlock,
+          lastUnderlyingTimestamp: request.lastUnderlyingTimestamp,
+          paymentAddress: request.paymentAddress,
+          rawResponse: request
+        } : undefined
+      };
+    } catch (error: any) {
+      console.error(`❌ Error querying redemption request:`, error.message);
+      return {
+        exists: false
+      };
+    }
+  }
+
+  /**
    * Get agent's underlying XRPL address from agent vault address
    * This is the address that will actually send the XRP payment
    */
