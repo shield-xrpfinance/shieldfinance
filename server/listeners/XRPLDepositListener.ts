@@ -547,7 +547,7 @@ export class XRPLDepositListener {
 
       // Current time in seconds (XRPL uses Ripple Epoch: seconds since 2000-01-01)
       const currentTime = Math.floor(Date.now() / 1000) - 946684800; // Ripple epoch offset
-      const fifteenMinutesAgo = currentTime - (15 * 60); // 15 minutes in seconds
+      const twentyFourHoursAgo = currentTime - (24 * 60 * 60); // 24 hours in seconds (matches REDEMPTION_AWAITING_PROOF_TTL_MS)
 
       let processedCount = 0;
 
@@ -574,9 +574,9 @@ export class XRPLDepositListener {
           continue;
         }
 
-        // Check if transaction is within the last 15 minutes
+        // Check if transaction is within the last 24 hours (matches redemption TTL)
         const txTime = tx.date;
-        if (txTime && txTime < fifteenMinutesAgo) {
+        if (txTime && txTime < twentyFourHoursAgo) {
           console.log(`⏭️  Skipping old transaction from ${new Date((txTime + 946684800) * 1000).toISOString()}`);
           continue;
         }

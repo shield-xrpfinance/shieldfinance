@@ -1798,6 +1798,81 @@ export async function registerRoutes(
     }
   });
 
+  // Manual retry for stuck redemptions
+  app.post("/api/withdrawals/:redemptionId/retry", async (req, res) => {
+    try {
+      const { redemptionId } = req.params;
+      
+      // Get redemption details
+      const redemption = await storage.getRedemptionById(redemptionId);
+      if (!redemption) {
+        return res.status(404).json({ error: "Redemption not found" });
+      }
+      
+      if (redemption.status !== "awaiting_proof") {
+        return res.status(400).json({ 
+          error: `Redemption is not in awaiting_proof status (current: ${redemption.status})` 
+        });
+      }
+      
+      // If xrplPayoutTxHash is already set, use it
+      if (redemption.xrplPayoutTxHash) {
+        console.log(`🔄 Using existing XRPL TX hash: ${redemption.xrplPayoutTxHash}`);
+        await bridgeService.processRedemptionConfirmation(redemptionId, redemption.xrplPayoutTxHash);
+        return res.json({ 
+          success: true, 
+          message: "Redemption retry triggered", 
+          txHash: redemption.xrplPayoutTxHash 
+        });
+      }
+      
+      // Otherwise, try to find the XRPL payment
+      // This would require XRPL client access - for now, return an error
+      return res.status(400).json({ 
+        error: "No XRPL payment TX hash found. Please provide the TX hash manually.",
+        redemption: {
+          id: redemption.id,
+          userAddress: redemption.walletAddress,
+          agentAddress: redemption.agentUnderlyingAddress,
+          expectedXrp: redemption.expectedXrpDrops,
+          status: redemption.status
+        }
+      });
+    } catch (error) {
+      console.error("Error retrying redemption:", error);
+      res.status(500).json({ error: "Failed to retry redemption" });
+    }
+  });
+
+  // Manual retry with TX hash
+  app.post("/api/withdrawals/:redemptionId/complete", async (req, res) => {
+    try {
+      const { redemptionId } = req.params;
+      const { txHash } = req.body;
+      
+      if (!txHash) {
+        return res.status(400).json({ error: "txHash is required" });
+      }
+      
+      const redemption = await storage.getRedemptionById(redemptionId);
+      if (!redemption) {
+        return res.status(404).json({ error: "Redemption not found" });
+      }
+      
+      console.log(`🔧 Manually completing redemption ${redemptionId} with TX ${txHash}`);
+      await bridgeService.processRedemptionConfirmation(redemptionId, txHash);
+      
+      res.json({ 
+        success: true, 
+        message: "Redemption completion triggered", 
+        txHash 
+      });
+    } catch (error) {
+      console.error("Error completing redemption:", error);
+      res.status(500).json({ error: "Failed to complete redemption" });
+    }
+  });
+
   // Get payment transaction result
   app.get("/api/wallet/xaman/payment/:uuid", async (req, res) => {
     try {
