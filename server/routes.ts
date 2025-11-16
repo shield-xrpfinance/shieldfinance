@@ -1765,6 +1765,75 @@ export async function registerRoutes(
     }
   });
 
+  // Debug: Direct contract query with known request ID (ADMIN ONLY)
+  // IMPORTANT: This must be BEFORE the generic /api/withdrawals/:id route
+  app.get("/api/withdrawals/:redemptionId/debug-direct", requireAdminAuth, async (req, res) => {
+    try {
+      const { redemptionId } = req.params;
+      const requestIdParam = req.query.requestId as string;
+      
+      if (!requestIdParam) {
+        return res.status(400).json({ error: "requestId query parameter required" });
+      }
+      
+      console.log(`\n🔍 DIRECT DEBUG: Checking FAssets request state`);
+      console.log(`   Redemption ID: ${redemptionId}`);
+      console.log(`   Request ID: ${requestIdParam}`);
+      
+      // Get contract state directly through FAssetsClient
+      const fassetsClient = (bridgeService as any).fassetsClient;
+      const requestId = BigInt(requestIdParam);
+      let requestState;
+      
+      try {
+        requestState = await fassetsClient.getRedemptionRequest(requestId);
+        console.log(`✅ Request state retrieved from contract`);
+        console.log(`📊 Raw state:`, requestState);
+        
+        // The state is an object with named properties, not an array
+        const stateInfo: any = {
+          exists: true,
+          agentVault: requestState.agentVault,
+          valueUBA: requestState.valueUBA.toString(),
+          feeUBA: requestState.feeUBA.toString(),
+          firstUnderlyingBlock: requestState.firstUnderlyingBlock.toString(),
+          lastUnderlyingBlock: requestState.lastUnderlyingBlock.toString(),
+          lastUnderlyingTimestamp: requestState.lastUnderlyingTimestamp.toString(),
+          paymentAddress: requestState.paymentAddress
+        };
+        
+        console.log(`📊 Parsed Contract State:`, JSON.stringify(stateInfo, null, 2));
+        
+        return res.json({
+          redemptionId,
+          requestId: requestIdParam,
+          contractState: stateInfo,
+          interpretation: {
+            valueXRP: ethers.formatUnits(stateInfo.valueUBA, 6),
+            feeXRP: ethers.formatUnits(stateInfo.feeUBA, 6),
+            netXRP: ethers.formatUnits(BigInt(stateInfo.valueUBA) - BigInt(stateInfo.feeUBA), 6),
+            paymentAddress: stateInfo.paymentAddress,
+            agentVault: stateInfo.agentVault
+          }
+        });
+      } catch (e: any) {
+        console.error(`❌ Failed to get request state:`, e.message);
+        return res.status(200).json({
+          redemptionId,
+          requestId: requestIdParam,
+          contractState: {
+            exists: false,
+            error: e.message,
+            suggestion: "Request may have been deleted/expired or ID is incorrect"
+          }
+        });
+      }
+    } catch (error: any) {
+      console.error("Error debugging redemption:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
+
   // Get redemption status by ID
   app.get("/api/withdrawals/:id", async (req, res) => {
     try {
