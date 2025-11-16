@@ -1832,6 +1832,70 @@ export async function registerRoutes(
         console.log(`✅ Using existing FDC proof from database`);
       }
       
+      // DIAGNOSTIC: Try static call first to get actual contract revert reason
+      console.log("\n🔍 TESTING: Attempting static call to check contract acceptance...");
+      const fassetsClient = (bridgeService as any).fassetsClient;
+      const assetManager = await fassetsClient.getAssetManager();
+      
+      // Encode proof for contract (inline from FAssetsClient.encodeProofForContract)
+      const encodedProof = {
+        merkleProof: proof.merkleProof,
+        data: {
+          attestationType: proof.data.attestationType,
+          sourceId: proof.data.sourceId,
+          votingRound: BigInt(proof.data.votingRound),
+          lowestUsedTimestamp: BigInt(proof.data.lowestUsedTimestamp),
+          requestBody: {
+            transactionId: proof.data.requestBody.transactionId,
+            inUtxo: BigInt(proof.data.requestBody.inUtxo),
+            utxo: BigInt(proof.data.requestBody.utxo)
+          },
+          responseBody: {
+            blockNumber: BigInt(proof.data.responseBody.blockNumber),
+            blockTimestamp: BigInt(proof.data.responseBody.blockTimestamp),
+            sourceAddressHash: proof.data.responseBody.sourceAddressHash,
+            sourceAddressesRoot: proof.data.responseBody.sourceAddressesRoot,
+            receivingAddressHash: proof.data.responseBody.receivingAddressHash,
+            intendedReceivingAddressHash: proof.data.responseBody.intendedReceivingAddressHash,
+            spentAmount: BigInt(proof.data.responseBody.spentAmount),
+            intendedSpentAmount: BigInt(proof.data.responseBody.intendedSpentAmount),
+            receivedAmount: BigInt(proof.data.responseBody.receivedAmount),
+            intendedReceivedAmount: BigInt(proof.data.responseBody.intendedReceivedAmount),
+            standardPaymentReference: proof.data.responseBody.standardPaymentReference,
+            oneToOne: proof.data.responseBody.oneToOne,
+            status: BigInt(proof.data.responseBody.status)
+          }
+        }
+      };
+      
+      try {
+        const staticResult = await assetManager.confirmRedemptionPayment.staticCall(
+          encodedProof,
+          BigInt(redemption.redemptionRequestId)
+        );
+        console.log("✅ Static call SUCCEEDED - contract accepts this proof");
+        console.log(`   Result:`, staticResult);
+      } catch (staticError: any) {
+        console.error("❌ Static call FAILED - contract rejects this proof:");
+        console.error(`   Error: ${staticError.message}`);
+        console.error(`   Revert data:`, staticError.data);
+        
+        // Try to decode revert reason if possible
+        if (staticError.data) {
+          try {
+            const decoded = ethers.AbiCoder.defaultAbiCoder().decode(
+              ["string"],
+              ethers.dataSlice(staticError.data, 4)
+            );
+            console.error(`   Decoded revert reason: ${decoded[0]}`);
+          } catch (decodeError) {
+            console.error(`   Could not decode revert reason`);
+          }
+        }
+        
+        throw new Error(`Contract rejects proof: ${staticError.message}`);
+      }
+      
       // Attempt to confirm payment on contract
       const confirmTxHash = await bridgeService.confirmRedemptionPayment(
         proof,
