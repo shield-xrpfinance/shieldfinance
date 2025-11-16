@@ -433,9 +433,55 @@ export class FAssetsClient {
     // Get agent info from AssetManager
     const agentInfo = await assetManager.getAgentInfo(agentVaultAddress);
     
-    console.log(`✅ Agent underlying address: ${agentInfo.underlyingAddress}`);
+    // Log full agentInfo object to debug property names
+    console.log(`\n📋 Full agentInfo structure:`, {
+      keys: Object.keys(agentInfo),
+      fullObject: JSON.stringify(agentInfo, (key, value) => 
+        typeof value === 'bigint' ? value.toString() : value
+      , 2)
+    });
     
-    return agentInfo.underlyingAddress;
+    // Try multiple possible property names for the underlying address
+    // Different versions of FAssets SDK might use different property names
+    let underlyingAddress: string | undefined;
+    
+    // Try common property names in order of likelihood
+    if (agentInfo.underlyingAddress) {
+      underlyingAddress = agentInfo.underlyingAddress;
+      console.log(`✅ Found underlyingAddress via property: underlyingAddress`);
+    } else if (agentInfo.underlyingAddressString) {
+      underlyingAddress = agentInfo.underlyingAddressString;
+      console.log(`✅ Found underlyingAddress via property: underlyingAddressString`);
+    } else if (agentInfo.paymentAddress) {
+      underlyingAddress = agentInfo.paymentAddress;
+      console.log(`✅ Found underlyingAddress via property: paymentAddress`);
+    } else if (agentInfo.xrpAddress) {
+      underlyingAddress = agentInfo.xrpAddress;
+      console.log(`✅ Found underlyingAddress via property: xrpAddress`);
+    } else {
+      // Try to find any property that looks like an XRPL address
+      for (const [key, value] of Object.entries(agentInfo)) {
+        if (typeof value === 'string' && value.startsWith('r') && value.length >= 25 && value.length <= 35) {
+          underlyingAddress = value;
+          console.log(`⚠️  Found potential XRPL address via property: ${key}`);
+          break;
+        }
+      }
+    }
+    
+    if (!underlyingAddress) {
+      console.error(`❌ Could not find underlying address in agentInfo`);
+      console.error(`   Available properties:`, Object.keys(agentInfo));
+      console.error(`   Agent vault: ${agentVaultAddress}`);
+      throw new Error(
+        `Could not extract underlying XRPL address from agent info. ` +
+        `Available properties: ${Object.keys(agentInfo).join(', ')}. ` +
+        `Please check FAssets SDK version and update property name.`
+      );
+    }
+    
+    console.log(`✅ Agent underlying address: ${underlyingAddress}`);
+    return underlyingAddress;
   }
 
   async confirmRedemptionPayment(

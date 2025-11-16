@@ -1647,16 +1647,25 @@ export class BridgeService {
    * Triggers Phase 3 background worker in non-blocking mode
    */
   async handleRedemptionPayment(payment: RedemptionPayment): Promise<void> {
-    console.log(`\n💰 Redemption payment detected!`);
-    console.log(`   Redemption ID: ${payment.redemptionId}`);
-    console.log(`   User: ${payment.userAddress}`);
-    console.log(`   Agent: ${payment.agentAddress}`);
-    console.log(`   Amount: ${payment.amount} XRP`);
-    console.log(`   TX Hash: ${payment.txHash}`);
+    console.log(`\n💰 ================================`);
+    console.log(`💰 Redemption Payment Handler`);
+    console.log(`💰 ================================`);
+    console.log(`   📋 Redemption ID: ${payment.redemptionId}`);
+    console.log(`   👤 User: ${payment.userAddress}`);
+    console.log(`   🏢 Agent: ${payment.agentAddress}`);
+    console.log(`   💵 Amount: ${payment.amount} XRP`);
+    console.log(`   🔗 TX Hash: ${payment.txHash}`);
+    console.log(`   📝 Memo: ${payment.memo || '(none)'}`);
+    console.log(`\n   🔄 Starting Phase 3: Redemption Completion (background)`);
     
     // Trigger Phase 3 in background (don't await)
     this.processRedemptionConfirmation(payment.redemptionId, payment.txHash).catch(error => {
-      console.error(`Phase 3 failed for redemption ${payment.redemptionId}:`, error);
+      console.error(`\n❌ ================================`);
+      console.error(`❌ Phase 3 Failed!`);
+      console.error(`❌ ================================`);
+      console.error(`   Redemption ID: ${payment.redemptionId}`);
+      console.error(`   Error:`, error);
+      console.error(`   Stack:`, error instanceof Error ? error.stack : 'N/A');
     });
   }
 
@@ -1674,45 +1683,77 @@ export class BridgeService {
     xrplTxHash: string
   ): Promise<void> {
     try {
-      console.log(`\n🔄 Starting redemption confirmation (Phase 3)`);
-      console.log(`   Redemption ID: ${redemptionId}`);
-      console.log(`   XRPL TX Hash: ${xrplTxHash}`);
+      console.log(`\n🔄 ================================`);
+      console.log(`🔄 Phase 3: Redemption Confirmation`);
+      console.log(`🔄 ================================`);
+      console.log(`   📋 Redemption ID: ${redemptionId}`);
+      console.log(`   🔗 XRPL TX Hash: ${xrplTxHash}`);
       
       const redemption = await this.config.storage.getRedemptionById(redemptionId);
-      if (!redemption) throw new Error("Redemption not found");
+      if (!redemption) {
+        throw new Error(`Redemption ${redemptionId} not found in database`);
+      }
+      
+      console.log(`\n   📊 Redemption Details:`);
+      console.log(`      Wallet: ${redemption.walletAddress}`);
+      console.log(`      Vault: ${redemption.vaultId}`);
+      console.log(`      Position: ${redemption.positionId}`);
+      console.log(`      Share Amount: ${redemption.shareAmount}`);
+      console.log(`      FXRP Redeemed: ${redemption.fxrpRedeemed}`);
+      console.log(`      XRP Sent: ${redemption.xrpSent}`);
+      console.log(`      Current Status: ${redemption.status}`);
       
       // Update status to xrpl_payout
+      console.log(`\n   📝 Updating status to "xrpl_payout"...`);
       await this.config.storage.updateRedemptionStatus(redemptionId, "xrpl_payout", {
         xrplPayoutTxHash: xrplTxHash,
         xrplPayoutAt: new Date(),
       });
+      console.log(`   ✅ Status updated to "xrpl_payout"`);
       
       // Step 1: Generate FDC proof of agent→user payment
-      console.log("⏳ Step 1: Generating FDC proof...");
+      console.log(`\n   ⏳ Step 1/5: Generating FDC proof...`);
+      console.log(`      TX Hash: ${xrplTxHash}`);
       const fdcResult = await this.generateFDCProofForRedemption(
         xrplTxHash,
         redemptionId
       );
+      console.log(`   ✅ Step 1/5: FDC proof generated successfully`);
+      console.log(`      Voting Round: ${fdcResult.votingRoundId}`);
+      console.log(`      Attestation TX: ${fdcResult.attestationTxHash}`);
       
       // Step 2: Confirm redemption payment on FAssets contract
-      console.log("⏳ Step 2: Confirming redemption payment...");
+      console.log(`\n   ⏳ Step 2/5: Confirming redemption payment on FAssets contract...`);
+      console.log(`      Request ID: ${redemption.redemptionRequestId}`);
       const confirmationTxHash = await this.confirmRedemptionPayment(
         fdcResult.proof,
         BigInt(redemption.redemptionRequestId!)
       );
+      console.log(`   ✅ Step 2/5: Redemption payment confirmed on-chain`);
+      console.log(`      Confirmation TX: ${confirmationTxHash}`);
       
       // Step 3: Update position balance (deduct shXRP)
-      console.log("⏳ Step 3: Updating position balance...");
+      console.log(`\n   ⏳ Step 3/5: Updating position balance...`);
       const position = await this.config.storage.getPosition(redemption.positionId);
-      if (!position) throw new Error("Position not found");
+      if (!position) {
+        throw new Error(`Position ${redemption.positionId} not found`);
+      }
       
-      const newBalance = parseFloat(position.amount) - parseFloat(redemption.shareAmount);
+      const oldBalance = parseFloat(position.amount);
+      const withdrawAmount = parseFloat(redemption.shareAmount);
+      const newBalance = oldBalance - withdrawAmount;
+      
+      console.log(`      Old Balance: ${oldBalance.toFixed(6)} shXRP`);
+      console.log(`      Withdraw: ${withdrawAmount.toFixed(6)} shXRP`);
+      console.log(`      New Balance: ${newBalance.toFixed(6)} shXRP`);
+      
       await this.config.storage.updatePosition(redemption.positionId, {
         amount: newBalance.toFixed(6)
       });
+      console.log(`   ✅ Step 3/5: Position balance updated`);
       
       // Step 4: Create withdrawal transaction record
-      console.log("⏳ Step 4: Creating transaction record...");
+      console.log(`\n   ⏳ Step 4/5: Creating transaction record...`);
       await this.config.storage.createTransaction({
         vaultId: redemption.vaultId,
         positionId: redemption.positionId,
@@ -1723,8 +1764,10 @@ export class BridgeService {
         txHash: xrplTxHash,
         network: this.config.network === "mainnet" ? "mainnet" : "testnet",
       });
+      console.log(`   ✅ Step 4/5: Transaction record created`);
       
       // Step 5: Mark redemption as completed
+      console.log(`\n   ⏳ Step 5/5: Marking redemption as completed...`);
       await this.config.storage.updateRedemptionStatus(redemptionId, "completed", {
         fdcAttestationTxHash: fdcResult.attestationTxHash,
         fdcVotingRoundId: fdcResult.votingRoundId.toString(),
@@ -1732,15 +1775,23 @@ export class BridgeService {
         confirmationTxHash: confirmationTxHash,
         completedAt: new Date(),
       });
+      console.log(`   ✅ Step 5/5: Redemption marked as completed`);
       
       // Unsubscribe user address from listener (cleanup)
       if (this.xrplListener) {
+        console.log(`\n   🔕 Unsubscribing user address from XRPL listener...`);
         await this.xrplListener.unsubscribeUserAddress(redemption.walletAddress);
+        console.log(`   ✅ User address unsubscribed`);
       }
       
-      console.log(`✅ Redemption ${redemptionId} completed successfully`);
-      console.log(`   XRP sent to: ${redemption.walletAddress}`);
-      console.log(`   Amount: ${redemption.fxrpRedeemed} FXRP → ${redemption.xrpSent} XRP`);
+      console.log(`\n✅ ================================`);
+      console.log(`✅ Redemption Completed Successfully!`);
+      console.log(`✅ ================================`);
+      console.log(`   📋 Redemption ID: ${redemptionId}`);
+      console.log(`   👤 User: ${redemption.walletAddress}`);
+      console.log(`   💰 Amount: ${redemption.fxrpRedeemed} FXRP → ${redemption.xrpSent} XRP`);
+      console.log(`   🔗 XRPL TX: ${xrplTxHash}`);
+      console.log(`   🔗 Confirmation TX: ${confirmationTxHash}`);
       
     } catch (error) {
       // Handle FDC timeout separately

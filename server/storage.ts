@@ -539,15 +539,36 @@ export class DatabaseStorage implements IStorage {
     // Calculate expiry cutoff (24h ago)
     const cutoffDate = new Date(Date.now() - REDEMPTION_AWAITING_PROOF_TTL_MS);
     
+    // Build conditional where clause
+    // If agentAddress is available, use it for matching (more precise)
+    // If not available (null/undefined), match on user address and amount only (fallback)
+    const whereConditions = [
+      eq(fxrpToXrpRedemptions.status, "awaiting_proof"),
+      eq(fxrpToXrpRedemptions.walletAddress, userAddress),
+      gt(fxrpToXrpRedemptions.createdAt, cutoffDate)
+    ];
+    
+    // Only filter by agent address if it's known (not null/undefined)
+    if (agentAddress) {
+      whereConditions.push(eq(fxrpToXrpRedemptions.agentUnderlyingAddress, agentAddress));
+      console.log(`🔍 Matching redemption WITH agent filter:`, {
+        userAddress,
+        agentAddress,
+        amountDrops,
+        cutoffDate: cutoffDate.toISOString()
+      });
+    } else {
+      console.warn(`⚠️  Matching redemption WITHOUT agent filter (agent address unknown):`, {
+        userAddress,
+        amountDrops,
+        cutoffDate: cutoffDate.toISOString()
+      });
+    }
+    
     // Find redemptions awaiting proof that match the payment details
     // Only consider redemptions created within the last 24 hours to avoid matching expired requests
     const redemptions = await db.query.fxrpToXrpRedemptions.findMany({
-      where: and(
-        eq(fxrpToXrpRedemptions.status, "awaiting_proof"),
-        eq(fxrpToXrpRedemptions.walletAddress, userAddress),
-        eq(fxrpToXrpRedemptions.agentUnderlyingAddress, agentAddress),
-        gt(fxrpToXrpRedemptions.createdAt, cutoffDate)
-      ),
+      where: and(...whereConditions),
       orderBy: desc(fxrpToXrpRedemptions.createdAt),
     });
 
@@ -582,10 +603,23 @@ export class DatabaseStorage implements IStorage {
 
     console.log(`❌ No matching redemption found for payment:`);
     console.log(`   User: ${userAddress}`);
-    console.log(`   Agent: ${agentAddress}`);
+    console.log(`   Agent: ${agentAddress || '(unknown - will match without agent filter)'}`);
     console.log(`   Amount: ${amountDrops} XRP (${amountUBA} UBA)`);
     console.log(`   Checked ${redemptions.length} awaiting_proof redemption(s) created after ${cutoffDate.toISOString()}`);
     console.log(`   Note: Redemptions older than ${REDEMPTION_AWAITING_PROOF_TTL_MS / (60 * 60 * 1000)}h are automatically excluded`);
+    
+    // Log details of each redemption checked to help debug
+    if (redemptions.length > 0) {
+      console.log(`\n📋 Redemptions checked for matching:`);
+      for (const r of redemptions) {
+        console.log(`   - ID: ${r.id}`);
+        console.log(`     Wallet: ${r.walletAddress}`);
+        console.log(`     Agent: ${r.agentUnderlyingAddress || '(unknown)'}`);
+        console.log(`     Expected XRP: ${r.expectedXrpDrops ? (parseFloat(r.expectedXrpDrops) / 1_000_000).toFixed(6) : 'N/A'} (${r.expectedXrpDrops || 'N/A'} UBA)`);
+        console.log(`     XRP Sent: ${r.xrpSent || 'N/A'} XRP`);
+        console.log(`     Created: ${r.createdAt.toISOString()}`);
+      }
+    }
 
     return null;
   }

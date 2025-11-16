@@ -391,19 +391,31 @@ export class XRPLDepositListener {
           memo: memo,
         };
 
-        console.log(`💸 XRP Redemption payment detected (agent → user):`, payment);
+        console.log(`\n💸 ================================`);
+        console.log(`💸 XRP Redemption Payment Detected!`);
+        console.log(`💸 ================================`);
+        console.log(`   ✅ Matched redemption: ${matchingRedemption.id}`);
+        console.log(`   📍 User address: ${destination}`);
+        console.log(`   📍 Agent address: ${source}`);
+        console.log(`   💰 Amount: ${amountDrops} XRP`);
+        console.log(`   🔗 TX Hash: ${txHash}`);
+        console.log(`   📝 Memo: ${memo || '(none)'}`);
+        console.log(`   🔄 Triggering redemption completion flow...`);
 
         try {
           await this.config.onRedemptionPayment(payment);
+          console.log(`   ✅ Redemption payment handler completed successfully`);
         } catch (error) {
-          console.error("❌ Error handling redemption payment:", error);
+          console.error(`   ❌ Error handling redemption payment:`, error);
+          console.error(`   📊 Payment details:`, payment);
         }
       } else {
-        console.log(`ℹ️  Payment to monitored user but no matching redemption found`, {
-          destination,
-          source,
-          amount: amountDrops,
-        });
+        console.log(`\nℹ️  Payment to monitored user but no matching redemption found`);
+        console.log(`   Destination: ${destination}`);
+        console.log(`   Source: ${source}`);
+        console.log(`   Amount: ${amountDrops} XRP`);
+        console.log(`   TX Hash: ${txHash}`);
+        console.log(`   This might be a regular payment, not a redemption`);
       }
     } else {
       console.log("⚠️  No handler configured for this payment type:", {
