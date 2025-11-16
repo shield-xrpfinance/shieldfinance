@@ -1862,6 +1862,102 @@ export async function registerRoutes(
     }
   });
 
+  // Debug: Check on-chain redemption request status (ADMIN ONLY)
+  // IMPORTANT: This must be BEFORE the generic /api/withdrawals/:id route
+  app.get("/api/withdrawals/:redemptionId/check-contract-status", requireAdminAuth, async (req, res) => {
+    try {
+      const { redemptionId } = req.params;
+      
+      console.log(`\n🔍 CONTRACT STATUS CHECK for redemption ${redemptionId}`);
+      
+      // Get redemption from database
+      const redemption = await storage.getRedemptionById(redemptionId);
+      if (!redemption) {
+        return res.status(404).json({ error: "Redemption not found in database" });
+      }
+      
+      if (!redemption.redemptionRequestId) {
+        return res.status(400).json({ 
+          error: "No redemption request ID found in database",
+          redemption: {
+            status: redemption.status,
+            xrplPayoutTxHash: redemption.xrplPayoutTxHash
+          }
+        });
+      }
+      
+      const requestId = BigInt(redemption.redemptionRequestId);
+      
+      console.log(`📊 Database state:`, {
+        status: redemption.status,
+        redemptionRequestId: redemption.redemptionRequestId,
+        xrplPayoutTxHash: redemption.xrplPayoutTxHash,
+        hasFdcProof: redemption.fdcProofData ? "YES" : "NO"
+      });
+      
+      // Query contract state
+      const fassetsClient = (bridgeService as any).fassetsClient;
+      const contractStatus = await fassetsClient.getRedemptionRequestStatus(requestId);
+      
+      if (!contractStatus.exists) {
+        return res.json({
+          redemptionId,
+          requestId: requestId.toString(),
+          contractState: {
+            exists: false,
+            diagnosis: "Redemption request does not exist on-chain",
+            possibleReasons: [
+              "Request was already confirmed and removed from contract",
+              "Request expired and was cleaned up",
+              "Request ID is incorrect"
+            ]
+          },
+          databaseState: {
+            status: redemption.status,
+            xrplPayoutTxHash: redemption.xrplPayoutTxHash,
+            hasFdcProof: redemption.fdcProofData ? "YES" : "NO"
+          }
+        });
+      }
+      
+      // Request exists, return full details
+      const details = contractStatus.details!;
+      
+      return res.json({
+        redemptionId,
+        requestId: requestId.toString(),
+        contractState: {
+          exists: true,
+          agentVault: details.agentVault,
+          valueUBA: details.valueUBA.toString(),
+          feeUBA: details.feeUBA.toString(),
+          firstUnderlyingBlock: details.firstUnderlyingBlock.toString(),
+          lastUnderlyingBlock: details.lastUnderlyingBlock.toString(),
+          lastUnderlyingTimestamp: details.lastUnderlyingTimestamp.toString(),
+          paymentAddress: details.paymentAddress,
+          interpretation: {
+            valueXRP: ethers.formatUnits(details.valueUBA, 6),
+            feeXRP: ethers.formatUnits(details.feeUBA, 6),
+            totalExpectedXRP: ethers.formatUnits(details.valueUBA + details.feeUBA, 6)
+          }
+        },
+        databaseState: {
+          status: redemption.status,
+          xrplPayoutTxHash: redemption.xrplPayoutTxHash,
+          hasFdcProof: redemption.fdcProofData ? "YES" : "NO",
+          fdcAttestationTxHash: redemption.fdcAttestationTxHash
+        }
+      });
+      
+    } catch (error: any) {
+      console.error("Error checking contract status:", error);
+      return res.status(500).json({ 
+        error: error.message,
+        stack: error.stack 
+      });
+    }
+  });
+
   // Debug: Direct contract query with known request ID (ADMIN ONLY)
   // IMPORTANT: This must be BEFORE the generic /api/withdrawals/:id route
   app.get("/api/withdrawals/:redemptionId/debug-direct", requireAdminAuth, async (req, res) => {
