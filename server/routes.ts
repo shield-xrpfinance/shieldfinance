@@ -1862,6 +1862,56 @@ export async function registerRoutes(
     }
   });
 
+  // Debug: Fund smart account with CFLR (ADMIN ONLY)
+  app.post("/api/admin/fund-smart-account", requireAdminAuth, async (req, res) => {
+    try {
+      const { amount } = req.body;
+      const amountToSend = amount || "0.1";
+      
+      console.log(`\n💰 Funding smart account with ${amountToSend} CFLR...`);
+      
+      const flareClient = (bridgeService as any).config.flareClient;
+      const smartAccountAddress = flareClient.getSignerAddress();
+      
+      console.log(`   Smart Account: ${smartAccountAddress}`);
+      
+      const provider = flareClient.provider;
+      const operatorWallet = new ethers.Wallet(
+        process.env.OPERATOR_PRIVATE_KEY!,
+        provider
+      );
+      
+      console.log(`   Funding from: ${operatorWallet.address}`);
+      
+      const tx = await operatorWallet.sendTransaction({
+        to: smartAccountAddress,
+        value: ethers.parseEther(amountToSend)
+      });
+      
+      console.log(`   TX submitted: ${tx.hash}`);
+      await tx.wait();
+      
+      const balance = await provider.getBalance(smartAccountAddress);
+      console.log(`✅ Smart account funded!`);
+      console.log(`   New balance: ${ethers.formatEther(balance)} CFLR`);
+      
+      return res.json({
+        success: true,
+        txHash: tx.hash,
+        smartAccountAddress,
+        amount: amountToSend,
+        newBalance: ethers.formatEther(balance)
+      });
+      
+    } catch (error: any) {
+      console.error("Error funding smart account:", error);
+      return res.status(500).json({ 
+        error: error.message,
+        stack: error.stack 
+      });
+    }
+  });
+
   // Debug: Check XRPL transaction details for redemption (ADMIN ONLY)
   app.get("/api/withdrawals/:redemptionId/check-xrpl-tx", requireAdminAuth, async (req, res) => {
     try {

@@ -552,6 +552,54 @@ export class FAssetsClient {
     return underlyingAddress;
   }
 
+  /**
+   * Convert stored FDC proof JSON to ABI-compatible VerifiedAttestationStruct
+   * The contract expects a properly typed struct, not raw JSON
+   */
+  private encodeProofForContract(proof: any): any {
+    console.log(`\n🔄 Encoding FDC proof for contract...`);
+    
+    // The proof from database has structure: { merkleProof: [...], data: {...} }
+    // AssetManager expects the full attestation struct with typed fields
+    
+    const encoded = {
+      merkleProof: proof.merkleProof,
+      data: {
+        attestationType: proof.data.attestationType,
+        sourceId: proof.data.sourceId,
+        votingRound: BigInt(proof.data.votingRound),
+        lowestUsedTimestamp: BigInt(proof.data.lowestUsedTimestamp),
+        requestBody: {
+          transactionId: proof.data.requestBody.transactionId,
+          inUtxo: BigInt(proof.data.requestBody.inUtxo),
+          utxo: BigInt(proof.data.requestBody.utxo)
+        },
+        responseBody: {
+          blockNumber: BigInt(proof.data.responseBody.blockNumber),
+          blockTimestamp: BigInt(proof.data.responseBody.blockTimestamp),
+          sourceAddressHash: proof.data.responseBody.sourceAddressHash,
+          sourceAddressesRoot: proof.data.responseBody.sourceAddressesRoot,
+          receivingAddressHash: proof.data.responseBody.receivingAddressHash,
+          intendedReceivingAddressHash: proof.data.responseBody.intendedReceivingAddressHash,
+          spentAmount: BigInt(proof.data.responseBody.spentAmount),
+          intendedSpentAmount: BigInt(proof.data.responseBody.intendedSpentAmount),
+          receivedAmount: BigInt(proof.data.responseBody.receivedAmount),
+          intendedReceivedAmount: BigInt(proof.data.responseBody.intendedReceivedAmount),
+          standardPaymentReference: proof.data.responseBody.standardPaymentReference,
+          oneToOne: proof.data.responseBody.oneToOne,
+          status: BigInt(proof.data.responseBody.status)
+        }
+      }
+    };
+    
+    console.log(`✅ Proof encoded for contract`);
+    console.log(`   Merkle proof length: ${encoded.merkleProof.length}`);
+    console.log(`   Voting round: ${encoded.data.votingRound}`);
+    console.log(`   Received amount: ${encoded.data.responseBody.receivedAmount}`);
+    
+    return encoded;
+  }
+
   async confirmRedemptionPayment(
     proof: any,
     requestId: bigint
@@ -561,7 +609,10 @@ export class FAssetsClient {
     console.log(`\n✅ Confirming redemption payment:`);
     console.log(`   Request ID: ${requestId}`);
     
-    const tx = await assetManager.confirmRedemptionPayment(proof, requestId);
+    // Encode proof to proper struct format
+    const encodedProof = this.encodeProofForContract(proof);
+    
+    const tx = await assetManager.confirmRedemptionPayment(encodedProof, requestId);
     const receipt = await tx.wait();
     
     console.log(`✅ Redemption payment confirmed: ${receipt.hash}`);
