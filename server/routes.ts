@@ -1890,6 +1890,112 @@ export async function registerRoutes(
     }
   });
 
+  // Debug: Check redemption request state on AssetManager contract (ADMIN ONLY)
+  app.get("/api/withdrawals/:redemptionId/debug", requireAdminAuth, async (req, res) => {
+    try {
+      const { redemptionId } = req.params;
+      
+      const redemption = await storage.getRedemptionById(redemptionId);
+      if (!redemption) {
+        return res.status(404).json({ error: "Redemption not found" });
+      }
+      
+      if (!redemption.redemptionRequestId) {
+        return res.status(400).json({ 
+          error: "No FAssets redemption request ID found",
+          redemption: {
+            id: redemption.id,
+            status: redemption.status
+          }
+        });
+      }
+      
+      console.log(`\n🔍 DEBUG: Checking FAssets request state`);
+      console.log(`   Redemption ID: ${redemptionId}`);
+      console.log(`   Request ID: ${redemption.redemptionRequestId}`);
+      
+      // Get contract state through BridgeService's FAssets client
+      const fassetsClient = (bridgeService as any).fassetsClient;
+      const assetManager = await (fassetsClient as any).getAssetManager();
+      
+      // Query redemption request state
+      const requestId = BigInt(redemption.redemptionRequestId);
+      let requestState;
+      
+      try {
+        // Try to get the request - this might fail if it doesn't exist
+        requestState = await assetManager.getRedemptionRequest(requestId);
+        console.log(`✅ Request state retrieved from contract`);
+      } catch (e: any) {
+        console.error(`❌ Failed to get request state:`, e.message);
+        return res.status(200).json({
+          redemption: {
+            id: redemption.id,
+            status: redemption.status,
+            requestId: redemption.redemptionRequestId
+          },
+          contractState: {
+            exists: false,
+            error: e.message,
+            suggestion: "Request may have been deleted/expired or ID is incorrect"
+          }
+        });
+      }
+      
+      // Parse the request state
+      const stateInfo: any = {
+        exists: true,
+        raw: {}
+      };
+      
+      // Extract fields from the tuple (structure varies by contract version)
+      if (requestState) {
+        // Common fields in FAssets redemption requests
+        try {
+          stateInfo.raw = {
+            redeemer: requestState[0]?.toString?.() || requestState.redeemer?.toString?.(),
+            valueUBA: requestState[1]?.toString?.() || requestState.valueUBA?.toString?.(),
+            feeUBA: requestState[2]?.toString?.() || requestState.feeUBA?.toString?.(),
+            firstUnderlyingBlock: requestState[3]?.toString?.() || requestState.firstUnderlyingBlock?.toString?.(),
+            lastUnderlyingBlock: requestState[4]?.toString?.() || requestState.lastUnderlyingBlock?.toString?.(),
+            lastUnderlyingTimestamp: requestState[5]?.toString?.() || requestState.lastUnderlyingTimestamp?.toString?.(),
+            paymentAddress: requestState[6]?.toString?.() || requestState.paymentAddress?.toString?.(),
+            executor: requestState[7]?.toString?.() || requestState.executor?.toString?.(),
+          };
+          
+          // Check if request has expired
+          const currentBlock = await assetManager.provider.getBlockNumber();
+          const lastBlock = BigInt(stateInfo.raw.lastUnderlyingBlock || "0");
+          
+          stateInfo.status = lastBlock > 0 && BigInt(currentBlock) > lastBlock ? "expired" : "active";
+          stateInfo.expiresAtBlock = stateInfo.raw.lastUnderlyingBlock;
+          stateInfo.currentBlock = currentBlock.toString();
+          
+        } catch (parseError: any) {
+          console.warn(`⚠️  Could not parse all request fields:`, parseError.message);
+          stateInfo.parseError = parseError.message;
+        }
+      }
+      
+      res.json({
+        redemption: {
+          id: redemption.id,
+          status: redemption.status,
+          requestId: redemption.redemptionRequestId,
+          xrplTxHash: redemption.xrplPayoutTxHash
+        },
+        contractState: stateInfo
+      });
+      
+    } catch (error: any) {
+      console.error("Error debugging redemption:", error);
+      res.status(500).json({ 
+        error: "Failed to debug redemption",
+        message: error.message 
+      });
+    }
+  });
+
   // Manual retry with TX hash (ADMIN ONLY)
   app.post("/api/withdrawals/:redemptionId/complete", requireAdminAuth, async (req, res) => {
     try {
