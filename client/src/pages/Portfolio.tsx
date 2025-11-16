@@ -267,9 +267,38 @@ export default function Portfolio() {
     const abortController = new AbortController();
     withdrawPollingAbortControllerRef.current = abortController;
     let timeoutId: NodeJS.Timeout | null = null;
+    
+    // Track polling attempts and timeout (5 minutes = 300 seconds, polling every 2s = 150 attempts)
+    const POLL_INTERVAL_MS = 2000;
+    const MAX_POLL_TIME_MS = 5 * 60 * 1000; // 5 minutes
+    const MAX_POLL_ATTEMPTS = MAX_POLL_TIME_MS / POLL_INTERVAL_MS;
+    let pollAttempts = 0;
+    const pollingStartTime = Date.now();
 
     const pollStatus = async () => {
       try {
+        pollAttempts++;
+        const elapsedMs = Date.now() - pollingStartTime;
+        
+        // Check if timeout exceeded
+        if (pollAttempts > MAX_POLL_ATTEMPTS || elapsedMs > MAX_POLL_TIME_MS) {
+          console.warn(`Withdrawal polling timeout after ${pollAttempts} attempts (${Math.round(elapsedMs / 1000)}s)`);
+          
+          setWithdrawProgressStep('error');
+          setWithdrawErrorMessage(
+            `Withdrawal is taking longer than expected. Your withdrawal request (ID: ${withdrawRedemptionId}) is still processing in the background. ` +
+            `You can check the status on the Bridge Tracking page or verify the XRPL transaction in your wallet.`
+          );
+          
+          toast({
+            title: "Withdrawal Status Timeout",
+            description: "The withdrawal is taking longer than expected but may still complete. Check Bridge Tracking for updates.",
+            variant: "destructive",
+          });
+          
+          return; // Stop polling
+        }
+        
         const response = await fetch(`/api/withdrawals/${withdrawRedemptionId}/status`, {
           signal: abortController.signal,
         });
@@ -316,7 +345,7 @@ export default function Portfolio() {
         }
 
         // Continue polling every 2 seconds
-        timeoutId = setTimeout(pollStatus, 2000);
+        timeoutId = setTimeout(pollStatus, POLL_INTERVAL_MS);
       } catch (error) {
         if (error instanceof Error && error.name === 'AbortError') {
           // Polling was aborted, this is expected
