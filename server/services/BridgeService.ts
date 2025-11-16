@@ -1753,18 +1753,24 @@ export class BridgeService {
       console.log(`   ✅ Step 3/5: Position balance updated`);
       
       // Step 4: Create withdrawal transaction record
-      console.log(`\n   ⏳ Step 4/5: Creating transaction record...`);
-      await this.config.storage.createTransaction({
-        vaultId: redemption.vaultId,
-        positionId: redemption.positionId,
-        type: "withdrawal",
-        amount: redemption.fxrpRedeemed || "0",
-        rewards: "0",
-        status: "completed",
-        txHash: xrplTxHash,
-        network: this.config.network === "mainnet" ? "mainnet" : "testnet",
-      });
-      console.log(`   ✅ Step 4/5: Transaction record created`);
+      // Check if transaction already exists (idempotency)
+      const existingTx = await this.config.storage.getTransactionByTxHash(xrplTxHash);
+      if (existingTx) {
+        console.log(`   ⏭️  Step 4/5: Transaction record already exists, skipping creation`);
+      } else {
+        console.log(`   ⏳ Step 4/5: Creating transaction record...`);
+        await this.config.storage.createTransaction({
+          vaultId: redemption.vaultId,
+          positionId: redemption.positionId,
+          type: "withdrawal",
+          amount: redemption.xrpSent ?? redemption.fxrpRedeemed ?? redemption.shareAmount,
+          rewards: "0",
+          status: "completed",
+          txHash: xrplTxHash,
+          network: this.config.network === "mainnet" ? "mainnet" : "testnet",
+        });
+        console.log(`   ✅ Step 4/5: Transaction record created`);
+      }
       
       // Step 5: Mark redemption as completed
       console.log(`\n   ⏳ Step 5/5: Marking redemption as completed...`);

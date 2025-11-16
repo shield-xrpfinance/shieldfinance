@@ -19,6 +19,7 @@ export interface IStorage {
   deletePosition(id: string): Promise<boolean>;
   
   getTransactions(limit?: number): Promise<Transaction[]>;
+  getTransactionByTxHash(txHash: string): Promise<Transaction | undefined>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   getTransactionSummary(): Promise<{ totalDeposits: string; totalWithdrawals: string; totalRewards: string; depositCount: number; withdrawalCount: number; claimCount: number }>;
   
@@ -201,6 +202,13 @@ export class DatabaseStorage implements IStorage {
       .from(transactions)
       .orderBy(desc(transactions.createdAt))
       .limit(limit);
+  }
+
+  async getTransactionByTxHash(txHash: string): Promise<Transaction | undefined> {
+    const [transaction] = await db.select()
+      .from(transactions)
+      .where(eq(transactions.txHash, txHash));
+    return transaction || undefined;
   }
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
