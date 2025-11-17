@@ -264,6 +264,9 @@ export default function Vaults() {
     cancelledEscrowCount: vaultEscrowStats[vault.id]?.cancelledCount || 0,
     failedEscrowCount: vaultEscrowStats[vault.id]?.failedCount || 0,
     totalEscrowAmount: vaultEscrowStats[vault.id]?.totalAmount.toString() || "0",
+    depositLimit: (vault as any).depositLimit || null,
+    depositLimitRaw: (vault as any).depositLimitRaw || null,
+    paused: typeof (vault as any).paused === 'boolean' ? (vault as any).paused : null,
   })) || [];
 
 
@@ -284,16 +287,22 @@ export default function Vaults() {
 
   const handleDeposit = (vaultId: string) => {
     const vault = allVaults.find((v) => v.id === vaultId);
-    if (vault) {
-      setSelectedVault({ 
-        id: vault.id, 
-        name: vault.name, 
-        apy: vault.apy,
-        apyLabel: vault.apyLabel,
-        depositAssets: vault.depositAssets || ["XRP"],
-      });
-      setDepositModalOpen(true);
+    if (!vault) return;
+    
+    // Block deposit flow if vault is paused
+    if (vault.paused === true) {
+      console.warn(`⏸️  Deposit blocked: Vault ${vault.name} is currently paused`);
+      return;
     }
+    
+    setSelectedVault({ 
+      id: vault.id, 
+      name: vault.name, 
+      apy: vault.apy,
+      apyLabel: vault.apyLabel,
+      depositAssets: vault.depositAssets || ["XRP"],
+    });
+    setDepositModalOpen(true);
   };
 
   const depositMutation = useMutation({

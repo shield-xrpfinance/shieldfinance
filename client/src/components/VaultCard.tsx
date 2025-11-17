@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Shield, ShieldAlert, ShieldCheck, Clock, Users, Lock, Info, TrendingUp } from "lucide-react";
+import { Shield, ShieldAlert, ShieldCheck, Clock, Users, Lock, Info, TrendingUp, AlertTriangle, DollarSign } from "lucide-react";
 import { MultiAssetIcon } from "@/components/AssetIcon";
 import { useNetwork } from "@/lib/networkContext";
 import { getVaultYieldProjection } from "@/lib/demoYield";
@@ -83,6 +83,19 @@ export default function VaultCard({
             </h3>
           </div>
           <div className="flex items-center gap-2">
+            {paused === true && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive" data-testid={`badge-paused-${id}`}>
+                    <AlertTriangle className="h-3 w-3 mr-1" />
+                    Paused
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>This vault is currently paused by administrators. Deposits and withdrawals are temporarily disabled.</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             {isTestnet && (
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -190,6 +203,33 @@ export default function VaultCard({
             </div>
             <p className="text-base font-semibold font-mono tabular-nums" data-testid={`text-liquidity-${id}`}>{liquidity}</p>
           </div>
+          {depositLimit && (
+            <div>
+              <div className="flex items-center gap-1 mb-1">
+                <p className="text-xs text-muted-foreground">Deposit Limit</p>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Info className="h-3 w-3 text-muted-foreground cursor-help" data-testid={`icon-deposit-limit-info-${id}`} />
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>Maximum total deposits allowed in this vault. This limit helps manage risk and ensure vault stability.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <div className="flex items-center gap-1">
+                <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
+                <p className="text-base font-semibold font-mono tabular-nums" data-testid={`text-deposit-limit-${id}`}>
+                  {(() => {
+                    const num = parseFloat(depositLimit);
+                    if (isNaN(num) || !isFinite(num)) {
+                      return depositLimitRaw ? `${depositLimitRaw} (raw)` : "N/A";
+                    }
+                    return `${num.toLocaleString()} FXRP`;
+                  })()}
+                </p>
+              </div>
+            </div>
+          )}
           <div>
             <p className="text-xs text-muted-foreground mb-1">Lock Period</p>
             <div className="flex items-center gap-1">
@@ -247,11 +287,14 @@ export default function VaultCard({
         <Button
           className="w-full"
           onClick={() => onDeposit(id)}
+          disabled={paused === true}
           data-testid={`button-deposit-${id}`}
         >
-          {depositAssets.length > 1 
-            ? `Deposit ${depositAssets.join(" + ")}` 
-            : `Deposit ${depositAssets[0]}`}
+          {paused === true 
+            ? "Deposits Paused" 
+            : depositAssets.length > 1 
+              ? `Deposit ${depositAssets.join(" + ")}` 
+              : `Deposit ${depositAssets[0]}`}
         </Button>
         <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
           <Users className="h-3.5 w-3.5" />
