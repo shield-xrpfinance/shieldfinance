@@ -31,9 +31,28 @@ export const redemptionStatusEnum = pgEnum("redemption_status", [
   "redeeming_fxrp",       // FAssets redemption in progress
   "awaiting_proof",       // Waiting for FDC attestation proof
   "xrpl_payout",          // Sending XRP to depositor's wallet
+  "xrpl_received",        // USER SUCCESS: XRP received in wallet (terminal from user perspective)
   "completed",            // XRP successfully sent to depositor
   "awaiting_liquidity",   // Queued - not enough FXRP in vault
   "failed"                // Redemption failed
+]);
+
+// User-facing status for withdrawals (what users see in UI)
+export const userStatusEnum = pgEnum("user_status", [
+  "processing",           // Withdrawal in progress
+  "completed",            // User successfully received XRP
+  "failed"                // Withdrawal failed before XRP was sent
+]);
+
+// Backend reconciliation status (internal tracking)
+export const backendStatusEnum = pgEnum("backend_status", [
+  "not_started",          // Backend confirmation not yet needed
+  "confirming",           // Actively confirming redemption payment on-chain
+  "retry_pending",        // Waiting to retry confirmation
+  "retrying",             // Retrying confirmation after failure
+  "confirmed",            // Successfully confirmed on FAssets contract
+  "manual_review",        // Needs manual intervention
+  "abandoned"             // Gave up after max retries (user still has XRP)
 ]);
 
 export const vaults = pgTable("vaults", {
@@ -187,8 +206,13 @@ export const fxrpToXrpRedemptions = pgTable("fxrp_to_xrp_redemptions", {
   fxrpRedeemed: decimal("fxrp_redeemed", { precision: 18, scale: 6 }), // FXRP received from vault
   xrpSent: decimal("xrp_sent", { precision: 18, scale: 6 }), // XRP sent to depositor
   
-  // Status machine
+  // Status machine (legacy - kept for backward compatibility)
   status: redemptionStatusEnum("status").notNull().default("pending"),
+  
+  // Dual-status model: separate user-facing vs backend reconciliation
+  userStatus: userStatusEnum("user_status").notNull().default("processing"),
+  backendStatus: backendStatusEnum("backend_status").notNull().default("not_started"),
+  backendError: text("backend_error"), // Backend reconciliation error details
   
   // Transaction hashes
   vaultRedeemTxHash: text("vault_redeem_tx_hash"), // Flare TX: ERC-4626 redeem()

@@ -1334,7 +1334,8 @@ export class BridgeService {
       console.log(`   Expecting agent to send: ${ethers.formatUnits(netAmountUBA, 6)} XRP`);
       
       // Update redemption status with redemption details AND agent info
-      await this.config.storage.updateRedemptionStatus(redemptionId, "redeeming_fxrp", {
+      await this.config.storage.updateRedemption(redemptionId, {
+        status: "redeeming_fxrp",
         fassetsRedemptionTxHash: redemptionRequest.txHash,
         redemptionRequestId: redemptionRequest.requestId.toString(),
         agentVaultAddress: redemptionDetails.agentVault,
@@ -1361,7 +1362,11 @@ export class BridgeService {
       return redemptionRequest.txHash;
     } catch (error) {
       console.error("Error requesting FAssets redemption:", error);
-      await this.config.storage.updateRedemptionStatus(redemptionId, "failed", {
+      // This error occurs before user receives XRP, so userStatus can be marked failed
+      await this.config.storage.updateRedemption(redemptionId, {
+        status: "failed",
+        userStatus: "failed",
+        backendStatus: "not_started",
         errorMessage: error instanceof Error ? error.message : "Unknown error during redemption request",
       });
       throw error;
@@ -1399,7 +1404,11 @@ export class BridgeService {
 
     try {
       // Update status to indicate we're awaiting proof
-      await this.config.storage.updateRedemptionStatus(redemptionId, "awaiting_proof", {
+      // User has received XRP - freeze userStatus at completed
+      await this.config.storage.updateRedemption(redemptionId, {
+        status: "awaiting_proof",
+        userStatus: "completed", // User has XRP successfully
+        backendStatus: "confirming",
         xrplPayoutTxHash: xrplTxHash,
         xrplPayoutAt: new Date(),
       });
@@ -1427,17 +1436,26 @@ export class BridgeService {
       console.log(`✅ Redemption payment confirmed: ${confirmTxHash}`);
 
       // Update redemption to completed
-      await this.config.storage.updateRedemptionStatus(redemptionId, "completed", {
+      await this.config.storage.updateRedemption(redemptionId, {
+        status: "completed",
+        userStatus: "completed", // User already has XRP
+        backendStatus: "confirmed",
         fdcAttestationTxHash: confirmTxHash,
       });
 
       return confirmTxHash;
     } catch (error) {
       console.error("Error confirming redemption payment:", error);
-      await this.config.storage.updateRedemptionStatus(redemptionId, "failed", {
-        errorMessage: error instanceof Error ? error.message : "Unknown error during redemption confirmation",
+      // This error occurs AFTER user received XRP - preserve userStatus=completed
+      await this.config.storage.updateRedemption(redemptionId, {
+        status: "awaiting_proof",
+        userStatus: "completed", // User has XRP successfully
+        backendStatus: "manual_review",
+        backendError: error instanceof Error ? error.message : "Unknown error during redemption confirmation",
+        errorMessage: "Backend confirmation issue (you have XRP successfully)",
       });
-      throw error;
+      // Don't throw - user already has XRP
+      console.warn(`⚠️ Backend confirmation failed but user has XRP - redemption ${redemptionId}`);
     }
   }
 
@@ -1470,7 +1488,8 @@ export class BridgeService {
     console.log(`   Fee (UBA): ${feeUBA} (${ethers.formatUnits(feeUBA, 6)} XRP)`);
     console.log(`   Net amount (UBA): ${netAmountUBA} (${ethers.formatUnits(netAmountUBA, 6)} XRP)`);
 
-    await this.config.storage.updateRedemptionStatus(redemptionId, "redeeming_fxrp", {
+    await this.config.storage.updateRedemption(redemptionId, {
+      status: "redeeming_fxrp",
       fassetsRedemptionTxHash: demoTxHash,
       redemptionRequestId: demoRedemptionRequestId,
       agentVaultAddress: "0xDEMO" + Date.now().toString(16).slice(-8),
@@ -1491,7 +1510,11 @@ export class BridgeService {
     // Simulate agent sending XRP
     console.log("   [2/3] Agent sending XRP to depositor...");
     const demoXrplTxHash = `DEMO-XRPL-PAYOUT-${Date.now().toString(16)}`;
-    await this.config.storage.updateRedemptionStatus(redemptionId, "xrpl_payout", {
+    // User receives XRP in demo mode - freeze userStatus at completed
+    await this.config.storage.updateRedemption(redemptionId, {
+      status: "xrpl_payout",
+      userStatus: "completed", // User has XRP successfully (demo)
+      backendStatus: "confirming",
       xrplPayoutTxHash: demoXrplTxHash,
       xrplPayoutAt: new Date(),
     });
@@ -1536,7 +1559,10 @@ export class BridgeService {
     console.log("✅ Demo mode: Position and transaction updated");
     
     // Now mark as completed
-    await this.config.storage.updateRedemptionStatus(redemptionId, "completed", {
+    await this.config.storage.updateRedemption(redemptionId, {
+      status: "completed",
+      userStatus: "completed", // User has XRP successfully (demo)
+      backendStatus: "confirmed",
       fdcProofHash: `0xDEMOPROOF${Date.now().toString(16)}`,
       fdcAttestationTxHash: `0xDEMOCONFIRM${Date.now().toString(16)}`,
       completedAt: new Date(),
@@ -1703,13 +1729,17 @@ export class BridgeService {
       console.log(`      XRP Sent: ${redemption.xrpSent}`);
       console.log(`      Current Status: ${redemption.status}`);
       
-      // Update status to xrpl_payout
-      console.log(`\n   📝 Updating status to "xrpl_payout"...`);
-      await this.config.storage.updateRedemptionStatus(redemptionId, "xrpl_payout", {
+      // Update status to xrpl_received and set userStatus to completed (terminal success from user perspective)
+      console.log(`\n   📝 Updating user status to "completed" (XRP received)...`);
+      await this.config.storage.updateRedemption(redemptionId, {
+        status: "xrpl_received",
         xrplPayoutTxHash: xrplTxHash,
         xrplPayoutAt: new Date(),
+        userStatus: "completed",
+        backendStatus: "confirming",
       });
-      console.log(`   ✅ Status updated to "xrpl_payout"`);
+      console.log(`   ✅ User status: "completed" (frozen - will never change)`);
+      console.log(`   ✅ Backend status: "confirming" (backend confirmation in progress)`);
       
       // Step 1: Generate FDC proof of agent→user payment
       console.log(`\n   ⏳ Step 1/5: Generating FDC proof...`);
@@ -1772,16 +1802,19 @@ export class BridgeService {
         console.log(`   ✅ Step 4/5: Transaction record created`);
       }
       
-      // Step 5: Mark redemption as completed
-      console.log(`\n   ⏳ Step 5/5: Marking redemption as completed...`);
-      await this.config.storage.updateRedemptionStatus(redemptionId, "completed", {
+      // Step 5: Mark backend confirmation as complete
+      console.log(`\n   ⏳ Step 5/5: Marking backend confirmation as complete...`);
+      await this.config.storage.updateRedemption(redemptionId, {
+        status: "completed",
         fdcAttestationTxHash: fdcResult.attestationTxHash,
         fdcVotingRoundId: fdcResult.votingRoundId.toString(),
         fdcProofHash: JSON.stringify(fdcResult.proof),
         confirmationTxHash: confirmationTxHash,
         completedAt: new Date(),
+        backendStatus: "confirmed",
+        backendError: null,
       });
-      console.log(`   ✅ Step 5/5: Redemption marked as completed`);
+      console.log(`   ✅ Step 5/5: Backend confirmation complete`);
       
       // Unsubscribe user address from listener (cleanup)
       if (this.xrplListener) {
@@ -1800,23 +1833,48 @@ export class BridgeService {
       console.log(`   🔗 Confirmation TX: ${confirmationTxHash}`);
       
     } catch (error) {
+      // CRITICAL: User already has XRP - never mark userStatus as failed!
+      // Only update backend reconciliation status
+      
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      const isGasError = errorMessage.toLowerCase().includes("gas") || 
+                         errorMessage.toLowerCase().includes("smart wallet") ||
+                         errorMessage.toLowerCase().includes("paymaster");
+      
       // Handle FDC timeout separately
       if (error instanceof FDCTimeoutError) {
         console.warn(`⏰ FDC timeout for redemption ${redemptionId}`);
-        await this.config.storage.updateRedemptionStatus(redemptionId, "awaiting_proof", {
+        console.warn(`   User has XRP - marking backend as retry_pending`);
+        await this.config.storage.updateRedemption(redemptionId, {
+          status: "awaiting_proof",
           errorMessage: `FDC proof timeout. Will retry.`,
           fdcVotingRoundId: error.votingRoundId.toString(),
           fdcRequestBytes: error.requestBytes,
+          backendStatus: "retry_pending",
+          backendError: `FDC proof timeout - voting round ${error.votingRoundId}`,
         });
         return; // Don't throw - timeout is recoverable
       }
       
-      // Other errors are terminal
-      console.error(`❌ Redemption confirmation failed:`, error);
-      await this.config.storage.updateRedemptionStatus(redemptionId, "failed", {
-        errorMessage: error instanceof Error ? error.message : "Unknown error",
+      // Other errors during backend confirmation
+      console.error(`❌ Backend confirmation failed for redemption ${redemptionId}`);
+      console.error(`   Error:`, errorMessage);
+      console.error(`   ⚠️  User has XRP successfully - this is a backend issue only`);
+      
+      // Update backend status based on error type
+      const backendStatus = isGasError ? "retry_pending" : "manual_review";
+      
+      await this.config.storage.updateRedemption(redemptionId, {
+        status: "xrpl_received", // Keep at xrpl_received, not failed
+        errorMessage: `Backend confirmation issue: ${errorMessage}`,
+        backendStatus,
+        backendError: `${error instanceof Error ? error.stack : errorMessage}`,
       });
-      throw error;
+      
+      // Log for operations team but don't throw (user already succeeded)
+      console.warn(`⚠️  Backend confirmation needs attention - redemption ${redemptionId}`);
+      console.warn(`   Backend Status: ${backendStatus}`);
+      console.warn(`   User Status: completed (user has XRP)`);
     }
   }
 }

@@ -2437,25 +2437,36 @@ export async function registerRoutes(
       // Calculate the XRP amount being withdrawn
       const amount = redemption.xrpSent || redemption.fxrpRedeemed || redemption.shareAmount;
 
-      // Map redemption status to progress modal step
+      // Use userStatus for determining what the user sees
+      // This ensures users see "complete" when they receive XRP, even if backend confirmation fails
       let currentStep: "creating" | "processing" | "sending" | "complete" | "error";
-      if (redemption.status === "failed") {
-        currentStep = "error";
-      } else if (redemption.status === "completed") {
+      let displayError: string | undefined;
+      
+      if (redemption.userStatus === "completed") {
+        // User has XRP successfully - show complete
         currentStep = "complete";
-      } else if (redemption.status === "pending") {
-        currentStep = "creating";
-      } else if (redemption.status === "xrpl_payout") {
-        currentStep = "sending";
+      } else if (redemption.userStatus === "failed") {
+        // Withdrawal failed before user received XRP
+        currentStep = "error";
+        displayError = redemption.errorMessage || "Withdrawal failed";
       } else {
-        // Processing statuses: redeeming_shares, redeemed_fxrp, redeeming_fxrp, awaiting_proof, awaiting_liquidity
-        currentStep = "processing";
+        // userStatus === "processing" - map legacy status for UI
+        if (redemption.status === "pending") {
+          currentStep = "creating";
+        } else if (redemption.status === "xrpl_payout" || redemption.status === "xrpl_received") {
+          currentStep = "sending";
+        } else {
+          // redeeming_shares, redeemed_fxrp, redeeming_fxrp, awaiting_proof, awaiting_liquidity
+          currentStep = "processing";
+        }
       }
 
       res.json({
         success: true,
         redemptionId: redemption.id,
-        status: redemption.status,
+        status: redemption.status, // Legacy field
+        userStatus: redemption.userStatus, // User-facing status
+        backendStatus: redemption.backendStatus, // Backend reconciliation status
         currentStep: currentStep,
         amount: amount,
         shareAmount: redemption.shareAmount,
@@ -2466,7 +2477,8 @@ export async function registerRoutes(
         fassetsRedemptionTxHash: redemption.fassetsRedemptionTxHash,
         createdAt: redemption.createdAt,
         completedAt: redemption.completedAt,
-        error: redemption.status === 'failed' ? redemption.errorMessage : undefined,
+        error: displayError,
+        backendError: redemption.backendError, // Backend errors separate from user-facing errors
       });
     } catch (error) {
       console.error("Withdrawal status fetch error:", error);

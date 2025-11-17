@@ -66,8 +66,9 @@ export default function Portfolio() {
     },
     enabled: !!address,
     refetchInterval: (query) => {
+      // Use userStatus to determine if redemptions are still active
       const hasActiveRedemptions = query.state.data?.some((r: any) => 
-        !["completed", "failed"].includes(r.status)
+        r.userStatus === "processing"
       );
       return hasActiveRedemptions ? 5000 : false;
     },
