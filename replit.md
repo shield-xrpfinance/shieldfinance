@@ -59,6 +59,17 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
   - Responsive Grid: Stats display in 4-column grid on desktop, 2-column on tablet, single column on mobile.
   - Chart Styling: APY Performance chart wrapped in glass-themed container (rounded-2xl border-2 with gradient background).
   - Design System: Matches sidebar "Need help?" section and vaults page for cohesive glassmorphism aesthetic throughout app.
+- **Real-Time UX & Progress Tracking (Nov 2025)**: Complete overhaul of deposit/withdrawal flows with live status updates and milestone celebrations.
+  - **Critical Bug Fix**: Fixed P0 issue where withdrawals showed "failed" status despite successful XRP receipt due to Smart Account gas funding issues. Now treats XRP receipt (`xrpl_received`) as terminal success state with proof confirmation running as optional background retry.
+  - **Status State Machine**: Withdrawal flow: pending → redeeming_shares → redeemed_fxrp → redeeming_fxrp → awaiting_proof → **xrpl_received (terminal success)** → completed (proof confirmed, optional).
+  - **Gas Preflight Checks**: Validates Smart Account FLR balance and paymaster availability before withdrawal initiation to prevent burning shXRP without ability to complete XRPL redemption.
+  - **Real-Time Polling Infrastructure**: Created `useStatusPolling` hook (`client/src/hooks/useStatusPolling.ts`) for 2-second status polling with proper AbortController cleanup, memory leak prevention, and loading state optimization (only shows loading on first fetch, subsequent polls update silently).
+  - **Progress Modal Component**: Reusable `ProgressModal` (`client/src/components/ProgressModal.tsx`) with config-driven steps, milestone celebrations (confetti animations), time estimates, metadata display (bridge/redemption ID with copy button), and action buttons.
+  - **Multi-Step Deposit Flow**: DepositModal stays open after Xaman signature showing: Payment Signed → Reserving Collateral (~30s) → Generating FDC Proof (~3 min) → Minting shXRP (~30s) → Deposit Complete. Includes navigation buttons to Bridge Tracking or close modal.
+  - **Multi-Step Withdrawal Flow**: Shows real-time progress: Burning shXRP (~30s) → Redeeming FXRP (~30s) → Agent Sending XRP (~1 min) → **XRP Received to Your Wallet! (milestone celebration)** → Finalizing Proof (~3 min, optional). User can dismiss modal after XRP received; proof confirmation continues in background.
+  - **Milestone Celebrations**: Toast notifications for key events: "Payment Signed", "Collateral Reserved", "XRP Received to Your Wallet!", "Deposit Complete", "Withdrawal Complete". Confetti animations trigger on milestone completion.
+  - **Auto-Refresh Pages**: Bridge Tracking page polls every 2 seconds when active bridges exist (shows "Last updated" timestamp with pulsing indicator). Portfolio page auto-refreshes positions every 5 seconds and redemptions when active. Polling intelligently stops when operations complete for performance optimization.
+  - **Design Consistency**: All progress modals use glassmorphism theme (`bg-gradient-to-br from-primary/10 via-primary/5 to-background border-2`), Sparkles icons for celebrations (no emojis), consistent spacing and typography.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.

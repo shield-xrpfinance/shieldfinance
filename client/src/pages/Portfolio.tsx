@@ -77,6 +77,7 @@ export default function Portfolio() {
       return response.json();
     },
     enabled: !!address,
+    refetchInterval: 5000,
   });
 
   const { data: redemptions = [] } = useQuery<any[]>({
