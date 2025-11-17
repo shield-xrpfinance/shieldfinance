@@ -2,8 +2,8 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Vault as VaultType } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import StatsCard from "@/components/StatsCard";
-import VaultCard from "@/components/VaultCard";
+import GlassStatsCard from "@/components/GlassStatsCard";
+import VaultListItem from "@/components/VaultListItem";
 import ApyChart from "@/components/ApyChart";
 import DepositModal from "@/components/DepositModal";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
@@ -601,29 +601,33 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Dashboard</h1>
-        <p className="text-muted-foreground">
+    <div className="space-y-12">
+      <div className="space-y-3">
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-muted-foreground text-base">
           Overview of your liquid staking protocol performance
         </p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatsCard
+        <GlassStatsCard
           label="Total Value Locked"
           value="$24.5M"
           change={{ value: 12.5, positive: true }}
           icon={<Coins className="h-6 w-6" />}
         />
-        <StatsCard
+        <GlassStatsCard
           label="Average APY"
           value="8.2%"
           change={{ value: 0.8, positive: true }}
           icon={<TrendingUp className="h-6 w-6" />}
         />
-        <StatsCard label="Active Vaults" value="12" icon={<Vault className="h-6 w-6" />} />
-        <StatsCard
+        <GlassStatsCard 
+          label="Active Vaults" 
+          value="12" 
+          icon={<Vault className="h-6 w-6" />} 
+        />
+        <GlassStatsCard
           label="Total Stakers"
           value="3,421"
           change={{ value: 5.2, positive: true }}
@@ -631,27 +635,42 @@ export default function Dashboard() {
         />
       </div>
 
-      <div>
-        <h2 className="text-2xl font-semibold mb-6">Featured Vaults</h2>
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">Featured Vaults</h2>
+          <p className="text-muted-foreground">
+            High-performing vaults for your XRP liquid staking
+          </p>
+        </div>
         {isLoading ? (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-6">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-96" data-testid={`skeleton-vault-${i}`} />
+              <Skeleton key={i} className="h-48" data-testid={`skeleton-vault-${i}`} />
             ))}
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <div className="space-y-6">
             {vaults.map((vault) => (
-              <VaultCard key={vault.id} {...vault} onDeposit={handleDeposit} />
+              <VaultListItem key={vault.id} {...vault} onDeposit={handleDeposit} />
             ))}
           </div>
         )}
       </div>
 
-      <ApyChart
-        data={chartData}
-        vaultNames={["Stable Yield", "High Yield", "Maximum Returns"]}
-      />
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">APY Performance</h2>
+          <p className="text-muted-foreground">
+            Historical yield trends across all vaults
+          </p>
+        </div>
+        <div className="rounded-2xl border-2 bg-gradient-to-br from-primary/5 via-background to-background p-8">
+          <ApyChart
+            data={chartData}
+            vaultNames={["Stable Yield", "High Yield", "Maximum Returns"]}
+          />
+        </div>
+      </div>
 
       {selectedVault && (
         <DepositModal
