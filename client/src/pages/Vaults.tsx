@@ -2,7 +2,8 @@ import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Vault as VaultType, Escrow } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import VaultCard from "@/components/VaultCard";
+import VaultListItem from "@/components/VaultListItem";
+import CollapsibleSection from "@/components/CollapsibleSection";
 import DepositModal from "@/components/DepositModal";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
@@ -698,11 +699,41 @@ export default function Vaults() {
         </Select>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        {filteredVaults.map((vault) => (
-          <VaultCard key={vault.id} {...vault} onDeposit={handleDeposit} />
-        ))}
+      {/* Active Vaults Section */}
+      <div className="space-y-4">
+        <h2 className="text-2xl font-semibold">Active Vaults</h2>
+        <div className="space-y-4">
+          {filteredVaults
+            .filter((vault) => !vault.comingSoon)
+            .map((vault) => (
+              <VaultListItem key={vault.id} {...vault} onDeposit={handleDeposit} />
+            ))}
+          {filteredVaults.filter((vault) => !vault.comingSoon).length === 0 && (
+            <p className="text-muted-foreground text-center py-12">
+              No active vaults found matching your search.
+            </p>
+          )}
+        </div>
       </div>
+
+      {/* Coming Soon Vaults Section */}
+      {filteredVaults.filter((vault) => vault.comingSoon).length > 0 && (
+        <div className="mt-12">
+          <CollapsibleSection
+            title="Coming Soon Vaults"
+            count={filteredVaults.filter((vault) => vault.comingSoon).length}
+            defaultOpen={false}
+          >
+            <div className="space-y-3">
+              {filteredVaults
+                .filter((vault) => vault.comingSoon)
+                .map((vault) => (
+                  <VaultListItem key={vault.id} {...vault} onDeposit={handleDeposit} />
+                ))}
+            </div>
+          </CollapsibleSection>
+        </div>
+      )}
 
       {selectedVault && (
         <DepositModal
