@@ -192,20 +192,25 @@ export default function Dashboard() {
     setProgressErrorMessage(undefined);
   };
 
-  const vaults = apiVaults?.slice(0, 3).map(vault => ({
-    id: vault.id,
-    name: vault.name,
-    asset: vault.asset || "XRP",
-    apy: vault.apy,
-    apyLabel: vault.apyLabel,
-    tvl: formatCurrency(vault.tvl),
-    liquidity: formatCurrency(vault.liquidity),
-    lockPeriod: vault.lockPeriod,
-    riskLevel: vault.riskLevel as "low" | "medium" | "high",
-    depositors: 0,
-    status: vault.status.charAt(0).toUpperCase() + vault.status.slice(1),
-    depositAssets: (vault.asset || "XRP").split(",").map(a => a.trim()),
-  })) || [];
+  // Filter out coming soon vaults and take first 3 active vaults
+  const vaults = apiVaults
+    ?.filter(vault => !(vault as any).comingSoon)
+    .slice(0, 3)
+    .map(vault => ({
+      id: vault.id,
+      name: vault.name,
+      asset: vault.asset || "XRP",
+      apy: vault.apy,
+      apyLabel: vault.apyLabel,
+      tvl: formatCurrency(vault.tvl),
+      liquidity: formatCurrency(vault.liquidity),
+      lockPeriod: vault.lockPeriod,
+      riskLevel: vault.riskLevel as "low" | "medium" | "high",
+      depositors: 0,
+      status: vault.status.charAt(0).toUpperCase() + vault.status.slice(1),
+      depositAssets: (vault.asset || "XRP").split(",").map(a => a.trim()),
+      comingSoon: (vault as any).comingSoon || false,
+    })) || [];
 
   const chartData = [
     { date: "Oct 1", "Stable Yield": 7.2, "High Yield": 12.5, "Maximum Returns": 18.2 },
@@ -647,6 +652,13 @@ export default function Dashboard() {
             {[1, 2, 3].map((i) => (
               <Skeleton key={i} className="h-48" data-testid={`skeleton-vault-${i}`} />
             ))}
+          </div>
+        ) : vaults.length === 0 ? (
+          <div className="text-center py-16 rounded-2xl border-2 border-dashed bg-muted/20">
+            <p className="text-xl text-muted-foreground mb-2">No active vaults available</p>
+            <p className="text-sm text-muted-foreground">
+              Check back soon for new staking opportunities
+            </p>
           </div>
         ) : (
           <div className="space-y-6">
