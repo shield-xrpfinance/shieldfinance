@@ -29,6 +29,11 @@ Preferred communication style: Simple, everyday language.
 - **Production Publishing Optimization**: Fast server startup, asynchronous service initialization, dual health endpoints (`/healthz`, `/readyz`), and API readiness guards.
 - **Decimal Mismatch Resolution**: Corrected FXRP decimal handling (6 decimals) in `ShXRPVault` and related services.
 - **UX Enhancements**: Multi-step progress modals for deposits and withdrawals with real-time status polling.
+- **P0 Vault Controls (Nov 2025)**: Complete backend and frontend integration for deposit limits and pausable emergency controls.
+  - Backend: Admin-only API endpoints (`/api/vaults/:id/deposit-limit`, `/api/vaults/:id/pause`) with SHA-256 authentication.
+  - Frontend: Vault cards display deposit limit and paused status (read-only); deposit flow blocked when paused.
+  - Type Safety: Strict boolean normalization for `paused` field; NaN protection for deposit limit display.
+  - Security: Deposit button disabled and `handleDeposit()` guard prevents modal opening when vault is paused.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
