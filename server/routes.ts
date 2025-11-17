@@ -2009,6 +2009,129 @@ export async function registerRoutes(
     }
   });
 
+  // P0 Security: Pause vault operations (ADMIN ONLY)
+  app.post("/api/admin/vault/pause", requireAdminAuth, async (req, res) => {
+    try {
+      if (!flareClient) {
+        return res.status(503).json({ error: "FlareClient not initialized" });
+      }
+      
+      console.log(`\n⏸️  PAUSE VAULT: Emergency stop initiated`);
+      
+      const vaultAddress = getVaultAddress();
+      const vaultContract = flareClient.getShXRPVault(vaultAddress) as any;
+      
+      console.log(`   Vault: ${vaultAddress}`);
+      
+      // Call pause() on the contract
+      const tx = await vaultContract.pause();
+      console.log(`   TX submitted: ${tx.hash}`);
+      
+      const receipt = await tx.wait();
+      console.log(`✅ Vault paused successfully`);
+      
+      return res.json({
+        success: true,
+        txHash: receipt.hash,
+        vaultAddress,
+        message: "Vault operations paused - all deposits and withdrawals are now blocked"
+      });
+      
+    } catch (error: any) {
+      console.error("Error pausing vault:", error);
+      return res.status(500).json({ 
+        error: error.message,
+        details: error.reason || error.stack
+      });
+    }
+  });
+  
+  // P0 Security: Unpause vault operations (ADMIN ONLY)
+  app.post("/api/admin/vault/unpause", requireAdminAuth, async (req, res) => {
+    try {
+      if (!flareClient) {
+        return res.status(503).json({ error: "FlareClient not initialized" });
+      }
+      
+      console.log(`\n▶️  UNPAUSE VAULT: Resuming normal operations`);
+      
+      const vaultAddress = getVaultAddress();
+      const vaultContract = flareClient.getShXRPVault(vaultAddress) as any;
+      
+      console.log(`   Vault: ${vaultAddress}`);
+      
+      // Call unpause() on the contract
+      const tx = await vaultContract.unpause();
+      console.log(`   TX submitted: ${tx.hash}`);
+      
+      const receipt = await tx.wait();
+      console.log(`✅ Vault unpaused successfully`);
+      
+      return res.json({
+        success: true,
+        txHash: receipt.hash,
+        vaultAddress,
+        message: "Vault operations resumed - deposits and withdrawals are now enabled"
+      });
+      
+    } catch (error: any) {
+      console.error("Error unpausing vault:", error);
+      return res.status(500).json({ 
+        error: error.message,
+        details: error.reason || error.stack
+      });
+    }
+  });
+  
+  // P0 Security: Update deposit limit (ADMIN ONLY)
+  app.post("/api/admin/vault/set-deposit-limit", requireAdminAuth, async (req, res) => {
+    try {
+      if (!flareClient) {
+        return res.status(503).json({ error: "FlareClient not initialized" });
+      }
+      
+      const { newLimit } = req.body;
+      
+      if (!newLimit) {
+        return res.status(400).json({ error: "newLimit required in request body (in FXRP, e.g., '2000000' for 2M FXRP)" });
+      }
+      
+      console.log(`\n📊 UPDATE DEPOSIT LIMIT: Setting new capacity`);
+      
+      const vaultAddress = getVaultAddress();
+      const vaultContract = flareClient.getShXRPVault(vaultAddress) as any;
+      
+      // Convert newLimit to contract units (FXRP uses 6 decimals)
+      const newLimitRaw = ethers.parseUnits(newLimit, 6);
+      
+      console.log(`   Vault: ${vaultAddress}`);
+      console.log(`   New Limit: ${newLimit} FXRP (${newLimitRaw.toString()} raw units)`);
+      
+      // Call setDepositLimit() on the contract
+      const tx = await vaultContract.setDepositLimit(newLimitRaw);
+      console.log(`   TX submitted: ${tx.hash}`);
+      
+      const receipt = await tx.wait();
+      console.log(`✅ Deposit limit updated successfully`);
+      
+      return res.json({
+        success: true,
+        txHash: receipt.hash,
+        vaultAddress,
+        newLimit,
+        newLimitRaw: newLimitRaw.toString(),
+        message: `Deposit limit updated to ${newLimit} FXRP`
+      });
+      
+    } catch (error: any) {
+      console.error("Error updating deposit limit:", error);
+      return res.status(500).json({ 
+        error: error.message,
+        details: error.reason || error.stack
+      });
+    }
+  });
+
   // Debug: Check XRPL transaction details for redemption (ADMIN ONLY)
   app.get("/api/withdrawals/:redemptionId/check-xrpl-tx", requireAdminAuth, async (req, res) => {
     try {
