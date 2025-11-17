@@ -51,6 +51,14 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
   - Accessibility: Added aria-expanded, aria-controls, and role="region" attributes for screen readers.
   - Responsive: Flexbox layout with wrapping metrics on tablet, vertical stacking on mobile.
   - Empty States: Proper handling when no vaults match search/filter criteria.
+- **Dashboard Glassmorphism Redesign (Nov 2025)**: Modernized dashboard to match vaults page aesthetic with cohesive glass theme.
+  - Components: Created `GlassStatsCard` with glassmorphism styling (gradient backgrounds, backdrop blur, glowing icon effects).
+  - Glass Theme: `bg-gradient-to-br from-primary/10 via-primary/5 to-background`, `backdrop-blur-sm`, glowing icons with `blur-xl`.
+  - Layout Consistency: Replaced old `StatsCard` grid with `GlassStatsCard` components, replaced `VaultCard` grid with `VaultListItem` for design consistency.
+  - Typography: Updated to text-3xl headings, text-4xl stat values with tabular-nums, generous spacing (space-y-12 between sections, p-8 card padding).
+  - Responsive Grid: Stats display in 4-column grid on desktop, 2-column on tablet, single column on mobile.
+  - Chart Styling: APY Performance chart wrapped in glass-themed container (rounded-2xl border-2 with gradient background).
+  - Design System: Matches sidebar "Need help?" section and vaults page for cohesive glassmorphism aesthetic throughout app.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
