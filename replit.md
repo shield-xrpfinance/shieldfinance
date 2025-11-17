@@ -59,6 +59,21 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
   - Responsive Grid: Stats display in 4-column grid on desktop, 2-column on tablet, single column on mobile.
   - Chart Styling: APY Performance chart wrapped in glass-themed container (rounded-2xl border-2 with gradient background).
   - Design System: Matches sidebar "Need help?" section and vaults page for cohesive glassmorphism aesthetic throughout app.
+- **Dual-Status Withdrawal Model (Nov 2025)**: Complete separation of user-facing and backend status tracking for withdrawals.
+  - Database: Added `userStatus`, `backendStatus`, and `backendError` fields to `fxrp_to_xrp_redemptions` table.
+  - User Status: Terminal "completed" status when user receives XRP in their wallet (never changes to "failed" afterward).
+  - Backend Status: Separate tracking for FDC proof confirmation ("confirming", "confirmed", "retry_pending", "manual_review", "abandoned").
+  - Error Handling: User never sees "failed" status if they received XRP; backend errors stored separately in `backendError` field.
+  - BridgeService: All redemption updates preserve userStatus after XRP is received; automatic retry logic for backend confirmation failures.
+  - API: Endpoints expose `userStatus` for UI display; `backendStatus` and `backendError` for admin monitoring.
+  - Frontend: Portfolio page uses userStatus to determine completion; contextual error messages replace generic failures.
+- **Deposit Flow UX Improvements (Nov 2025)**: Enhanced progress modal for better user guidance.
+  - Progress Modal: Stays open after Xaman/WalletConnect signature (doesn't auto-close).
+  - Bridge ID Display: Shows bridge ID in monospace font with copy-to-clipboard functionality.
+  - Navigation: "View in Bridge Tracking" button navigates to `/bridge-tracking` page for status monitoring.
+  - Dismissible Modal: Users can close modal manually or let it persist while they complete other tasks.
+  - Info Alert: Clear messaging that users can check bridge status anytime in Bridge Tracking.
+  - State Machine: Updates to 'awaiting_payment' step after signature; supports Xaman, WalletConnect, and fallback flows.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
