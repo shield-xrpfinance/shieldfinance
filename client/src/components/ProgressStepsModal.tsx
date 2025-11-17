@@ -1,8 +1,10 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { CheckCircle2, Loader2, Circle } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { CheckCircle2, Loader2, Circle, ExternalLink, Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export type ProgressStep = 'creating' | 'reserving' | 'ready' | 'error';
+export type ProgressStep = 'creating' | 'reserving' | 'ready' | 'awaiting_payment' | 'error';
 
 interface ProgressStepsModalProps {
   open: boolean;
@@ -10,7 +12,9 @@ interface ProgressStepsModalProps {
   errorMessage?: string;
   amount?: string;
   vaultName?: string;
+  bridgeId?: string;
   onOpenChange?: (open: boolean) => void;
+  onNavigateToBridgeTracking?: () => void;
 }
 
 interface StepConfig {
@@ -35,6 +39,11 @@ const steps: StepConfig[] = [
     title: 'Ready for Payment',
     description: 'Please approve the payment in your wallet',
   },
+  {
+    id: 'awaiting_payment',
+    title: 'Processing Bridge',
+    description: 'Payment signed. Waiting for transaction confirmation...',
+  },
 ];
 
 export function ProgressStepsModal({
@@ -43,7 +52,9 @@ export function ProgressStepsModal({
   errorMessage,
   amount,
   vaultName,
+  bridgeId,
   onOpenChange,
+  onNavigateToBridgeTracking,
 }: ProgressStepsModalProps) {
   const getCurrentStepIndex = () => {
     if (currentStep === 'error') return -1;
@@ -59,7 +70,7 @@ export function ProgressStepsModal({
     return 'pending';
   };
 
-  const canDismiss = currentStep === 'error' || currentStep === 'ready';
+  const canDismiss = currentStep === 'error' || currentStep === 'ready' || currentStep === 'awaiting_payment';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -182,6 +193,50 @@ export function ProgressStepsModal({
         {currentStep === 'reserving' && (
           <div className="text-center text-xs text-muted-foreground">
             This may take up to 60 seconds...
+          </div>
+        )}
+
+        {currentStep === 'awaiting_payment' && (
+          <div className="space-y-4 pt-2">
+            {bridgeId && (
+              <div className="rounded-md bg-muted p-4 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Bridge ID
+                </p>
+                <p className="text-sm font-mono break-all" data-testid="text-bridge-id">
+                  {bridgeId}
+                </p>
+              </div>
+            )}
+
+            <Alert>
+              <Info className="h-4 w-4" />
+              <AlertDescription className="text-sm">
+                You can close this and check the bridge status anytime in Bridge Tracking
+              </AlertDescription>
+            </Alert>
+
+            <div className="flex flex-col gap-2">
+              {onNavigateToBridgeTracking && (
+                <Button
+                  variant="default"
+                  onClick={onNavigateToBridgeTracking}
+                  data-testid="button-view-bridge-tracking"
+                  className="w-full"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View in Bridge Tracking
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange?.(false)}
+                data-testid="button-dismiss-progress"
+                className="w-full"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         )}
       </DialogContent>

@@ -23,6 +23,7 @@ import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import UniversalProvider from "@walletconnect/universal-provider";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useLocation } from "wouter";
 
 export default function Vaults() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -42,6 +43,7 @@ export default function Vaults() {
   const { toast } = useToast();
   const { address, provider, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
+  const [, setLocation] = useLocation();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
     queryKey: ["/api/vaults"],
@@ -112,16 +114,19 @@ export default function Vaults() {
               
               if (paymentResult.success) {
                 if (provider === "xaman" && paymentResult.payloadUuid) {
-                  // Close progress modal, show Xaman signing modal
-                  setProgressModalOpen(false);
+                  // Show Xaman signing modal while keeping progress modal open
                   setXamanPayload({
                     uuid: paymentResult.payloadUuid,
                     qrUrl: paymentResult.qrUrl || "",
                     deepLink: paymentResult.deepLink || "",
                   });
                   setXamanSigningModalOpen(true);
+                  
+                  // Keep progress modal open and update to awaiting_payment step
+                  setProgressStep('awaiting_payment');
                 } else if (provider === "walletconnect" && paymentResult.txHash) {
-                  setProgressModalOpen(false);
+                  // For WalletConnect, update to awaiting_payment
+                  setProgressStep('awaiting_payment');
                   toast({
                     title: "Payment Submitted",
                     description: `Transaction submitted: ${paymentResult.txHash}`,
@@ -129,7 +134,7 @@ export default function Vaults() {
                 }
               } else {
                 console.warn("⚠️ Payment request failed:", paymentResult.error);
-                setProgressModalOpen(false);
+                setProgressStep('awaiting_payment');
                 toast({
                   title: "Payment Request Info",
                   description: "Please manually send the payment to complete the bridge.",
@@ -137,14 +142,14 @@ export default function Vaults() {
               }
             } catch (paymentError) {
               console.error("❌ Payment request exception:", paymentError);
-              setProgressModalOpen(false);
+              setProgressStep('awaiting_payment');
               toast({
                 title: "Payment Request Failed",
                 description: "Please manually send the payment to complete the bridge.",
               });
             }
           } else {
-            setProgressModalOpen(false);
+            setProgressStep('awaiting_payment');
             toast({
               title: "Bridge Ready",
               description: "Bridge is ready for payment. Please complete the transaction.",
@@ -207,6 +212,11 @@ export default function Vaults() {
     setPollingBridgeId(null);
     setBridgeInfo(null);
     setProgressErrorMessage(undefined);
+  };
+
+  const handleNavigateToBridgeTracking = () => {
+    setLocation('/bridge-tracking');
+    handleCloseProgressModal();
   };
 
   const vaultEscrowStats = useMemo(() => {
@@ -803,9 +813,11 @@ export default function Vaults() {
         currentStep={progressStep}
         amount={bridgeInfo?.amount}
         vaultName={bridgeInfo?.vaultName}
+        bridgeId={bridgeInfo?.bridgeId}
         errorMessage={progressErrorMessage}
+        onNavigateToBridgeTracking={handleNavigateToBridgeTracking}
         onOpenChange={(open) => {
-          if (!open && (progressStep === 'error' || progressStep === 'ready')) {
+          if (!open && (progressStep === 'error' || progressStep === 'ready' || progressStep === 'awaiting_payment')) {
             handleCloseProgressModal();
           }
         }}
