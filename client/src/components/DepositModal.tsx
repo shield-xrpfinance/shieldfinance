@@ -24,7 +24,7 @@ import XamanSigningModal from "./XamanSigningModal";
 import ProgressModal from "./ProgressModal";
 import { useStatusPolling } from "@/hooks/useStatusPolling";
 import { MultiAssetIcon } from "@/components/AssetIcon";
-import type { PaymentRequest } from "@shared/schema";
+import type { PaymentRequest, SelectXrpToFxrpBridge } from "@shared/schema";
 import { calculateLotRounding, type LotRoundingResult, LOT_SIZE } from "@shared/lotRounding";
 
 interface DepositModalProps {
@@ -52,7 +52,6 @@ const initialDepositSteps: ProgressStep[] = [
   { 
     id: 'payment_signed', 
     label: 'Payment Signed', 
-    estimate: null, 
     isMilestone: true, 
     status: 'pending' 
   },
@@ -80,7 +79,6 @@ const initialDepositSteps: ProgressStep[] = [
   { 
     id: 'completed', 
     label: 'Deposit Complete', 
-    estimate: null, 
     isMilestone: true, 
     status: 'pending' 
   }
@@ -133,7 +131,7 @@ export default function DepositModal({
   const [, setLocation] = useLocation();
 
   // Status polling - poll bridge status when in progress phase
-  const { data: bridgeStatus } = useStatusPolling(
+  const { data: bridgeStatus } = useStatusPolling<SelectXrpToFxrpBridge>(
     bridgeId ? `/api/bridges/${bridgeId}` : '',
     { enabled: depositPhase === 'progress' && !!bridgeId, interval: 2000 }
   );
@@ -192,7 +190,8 @@ export default function DepositModal({
 
   // Update progress steps based on bridge status
   useEffect(() => {
-    if (!bridgeStatus || depositPhase !== 'progress') return;
+    // Guard: ensure bridgeStatus exists and has status field before proceeding
+    if (!bridgeStatus || !bridgeStatus.status || depositPhase !== 'progress') return;
 
     const status = bridgeStatus.status;
     console.log("📊 Bridge status update:", status);
@@ -883,7 +882,15 @@ export default function DepositModal({
           qrUrl={xamanPayload.qrUrl}
           deepLink={xamanPayload.deepLink}
           onSuccess={handleXamanSuccess}
-          onCancel={handleXamanCancel}
+          onError={(error) => {
+            console.error("Xaman signing error:", error);
+            toast({
+              title: "Signature Failed",
+              description: error || "Failed to sign transaction. Please try again.",
+              variant: "destructive"
+            });
+            handleXamanCancel();
+          }}
         />
       )}
 
