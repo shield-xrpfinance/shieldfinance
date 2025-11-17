@@ -13,8 +13,9 @@ import { readinessRegistry } from "./services/ReadinessRegistry";
 
 const app = express();
 
-// Module-level reference to the real bridge service (assigned when initialized)
+// Module-level references to services (assigned when initialized)
 let realBridgeService: BridgeService | null = null;
+let realFlareClient: FlareClient | null = null;
 
 declare module 'http' {
   interface IncomingMessage {
@@ -97,6 +98,9 @@ async function initializeServices() {
       enablePaymaster: process.env.ENABLE_PAYMASTER === "true",
     });
     readinessRegistry.setReady('flareClient');
+    
+    // Assign to module-level variable so proxy can forward to it
+    realFlareClient = flareClient;
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : 'Unknown error';
     readinessRegistry.setError('flareClient', errorMsg);
@@ -482,7 +486,7 @@ async function initializeFlareClientWithRetry(config: {
   console.log("✅ Storage initialized");
   
   // Step 2: Start HTTP server immediately (before service initialization)
-  // Create a proxy that will forward to the real bridge service once initialized
+  // Create proxies that will forward to real services once initialized
   const bridgeServiceProxy = new Proxy({} as BridgeService, {
     get(target, prop) {
       if (!realBridgeService) {
@@ -503,7 +507,21 @@ async function initializeFlareClientWithRetry(config: {
     }
   });
   
-  const server = await registerRoutes(app, bridgeServiceProxy);
+  const flareClientProxy = new Proxy({} as FlareClient, {
+    get(target, prop) {
+      if (!realFlareClient) {
+        // Return undefined for optional usage (routes handle gracefully)
+        return undefined;
+      }
+      const value = (realFlareClient as any)[prop];
+      if (typeof value === 'function') {
+        return value.bind(realFlareClient);
+      }
+      return value;
+    }
+  });
+  
+  const server = await registerRoutes(app, bridgeServiceProxy, flareClientProxy);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

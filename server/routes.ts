@@ -163,7 +163,8 @@ async function verifyWalletAutoSubmittedTransaction(txHash: string, network: str
 
 export async function registerRoutes(
   app: Express,
-  bridgeService: BridgeService
+  bridgeService: BridgeService,
+  flareClient?: FlareClient
 ): Promise<Server> {
   // Health check endpoints (must be first for fast startup verification)
   
@@ -196,7 +197,39 @@ export async function registerRoutes(
   app.get("/api/vaults", async (_req, res) => {
     try {
       const vaults = await storage.getVaults();
-      res.json(vaults);
+      
+      // Enrich with live contract data if flareClient is available
+      if (flareClient && vaults.length > 0) {
+        try {
+          const vaultAddress = getVaultAddress();
+          const vaultContract = flareClient.getShXRPVault(vaultAddress) as any;
+          
+          // Fetch P0 security state from contract
+          const [depositLimit, paused] = await Promise.all([
+            vaultContract.depositLimit(),
+            vaultContract.paused()
+          ]);
+          
+          // Add P0 fields to the first vault (Shield XRP)
+          const enrichedVaults = vaults.map((vault, index) => {
+            if (index === 0) {
+              return {
+                ...vault,
+                depositLimit: ethers.formatUnits(depositLimit, 6), // FXRP uses 6 decimals
+                paused
+              };
+            }
+            return vault;
+          });
+          
+          res.json(enrichedVaults);
+        } catch (contractError) {
+          console.error("Failed to fetch contract state, returning vaults without P0 data:", contractError);
+          res.json(vaults); // Return vaults without P0 data if contract fetch fails
+        }
+      } else {
+        res.json(vaults);
+      }
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch vaults" });
     }
