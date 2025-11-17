@@ -5,6 +5,7 @@ This project is a full-stack DeFi application providing a dashboard for XRP liqu
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
+Design preference: Modern, clean list-based layouts over grid cards for better space utilization.
 
 ## System Architecture
 
@@ -41,6 +42,15 @@ Preferred communication style: Simple, everyday language.
   - Security: Multi-layer protection - frontend guards + backend validation + audit logging.
   - UX: Tooltip explains vault is under development; placeholder metrics clearly indicate unavailable status.
   - Production Status: 1 active Shield XRP vault, 5 placeholder vaults marked as coming soon.
+- **UI/UX Overhaul (Nov 2025)**: Complete redesign of vaults page from grid-based cards to modern list layout.
+  - Layout: Replaced 3-column grid with full-width list items for better horizontal space utilization.
+  - Information Architecture: Separated "Active Vaults" and "Coming Soon" sections for clear hierarchy.
+  - Components: Created `VaultListItem` (horizontal metrics display) and `CollapsibleSection` (accessible accordion).
+  - Modern Design: Larger typography (text-3xl headings), gradient APY text, stronger borders (border-2), generous spacing.
+  - Coming Soon UX: Collapsible section (collapsed by default) with dashed border, minimizes screen estate for placeholder vaults.
+  - Accessibility: Added aria-expanded, aria-controls, and role="region" attributes for screen readers.
+  - Responsive: Flexbox layout with wrapping metrics on tablet, vertical stacking on mobile.
+  - Empty States: Proper handling when no vaults match search/filter criteria.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
