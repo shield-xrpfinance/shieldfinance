@@ -30,6 +30,9 @@ interface VaultCardProps {
   cancelledEscrowCount?: number;
   failedEscrowCount?: number;
   totalEscrowAmount?: string;
+  depositLimit?: string | null;
+  depositLimitRaw?: string | null;
+  paused?: boolean | null;
   onDeposit: (id: string) => void;
 }
 
@@ -57,6 +60,9 @@ export default function VaultCard({
   cancelledEscrowCount = 0,
   failedEscrowCount = 0,
   totalEscrowAmount,
+  depositLimit,
+  depositLimitRaw,
+  paused,
   onDeposit,
 }: VaultCardProps) {
   const risk = riskConfig[riskLevel];
