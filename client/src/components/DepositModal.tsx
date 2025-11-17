@@ -343,11 +343,32 @@ export default function DepositModal({
   };
 
   const handleXRPDeposit = async () => {
+    // Validate all required fields before proceeding
     if (!address) {
       console.error("❌ No wallet address available");
       toast({
         title: "Wallet Not Connected",
         description: "Please connect your wallet before making a deposit.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!vaultId) {
+      console.error("❌ No vaultId provided");
+      toast({
+        title: "Configuration Error",
+        description: "Vault information is missing. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!totalValue || totalValue <= 0) {
+      console.error("❌ Invalid amount:", totalValue);
+      toast({
+        title: "Invalid Amount",
+        description: "Please enter a valid deposit amount.",
         variant: "destructive",
       });
       return;

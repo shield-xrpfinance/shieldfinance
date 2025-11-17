@@ -688,6 +688,7 @@ export default function Dashboard() {
         <DepositModal
           open={depositModalOpen}
           onOpenChange={setDepositModalOpen}
+          vaultId={selectedVault.id}
           vaultName={selectedVault.name}
           vaultApy={selectedVault.apy}
           vaultApyLabel={selectedVault.apyLabel}
