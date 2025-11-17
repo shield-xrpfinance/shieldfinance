@@ -192,6 +192,94 @@ export class SmartAccountClient {
   }
 
   /**
+   * Check gas availability before withdrawal to prevent burning user's shXRP with insufficient gas.
+   * 
+   * Checks:
+   * 1. Smart Account FLR balance for self-paying gas
+   * 2. Paymaster API for sponsorship availability
+   * 
+   * @returns Object with gasAvailable flag and details for monitoring
+   */
+  async checkGasAvailability(): Promise<{
+    gasAvailable: boolean;
+    flrBalance: string;
+    paymasterAvailable: boolean;
+    estimatedGasCost: string;
+    errorMessage?: string;
+  }> {
+    if (!this.smartAccountAddress) {
+      throw new Error('Smart account not initialized. Call initialize() first.');
+    }
+
+    try {
+      const provider = this.getProvider();
+
+      // 1. Check Smart Account FLR balance
+      const flrBalanceWei = await provider.getBalance(this.smartAccountAddress);
+      const flrBalance = ethers.formatEther(flrBalanceWei);
+
+      console.log(`📊 Gas Preflight Check:`);
+      console.log(`   Smart Account: ${this.smartAccountAddress}`);
+      console.log(`   FLR Balance: ${flrBalance} FLR`);
+
+      // 2. Estimate gas cost for typical redemption confirmation transaction
+      // Rough estimate: 500,000 gas units * 25 gwei = 0.0125 FLR
+      const estimatedGasUnits = 500000n;
+      const gasPrice = await provider.getFeeData();
+      const gasPriceWei = gasPrice.gasPrice || 25000000000n; // Default 25 gwei if null
+      const estimatedGasCostWei = estimatedGasUnits * gasPriceWei;
+      const estimatedGasCost = ethers.formatEther(estimatedGasCostWei);
+
+      console.log(`   Estimated Gas: ${estimatedGasUnits.toString()} units`);
+      console.log(`   Gas Price: ${ethers.formatUnits(gasPriceWei, 'gwei')} gwei`);
+      console.log(`   Estimated Cost: ${estimatedGasCost} FLR`);
+
+      // 3. Check if paymaster is configured
+      const paymasterAvailable = this.config.enablePaymaster === true;
+      console.log(`   Paymaster: ${paymasterAvailable ? 'Enabled' : 'Disabled'}`);
+
+      // 4. Determine gas availability
+      const hasSufficientBalance = flrBalanceWei >= estimatedGasCostWei;
+      const gasAvailable = hasSufficientBalance || paymasterAvailable;
+
+      if (!gasAvailable) {
+        const errorMessage = paymasterAvailable
+          ? `Paymaster enabled but smart account has insufficient FLR (${flrBalance} FLR < ${estimatedGasCost} FLR estimated)`
+          : `Insufficient FLR for gas (${flrBalance} FLR < ${estimatedGasCost} FLR estimated). Enable paymaster or fund smart account.`;
+        
+        console.warn(`⚠️  Gas Check Failed: ${errorMessage}`);
+
+        return {
+          gasAvailable: false,
+          flrBalance,
+          paymasterAvailable,
+          estimatedGasCost,
+          errorMessage,
+        };
+      }
+
+      console.log(`✅ Gas Check Passed: ${hasSufficientBalance ? 'Sufficient FLR balance' : 'Paymaster enabled'}`);
+
+      return {
+        gasAvailable: true,
+        flrBalance,
+        paymasterAvailable,
+        estimatedGasCost,
+      };
+    } catch (error) {
+      console.error('❌ Gas availability check failed:', error);
+      
+      return {
+        gasAvailable: false,
+        flrBalance: '0',
+        paymasterAvailable: false,
+        estimatedGasCost: '0',
+        errorMessage: error instanceof Error ? error.message : 'Unknown error during gas check',
+      };
+    }
+  }
+
+  /**
    * @deprecated This method is deprecated and should not be used.
    * The system operates in smart-account-only mode. All transactions MUST go through ERC-4337.
    * Use getContractSigner() from FlareClient instead, which returns SmartAccountSigner.

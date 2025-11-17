@@ -1276,6 +1276,7 @@ export class BridgeService {
    * @returns Transaction hash of FAssets redemption request
    * 
    * Flow:
+   * 0. Gas Preflight Check - Verify Smart Account has FLR or paymaster is available
    * 1. Request redemption from AssetManager (burns FXRP, creates redemption request)
    * 2. FAssets agent sends XRP to receiverXrplAddress
    * 3. Generate FDC attestation proof for agent's payment
@@ -1298,6 +1299,34 @@ export class BridgeService {
     if (!this.fassetsClient) {
       throw new Error("FAssetsClient not initialized. This should never happen in production mode.");
     }
+
+    // CRITICAL: Gas Preflight Check before burning user's shXRP
+    // This prevents the bug where user loses shXRP but withdrawal fails due to gas errors
+    console.log(`\n⛽ Gas Preflight Check (CRITICAL)...`);
+    if (!this.config.flareClient) {
+      throw new Error("FlareClient not initialized");
+    }
+    
+    const smartAccountClient = this.config.flareClient.getSmartAccountClient();
+    const gasCheck = await smartAccountClient.checkGasAvailability();
+    
+    if (!gasCheck.gasAvailable) {
+      const errorMsg = `Gas preflight check failed: ${gasCheck.errorMessage}. Cannot proceed with withdrawal to prevent burning user's shXRP without ability to complete redemption.`;
+      console.error(`❌ ${errorMsg}`);
+      
+      await this.config.storage.updateRedemptionStatus(redemptionId, "failed", {
+        errorMessage: errorMsg,
+      });
+      
+      throw new Error(errorMsg);
+    }
+    
+    console.log(`✅ Gas Preflight Check Passed`);
+    console.log(`   FLR Balance: ${gasCheck.flrBalance} FLR`);
+    console.log(`   Paymaster: ${gasCheck.paymasterAvailable ? 'Available' : 'N/A'}`);
+    console.log(`   Estimated Cost: ${gasCheck.estimatedGasCost} FLR`);
+    console.log(`   ✅ Safe to proceed with withdrawal`);
+    console.log(``);
 
     try {
       // Step 1: Request redemption from AssetManager
@@ -1672,11 +1701,15 @@ export class BridgeService {
   /**
    * Phase 3 Background Worker: Process redemption confirmation
    * This orchestrates the complete redemption confirmation flow:
-   * 1. Generate FDC proof of agent→user payment
-   * 2. Confirm redemption payment on FAssets contract
-   * 3. Update position balance (deduct shXRP)
-   * 4. Create withdrawal transaction record
-   * 5. Mark redemption as completed
+   * 1. Mark as xrpl_received (USER RECEIVES XRP = SUCCESS)
+   * 2. Generate FDC proof of agent→user payment (with retries)
+   * 3. Confirm redemption payment on FAssets contract (with retries)
+   * 4. Update position balance (deduct shXRP)
+   * 5. Create withdrawal transaction record
+   * 6. Mark redemption as fully completed
+   * 
+   * CRITICAL FIX: User receiving XRP = terminal success (xrpl_received status)
+   * Proof confirmation failures do NOT change user-facing success status
    */
   async processRedemptionConfirmation(
     redemptionId: string,
@@ -1703,37 +1736,21 @@ export class BridgeService {
       console.log(`      XRP Sent: ${redemption.xrpSent}`);
       console.log(`      Current Status: ${redemption.status}`);
       
-      // Update status to xrpl_payout
-      console.log(`\n   📝 Updating status to "xrpl_payout"...`);
-      await this.config.storage.updateRedemptionStatus(redemptionId, "xrpl_payout", {
+      // CRITICAL: Mark as xrpl_received IMMEDIATELY
+      // User has received XRP = withdrawal is SUCCESS from user perspective
+      console.log(`\n   ✅ CRITICAL: Marking as xrpl_received (USER SUCCESS)`);
+      console.log(`      User has received XRP - withdrawal is now successful!`);
+      console.log(`      Proof confirmation will run in background with retries`);
+      
+      await this.config.storage.updateRedemptionStatus(redemptionId, "xrpl_received", {
         xrplPayoutTxHash: xrplTxHash,
         xrplPayoutAt: new Date(),
       });
-      console.log(`   ✅ Status updated to "xrpl_payout"`);
+      console.log(`   ✅ Status updated to "xrpl_received" (terminal success)`);
       
-      // Step 1: Generate FDC proof of agent→user payment
-      console.log(`\n   ⏳ Step 1/5: Generating FDC proof...`);
-      console.log(`      TX Hash: ${xrplTxHash}`);
-      const fdcResult = await this.generateFDCProofForRedemption(
-        xrplTxHash,
-        redemptionId
-      );
-      console.log(`   ✅ Step 1/5: FDC proof generated successfully`);
-      console.log(`      Voting Round: ${fdcResult.votingRoundId}`);
-      console.log(`      Attestation TX: ${fdcResult.attestationTxHash}`);
-      
-      // Step 2: Confirm redemption payment on FAssets contract
-      console.log(`\n   ⏳ Step 2/5: Confirming redemption payment on FAssets contract...`);
-      console.log(`      Request ID: ${redemption.redemptionRequestId}`);
-      const confirmationTxHash = await this.confirmRedemptionPayment(
-        fdcResult.proof,
-        BigInt(redemption.redemptionRequestId!)
-      );
-      console.log(`   ✅ Step 2/5: Redemption payment confirmed on-chain`);
-      console.log(`      Confirmation TX: ${confirmationTxHash}`);
-      
-      // Step 3: Update position balance (deduct shXRP)
-      console.log(`\n   ⏳ Step 3/5: Updating position balance...`);
+      // Update position balance and create transaction record immediately
+      // This ensures user's balance is updated even if proof confirmation fails
+      console.log(`\n   ⏳ Updating position balance (immediate)...`);
       const position = await this.config.storage.getPosition(redemption.positionId);
       if (!position) {
         throw new Error(`Position ${redemption.positionId} not found`);
@@ -1750,15 +1767,12 @@ export class BridgeService {
       await this.config.storage.updatePosition(redemption.positionId, {
         amount: newBalance.toFixed(6)
       });
-      console.log(`   ✅ Step 3/5: Position balance updated`);
+      console.log(`   ✅ Position balance updated`);
       
-      // Step 4: Create withdrawal transaction record
-      // Check if transaction already exists (idempotency)
+      // Create withdrawal transaction record (check idempotency)
       const existingTx = await this.config.storage.getTransactionByTxHash(xrplTxHash);
-      if (existingTx) {
-        console.log(`   ⏭️  Step 4/5: Transaction record already exists, skipping creation`);
-      } else {
-        console.log(`   ⏳ Step 4/5: Creating transaction record...`);
+      if (!existingTx) {
+        console.log(`   ⏳ Creating transaction record...`);
         await this.config.storage.createTransaction({
           vaultId: redemption.vaultId,
           positionId: redemption.positionId,
@@ -1769,35 +1783,21 @@ export class BridgeService {
           txHash: xrplTxHash,
           network: this.config.network === "mainnet" ? "mainnet" : "testnet",
         });
-        console.log(`   ✅ Step 4/5: Transaction record created`);
-      }
-      
-      // Step 5: Mark redemption as completed
-      console.log(`\n   ⏳ Step 5/5: Marking redemption as completed...`);
-      await this.config.storage.updateRedemptionStatus(redemptionId, "completed", {
-        fdcAttestationTxHash: fdcResult.attestationTxHash,
-        fdcVotingRoundId: fdcResult.votingRoundId.toString(),
-        fdcProofHash: JSON.stringify(fdcResult.proof),
-        confirmationTxHash: confirmationTxHash,
-        completedAt: new Date(),
-      });
-      console.log(`   ✅ Step 5/5: Redemption marked as completed`);
-      
-      // Unsubscribe user address from listener (cleanup)
-      if (this.xrplListener) {
-        console.log(`\n   🔕 Unsubscribing user address from XRPL listener...`);
-        await this.xrplListener.unsubscribeUserAddress(redemption.walletAddress);
-        console.log(`   ✅ User address unsubscribed`);
+        console.log(`   ✅ Transaction record created`);
+      } else {
+        console.log(`   ⏭️  Transaction record already exists, skipping creation`);
       }
       
       console.log(`\n✅ ================================`);
-      console.log(`✅ Redemption Completed Successfully!`);
+      console.log(`✅ Withdrawal Complete (User Perspective)!`);
       console.log(`✅ ================================`);
-      console.log(`   📋 Redemption ID: ${redemptionId}`);
-      console.log(`   👤 User: ${redemption.walletAddress}`);
-      console.log(`   💰 Amount: ${redemption.fxrpRedeemed} FXRP → ${redemption.xrpSent} XRP`);
-      console.log(`   🔗 XRPL TX: ${xrplTxHash}`);
-      console.log(`   🔗 Confirmation TX: ${confirmationTxHash}`);
+      console.log(`   Status: xrpl_received (terminal success)`);
+      console.log(`   User received: ${redemption.xrpSent || redemption.fxrpRedeemed} XRP`);
+      console.log(`   Now attempting proof confirmation in background...`);
+      console.log(``);
+      
+      // Background proof confirmation with retry logic (failures don't affect user success)
+      await this.confirmRedemptionProofWithRetry(redemptionId, xrplTxHash, redemption);
       
     } catch (error) {
       // Handle FDC timeout separately
@@ -1811,12 +1811,154 @@ export class BridgeService {
         return; // Don't throw - timeout is recoverable
       }
       
-      // Other errors are terminal
+      // Other errors during initial setup are terminal
       console.error(`❌ Redemption confirmation failed:`, error);
       await this.config.storage.updateRedemptionStatus(redemptionId, "failed", {
         errorMessage: error instanceof Error ? error.message : "Unknown error",
       });
       throw error;
+    }
+  }
+
+  /**
+   * Confirm redemption proof with exponential backoff retry logic
+   * This runs in background after user has received XRP
+   * Failures here do NOT mark the withdrawal as failed from user perspective
+   */
+  private async confirmRedemptionProofWithRetry(
+    redemptionId: string,
+    xrplTxHash: string,
+    redemption: any,
+    retryAttempt: number = 0
+  ): Promise<void> {
+    const maxRetries = 3;
+    const baseDelay = 5000; // 5 seconds
+    
+    try {
+      // Step 1: Generate FDC proof of agent→user payment
+      console.log(`\n   ⏳ [Background] Generating FDC proof (attempt ${retryAttempt + 1}/${maxRetries + 1})...`);
+      console.log(`      TX Hash: ${xrplTxHash}`);
+      const fdcResult = await this.generateFDCProofForRedemption(
+        xrplTxHash,
+        redemptionId
+      );
+      console.log(`   ✅ [Background] FDC proof generated successfully`);
+      console.log(`      Voting Round: ${fdcResult.votingRoundId}`);
+      console.log(`      Attestation TX: ${fdcResult.attestationTxHash}`);
+      
+      // Step 2: Confirm redemption payment on FAssets contract
+      console.log(`\n   ⏳ [Background] Confirming redemption payment on FAssets contract...`);
+      console.log(`      Request ID: ${redemption.redemptionRequestId}`);
+      const confirmationTxHash = await this.confirmRedemptionPayment(
+        fdcResult.proof,
+        BigInt(redemption.redemptionRequestId!)
+      );
+      console.log(`   ✅ [Background] Redemption payment confirmed on-chain`);
+      console.log(`      Confirmation TX: ${confirmationTxHash}`);
+      
+      // Mark redemption as fully completed (proof confirmed)
+      console.log(`\n   ⏳ [Background] Marking redemption as fully completed...`);
+      await this.config.storage.updateRedemptionStatus(redemptionId, "completed", {
+        fdcAttestationTxHash: fdcResult.attestationTxHash,
+        fdcVotingRoundId: fdcResult.votingRoundId.toString(),
+        fdcProofHash: JSON.stringify(fdcResult.proof),
+        confirmationTxHash: confirmationTxHash,
+        completedAt: new Date(),
+      });
+      console.log(`   ✅ [Background] Redemption marked as fully completed`);
+      
+      // Unsubscribe user address from listener (cleanup)
+      if (this.xrplListener) {
+        console.log(`\n   🔕 [Background] Unsubscribing user address from XRPL listener...`);
+        await this.xrplListener.unsubscribeUserAddress(redemption.walletAddress);
+        console.log(`   ✅ [Background] User address unsubscribed`);
+      }
+      
+      console.log(`\n✅ ================================`);
+      console.log(`✅ Proof Confirmation Complete!`);
+      console.log(`✅ ================================`);
+      console.log(`   📋 Redemption ID: ${redemptionId}`);
+      console.log(`   👤 User: ${redemption.walletAddress}`);
+      console.log(`   💰 Amount: ${redemption.fxrpRedeemed} FXRP → ${redemption.xrpSent} XRP`);
+      console.log(`   🔗 XRPL TX: ${xrplTxHash}`);
+      console.log(`   🔗 Confirmation TX: ${confirmationTxHash}`);
+      
+    } catch (error) {
+      // CRITICAL: User already received XRP - do NOT mark as failed
+      // Log errors but keep status as xrpl_received
+      
+      // Check for specific gas errors
+      const isGasError = error instanceof Error && (
+        error.message.includes('insufficient funds') ||
+        error.message.includes('gas') ||
+        error.message.includes('out of gas') ||
+        error.message.includes('transaction underpriced')
+      );
+      
+      if (isGasError) {
+        console.error(`\n⛽ [Background] Gas Error - Proof confirmation failed but user HAS XRP`);
+        console.error(`   Error: ${error instanceof Error ? error.message : 'Unknown gas error'}`);
+        console.error(`   Status remains: xrpl_received (user success)`);
+        
+        // Retry with exponential backoff
+        if (retryAttempt < maxRetries) {
+          const delay = baseDelay * Math.pow(2, retryAttempt);
+          console.warn(`\n⏳ [Background] Retrying proof confirmation in ${delay}ms (attempt ${retryAttempt + 2}/${maxRetries + 1})...`);
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return await this.confirmRedemptionProofWithRetry(redemptionId, xrplTxHash, redemption, retryAttempt + 1);
+        } else {
+          console.error(`\n❌ [Background] Max retries reached - proof confirmation permanently failed`);
+          console.warn(`   ⚠️  Redemption stays at xrpl_received (user HAS XRP)`);
+          console.warn(`   ⚠️  Manual intervention may be needed for proof confirmation`);
+          
+          // Update error message but keep status as xrpl_received
+          await this.config.storage.updateRedemption(redemptionId, {
+            errorMessage: `Proof confirmation failed after ${maxRetries + 1} attempts: ${error instanceof Error ? error.message : 'Unknown error'}. User received XRP successfully.`,
+          });
+          return; // Don't throw - user has their XRP
+        }
+      }
+      
+      // Handle FDC timeout separately (also recoverable)
+      if (error instanceof FDCTimeoutError) {
+        console.warn(`\n⏰ [Background] FDC timeout for redemption ${redemptionId}`);
+        console.warn(`   Status remains: xrpl_received (user HAS XRP)`);
+        
+        if (retryAttempt < maxRetries) {
+          const delay = baseDelay * Math.pow(2, retryAttempt);
+          console.warn(`   ⏳ Retrying in ${delay}ms...`);
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
+          return await this.confirmRedemptionProofWithRetry(redemptionId, xrplTxHash, redemption, retryAttempt + 1);
+        } else {
+          await this.config.storage.updateRedemption(redemptionId, {
+            errorMessage: `FDC proof timeout after ${maxRetries + 1} attempts. User received XRP successfully.`,
+            fdcVotingRoundId: error.votingRoundId.toString(),
+            fdcRequestBytes: error.requestBytes,
+          });
+          return;
+        }
+      }
+      
+      // Other errors: Log but don't fail the withdrawal
+      console.error(`\n❌ [Background] Proof confirmation error (non-gas):`);
+      console.error(`   Error:`, error);
+      console.warn(`   ⚠️  Status remains: xrpl_received (user HAS XRP)`);
+      
+      if (retryAttempt < maxRetries) {
+        const delay = baseDelay * Math.pow(2, retryAttempt);
+        console.warn(`   ⏳ Retrying in ${delay}ms...`);
+        
+        await new Promise(resolve => setTimeout(resolve, delay));
+        return await this.confirmRedemptionProofWithRetry(redemptionId, xrplTxHash, redemption, retryAttempt + 1);
+      } else {
+        await this.config.storage.updateRedemption(redemptionId, {
+          errorMessage: `Proof confirmation failed after ${maxRetries + 1} attempts: ${error instanceof Error ? error.message : 'Unknown error'}. User received XRP successfully.`,
+        });
+        console.error(`   ⚠️  Manual intervention may be needed for proof confirmation`);
+        return; // Don't throw - user has their XRP
+      }
     }
   }
 }

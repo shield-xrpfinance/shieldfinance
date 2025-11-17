@@ -2438,11 +2438,19 @@ export async function registerRoutes(
       const amount = redemption.xrpSent || redemption.fxrpRedeemed || redemption.shareAmount;
 
       // Map redemption status to progress modal step
+      // CRITICAL FIX: xrpl_received = user success (received XRP)
       let currentStep: "creating" | "processing" | "sending" | "complete" | "error";
+      let proofConfirmationPending = false;
+      
       if (redemption.status === "failed") {
         currentStep = "error";
       } else if (redemption.status === "completed") {
         currentStep = "complete";
+        proofConfirmationPending = false;
+      } else if (redemption.status === "xrpl_received") {
+        // CRITICAL: User received XRP = withdrawal is complete from user perspective
+        currentStep = "complete";
+        proofConfirmationPending = true; // Proof confirmation still processing in background
       } else if (redemption.status === "pending") {
         currentStep = "creating";
       } else if (redemption.status === "xrpl_payout") {
@@ -2466,6 +2474,7 @@ export async function registerRoutes(
         fassetsRedemptionTxHash: redemption.fassetsRedemptionTxHash,
         createdAt: redemption.createdAt,
         completedAt: redemption.completedAt,
+        proofConfirmationPending: proofConfirmationPending, // Inform frontend if proof is still processing
         error: redemption.status === 'failed' ? redemption.errorMessage : undefined,
       });
     } catch (error) {
@@ -3056,7 +3065,7 @@ export async function registerRoutes(
       console.log(`Querying blocks ${fromBlock} to ${currentBlock} in chunks of ${CHUNK_SIZE}...`);
       
       // Helper to query events in chunks
-      async function queryEventsInChunks(filter: any, from: number, to: number): Promise<any[]> {
+      const queryEventsInChunks = async (filter: any, from: number, to: number): Promise<any[]> => {
         const allEvents: any[] = [];
         for (let start = from; start <= to; start += CHUNK_SIZE) {
           const end = Math.min(start + CHUNK_SIZE - 1, to);
@@ -3069,7 +3078,7 @@ export async function registerRoutes(
           }
         }
         return allEvents;
-      }
+      };
       
       const depositFilter = vault.filters.Deposit(null, smartAccountAddress);
       const depositEvents = await queryEventsInChunks(depositFilter, fromBlock, currentBlock);
