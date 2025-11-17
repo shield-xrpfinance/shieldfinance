@@ -57,22 +57,39 @@ Use Tailwind units of **2, 4, 6, 8, 12, 16** for consistent rhythm
   - Percentage change indicator with up/down arrow
   - Subtle trend sparkline visualization (optional micro-chart)
 
-### Vault Cards
+### Vault Display (Modern List Layout)
 
-**Layout:** 3-column grid (`lg:grid-cols-3 md:grid-cols-2 grid-cols-1`)
+**Design Philosophy:** List-based layout maximizes horizontal space and creates clear visual hierarchy. Active vaults get prominence, coming soon vaults are minimized.
 
-Each vault card includes:
-- Vault name and protocol badge (top)
-- Large APY display (center, `text-4xl font-bold`)
-- Key metrics grid (2x2):
-  - Total Value Locked
-  - Liquidity Available
-  - Lock Period
-  - Risk Rating (badge with icon)
-- Action button: "Deposit XRP" (full-width, prominent)
-- Footer: Current depositors count, vault status badge
+**Active Vaults Section:**
+- Full-width list items (not grid cards)
+- Horizontal layout with metrics in a row
+- Large typography for vault names (`text-2xl font-semibold`)
+- Inline metrics display: APY → TVL → Liquidity → Depositors
+- Prominent deposit CTA positioned on the right
+- Spacing: `p-8` internal padding, `rounded-2xl` corners
+- Hover effect: subtle elevation and border glow
+- Modern card treatment with clean borders
 
-**Card Spacing:** `p-6` internal padding, `rounded-xl` corners, subtle border
+**Coming Soon Vaults Section:**
+- Collapsible accordion (collapsed by default)
+- Section header: "X Vaults Coming Soon" with expand/collapse icon
+- When expanded: compact list items with minimal spacing
+- Visual dimming: 75% opacity to deprioritize
+- No deposit buttons, clear "Coming Soon" badge
+- Spacing: `p-4` internal padding for compact feel
+
+**Metric Display:**
+- Horizontal row layout with consistent spacing (`gap-8`)
+- Each metric: Label above value pattern
+- Labels: `text-xs uppercase tracking-wide text-muted-foreground`
+- Values: `text-2xl font-semibold tabular-nums`
+- APY gets accent color treatment for emphasis
+
+**Responsive Behavior:**
+- Desktop: Full horizontal layout with all metrics visible
+- Tablet: Metrics wrap to 2 rows
+- Mobile: Stacks vertically with key metrics prioritized
 
 ### Deposit/Withdrawal Interface
 
