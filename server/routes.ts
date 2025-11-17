@@ -44,7 +44,7 @@ const requireAdminAuth = (req: Request, res: Response, next: NextFunction) => {
   // Validate hex format and length (SHA-256 produces 64 hex chars)
   if (providedKey.length !== 64 || !/^[0-9a-f]{64}$/i.test(providedKey)) {
     console.warn(`⚠️  Invalid admin key format from ${req.ip}`);
-    return res.status(403).json({ error: "Forbidden: Invalid admin key format" });
+    return res.status(401).json({ error: "Unauthorized: Invalid admin key" });
   }
   
   // Compare provided hex digest directly against expected (no double hashing)
@@ -53,7 +53,7 @@ const requireAdminAuth = (req: Request, res: Response, next: NextFunction) => {
     Buffer.from(providedKey.toLowerCase(), 'hex')
   )) {
     console.warn(`⚠️  Unauthorized admin access attempt from ${req.ip}`);
-    return res.status(403).json({ error: "Forbidden: Invalid admin key" });
+    return res.status(401).json({ error: "Unauthorized: Invalid admin key" });
   }
   
   console.log(`✅ Admin authenticated from ${req.ip}`);  // Log successful access for audit
@@ -205,7 +205,7 @@ export async function registerRoutes(
           const vaultContract = flareClient.getShXRPVault(vaultAddress) as any;
           
           // Fetch P0 security state from contract
-          const [depositLimit, paused] = await Promise.all([
+          const [depositLimitRaw, paused] = await Promise.all([
             vaultContract.depositLimit(),
             vaultContract.paused()
           ]);
@@ -215,7 +215,8 @@ export async function registerRoutes(
             if (index === 0) {
               return {
                 ...vault,
-                depositLimit: ethers.formatUnits(depositLimit, 6), // FXRP uses 6 decimals
+                depositLimit: ethers.formatUnits(depositLimitRaw, 6).toString(), // Always string for JSON precision
+                depositLimitRaw: depositLimitRaw.toString(), // Raw contract value
                 paused
               };
             }
