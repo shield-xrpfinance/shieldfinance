@@ -169,6 +169,8 @@ export const FIRELIGHT_VAULT_ABI = [
   
   // Custom ShXRPVault configuration
   "function minDeposit() view returns (uint256)",  // Minimum deposit amount in FXRP
+  "function depositLimit() view returns (uint256)",  // Maximum total assets allowed in vault
+  "function paused() view returns (bool)",  // Check if vault is paused
   
   // Deposit functions
   "function deposit(uint256 assets, address receiver) returns (uint256 shares)",
@@ -199,13 +201,25 @@ export const FIRELIGHT_VAULT_ABI = [
   "event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)",
   "event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)",
   
+  // ==================== ShXRPVault Admin Functions ====================
+  
+  // P0 Security Features (Owner only)
+  "function pause()",  // Emergency stop - halt all deposits/withdrawals
+  "function unpause()",  // Resume normal operations after pause
+  "function setDepositLimit(uint256 newLimit)",  // Update maximum vault capacity
+  
   // ==================== Firelight Custom Events (if applicable) ====================
   
   // Note: Exact custom events TBD from Firelight contract source
   // These are educated guesses based on common vault patterns
   "event YieldDistributed(uint256 amount)",
   "event RewardsCompounded(uint256 newTotalAssets)",
-  "event VaultCapUpdated(uint256 newCap)"
+  "event VaultCapUpdated(uint256 newCap)",
+  
+  // P0 Security Events (OpenZeppelin Pausable)
+  "event Paused(address account)",
+  "event Unpaused(address account)",
+  "event DepositLimitUpdated(uint256 newDepositLimit)"
 ] as const;
 
 /**
