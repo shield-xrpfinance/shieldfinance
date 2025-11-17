@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, decimal, integer, timestamp, pgEnum } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, integer, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -47,6 +47,7 @@ export const vaults = pgTable("vaults", {
   lockPeriod: integer("lock_period").notNull(),
   riskLevel: text("risk_level").notNull(),
   status: text("status").notNull().default("active"),
+  comingSoon: boolean("coming_soon").notNull().default(false),
 });
 
 export const positions = pgTable("positions", {
