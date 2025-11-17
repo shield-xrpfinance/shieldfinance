@@ -103,6 +103,7 @@ export default function DepositModal({
   
   // Phase state: form → xaman → progress
   const [depositPhase, setDepositPhase] = useState<'form' | 'xaman' | 'progress'>('form');
+  const [isCreatingBridge, setIsCreatingBridge] = useState(false);
   
   // Bridge tracking
   const [bridgeId, setBridgeId] = useState<string | null>(null);
@@ -166,6 +167,7 @@ export default function DepositModal({
       setAmounts({});
       setStep(1);
       setDepositPhase('form');
+      setIsCreatingBridge(false);
       setBridgeId(null);
       setXamanPayload(null);
       setProgressSteps([...initialDepositSteps]);
@@ -342,6 +344,12 @@ export default function DepositModal({
   };
 
   const handleXRPDeposit = async () => {
+    // Prevent duplicate submissions
+    if (isCreatingBridge) {
+      console.log("⚠️ Bridge creation already in progress, ignoring click");
+      return;
+    }
+
     // Validate all required fields before proceeding
     if (!address) {
       console.error("❌ No wallet address available");
@@ -372,6 +380,8 @@ export default function DepositModal({
       });
       return;
     }
+
+    setIsCreatingBridge(true);
 
     try {
       // Create bridge
@@ -409,6 +419,7 @@ export default function DepositModal({
         description: error instanceof Error ? error.message : "Failed to create bridge",
         variant: "destructive",
       });
+      setIsCreatingBridge(false);
     }
   };
 
@@ -435,6 +446,7 @@ export default function DepositModal({
               deepLink: paymentResult.deepLink || "",
             });
             setDepositPhase('xaman');
+            setIsCreatingBridge(false); // Reset flag when Xaman modal opens
           } else {
             throw new Error("Failed to create payment request");
           }
@@ -811,10 +823,13 @@ export default function DepositModal({
                 )}
                 <Button
                   onClick={handleContinue}
-                  disabled={step === 1 && (!hasValidAmount || balancesLoading)}
+                  disabled={
+                    (step === 1 && (!hasValidAmount || balancesLoading)) || 
+                    (step === 2 && isCreatingBridge)
+                  }
                   data-testid={step === 1 ? "button-continue" : "button-confirm-deposit"}
                 >
-                  {step === 1 ? "Continue" : "Confirm Deposit"}
+                  {step === 1 ? "Continue" : isCreatingBridge ? "Creating Bridge..." : "Confirm Deposit"}
                 </Button>
               </DialogFooter>
             </>
