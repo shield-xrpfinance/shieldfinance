@@ -699,37 +699,44 @@ export default function Vaults() {
         </Select>
       </div>
 
-      {/* Active Vaults Section */}
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Active Vaults</h2>
-          <p className="text-muted-foreground">
-            Earn yield on your XRP with our liquid staking vaults
+      {/* Empty State - No vaults at all */}
+      {filteredVaults.length === 0 && (
+        <div className="text-center py-16">
+          <p className="text-xl text-muted-foreground mb-2">No vaults found</p>
+          <p className="text-sm text-muted-foreground">
+            Try adjusting your search or filter criteria
           </p>
         </div>
+      )}
+
+      {/* Active Vaults Section */}
+      {filteredVaults.filter((vault) => !vault.comingSoon).length > 0 && (
         <div className="space-y-6">
-          {filteredVaults
-            .filter((vault) => !vault.comingSoon)
-            .map((vault) => (
-              <VaultListItem key={vault.id} {...vault} onDeposit={handleDeposit} />
-            ))}
-          {filteredVaults.filter((vault) => !vault.comingSoon).length === 0 && (
-            <p className="text-muted-foreground text-center py-12">
-              No active vaults found matching your search.
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold tracking-tight">Active Vaults</h2>
+            <p className="text-muted-foreground">
+              Earn yield on your XRP with our liquid staking vaults
             </p>
-          )}
+          </div>
+          <div className="space-y-6">
+            {filteredVaults
+              .filter((vault) => !vault.comingSoon)
+              .map((vault) => (
+                <VaultListItem key={vault.id} {...vault} onDeposit={handleDeposit} />
+              ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Coming Soon Vaults Section */}
       {filteredVaults.filter((vault) => vault.comingSoon).length > 0 && (
         <div className="mt-12">
           <CollapsibleSection
-            title="Coming Soon Vaults"
+            title="Coming Soon"
             count={filteredVaults.filter((vault) => vault.comingSoon).length}
             defaultOpen={false}
           >
-            <div className="space-y-3">
+            <div className="space-y-4">
               {filteredVaults
                 .filter((vault) => vault.comingSoon)
                 .map((vault) => (
