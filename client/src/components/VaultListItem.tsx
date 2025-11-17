@@ -63,7 +63,7 @@ export default function VaultListItem({
   const isDepositDisabled = comingSoon || paused === true;
 
   return (
-    <Card className={`hover-elevate transition-all duration-200 ${comingSoon ? 'opacity-75' : ''}`}>
+    <Card className={`hover-elevate transition-all duration-200 border-2 ${comingSoon ? 'opacity-75' : ''}`}>
       <div className="p-8">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
           {/* Left: Vault Info */}
@@ -134,7 +134,7 @@ export default function VaultListItem({
             {/* APY */}
             <div className="text-center">
               <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">APY</p>
-              <p className="text-2xl font-semibold tabular-nums text-primary" data-testid={`text-apy-${id}`}>
+              <p className="text-3xl font-bold tabular-nums bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent" data-testid={`text-apy-${id}`}>
                 {apy}
               </p>
               {apyLabel && (

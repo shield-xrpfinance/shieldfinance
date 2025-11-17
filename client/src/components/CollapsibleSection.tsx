@@ -24,24 +24,24 @@ export default function CollapsibleSection({
       <Button
         variant="ghost"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full justify-start gap-2 h-auto p-4 hover-elevate"
+        className="w-full justify-start gap-3 h-auto p-6 hover-elevate rounded-2xl border-2 border-dashed"
         data-testid="button-toggle-section"
       >
         {isOpen ? (
-          <ChevronDown className="h-5 w-5 text-muted-foreground" />
+          <ChevronDown className="h-5 w-5 text-muted-foreground flex-shrink-0" />
         ) : (
-          <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
         )}
-        {icon && <span className="text-muted-foreground">{icon}</span>}
-        <span className="text-lg font-semibold">
-          {title}
+        {icon && <span className="text-muted-foreground flex-shrink-0">{icon}</span>}
+        <div className="flex items-baseline gap-2">
+          <span className="text-xl font-semibold">{title}</span>
           {count !== undefined && (
-            <span className="ml-2 text-muted-foreground font-normal">({count})</span>
+            <span className="text-sm text-muted-foreground font-normal">({count} vaults)</span>
           )}
-        </span>
+        </div>
       </Button>
 
-      {isOpen && <div className="space-y-3 pl-2">{children}</div>}
+      {isOpen && <div className="space-y-4">{children}</div>}
     </div>
   );
 }

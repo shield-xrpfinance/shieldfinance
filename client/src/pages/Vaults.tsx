@@ -700,9 +700,14 @@ export default function Vaults() {
       </div>
 
       {/* Active Vaults Section */}
-      <div className="space-y-4">
-        <h2 className="text-2xl font-semibold">Active Vaults</h2>
-        <div className="space-y-4">
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <h2 className="text-3xl font-bold tracking-tight">Active Vaults</h2>
+          <p className="text-muted-foreground">
+            Earn yield on your XRP with our liquid staking vaults
+          </p>
+        </div>
+        <div className="space-y-6">
           {filteredVaults
             .filter((vault) => !vault.comingSoon)
             .map((vault) => (
