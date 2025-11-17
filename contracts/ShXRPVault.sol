@@ -8,6 +8,8 @@ import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/Pausable.sol";
+import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IStrategy.sol";
 
 /**
@@ -26,6 +28,8 @@ import "./interfaces/IStrategy.sol";
  * - Multi-strategy yield optimization (Kinetic lending, Firelight staking, etc.)
  * - Dynamic buffer management for instant withdrawals
  * - ReentrancyGuard for deposit/withdrawal security
+ * - Pausable for emergency stop (exploit/vulnerability protection)
+ * - Deposit limit enforcement to control TVL growth
  * 
  * Flow:
  * 1. User mints FXRP via FAssets bridge (XRP → FXRP on Flare)
@@ -47,7 +51,7 @@ import "./interfaces/IStrategy.sol";
  * - Strategies: See docs/STRATEGY_INTEGRATION.md
  * - Operators coordinate bridging between XRPL and Flare
  */
-contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
+contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     using SafeERC20 for IERC20;
     
     // ========================================
@@ -79,6 +83,10 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
     // Minimum deposit amount (0.01 FXRP with 6 decimals)
     uint256 public minDeposit = 10000; // 0.01 FXRP (6 decimals)
     
+    // Maximum total deposit limit (prevents uncontrolled TVL growth)
+    // Start with 1M FXRP (~$2.1M at $2.10/XRP), can be increased as strategies scale
+    uint256 public depositLimit = 1_000_000e6; // 1,000,000 FXRP (6 decimals)
+    
     // Strategy Management
     mapping(address => StrategyInfo) public strategies;
     address[] public strategyList;
@@ -95,6 +103,7 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
     event OperatorRemoved(address indexed operator);
     event MinDepositUpdated(uint256 newMinDeposit);
     event BufferTargetUpdated(uint256 newTargetBps);
+    event DepositLimitUpdated(uint256 newDepositLimit);
     
     // Strategy Events
     event StrategyAdded(address indexed strategy, uint256 targetBps);
@@ -143,6 +152,76 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
      */
     function decimals() public view virtual override returns (uint8) {
         return IERC20Metadata(address(asset())).decimals();
+    }
+    
+    /**
+     * @dev Override maxDeposit to enforce deposit limit
+     * 
+     * ERC4626 Compliance (Critical):
+     * Preview functions must reflect the deposit limit, otherwise integrators
+     * (DEXs, aggregators, wallets) will show incorrect max deposit amounts.
+     * 
+     * Standard Behavior:
+     * - Returns remaining capacity: depositLimit - totalAssets()
+     * - Returns 0 if at or above limit
+     * - Returns 0 if paused
+     * 
+     * Example:
+     * - Deposit limit: 1M FXRP
+     * - Current TVL: 750K FXRP
+     * - maxDeposit() returns: 250K FXRP (remaining capacity)
+     * 
+     * @param receiver Address that would receive shares (unused, per ERC4626 spec)
+     * @return Maximum amount of assets that can be deposited
+     */
+    function maxDeposit(address receiver) public view virtual override returns (uint256) {
+        // If paused, no deposits allowed
+        if (paused()) {
+            return 0;
+        }
+        
+        uint256 currentAssets = totalAssets();
+        
+        // If at or above limit, no deposits allowed
+        if (currentAssets >= depositLimit) {
+            return 0;
+        }
+        
+        // Return remaining capacity
+        return depositLimit - currentAssets;
+    }
+    
+    /**
+     * @dev Override maxMint to enforce deposit limit
+     * 
+     * ERC4626 Compliance (Critical):
+     * Shares-based preview must also respect deposit limit.
+     * 
+     * Calculation:
+     * 1. Get remaining capacity in assets (depositLimit - totalAssets())
+     * 2. Convert to shares using current exchange rate
+     * 
+     * @param receiver Address that would receive shares (unused, per ERC4626 spec)
+     * @return Maximum amount of shares that can be minted
+     */
+    function maxMint(address receiver) public view virtual override returns (uint256) {
+        // If paused, no mints allowed
+        if (paused()) {
+            return 0;
+        }
+        
+        uint256 currentAssets = totalAssets();
+        
+        // If at or above limit, no mints allowed
+        if (currentAssets >= depositLimit) {
+            return 0;
+        }
+        
+        // Get remaining capacity in assets
+        uint256 remainingAssets = depositLimit - currentAssets;
+        
+        // Convert to shares using current exchange rate
+        return _convertToShares(remainingAssets, Math.Rounding.Floor);
     }
     
     /**
@@ -218,6 +297,7 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
         virtual 
         override 
         nonReentrant 
+        whenNotPaused 
         returns (uint256) 
     {
         require(assets >= minDeposit, "Below minimum deposit");
@@ -243,6 +323,7 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
         virtual 
         override 
         nonReentrant 
+        whenNotPaused 
         returns (uint256) 
     {
         uint256 assets = previewMint(shares);
@@ -270,6 +351,7 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
         virtual
         override
         nonReentrant
+        whenNotPaused
         returns (uint256)
     {
         return super.withdraw(assets, receiver, owner);
@@ -293,9 +375,44 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
         virtual
         override
         nonReentrant
+        whenNotPaused
         returns (uint256)
     {
         return super.redeem(shares, receiver, owner);
+    }
+    
+    /**
+     * @dev Override ERC4626 _deposit to enforce deposit limit
+     * 
+     * SECURITY (Firelight Protocol Pattern):
+     * Prevents uncontrolled TVL growth by enforcing maximum deposit cap.
+     * 
+     * Benefits:
+     * - Risk Management: Limit exposure during beta/audit phase
+     * - Strategy Capacity: Some strategies have TVL caps (e.g., Firelight max capacity)
+     * - Gradual Launch: Start with conservative limit, increase as strategies scale
+     * 
+     * Example Limits:
+     * - Beta Launch: 100K FXRP (~$210K)
+     * - Post-Audit: 1M FXRP (~$2.1M)
+     * - Mature Protocol: 10M+ FXRP (uncapped if strategies support it)
+     * 
+     * @param caller Address initiating deposit
+     * @param receiver Address receiving shares
+     * @param assets Amount of FXRP being deposited
+     * @param shares Amount of shares being minted
+     */
+    function _deposit(
+        address caller,
+        address receiver,
+        uint256 assets,
+        uint256 shares
+    ) internal override {
+        // Enforce deposit limit BEFORE accepting assets
+        require(totalAssets() + assets <= depositLimit, "Deposit limit exceeded");
+        
+        // Proceed with standard ERC4626 deposit flow
+        super._deposit(caller, receiver, assets, shares);
     }
     
     /**
@@ -527,6 +644,69 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard {
         require(newMinDeposit > 0, "Min deposit must be positive");
         minDeposit = newMinDeposit;
         emit MinDepositUpdated(newMinDeposit);
+    }
+    
+    /**
+     * @dev Update maximum deposit limit
+     * 
+     * Security Feature (Firelight Protocol Pattern):
+     * Controls total TVL to manage risk and match strategy capacity.
+     * 
+     * Recommended Progression:
+     * 1. Beta Launch: 100K FXRP (~$210K at $2.10/XRP)
+     * 2. Post-Audit: 1M FXRP (~$2.1M)
+     * 3. Growth Phase: 10M FXRP (~$21M)
+     * 4. Mature: Uncapped (type(uint256).max) if strategies support unlimited TVL
+     * 
+     * @param newDepositLimit New deposit limit in FXRP (6 decimals)
+     * 
+     * Example: 1M FXRP = 1_000_000e6 = 1000000000000
+     */
+    function setDepositLimit(uint256 newDepositLimit) external onlyOwner {
+        require(newDepositLimit > 0, "Deposit limit must be positive");
+        depositLimit = newDepositLimit;
+        emit DepositLimitUpdated(newDepositLimit);
+    }
+    
+    /**
+     * @dev Pause all deposits and withdrawals
+     * 
+     * Emergency Stop (Firelight Protocol Pattern):
+     * Immediately halts all vault operations to contain exploits or vulnerabilities.
+     * 
+     * Use Cases:
+     * - Critical bug discovered in vault or strategy
+     * - Ongoing exploit/attack detected
+     * - Suspicious activity requiring investigation
+     * - Major protocol upgrade requiring migration
+     * 
+     * Effects When Paused:
+     * - ❌ deposit() reverts
+     * - ❌ mint() reverts
+     * - ❌ withdraw() reverts
+     * - ❌ redeem() reverts
+     * - ✅ View functions still work (totalAssets, balanceOf, etc.)
+     * - ✅ Owner can still manage strategies (emergency withdrawals)
+     * 
+     * Recovery:
+     * Call unpause() after issue is resolved.
+     */
+    function pause() external onlyOwner {
+        _pause();
+    }
+    
+    /**
+     * @dev Unpause deposits and withdrawals
+     * 
+     * Restores normal vault operations after emergency pause.
+     * 
+     * Requirements:
+     * - Only owner can unpause
+     * - Vault must currently be paused
+     * - Issue that caused pause must be resolved
+     */
+    function unpause() external onlyOwner {
+        _unpause();
     }
     
     // ========================================
