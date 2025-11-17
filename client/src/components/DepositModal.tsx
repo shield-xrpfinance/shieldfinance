@@ -251,7 +251,7 @@ export default function DepositModal({
       if (currentIndex >= 0) {
         updatedSteps[currentIndex].status = 'error';
       }
-      setErrorMessage(bridgeStatus.errorMessage || "Deposit failed. Please try again.");
+      setErrorMessage(bridgeStatus?.errorMessage || "Deposit failed. Please try again.");
     }
 
     setProgressSteps(updatedSteps);
