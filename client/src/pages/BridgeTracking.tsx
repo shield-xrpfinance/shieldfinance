@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useWallet } from "@/lib/walletContext";
 import { BridgeStatus } from "@/components/BridgeStatus";
@@ -10,7 +10,7 @@ import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2, History, A
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
-import { format, formatDistanceToNow } from "date-fns";
+import { format } from "date-fns";
 import type { SelectXrpToFxrpBridge, Vault, BridgeHistoryEntry } from "@shared/schema";
 
 // Helper to convert snake_case status to human-readable format
@@ -70,39 +70,12 @@ export default function BridgeTracking() {
     vaultName: string;
     amount: string;
   } | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
-  const [timeAgo, setTimeAgo] = useState<string>("just now");
   const { toast } = useToast();
 
-  const { data: bridges, isLoading, isFetching, dataUpdatedAt } = useQuery<SelectXrpToFxrpBridge[]>({
+  const { data: bridges, isLoading } = useQuery<SelectXrpToFxrpBridge[]>({
     queryKey: [`/api/bridges/wallet/${address}`],
     enabled: !!address,
-    refetchInterval: (query) => {
-      const hasActiveBridges = query.state.data?.some((b: any) => 
-        !["completed", "vault_minted", "failed", "vault_mint_failed"].includes(b.status)
-      );
-      return hasActiveBridges ? 2000 : false;
-    },
   });
-
-  // Update last updated timestamp when data changes
-  useEffect(() => {
-    if (dataUpdatedAt) {
-      setLastUpdated(new Date(dataUpdatedAt));
-    }
-  }, [dataUpdatedAt]);
-
-  // Update "time ago" display every second
-  useEffect(() => {
-    const updateTimeAgo = () => {
-      const distance = formatDistanceToNow(lastUpdated, { addSuffix: true });
-      setTimeAgo(distance);
-    };
-
-    updateTimeAgo();
-    const interval = setInterval(updateTimeAgo, 1000);
-    return () => clearInterval(interval);
-  }, [lastUpdated]);
 
   const { data: vaults, isLoading: isLoadingVaults } = useQuery<Vault[]>({
     queryKey: ["/api/vaults"],
@@ -225,23 +198,13 @@ export default function BridgeTracking() {
 
   return (
     <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold" data-testid="text-page-title">
-            Bridge Tracking
-          </h1>
-          <p className="text-muted-foreground mt-1" data-testid="text-page-subtitle">
-            Monitor your XRP to FXRP bridge operations in real-time
-          </p>
-        </div>
-        {address && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground" data-testid="text-last-updated">
-            {isFetching && !isLoading && (
-              <div className="h-2 w-2 rounded-full bg-primary animate-pulse" data-testid="indicator-refreshing" />
-            )}
-            <span>Last updated: {timeAgo}</span>
-          </div>
-        )}
+      <div>
+        <h1 className="text-3xl font-bold" data-testid="text-page-title">
+          Bridge Tracking
+        </h1>
+        <p className="text-muted-foreground mt-1" data-testid="text-page-subtitle">
+          Monitor your XRP to FXRP bridge operations in real-time
+        </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">

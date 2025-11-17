@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Position, Vault } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -8,26 +8,15 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import PortfolioTable from "@/components/PortfolioTable";
 import WithdrawModal from "@/components/WithdrawModal";
-import ProgressModal from "@/components/ProgressModal";
+import { WithdrawProgressModal, type WithdrawProgressStep } from "@/components/WithdrawProgressModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import EmptyState from "@/components/EmptyState";
 import { PortfolioStatsSkeleton, PortfolioTableSkeleton } from "@/components/skeletons/PortfolioSkeleton";
-import { TrendingUp, Coins, Gift, Package, Loader2, Copy, CheckCircle2 } from "lucide-react";
+import { TrendingUp, Coins, Gift, Package, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { useStatusPolling } from "@/hooks/useStatusPolling";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useLocation } from "wouter";
-
-// Define withdrawal step progression
-interface ProgressStep {
-  id: string;
-  label: string;
-  description?: string;
-  estimate?: string;
-  status: 'pending' | 'in_progress' | 'complete' | 'error';
-  isMilestone?: boolean;
-}
 
 export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
@@ -45,28 +34,16 @@ export default function Portfolio() {
   
   // Withdrawal progress modal state
   const [withdrawProgressModalOpen, setWithdrawProgressModalOpen] = useState(false);
+  const [withdrawProgressStep, setWithdrawProgressStep] = useState<WithdrawProgressStep>('creating');
   const [withdrawRedemptionId, setWithdrawRedemptionId] = useState<string | null>(null);
-  const [withdrawAmount, setWithdrawAmount] = useState<string>("");
-  const [lastCelebrationStatus, setLastCelebrationStatus] = useState<string | null>(null);
-  const [copiedRedemptionId, setCopiedRedemptionId] = useState(false);
+  const [withdrawXrplTxHash, setWithdrawXrplTxHash] = useState<string | null>(null);
+  const [withdrawErrorMessage, setWithdrawErrorMessage] = useState<string | undefined>(undefined);
+  const withdrawPollingAbortControllerRef = useRef<AbortController | null>(null);
   
   const { toast } = useToast();
   const { isConnected, address } = useWallet();
   const { network } = useNetwork();
   const [, navigate] = useLocation();
-
-  // Poll withdrawal status
-  const withdrawalStatusUrl = withdrawRedemptionId 
-    ? `/api/withdrawals/${withdrawRedemptionId}/status`
-    : "";
-  
-  const { data: withdrawalStatus, error: withdrawalStatusError } = useStatusPolling<any>(
-    withdrawalStatusUrl,
-    {
-      interval: 2000,
-      enabled: withdrawProgressModalOpen && !!withdrawRedemptionId,
-    }
-  );
 
   const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
     queryKey: ["/api/positions", address],
@@ -77,7 +54,6 @@ export default function Portfolio() {
       return response.json();
     },
     enabled: !!address,
-    refetchInterval: 5000,
   });
 
   const { data: redemptions = [] } = useQuery<any[]>({
@@ -206,88 +182,6 @@ export default function Portfolio() {
     }
   };
 
-  // Map backend redemption status to withdrawal steps
-  const getWithdrawalSteps = (status: string | undefined, xrplTxHash?: string): ProgressStep[] => {
-    const steps: ProgressStep[] = [
-      {
-        id: 'burning_shxrp',
-        label: 'Burning shXRP Shares',
-        description: 'Redeeming your shares from vault',
-        estimate: '~30s',
-        status: 'pending',
-      },
-      {
-        id: 'redeeming_fxrp',
-        label: 'Redeeming FXRP',
-        description: 'Requesting redemption from FAssets',
-        estimate: '~30s',
-        status: 'pending',
-      },
-      {
-        id: 'awaiting_xrp',
-        label: 'Agent Sending XRP',
-        description: 'FAssets agent transferring XRP to your wallet',
-        estimate: '~1 min',
-        status: 'pending',
-      },
-      {
-        id: 'xrp_received',
-        label: 'XRP Received to Your Wallet!',
-        description: 'Money is in your wallet',
-        estimate: undefined,
-        status: 'pending',
-        isMilestone: true,
-      },
-      {
-        id: 'finalizing_proof',
-        label: 'Finalizing Proof (Optional)',
-        description: 'Background confirmation running',
-        estimate: '~3 min',
-        status: 'pending',
-      },
-    ];
-
-    if (!status) return steps;
-
-    // Map backend status to step progression
-    let currentStepIndex = 0;
-    
-    switch (status) {
-      case 'pending':
-      case 'redeeming_shares':
-        currentStepIndex = 0;
-        break;
-      case 'redeemed_fxrp':
-      case 'redeeming_fxrp':
-        currentStepIndex = 1;
-        break;
-      case 'awaiting_proof':
-      case 'xrpl_payout':
-        currentStepIndex = 2;
-        break;
-      case 'xrpl_received':
-        currentStepIndex = 3; // Terminal success!
-        break;
-      case 'completed':
-        currentStepIndex = 4;
-        break;
-      case 'failed':
-        // Mark current step as error
-        return steps.map((step, idx) => ({
-          ...step,
-          status: idx < currentStepIndex ? 'complete' : idx === currentStepIndex ? 'error' : 'pending',
-        }));
-      default:
-        currentStepIndex = 0;
-    }
-
-    // Mark all steps before current as complete, current as in_progress, rest as pending
-    return steps.map((step, idx) => ({
-      ...step,
-      status: idx < currentStepIndex ? 'complete' : idx === currentStepIndex ? 'in_progress' : 'pending',
-    }));
-  };
-
   const handleConfirmWithdraw = async (amount: string) => {
     if (!selectedPosition || !address) return;
 
@@ -314,15 +208,8 @@ export default function Portfolio() {
       // Close withdraw modal and show progress modal
       setWithdrawModalOpen(false);
       setWithdrawRedemptionId(data.redemptionId);
-      setWithdrawAmount(amount);
+      setWithdrawProgressStep('creating');
       setWithdrawProgressModalOpen(true);
-      setLastCelebrationStatus(null);
-      
-      // Show initiation toast
-      toast({
-        title: "Withdrawal Initiated ✅",
-        description: `Processing ${amount} shXRP withdrawal to your wallet`,
-      });
       
     } catch (error) {
       console.error("Error processing withdrawal:", error);
@@ -371,60 +258,133 @@ export default function Portfolio() {
     setXamanPayload(null);
   };
 
-  // Show milestone toasts when withdrawal status changes
+  // Withdrawal status polling
   useEffect(() => {
-    if (!withdrawalStatus) return;
+    if (!withdrawRedemptionId || !withdrawProgressModalOpen) {
+      return;
+    }
 
-    const status = withdrawalStatus.status;
+    const abortController = new AbortController();
+    withdrawPollingAbortControllerRef.current = abortController;
+    let timeoutId: NodeJS.Timeout | null = null;
     
-    // Show XRP received celebration toast (only once)
-    if (status === 'xrpl_received' && lastCelebrationStatus !== 'xrpl_received') {
-      setLastCelebrationStatus('xrpl_received');
-      toast({
-        title: "XRP Received to Your Wallet! 💰",
-        description: `${withdrawalStatus.xrpSent || withdrawAmount} XRP has been successfully sent to your wallet!`,
-      });
-      
-      // Invalidate queries to refresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/positions", address] });
-      queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/wallet", address] });
-    }
-    
-    // Show final completion toast (only once)
-    if (status === 'completed' && lastCelebrationStatus !== 'completed') {
-      setLastCelebrationStatus('completed');
-      toast({
-        title: "Withdrawal Complete ✅",
-        description: "Proof confirmation finalized on-chain",
-      });
-    }
-    
-    // Show error toast if failed
-    if (status === 'failed' && lastCelebrationStatus !== 'failed') {
-      setLastCelebrationStatus('failed');
-      toast({
-        title: "Withdrawal Failed",
-        description: withdrawalStatus.errorMessage || "An error occurred during withdrawal",
-        variant: "destructive",
-      });
-    }
-  }, [withdrawalStatus, lastCelebrationStatus, toast, address, withdrawAmount]);
+    // Track polling attempts and timeout (5 minutes = 300 seconds, polling every 2s = 150 attempts)
+    const POLL_INTERVAL_MS = 2000;
+    const MAX_POLL_TIME_MS = 5 * 60 * 1000; // 5 minutes
+    const MAX_POLL_ATTEMPTS = MAX_POLL_TIME_MS / POLL_INTERVAL_MS;
+    let pollAttempts = 0;
+    const pollingStartTime = Date.now();
+
+    const pollStatus = async () => {
+      try {
+        pollAttempts++;
+        const elapsedMs = Date.now() - pollingStartTime;
+        
+        // Check if timeout exceeded
+        if (pollAttempts > MAX_POLL_ATTEMPTS || elapsedMs > MAX_POLL_TIME_MS) {
+          console.warn(`Withdrawal polling timeout after ${pollAttempts} attempts (${Math.round(elapsedMs / 1000)}s)`);
+          
+          setWithdrawProgressStep('error');
+          setWithdrawErrorMessage(
+            `Withdrawal is taking longer than expected. Your withdrawal request (ID: ${withdrawRedemptionId}) is still processing in the background. ` +
+            `You can check the status on the Bridge Tracking page or verify the XRPL transaction in your wallet.`
+          );
+          
+          toast({
+            title: "Withdrawal Status Timeout",
+            description: "The withdrawal is taking longer than expected but may still complete. Check Bridge Tracking for updates.",
+            variant: "destructive",
+          });
+          
+          return; // Stop polling
+        }
+        
+        const response = await fetch(`/api/withdrawals/${withdrawRedemptionId}/status`, {
+          signal: abortController.signal,
+        });
+
+        if (!response.ok) throw new Error('Failed to fetch withdrawal status');
+
+        const data = await response.json();
+
+        // Update progress step from API response
+        setWithdrawProgressStep(data.currentStep);
+
+        // Store XRPL transaction hash if available
+        if (data.xrplTxHash) {
+          setWithdrawXrplTxHash(data.xrplTxHash);
+        }
+
+        // Store error message if failed
+        if (data.status === 'failed') {
+          setWithdrawErrorMessage(data.error || 'Withdrawal failed');
+          
+          // Show error toast
+          toast({
+            title: "Withdrawal Failed",
+            description: data.error || "An error occurred during withdrawal. Please try again.",
+            variant: "destructive",
+          });
+        }
+
+        // Stop polling if complete or failed
+        if (data.status === 'completed' || data.status === 'failed') {
+          // Invalidate queries to refresh data
+          queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/wallet", address] });
+          
+          // Show success toast for completion
+          if (data.status === 'completed') {
+            toast({
+              title: "Withdrawal Complete",
+              description: `Successfully sent ${data.xrpSent || data.amount} XRP to your wallet!`,
+            });
+          }
+          
+          return;
+        }
+
+        // Continue polling every 2 seconds
+        timeoutId = setTimeout(pollStatus, POLL_INTERVAL_MS);
+      } catch (error) {
+        if (error instanceof Error && error.name === 'AbortError') {
+          // Polling was aborted, this is expected
+          return;
+        }
+        console.error('Withdrawal polling error:', error);
+        
+        // Show error toast
+        toast({
+          title: "Status Update Failed",
+          description: "Unable to fetch withdrawal status. The withdrawal is still processing.",
+          variant: "destructive",
+        });
+      }
+    };
+
+    // Start polling
+    pollStatus();
+
+    // Cleanup on unmount
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+      abortController.abort();
+    };
+  }, [withdrawRedemptionId, withdrawProgressModalOpen, address, toast]);
 
   // Handle withdrawal progress modal dismissal
   const handleWithdrawProgressDismiss = () => {
     setWithdrawProgressModalOpen(false);
     setWithdrawRedemptionId(null);
-    setWithdrawAmount("");
-    setLastCelebrationStatus(null);
-    setCopiedRedemptionId(false);
-  };
-
-  // Copy redemption ID to clipboard
-  const handleCopyRedemptionId = () => {
-    if (withdrawRedemptionId) {
-      navigator.clipboard.writeText(withdrawRedemptionId);
-      setCopiedRedemptionId(true);
-      setTimeout(() => setCopiedRedemptionId(false), 2000);
+    setWithdrawXrplTxHash(null);
+    setWithdrawErrorMessage(undefined);
+    setWithdrawProgressStep('creating');
+    
+    // Abort any ongoing polling
+    if (withdrawPollingAbortControllerRef.current) {
+      withdrawPollingAbortControllerRef.current.abort();
     }
   };
 
@@ -693,99 +653,16 @@ export default function Portfolio() {
           : "Scan the QR code with your Xaman wallet to complete the withdrawal"}
       />
 
-      <ProgressModal
+      <WithdrawProgressModal
         open={withdrawProgressModalOpen}
-        onOpenChange={(open) => {
-          // Only allow closing after XRP received or if there's an error
-          const canClose = withdrawalStatus?.status === 'xrpl_received' || 
-                          withdrawalStatus?.status === 'completed' ||
-                          withdrawalStatus?.status === 'failed';
-          if (!open && canClose) {
-            handleWithdrawProgressDismiss();
-          }
-        }}
-        title="Processing Withdrawal"
-        steps={getWithdrawalSteps(withdrawalStatus?.status, withdrawalStatus?.xrplTxHash)}
-        currentStepId={withdrawalStatus?.status === 'xrpl_received' ? 'xrp_received' : 
-                       withdrawalStatus?.status === 'completed' ? 'finalizing_proof' :
-                       withdrawalStatus?.status === 'failed' ? 'burning_shxrp' :
-                       'burning_shxrp'}
-        actions={
-          withdrawalStatus?.status === 'xrpl_received' || withdrawalStatus?.status === 'completed'
-            ? [
-                {
-                  label: "View Transactions",
-                  variant: "outline" as const,
-                  onClick: () => {
-                    handleWithdrawProgressDismiss();
-                    navigate("/transactions");
-                  },
-                },
-                {
-                  label: "Close",
-                  variant: "default" as const,
-                  onClick: handleWithdrawProgressDismiss,
-                },
-              ]
-            : withdrawalStatus?.status === 'failed'
-            ? [
-                {
-                  label: "Close",
-                  variant: "default" as const,
-                  onClick: handleWithdrawProgressDismiss,
-                },
-              ]
-            : []
-        }
-        errorMessage={withdrawalStatus?.status === 'failed' ? withdrawalStatus.errorMessage : undefined}
-        metadata={
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Redemption ID</span>
-              <div className="flex items-center gap-2">
-                <code className="text-xs font-mono bg-muted px-2 py-1 rounded">
-                  {withdrawRedemptionId?.slice(0, 8)}...
-                </code>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-8 w-8"
-                  onClick={handleCopyRedemptionId}
-                  data-testid="button-copy-redemption-id"
-                >
-                  {copiedRedemptionId ? (
-                    <CheckCircle2 className="h-4 w-4 text-chart-2" />
-                  ) : (
-                    <Copy className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Amount</span>
-              <span className="text-sm font-mono font-medium">
-                {withdrawAmount} shXRP
-                {withdrawalStatus?.xrpSent && (
-                  <span className="text-chart-2"> → {withdrawalStatus.xrpSent} XRP</span>
-                )}
-              </span>
-            </div>
-            {withdrawalStatus?.xrplTxHash && (
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-muted-foreground">XRPL Transaction</span>
-                <a
-                  href={`${network === 'mainnet' ? 'https://livenet.xrpl.org' : 'https://testnet.xrpl.org'}/transactions/${withdrawalStatus.xrplTxHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-xs text-primary hover:underline font-mono"
-                  data-testid="link-xrpl-transaction"
-                >
-                  {withdrawalStatus.xrplTxHash.slice(0, 8)}...
-                </a>
-              </div>
-            )}
-          </div>
-        }
+        currentStep={withdrawProgressStep}
+        errorMessage={withdrawErrorMessage}
+        amount={selectedPosition?.depositedAmount}
+        vaultName={selectedPosition?.vaultName}
+        xrplTxHash={withdrawXrplTxHash || undefined}
+        network={network}
+        onOpenChange={setWithdrawProgressModalOpen}
+        onDismiss={handleWithdrawProgressDismiss}
       />
     </div>
   );

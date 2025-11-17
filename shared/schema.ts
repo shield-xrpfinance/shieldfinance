@@ -31,8 +31,7 @@ export const redemptionStatusEnum = pgEnum("redemption_status", [
   "redeeming_fxrp",       // FAssets redemption in progress
   "awaiting_proof",       // Waiting for FDC attestation proof
   "xrpl_payout",          // Sending XRP to depositor's wallet
-  "xrpl_received",        // XRP received by user (terminal success, proof confirmation may still be pending)
-  "completed",            // XRP successfully sent AND proof confirmed on-chain
+  "completed",            // XRP successfully sent to depositor
   "awaiting_liquidity",   // Queued - not enough FXRP in vault
   "failed"                // Redemption failed
 ]);
