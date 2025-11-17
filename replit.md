@@ -34,6 +34,13 @@ Preferred communication style: Simple, everyday language.
   - Frontend: Vault cards display deposit limit and paused status (read-only); deposit flow blocked when paused.
   - Type Safety: Strict boolean normalization for `paused` field; NaN protection for deposit limit display.
   - Security: Deposit button disabled and `handleDeposit()` guard prevents modal opening when vault is paused.
+- **Coming Soon Vaults (Nov 2025)**: Complete backend and frontend integration for placeholder vaults.
+  - Database: `comingSoon` boolean field in vaults table (default: false).
+  - Backend Enforcement: API validation on POST `/api/deposits` and POST `/api/positions` returns 403 Forbidden with clear error message.
+  - Frontend Display: "Coming Soon" badge with clock icon, disabled deposit button, visual dimming (75% opacity).
+  - Security: Multi-layer protection - frontend guards + backend validation + audit logging.
+  - UX: Tooltip explains vault is under development; placeholder metrics clearly indicate unavailable status.
+  - Production Status: 1 active Shield XRP vault, 5 placeholder vaults marked as coming soon.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
