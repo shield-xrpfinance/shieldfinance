@@ -267,6 +267,7 @@ export default function Vaults() {
     depositLimit: (vault as any).depositLimit || null,
     depositLimitRaw: (vault as any).depositLimitRaw || null,
     paused: typeof (vault as any).paused === 'boolean' ? (vault as any).paused : null,
+    comingSoon: (vault as any).comingSoon || false,
   })) || [];
 
 
@@ -289,9 +290,15 @@ export default function Vaults() {
     const vault = allVaults.find((v) => v.id === vaultId);
     if (!vault) return;
     
+    // Block deposit flow if vault is coming soon
+    if (vault.comingSoon) {
+      console.warn(`[DEPOSIT_BLOCKED] Vault ${vault.name} is coming soon`);
+      return;
+    }
+    
     // Block deposit flow if vault is paused
     if (vault.paused === true) {
-      console.warn(`⏸️  Deposit blocked: Vault ${vault.name} is currently paused`);
+      console.warn(`[DEPOSIT_BLOCKED] Vault ${vault.name} is currently paused`);
       return;
     }
     

@@ -798,6 +798,15 @@ export async function registerRoutes(
         return res.status(404).json({ error: "Vault not found" });
       }
 
+      // Check if vault is coming soon
+      if ((vault as any).comingSoon === true) {
+        console.warn(`[DEPOSIT_BLOCKED] Vault ${vault.name} is coming soon - deposit rejected for ${walletAddress}`);
+        return res.status(403).json({ 
+          error: "Vault not available", 
+          message: "This vault is currently under development and not accepting deposits yet." 
+        });
+      }
+
       const vaultAssets = vault.asset.split(",").map(a => a.trim());
       const isXRPVault = vaultAssets.includes("XRP");
 
@@ -981,6 +990,15 @@ export async function registerRoutes(
       const vault = await storage.getVault(validatedData.vaultId);
       if (!vault) {
         return res.status(404).json({ error: "Vault not found" });
+      }
+      
+      // Check if vault is coming soon
+      if ((vault as any).comingSoon === true) {
+        console.warn(`[DEPOSIT_BLOCKED] Vault ${vault.name} is coming soon - position creation rejected for ${validatedData.walletAddress}`);
+        return res.status(403).json({ 
+          error: "Vault not available", 
+          message: "This vault is currently under development and not accepting deposits yet." 
+        });
       }
       
       const depositAmount = parseFloat(validatedData.amount);

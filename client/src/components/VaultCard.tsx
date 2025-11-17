@@ -33,6 +33,7 @@ interface VaultCardProps {
   depositLimit?: string | null;
   depositLimitRaw?: string | null;
   paused?: boolean | null;
+  comingSoon?: boolean;
   onDeposit: (id: string) => void;
 }
 
@@ -63,6 +64,7 @@ export default function VaultCard({
   depositLimit,
   depositLimitRaw,
   paused,
+  comingSoon = false,
   onDeposit,
 }: VaultCardProps) {
   const risk = riskConfig[riskLevel];
@@ -73,7 +75,7 @@ export default function VaultCard({
   const yieldProjection = getVaultYieldProjection(id);
 
   return (
-    <Card className="hover-elevate">
+    <Card className={`hover-elevate ${comingSoon ? 'opacity-75' : ''}`}>
       <CardHeader className="space-y-0 pb-4">
         <div className="flex items-start justify-between gap-2">
           <div className="flex items-center gap-3">
@@ -83,7 +85,20 @@ export default function VaultCard({
             </h3>
           </div>
           <div className="flex items-center gap-2">
-            {paused === true && (
+            {comingSoon && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="outline" className="text-xs bg-chart-4/10 text-chart-4 border-chart-4" data-testid={`badge-coming-soon-${id}`}>
+                    <Clock className="h-3 w-3 mr-1" />
+                    Coming Soon
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>This vault is currently under development. Check back soon for launch updates!</p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+            {paused === true && !comingSoon && (
               <Tooltip>
                 <TooltipTrigger asChild>
                   <Badge variant="outline" className="text-xs bg-destructive/10 text-destructive border-destructive" data-testid={`badge-paused-${id}`}>
@@ -287,14 +302,16 @@ export default function VaultCard({
         <Button
           className="w-full"
           onClick={() => onDeposit(id)}
-          disabled={paused === true}
+          disabled={paused === true || comingSoon}
           data-testid={`button-deposit-${id}`}
         >
-          {paused === true 
-            ? "Deposits Paused" 
-            : depositAssets.length > 1 
-              ? `Deposit ${depositAssets.join(" + ")}` 
-              : `Deposit ${depositAssets[0]}`}
+          {comingSoon
+            ? "Coming Soon"
+            : paused === true 
+              ? "Deposits Paused" 
+              : depositAssets.length > 1 
+                ? `Deposit ${depositAssets.join(" + ")}` 
+                : `Deposit ${depositAssets[0]}`}
         </Button>
         <div className="flex items-center justify-center gap-1 text-xs text-muted-foreground">
           <Users className="h-3.5 w-3.5" />
