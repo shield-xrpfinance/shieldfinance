@@ -343,26 +343,38 @@ export default function DepositModal({
   };
 
   const handleXRPDeposit = async () => {
-    if (!address) return;
+    if (!address) {
+      console.error("❌ No wallet address available");
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect your wallet before making a deposit.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     try {
       // Create bridge
-      console.log("📡 Creating bridge...");
+      console.log("📡 Creating bridge with address:", address);
+      const requestBody = {
+        walletAddress: address,
+        vaultId: vaultId,
+        amount: totalValue.toString(),
+        network: network,
+      };
+      console.log("Request payload:", requestBody);
+      
       const response = await fetch("/api/deposits", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          walletAddress: address,
-          vaultId: vaultId,
-          amount: totalValue.toString(),
-          network: network,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       const data = await response.json();
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || "Failed to create deposit");
+        console.error("❌ Bridge creation failed:", data);
+        throw new Error(data.error || data.message || "Failed to create deposit");
       }
 
       console.log("✅ Bridge created:", data.bridgeId);
@@ -371,7 +383,7 @@ export default function DepositModal({
       // Wait for bridge to reach awaiting_payment status, then trigger payment
       await pollForPaymentRequest(data.bridgeId);
     } catch (error) {
-      console.error("Bridge creation error:", error);
+      console.error("Bridge creation error details:", error);
       toast({
         title: "Deposit Failed",
         description: error instanceof Error ? error.message : "Failed to create bridge",
