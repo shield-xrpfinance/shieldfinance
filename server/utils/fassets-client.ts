@@ -760,6 +760,14 @@ export class FAssetsClient {
     console.log(`   Block number: ${receipt.blockNumber}`);
     console.log(`   Number of logs: ${receipt.logs?.length || 0}`);
     
+    // Log all log addresses for debugging ERC-4337 issues
+    if (receipt.logs && receipt.logs.length > 0) {
+      console.log('   Log addresses:');
+      for (let i = 0; i < receipt.logs.length; i++) {
+        console.log(`     [${i}] ${receipt.logs[i].address} (${receipt.logs[i].topics?.length || 0} topics)`);
+      }
+    }
+    
     // Log all event names found in receipt
     const eventNames: string[] = [];
     for (const log of receipt.logs || []) {
@@ -781,13 +789,6 @@ export class FAssetsClient {
     console.error('   ❌ CollateralReserved event not found');
     console.error(`   Events found: ${eventNames.length > 0 ? eventNames.join(', ') : 'none'}`);
     console.error(`   Raw logs count: ${receipt.logs?.length || 0}`);
-    
-    // If we have logs but no CollateralReserved, log first log for debugging
-    if (receipt.logs && receipt.logs.length > 0) {
-      console.error('   First log sample:');
-      console.error(`     address: ${receipt.logs[0].address}`);
-      console.error(`     topics: ${receipt.logs[0].topics?.length || 0} topics`);
-    }
     
     throw new Error("CollateralReserved event not found in transaction");
   }
