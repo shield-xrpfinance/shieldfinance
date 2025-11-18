@@ -1103,63 +1103,116 @@ export class BridgeService {
         };
       }
 
-      // Failed status with recoverable errors
-      if (bridge.status === "failed" && bridge.errorMessage) {
-        const errorMsg = bridge.errorMessage.toLowerCase();
-
-        // "Already known" error - the transaction might have been mined
-        if (errorMsg.includes("already known")) {
-          console.log(`   ✅ Recoverable: "Already known" error - attempting to resume from XRPL payment`);
-          if (bridge.xrplTxHash) {
-            await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
-            return { 
-              success: true, 
-              message: "Resuming from XRPL payment confirmation",
-              action: "resume_from_xrpl" 
-            };
-          } else {
+      // Failed status - check if XRPL was confirmed but minting never completed
+      if (bridge.status === "failed") {
+        // If XRPL payment confirmed but never minted, it's recoverable
+        if (bridge.xrplConfirmedAt && !bridge.vaultMintTxHash) {
+          console.log(`   ✅ Recoverable: Failed after XRPL confirmation - resuming minting`);
+          if (!bridge.xrplTxHash) {
             return { 
               success: false, 
               message: "Cannot resume: Missing XRPL transaction hash" 
             };
           }
+          // Update status to xrpl_confirmed to allow executeMintingWithProof to proceed
+          await this.config.storage.updateBridgeStatus(bridgeId, "xrpl_confirmed", {
+            errorMessage: null, // Clear any previous error
+          });
+          await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
+          return { 
+            success: true, 
+            message: "Resuming from XRPL payment confirmation",
+            action: "resume_from_xrpl" 
+          };
         }
+        
+        // Check error message patterns for other recoverable cases
+        if (bridge.errorMessage) {
+          const errorMsg = bridge.errorMessage.toLowerCase();
 
-        // "Attestation request not found" - proof might be available now
-        if (errorMsg.includes("attestation request not found")) {
-          console.log(`   ✅ Recoverable: Attestation not found - retrying proof generation`);
-          if (bridge.xrplTxHash) {
-            await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
-            return { 
-              success: true, 
-              message: "Retrying FDC proof generation",
-              action: "retry_proof_generation" 
-            };
-          } else {
-            return { 
-              success: false, 
-              message: "Cannot retry: Missing XRPL transaction hash" 
-            };
+          // "Already known" error - the transaction might have been mined
+          if (errorMsg.includes("already known")) {
+            console.log(`   ✅ Recoverable: "Already known" error - attempting to resume from XRPL payment`);
+            if (bridge.xrplTxHash) {
+              await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
+              return { 
+                success: true, 
+                message: "Resuming from XRPL payment confirmation",
+                action: "resume_from_xrpl" 
+              };
+            } else {
+              return { 
+                success: false, 
+                message: "Cannot resume: Missing XRPL transaction hash" 
+              };
+            }
+          }
+
+          // "Attestation request not found" - proof might be available now
+          if (errorMsg.includes("attestation request not found")) {
+            console.log(`   ✅ Recoverable: Attestation not found - retrying proof generation`);
+            if (bridge.xrplTxHash) {
+              await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
+              return { 
+                success: true, 
+                message: "Retrying FDC proof generation",
+                action: "retry_proof_generation" 
+              };
+            } else {
+              return { 
+                success: false, 
+                message: "Cannot retry: Missing XRPL transaction hash" 
+              };
+            }
+          }
+
+          // FDC-related errors
+          if (errorMsg.includes("fdc") || errorMsg.includes("timeout")) {
+            console.log(`   ✅ Recoverable: FDC-related error - retrying`);
+            if (bridge.xrplTxHash) {
+              await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
+              return { 
+                success: true, 
+                message: "Retrying FDC proof generation",
+                action: "retry_fdc" 
+              };
+            } else {
+              return { 
+                success: false, 
+                message: "Cannot retry: Missing XRPL transaction hash" 
+              };
+            }
+          }
+          
+          // Bundler fee errors - should be automatically retried now
+          if (errorMsg.includes("fee too low") || errorMsg.includes("user op cannot be replaced")) {
+            console.log(`   ✅ Recoverable: Bundler fee error - retrying with automatic fee bumping`);
+            if (bridge.xrplTxHash) {
+              await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
+              return { 
+                success: true, 
+                message: "Retrying with automatic fee bumping",
+                action: "retry_with_fee_bump" 
+              };
+            } else {
+              return { 
+                success: false, 
+                message: "Cannot retry: Missing XRPL transaction hash" 
+              };
+            }
           }
         }
-
-        // FDC-related errors
-        if (errorMsg.includes("fdc") || errorMsg.includes("timeout")) {
-          console.log(`   ✅ Recoverable: FDC-related error - retrying`);
-          if (bridge.xrplTxHash) {
-            await this.executeMintingWithProof(bridgeId, bridge.xrplTxHash);
-            return { 
-              success: true, 
-              message: "Retrying FDC proof generation",
-              action: "retry_fdc" 
-            };
-          } else {
-            return { 
-              success: false, 
-              message: "Cannot retry: Missing XRPL transaction hash" 
-            };
-          }
-        }
+      }
+      
+      // Stuck at minting status without completion
+      if (bridge.status === "minting" && !bridge.vaultMintTxHash) {
+        console.log(`   ✅ Recoverable: Stuck at minting - retrying vault mint`);
+        await this.completeBridgeWithVaultMinting(bridgeId);
+        return { 
+          success: true, 
+          message: "Retrying vault share minting",
+          action: "retry_minting" 
+        };
       }
 
       // Stuck at xrpl_confirmed without proof

@@ -128,21 +128,25 @@ export class SmartAccountClient {
 
         let userOp = await this.primeSdk.estimate();
         
-        // Apply fee bumping on retries
+        // Apply fee bumping on retries using BigInt arithmetic to avoid overflow
         if (attempt > 0) {
-          const feeMultiplier = Math.pow(FEE_BUMP_MULTIPLIER, attempt);
+          // Calculate multiplier: 1.2^attempt (expressed as ratio to avoid floats)
+          // For 20% increase: multiply by 12 and divide by 10
+          const multiplierNumerator = BigInt(12 ** attempt);
+          const multiplierDenominator = BigInt(10 ** attempt);
           
           if (userOp.maxFeePerGas) {
             const originalMaxFee = BigInt(userOp.maxFeePerGas.toString());
-            userOp.maxFeePerGas = BigInt(Math.floor(Number(originalMaxFee) * feeMultiplier));
+            userOp.maxFeePerGas = (originalMaxFee * multiplierNumerator) / multiplierDenominator;
           }
           
           if (userOp.maxPriorityFeePerGas) {
             const originalPriorityFee = BigInt(userOp.maxPriorityFeePerGas.toString());
-            userOp.maxPriorityFeePerGas = BigInt(Math.floor(Number(originalPriorityFee) * feeMultiplier));
+            userOp.maxPriorityFeePerGas = (originalPriorityFee * multiplierNumerator) / multiplierDenominator;
           }
           
-          console.log(`🔄 Retry ${attempt}/${MAX_RETRIES - 1} with ${(feeMultiplier * 100).toFixed(0)}% fees`);
+          const percentIncrease = ((Number(multiplierNumerator) / Number(multiplierDenominator)) * 100).toFixed(0);
+          console.log(`🔄 Retry ${attempt}/${MAX_RETRIES - 1} with ${percentIncrease}% fees`);
         }
 
         console.log('📊 Estimated UserOp:', {

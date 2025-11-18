@@ -478,15 +478,28 @@ export class DatabaseStorage implements IStorage {
       if (bridge.status === "fdc_proof_generated" && !bridge.flareTxHash) return true;
       
       // Failed status with recoverable error patterns
-      if (bridge.status === "failed" && bridge.errorMessage) {
-        const errorMsg = bridge.errorMessage.toLowerCase();
-        return (
-          errorMsg.includes("already known") ||
-          errorMsg.includes("attestation request not found") ||
-          errorMsg.includes("fdc") ||
-          errorMsg.includes("timeout")
-        );
+      if (bridge.status === "failed") {
+        // If XRPL payment confirmed but never minted, it's recoverable
+        if (bridge.xrplConfirmedAt && !bridge.vaultMintTxHash) {
+          return true;
+        }
+        
+        // Check error message patterns
+        if (bridge.errorMessage) {
+          const errorMsg = bridge.errorMessage.toLowerCase();
+          return (
+            errorMsg.includes("already known") ||
+            errorMsg.includes("attestation request not found") ||
+            errorMsg.includes("fdc") ||
+            errorMsg.includes("timeout") ||
+            errorMsg.includes("fee too low") ||
+            errorMsg.includes("user op cannot be replaced")
+          );
+        }
       }
+      
+      // Stuck at minting status without completion
+      if (bridge.status === "minting" && !bridge.vaultMintTxHash) return true;
       
       return false;
     });
