@@ -237,7 +237,19 @@ export class FAssetsClient {
     const receipt = await tx.wait();
     console.log(`✅ Collateral reserved: ${receipt.hash}`);
     
-    const reservationEvent = this.parseCollateralReservedEvent(receipt);
+    // For ERC-4337 transactions, fetch the full receipt from provider to get all logs
+    // The tx.wait() receipt might not include logs from nested contract calls
+    const signer = this.config.flareClient.getContractSigner();
+    const provider = signer.provider;
+    if (!provider) {
+      throw new Error('Provider not available for fetching transaction receipt');
+    }
+    const fullReceipt = await provider.getTransactionReceipt(receipt.hash);
+    if (!fullReceipt) {
+      throw new Error(`Failed to fetch transaction receipt for ${receipt.hash}`);
+    }
+    
+    const reservationEvent = this.parseCollateralReservedEvent(fullReceipt);
     
     // Convert paymentReference from bytes32 to hex string (remove 0x prefix for XRPL memo)
     const paymentReference = reservationEvent.paymentReference.replace(/^0x/, '');
@@ -293,6 +305,17 @@ export class FAssetsClient {
     const tx = await assetManager.executeMinting(proof, reservationId);
     const receipt = await tx.wait();
     
+    // Fetch full receipt for ERC-4337 transactions
+    const signer = this.config.flareClient.getContractSigner();
+    const provider = signer.provider;
+    if (provider) {
+      const fullReceipt = await provider.getTransactionReceipt(receipt.hash);
+      if (fullReceipt) {
+        console.log(`Minting executed: ${fullReceipt.hash}`);
+        return fullReceipt.hash;
+      }
+    }
+    
     console.log(`Minting executed: ${receipt.hash}`);
     return receipt.hash;
   }
@@ -319,7 +342,15 @@ export class FAssetsClient {
     
     console.log(`   Approving AssetManager to burn ${fxrpAmount} FXRP...`);
     const approveTx = await fxrpToken.approve(assetManagerAddress, fxrpAmountRaw);
-    await approveTx.wait();
+    const approveReceipt = await approveTx.wait();
+    
+    // Get signer for all transactions in this method
+    const signer = this.config.flareClient.getContractSigner();
+    
+    // Fetch full receipt for ERC-4337 transactions (approval)
+    if (signer.provider && approveReceipt) {
+      await signer.provider.getTransactionReceipt(approveReceipt.hash);
+    }
     console.log(`   ✅ Approval granted`);
     
     // Request redemption by manually constructing calldata to bypass ALL ethers validation
@@ -340,8 +371,7 @@ export class FAssetsClient {
       // Combine selector + encoded params
       const data = functionSelector + encodedParams.slice(2); // Remove 0x from encodedParams
       
-      // Get signer and send raw transaction
-      const signer = this.config.flareClient.getContractSigner();
+      // Send raw transaction using the signer
       const tx = await signer.sendTransaction({
         to: await this.getAssetManagerAddress(),
         data: data,
@@ -357,8 +387,18 @@ export class FAssetsClient {
       
       console.log(`✅ Redemption requested: ${receipt.hash}`);
       
+      // Fetch full receipt for ERC-4337 transactions
+      const provider = signer.provider;
+      if (!provider) {
+        throw new Error('Provider not available for fetching transaction receipt');
+      }
+      const fullReceipt = await provider.getTransactionReceipt(receipt.hash);
+      if (!fullReceipt) {
+        throw new Error(`Failed to fetch transaction receipt for ${receipt.hash}`);
+      }
+      
       // Parse RedemptionRequested event
-      const redemptionEvent = this.parseRedemptionRequestedEvent(receipt);
+      const redemptionEvent = this.parseRedemptionRequestedEvent(fullReceipt);
       
       console.log('\n📝 Redemption Request Details:');
       console.log(`   Request ID: ${redemptionEvent.requestId}`);
@@ -614,6 +654,17 @@ export class FAssetsClient {
     
     const tx = await assetManager.confirmRedemptionPayment(encodedProof, requestId);
     const receipt = await tx.wait();
+    
+    // Fetch full receipt for ERC-4337 transactions
+    const signer = this.config.flareClient.getContractSigner();
+    const provider = signer.provider;
+    if (provider) {
+      const fullReceipt = await provider.getTransactionReceipt(receipt.hash);
+      if (fullReceipt) {
+        console.log(`✅ Redemption payment confirmed: ${fullReceipt.hash}`);
+        return fullReceipt.hash;
+      }
+    }
     
     console.log(`✅ Redemption payment confirmed: ${receipt.hash}`);
     return receipt.hash;
