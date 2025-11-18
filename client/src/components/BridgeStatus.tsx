@@ -41,8 +41,12 @@ export function BridgeStatus({
 }: BridgeStatusProps) {
   const { toast } = useToast();
   
-  // Determine if bridge can be cancelled (active/in-progress, not completed/failed)
-  const canCancel = !["completed", "vault_minted", "failed", "vault_mint_failed", "cancelled"].includes(status) && !errorMessage;
+  // Determine if bridge can be cancelled
+  // Can only cancel BEFORE XRPL transaction is confirmed (before minting starts)
+  // Safe to cancel: pending, reserving_collateral, bridging, awaiting_payment
+  // NOT safe to cancel: xrpl_confirmed onwards (XRP sent, minting in progress)
+  const cancellableStatuses = ["pending", "reserving_collateral", "bridging", "awaiting_payment"];
+  const canCancel = cancellableStatuses.includes(status) && !errorMessage;
 
   const retryMutation = useMutation({
     mutationFn: async () => {

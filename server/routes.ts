@@ -802,6 +802,23 @@ export async function registerRoutes(
         return res.status(400).json({ error: "Missing required field: bridgeId" });
       }
 
+      // Fetch bridge to validate status before cancellation
+      const bridge = await storage.getBridgeById(bridgeId);
+      if (!bridge) {
+        return res.status(404).json({ error: "Bridge not found" });
+      }
+
+      // Validate bridge can be cancelled (only before XRPL transaction is confirmed)
+      // Once xrpl_confirmed, the XRP has been sent and minting is in progress
+      const cancellableStatuses = ["pending", "reserving_collateral", "bridging", "awaiting_payment"];
+      if (!cancellableStatuses.includes(bridge.status)) {
+        console.warn(`⚠️ Cancellation blocked for bridge ${bridgeId}: status=${bridge.status} (after XRPL confirmation)`);
+        return res.status(400).json({ 
+          error: "Cannot cancel deposit", 
+          message: "This deposit cannot be cancelled because the XRPL transaction has been confirmed and minting is in progress."
+        });
+      }
+
       console.log(`🚫 User-initiated cancellation for bridge ${bridgeId} by ${walletAddress}`);
 
       // Call BridgeService to cancel the bridge

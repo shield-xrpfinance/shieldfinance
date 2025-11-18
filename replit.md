@@ -82,13 +82,16 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
   - Validation: Added `account` to required fields alongside destination, amountDrops, and memo.
   - Impact: Bridge Tracking manual payments now display pre-filled amount (including 0.25% FAssets fee), destination address, and payment reference memo.
   - Scope: Only affects `/api/wallet/xaman/payment` endpoint used by Bridge Tracking. Dashboard/Vaults deposit flow using `/api/wallet/xaman/payment/deposit` remains unchanged.
-- **Deposit Cancellation Feature (Nov 18, 2025)**: Complete user-controlled cancellation system for in-progress deposits.
+- **Deposit Cancellation Feature (Nov 18, 2025)**: Complete user-controlled cancellation system for in-progress deposits with critical edge case protection.
   - User Interface: Cancel button (X icon) appears in BridgeStatus card header for active deposits.
   - Safety Confirmation: AlertDialog prompts user confirmation before cancelling ("Cancel Deposit?" with amount display).
-  - Cancellable States: pending, reserving_collateral, bridging, awaiting_payment, xrpl_confirmed, generating_proof, proof_generated, fdc_proof_generated, minting, vault_minting.
+  - Cancellable States: pending, reserving_collateral, bridging, awaiting_payment (before XRPL transaction confirmation).
+  - Protected States: Cannot cancel xrpl_confirmed, generating_proof, proof_generated, fdc_proof_generated, minting, vault_minting (after XRPL confirmation).
   - Terminal States: Cannot cancel completed, vault_minted, failed, vault_mint_failed, or cancelled deposits.
+  - Edge Case Protection: Once XRPL transaction is confirmed, cancellation is blocked because XRP has been sent and minting is in progress, preventing inconsistent state.
+  - Backend Validation: API validates bridge status before cancellation, returns clear error message if status is past cancellation window.
   - Backend Cleanup: BridgeService.cancelBridge() stops XRPL monitoring, removes agent listeners, updates database status to 'cancelled', sets cancelledAt timestamp.
-  - API Endpoint: POST `/api/bridges/:id/user-cancel` with wallet ownership validation (only deposit owner can cancel).
+  - API Endpoint: POST `/api/bridges/:id/user-cancel` with wallet ownership validation and status validation (only deposit owner can cancel, only before XRPL confirmation).
   - Database: Uses existing cancelledAt and cancellationReason fields in xrp_to_fxrp_bridges table.
   - Position Cleanup: Automatically deletes any associated position records to maintain data consistency.
 - **Real-Time Portfolio Updates (Nov 2025)**: Complete implementation of coordinated polling and status mapping for withdrawal tracking.
