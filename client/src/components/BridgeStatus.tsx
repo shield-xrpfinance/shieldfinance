@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, AlertCircle, Loader2, Copy, RefreshCw, Send } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, Loader2, Copy, RefreshCw, Send, X } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -21,6 +21,7 @@ interface BridgeStatusProps {
   bridgeId?: string;
   agentUnderlyingAddress?: string;
   onSendPayment?: () => void;
+  onCancelBridge?: () => void;
   isVaultsLoading?: boolean;
 }
 
@@ -35,9 +36,13 @@ export function BridgeStatus({
   bridgeId,
   agentUnderlyingAddress,
   onSendPayment,
+  onCancelBridge,
   isVaultsLoading = false,
 }: BridgeStatusProps) {
   const { toast } = useToast();
+  
+  // Determine if bridge can be cancelled (active/in-progress, not completed/failed)
+  const canCancel = !["completed", "vault_minted", "failed", "vault_mint_failed", "cancelled"].includes(status) && !errorMessage;
 
   const retryMutation = useMutation({
     mutationFn: async () => {
@@ -142,6 +147,17 @@ export function BridgeStatus({
                 <Loader2 className="mr-1 h-3 w-3 animate-spin" />
                 Processing
               </Badge>
+            )}
+            {canCancel && onCancelBridge && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onCancelBridge}
+                data-testid="button-cancel-bridge"
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <X className="h-3 w-3" />
+              </Button>
             )}
           </div>
         </div>

@@ -13,6 +13,16 @@ import BridgeStatusModal from "@/components/BridgeStatusModal";
 import { format } from "date-fns";
 import type { SelectXrpToFxrpBridge, Vault, BridgeHistoryEntry } from "@shared/schema";
 import { useBridgeTracking } from "@/hooks/useBridgeTracking";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 // Helper to convert snake_case status to human-readable format
 function formatStatus(status: string): string {
@@ -71,6 +81,7 @@ export default function BridgeTracking() {
     vaultName: string;
     amount: string;
   } | null>(null);
+  const [bridgeToCancel, setBridgeToCancel] = useState<{ id: string; amount: string } | null>(null);
   const { toast } = useToast();
 
   const { data: bridges, isLoading } = useQuery<SelectXrpToFxrpBridge[]>({
@@ -120,6 +131,14 @@ export default function BridgeTracking() {
     });
   }, [vaultMap, toast]);
 
+  // Callback to initiate bridge cancellation
+  const handleCancelBridge = useCallback((bridge: SelectXrpToFxrpBridge) => {
+    setBridgeToCancel({
+      id: bridge.id,
+      amount: bridge.xrpAmount,
+    });
+  }, []);
+
   const retryAllMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/bridges/reconcile-all");
@@ -138,6 +157,31 @@ export default function BridgeTracking() {
         description: error.message || "Failed to retry bridges",
         variant: "destructive",
       });
+    },
+  });
+
+  const cancelBridgeMutation = useMutation({
+    mutationFn: async (bridgeId: string) => {
+      const response = await apiRequest("POST", `/api/bridges/${bridgeId}/user-cancel`, {
+        walletAddress: address,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Bridge Cancelled",
+        description: "Your deposit request has been cancelled successfully",
+      });
+      queryClient.invalidateQueries({ queryKey: [`/api/bridges/wallet/${address}`] });
+      setBridgeToCancel(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Cancellation Failed",
+        description: error.message || "Failed to cancel bridge",
+        variant: "destructive",
+      });
+      setBridgeToCancel(null);
     },
   });
 
@@ -263,6 +307,7 @@ export default function BridgeTracking() {
                   bridgeId={bridge.id}
                   agentUnderlyingAddress={bridge.agentUnderlyingAddress || undefined}
                   onSendPayment={() => handleSendPayment(bridge)}
+                  onCancelBridge={() => handleCancelBridge(bridge)}
                   isVaultsLoading={isLoadingVaults}
                 />
               ))}
@@ -493,6 +538,42 @@ export default function BridgeTracking() {
           amount={selectedBridge.amount}
         />
       )}
+
+      <AlertDialog open={!!bridgeToCancel} onOpenChange={(open) => !open && setBridgeToCancel(null)}>
+        <AlertDialogContent data-testid="dialog-cancel-bridge">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Cancel Deposit?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to cancel this deposit of {bridgeToCancel?.amount} XRP?
+              This action will remove the deposit request from processing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-no">
+              Keep Deposit
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (bridgeToCancel) {
+                  cancelBridgeMutation.mutate(bridgeToCancel.id);
+                }
+              }}
+              disabled={cancelBridgeMutation.isPending}
+              className="bg-destructive hover:bg-destructive/90"
+              data-testid="button-cancel-yes"
+            >
+              {cancelBridgeMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Cancelling...
+                </>
+              ) : (
+                "Cancel Deposit"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
