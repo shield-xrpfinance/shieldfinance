@@ -100,7 +100,7 @@ export default function BridgeStatusModal({
   const [isCancelling, setIsCancelling] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
   const { toast } = useToast();
-  const { requestPayment, provider, isConnected, walletAddress } = useWallet();
+  const { requestPayment, provider, isConnected, address: walletAddress } = useWallet();
 
   useEffect(() => {
     if (!open || !bridgeId) {
@@ -157,7 +157,7 @@ export default function BridgeStatusModal({
     }
 
     const updateCountdown = () => {
-      const expiryDate = new Date(bridge.expiresAt);
+      const expiryDate = new Date(bridge.expiresAt!);
       const now = new Date();
       const seconds = differenceInSeconds(expiryDate, now);
       
@@ -235,35 +235,27 @@ export default function BridgeStatusModal({
   };
 
   const handleSendPayment = async () => {
-    if (!isConnected) {
+    if (!bridge?.totalAmountUBA) {
+      // This should never happen due to button being disabled, but defensive check
       toast({
-        title: "Wallet Not Connected",
-        description: "Please connect your wallet first",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (!bridge?.agentUnderlyingAddress || !bridge?.paymentReference) {
-      toast({
-        title: "Payment Details Missing",
-        description: "Bridge is not ready for payment yet",
-        variant: "destructive",
+        title: "Payment Not Ready",
+        description: "Waiting for collateral reservation to complete...",
+        variant: "default",
       });
       return;
     }
 
     setIsSendingPayment(true);
     try {
-      // Convert XRP amount to drops (1 XRP = 1,000,000 drops)
-      const xrpAmount = parseFloat(bridge.xrpAmount);
-      const amountInDrops = (xrpAmount * 1_000_000).toString();
+      // Use totalAmountUBA which already includes base amount + FAssets bridge fee
+      // This is critical - using xrpAmount would cause payment amount mismatch errors
+      const amountInDrops = bridge.totalAmountUBA;
 
       const result = await requestPayment({
         bridgeId: bridge.id,
-        destination: bridge.agentUnderlyingAddress,
+        destination: bridge.agentUnderlyingAddress!,
         amountDrops: amountInDrops,
-        memo: bridge.paymentReference,
+        memo: bridge.paymentReference!,
         network: "testnet", // Coston2 testnet
       });
 
@@ -726,7 +718,7 @@ export default function BridgeStatusModal({
                     <div className="space-y-2">
                       <Button 
                         onClick={handleSendPayment}
-                        disabled={isSendingPayment}
+                        disabled={isSendingPayment || !bridge.totalAmountUBA}
                         className="w-full"
                         size="lg"
                         data-testid="button-send-payment"
@@ -736,6 +728,11 @@ export default function BridgeStatusModal({
                             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                             Preparing Payment...
                           </>
+                        ) : !bridge.totalAmountUBA ? (
+                          <>
+                            <Clock className="h-4 w-4 mr-2" />
+                            Waiting for Collateral Reservation...
+                          </>
                         ) : (
                           <>
                             <Send className="h-4 w-4 mr-2" />
@@ -743,11 +740,17 @@ export default function BridgeStatusModal({
                           </>
                         )}
                       </Button>
-                      <p className="text-xs text-muted-foreground text-center">
-                        Or manually send {bridge.totalAmountUBA 
-                          ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)
-                          : amount} XRP using the details above
-                      </p>
+                      {!bridge.totalAmountUBA && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          <Info className="inline h-3 w-3 mr-1" />
+                          Collateral reservation in progress. Button will enable when ready.
+                        </p>
+                      )}
+                      {bridge.totalAmountUBA && (
+                        <p className="text-xs text-muted-foreground text-center">
+                          Or manually send {(Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)} XRP using the details above
+                        </p>
+                      )}
                     </div>
                   )}
 
