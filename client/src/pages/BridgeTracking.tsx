@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
 import { format } from "date-fns";
 import type { SelectXrpToFxrpBridge, Vault, BridgeHistoryEntry } from "@shared/schema";
+import { useBridgeTracking } from "@/hooks/useBridgeTracking";
 
 // Helper to convert snake_case status to human-readable format
 function formatStatus(status: string): string {
@@ -173,6 +174,9 @@ export default function BridgeTracking() {
       failedBridges: failed,
     };
   }, [bridges]);
+
+  // Enable real-time polling when there are active bridges
+  useBridgeTracking(activeBridges.length > 0, address);
 
   const NotConnectedMessage = () => (
     <Card>
