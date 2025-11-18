@@ -40,6 +40,8 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Deposit Cancellation Feature**: User-controlled cancellation system for in-progress deposits with safety confirmation and protection for confirmed XRPL transactions.
 - **Real-Time Portfolio Updates**: Coordinated polling and status mapping for withdrawals using `usePortfolioPolling` hook and query invalidation.
 - **ERC-4337 Bundler Retry Logic with Fee Bumping**: Robust retry system for UserOp submission with exponential backoff and 20% fee increase per retry.
+- **FDC Timing Optimizations**: Reduced DA indexing buffer from 60s to 30s (20s for late-round submissions >70s into 90s round) based on test evidence showing proofs ready faster than initially expected. Minimum wait reduced from 90s to 60s. Expected improvement: ~163s wait reduced to ~90-120s, improving deposit UX by 30-45 seconds.
+- **Withdrawal Position Refresh**: Query invalidation added to withdrawal completion handler to refresh positions, withdrawals, and transactions immediately after successful withdrawal, ensuring UI updates reflect balance changes without requiring manual refresh.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
