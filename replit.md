@@ -74,6 +74,16 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
   - Dismissible Modal: Users can close modal manually or let it persist while they complete other tasks.
   - Info Alert: Clear messaging that users can check bridge status anytime in Bridge Tracking.
   - State Machine: Updates to 'awaiting_payment' step after signature; supports Xaman, WalletConnect, and fallback flows.
+- **Real-Time Portfolio Updates (Nov 2025)**: Complete implementation of coordinated polling and status mapping for withdrawal tracking.
+  - Status Mapping: Created `statusMapping.ts` utility covering all 17 enum values (userStatus + redemptionStatus + legacy statuses).
+  - DisplayStatus Pattern: Consistent fallback logic `displayStatus = userStatus || status` used across rendering, polling guards, and refetchInterval.
+  - usePortfolioPolling Hook: Coordinated real-time refetches of positions, withdrawals, and transactions every 5s when active withdrawals exist.
+  - Query Invalidation: All 4 invalidation calls correctly use wallet-scoped keys `['/api/positions', address]`, `['/api/withdrawals/wallet', address]`, `['/api/transactions/wallet', address]`.
+  - Triple-Guard Consistency: hasActiveWithdrawals guard, refetchInterval guard, and rendering all check same terminal states: ['completed', 'xrpl_received', 'failed', 'cancelled'].
+  - Mutation Triggers: Manual invalidation after withdraw/claim mutations for immediate UI updates.
+  - Auto-Deduplication: TanStack Query prevents double-refresh when polling overlaps with manual triggers.
+  - FDC Attestation Optimization: Exponential backoff (10s→60s, 1.5x multiplier) with intelligent wait calculation based on voting round position reduces API load and "attestation not found" errors.
+  - Enhanced Logging: FDC timing phases logged for diagnostics (round calculation, backoff, attestation retrieval).
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
