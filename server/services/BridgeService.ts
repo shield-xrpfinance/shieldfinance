@@ -1456,6 +1456,7 @@ export class BridgeService {
       });
       // Don't throw - user already has XRP
       console.warn(`⚠️ Backend confirmation failed but user has XRP - redemption ${redemptionId}`);
+      return ""; // Return empty string - backend confirmation failed but user has XRP
     }
   }
 

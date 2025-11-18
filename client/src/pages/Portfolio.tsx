@@ -17,6 +17,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useLocation } from "wouter";
+import { getUserStatusLabel, getUserStatusIcon } from "@/lib/statusMapping";
+import { usePortfolioPolling } from "@/hooks/usePortfolioPolling";
 
 export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
@@ -66,10 +68,11 @@ export default function Portfolio() {
     },
     enabled: !!address,
     refetchInterval: (query) => {
-      // Use userStatus to determine if redemptions are still active
-      const hasActiveRedemptions = query.state.data?.some((r: any) => 
-        r.userStatus === "processing"
-      );
+      // Check for active redemptions using displayStatus fallback (matches polling guard logic)
+      const hasActiveRedemptions = query.state.data?.some((r: any) => {
+        const displayStatus = r.userStatus || r.status;
+        return displayStatus && !['completed', 'xrpl_received', 'failed', 'cancelled'].includes(displayStatus);
+      });
       return hasActiveRedemptions ? 5000 : false;
     },
   });
@@ -77,6 +80,16 @@ export default function Portfolio() {
   const { data: vaults = [] } = useQuery<Vault[]>({
     queryKey: ["/api/vaults"],
   });
+
+  // Check if there are any active (non-terminal) withdrawals
+  // Use displayStatus to handle both userStatus and status fields
+  const hasActiveWithdrawals = redemptions?.some(w => {
+    const displayStatus = w.userStatus || w.status;
+    return displayStatus && !['completed', 'xrpl_received', 'failed', 'cancelled'].includes(displayStatus);
+  }) || false;
+
+  // Enable polling when there are active withdrawals
+  usePortfolioPolling(hasActiveWithdrawals, address);
 
   const getVaultById = (vaultId: string) => vaults.find((v) => v.id === vaultId);
 
@@ -115,7 +128,7 @@ export default function Portfolio() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/positions", address] });
     },
   });
 
@@ -169,6 +182,11 @@ export default function Portfolio() {
         throw new Error(data.error || "Failed to create claim request");
       }
 
+      // Invalidate queries to trigger UI refresh
+      queryClient.invalidateQueries({ queryKey: ['/api/positions', address] });
+      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', address] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', address] });
+
       toast({
         title: "Claim Request Submitted",
         description: "A vault operator will review and approve your claim request shortly.",
@@ -205,6 +223,11 @@ export default function Portfolio() {
       if (!data.success) {
         throw new Error(data.error || "Failed to process withdrawal");
       }
+
+      // Invalidate queries to trigger UI refresh
+      queryClient.invalidateQueries({ queryKey: ['/api/positions', address] });
+      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', address] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', address] });
 
       // Close withdraw modal and show progress modal
       setWithdrawModalOpen(false);
@@ -331,7 +354,7 @@ export default function Portfolio() {
         // Stop polling if complete or failed
         if (data.status === 'completed' || data.status === 'failed') {
           // Invalidate queries to refresh data
-          queryClient.invalidateQueries({ queryKey: ["/api/positions"] });
+          queryClient.invalidateQueries({ queryKey: ["/api/positions", address] });
           queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/wallet", address] });
           
           // Show success toast for completion
@@ -546,25 +569,17 @@ export default function Portfolio() {
             <CardContent>
               <div className="space-y-3">
                 {redemptions.map((redemption) => {
+                  // Use userStatus if available, fall back to status for backward compatibility
+                  const displayStatus = redemption.userStatus || redemption.status;
+                  
                   const statusBadgeVariant = 
-                    redemption.status === "completed" ? "default" :
-                    redemption.status === "failed" ? "destructive" :
-                    redemption.status === "awaiting_proof" || redemption.status === "awaiting_liquidity" ? "outline" :
+                    displayStatus === "completed" || displayStatus === "xrpl_received" ? "default" :
+                    displayStatus === "failed" ? "destructive" :
                     "secondary";
                   
-                  const statusLabel = 
-                    redemption.status === "pending" ? "Initiated" :
-                    redemption.status === "redeeming_shares" ? "Redeeming Shares" :
-                    redemption.status === "redeemed_fxrp" ? "FXRP Redeemed" :
-                    redemption.status === "redeeming_fxrp" ? "Requesting Redemption" :
-                    redemption.status === "awaiting_proof" ? "Awaiting Payment" :
-                    redemption.status === "xrpl_payout" ? "Confirming Payment" :
-                    redemption.status === "completed" ? "Completed" :
-                    redemption.status === "awaiting_liquidity" ? "Queued (Low Liquidity)" :
-                    redemption.status === "failed" ? "Failed" :
-                    `Unknown (${redemption.status})`;
+                  const statusLabel = getUserStatusLabel(displayStatus);
                   
-                  const isActive = !["completed", "failed"].includes(redemption.status);
+                  const isActive = displayStatus && !["completed", "xrpl_received", "failed", "cancelled"].includes(displayStatus);
 
                   return (
                     <div 

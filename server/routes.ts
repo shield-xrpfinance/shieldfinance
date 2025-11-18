@@ -3068,7 +3068,7 @@ export async function registerRoutes(
       console.log(`Querying blocks ${fromBlock} to ${currentBlock} in chunks of ${CHUNK_SIZE}...`);
       
       // Helper to query events in chunks
-      async function queryEventsInChunks(filter: any, from: number, to: number): Promise<any[]> {
+      const queryEventsInChunks = async (filter: any, from: number, to: number): Promise<any[]> => {
         const allEvents: any[] = [];
         for (let start = from; start <= to; start += CHUNK_SIZE) {
           const end = Math.min(start + CHUNK_SIZE - 1, to);
@@ -3081,7 +3081,7 @@ export async function registerRoutes(
           }
         }
         return allEvents;
-      }
+      };
       
       const depositFilter = vault.filters.Deposit(null, smartAccountAddress);
       const depositEvents = await queryEventsInChunks(depositFilter, fromBlock, currentBlock);

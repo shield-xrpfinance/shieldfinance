@@ -15,7 +15,19 @@ export class FDCTimeoutError extends Error {
 }
 
 /**
- * Polls the FDC Verifier API for a finalized proof
+ * Polls the FDC Verifier API for a finalized proof with exponential backoff
+ * 
+ * FDC Timing Background:
+ * - Voting rounds are 90 seconds long
+ * - Choose phase occurs 90-135 seconds into the round
+ * - Finalization happens after the round completes
+ * - DA Layer needs time to index the finalized proof (~30-60 seconds)
+ * 
+ * Expected States During Polling:
+ * - 404: Proof not yet finalized (normal - round still in progress)
+ * - 400 "attestation request not found": Round finalizing, not yet indexed in DA Layer (normal)
+ * - 200: Proof ready and indexed
+ * 
  * @param votingRoundId - The voting round ID to poll for
  * @param requestBytes - The ABI encoded request bytes
  * @param network - The network to poll (mainnet or coston2)
@@ -27,23 +39,32 @@ async function pollVerifierProof(
   requestBytes: string,
   network: "mainnet" | "coston2"
 ): Promise<any> {
+  // DA Layer endpoints (correct per Flare documentation)
   const verifierUrl = network === "mainnet"
     ? "https://flr-data-availability.flare.network/api/v1/fdc/proof-by-request-round"
     : "https://ctn2-data-availability.flare.network/api/v1/fdc/proof-by-request-round";
   
-  const maxAttempts = 60; // 15 minutes max (60 attempts * 15 seconds) - extended for slow FDC finalization
-  const pollInterval = 15000; // 15 seconds
+  // Exponential backoff configuration
+  // Start with shorter intervals, grow to max of 60s
+  // This reduces API load while still being responsive
+  const initialPollInterval = 10000; // 10 seconds
+  const maxPollInterval = 60000; // 60 seconds max
+  const backoffMultiplier = 1.5; // Gentler than 2x for smoother progression
+  const maxAttempts = 40; // ~15 minutes with exponential backoff
   
+  let currentPollInterval = initialPollInterval;
   let lastStatusCode = 404; // Track last status code for diagnostics
   
-  console.log("🔄 Starting FDC Verifier proof polling...");
+  console.log("🔄 Starting FDC Verifier proof polling with exponential backoff...");
   console.log("  Voting Round ID:", votingRoundId);
-  console.log("  Request Bytes:", requestBytes);
+  console.log("  Request Bytes:", requestBytes.substring(0, 66) + "...");
   console.log("  Verifier URL:", verifierUrl);
+  console.log("  Initial poll interval: 10s, max: 60s");
   
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     try {
-      console.log(`\n⏱️  Polling attempt ${attempt}/${maxAttempts}...`);
+      const nextInterval = Math.min(currentPollInterval * backoffMultiplier, maxPollInterval);
+      console.log(`\n⏱️  Polling attempt ${attempt}/${maxAttempts} (next wait: ${Math.round(nextInterval/1000)}s)...`);
       
       const response = await fetch(verifierUrl, {
         method: "POST",
@@ -57,7 +78,7 @@ async function pollVerifierProof(
         })
       });
       
-      lastStatusCode = response.status; // Update last status code
+      lastStatusCode = response.status;
       
       if (response.ok) {
         const rawProofData = await response.json();
@@ -78,26 +99,33 @@ async function pollVerifierProof(
         return transformedProof;
       }
       
+      // 404: Voting round not yet finalized - this is expected and normal
       if (response.status === 404) {
-        console.log(`⏳ Proof not yet finalized (404). Waiting ${pollInterval/1000}s before retry...`);
-        await new Promise(resolve => setTimeout(resolve, pollInterval));
+        console.log(`⏳ Voting round ${votingRoundId} not yet finalized (404 - expected state)`);
+        console.log(`   Waiting ${Math.round(currentPollInterval/1000)}s before next attempt...`);
+        console.log(`   FDC Phase: Likely in choose phase (90-135s) or waiting for finalization`);
+        await new Promise(resolve => setTimeout(resolve, currentPollInterval));
+        currentPollInterval = nextInterval; // Increase interval for next attempt
         continue;
       }
       
-      // Handle 400 "attestation request not found" - voting round may still be finalizing
+      // 400 "attestation request not found": Round finalizing, not yet indexed in DA Layer
+      // This is also expected and normal - DA Layer needs time to index the proof
       if (response.status === 400) {
         const errorText = await response.text();
         if (errorText.includes("attestation request not found")) {
-          console.log(`⏳ Attestation not yet indexed in Data Availability Layer (400). Waiting ${pollInterval/1000}s before retry...`);
-          console.log(`   This is normal - voting round may still be finalizing`);
-          await new Promise(resolve => setTimeout(resolve, pollInterval));
+          console.log(`⏳ Attestation not yet indexed in Data Availability Layer (400 - expected state)`);
+          console.log(`   Waiting ${Math.round(currentPollInterval/1000)}s before next attempt...`);
+          console.log(`   FDC Phase: Round finalized, DA Layer indexing in progress (~30-60s)`);
+          await new Promise(resolve => setTimeout(resolve, currentPollInterval));
+          currentPollInterval = nextInterval;
           continue;
         }
-        // Other 400 error - throw
+        // Other 400 error - unexpected, throw
         throw new Error(`FDC Verifier error (${response.status}): ${errorText}`);
       }
       
-      // Other error - throw
+      // Other error - unexpected, throw
       const errorText = await response.text();
       throw new Error(`FDC Verifier error (${response.status}): ${errorText}`);
       
@@ -111,7 +139,8 @@ async function pollVerifierProof(
         // Throw FDCTimeoutError with diagnostic info for retry logic
         throw new FDCTimeoutError(votingRoundId, verifierUrl, lastStatusCode, requestBytes);
       }
-      await new Promise(resolve => setTimeout(resolve, pollInterval));
+      await new Promise(resolve => setTimeout(resolve, currentPollInterval));
+      currentPollInterval = Math.min(currentPollInterval * backoffMultiplier, maxPollInterval);
     }
   }
   
@@ -251,16 +280,63 @@ export async function generateFDCProof(
   console.log("     Round Duration:", votingRoundConfig.roundDurationSec, "sec");
   console.log("     Source: Flare's official hardcoded constants (documented at dev.flare.network)");
   
-  // Step 4: Wait for voting round to finalize, then poll Data Availability Layer
-  console.log("\n📋 Step 4: Wait for Voting Round Finalization");
+  // Step 4: Calculate intelligent wait time based on voting round position
+  console.log("\n📋 Step 4: Calculate Wait Time for Voting Round Finalization");
   console.log("  Using Voting Round ID:", votingRoundId);
   
-  // Calculate wait time based on actual round duration from on-chain contract
-  // We wait 2x the round duration to be safe and ensure finalization
-  const waitTime = votingRoundConfig.roundDurationSec * 2 * 1000; // Convert to milliseconds
-  console.log(`  Round Duration: ${votingRoundConfig.roundDurationSec}s (from VotingRounds contract)`);
-  console.log(`  Waiting ${waitTime / 1000}s (2x round duration) before polling...`);
-  console.log(`  This ensures the voting round has time to finalize`);
+  /**
+   * FDC Timing Breakdown (per Flare documentation):
+   * 
+   * 1. Voting Round Duration: 90 seconds
+   *    - Attestations submitted during this period are batched
+   * 
+   * 2. Choose Phase: 90-135 seconds into the round
+   *    - Data providers select which attestations to process
+   *    - Average duration: ~45 seconds (middle of 90-135s range = 112.5s)
+   * 
+   * 3. Finalization: After choose phase completes
+   *    - Round concludes and relay contract emits event
+   *    - Estimated time: ~30 seconds
+   * 
+   * 4. DA Layer Indexing: After finalization
+   *    - Merkle proofs become available in Data Availability Layer
+   *    - Estimated time: ~30-60 seconds
+   * 
+   * Total Wait Strategy:
+   * - Calculate time remaining in current voting round
+   * - Add choose phase time (~113 seconds from round start)
+   * - Add finalization + DA indexing buffer (~60 seconds)
+   * - This ensures we don't poll too early and waste API calls
+   */
+  
+  // Calculate position within current voting round
+  const roundStartTime = votingRoundConfig.roundOffsetSec + (votingRoundId * votingRoundConfig.roundDurationSec);
+  const secondsIntoRound = attestationSubmission.blockTimestamp - roundStartTime;
+  const remainingInRound = votingRoundConfig.roundDurationSec - secondsIntoRound;
+  
+  // Choose phase occurs at ~113 seconds from round start (middle of 90-135s range)
+  // If we're past that point, no need to wait for it
+  const choosePhaseTiming = 113; // Average of 90-135s range
+  const timeUntilChoosePhase = Math.max(0, choosePhaseTiming - secondsIntoRound);
+  
+  // Add buffer for finalization and DA Layer indexing (~60 seconds total)
+  const finalizationBuffer = 60;
+  
+  // Calculate optimal wait time
+  const optimalWaitTime = remainingInRound + timeUntilChoosePhase + finalizationBuffer;
+  const waitTime = Math.max(optimalWaitTime, 90) * 1000; // Minimum 90s, convert to ms
+  
+  console.log("\n⏰ FDC Timing Calculation:");
+  console.log(`  Block Timestamp: ${attestationSubmission.blockTimestamp} (${new Date(attestationSubmission.blockTimestamp * 1000).toISOString()})`);
+  console.log(`  Round Start Time: ${roundStartTime} (${new Date(roundStartTime * 1000).toISOString()})`);
+  console.log(`  Seconds Into Round: ${secondsIntoRound}s / ${votingRoundConfig.roundDurationSec}s`);
+  console.log(`  Time Remaining in Round: ${remainingInRound}s`);
+  console.log(`  Time Until Choose Phase (~113s): ${timeUntilChoosePhase}s`);
+  console.log(`  Finalization + DA Indexing Buffer: ${finalizationBuffer}s`);
+  console.log(`  Calculated Wait Time: ${Math.round(waitTime / 1000)}s`);
+  console.log("");
+  console.log(`⏳ Waiting ${Math.round(waitTime / 1000)}s for voting round to finalize and DA Layer to index...`);
+  console.log(`   Expected completion: ${new Date(Date.now() + waitTime).toISOString()}`);
   
   await new Promise(resolve => setTimeout(resolve, waitTime));
   
