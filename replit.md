@@ -82,6 +82,15 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
   - Validation: Added `account` to required fields alongside destination, amountDrops, and memo.
   - Impact: Bridge Tracking manual payments now display pre-filled amount (including 0.25% FAssets fee), destination address, and payment reference memo.
   - Scope: Only affects `/api/wallet/xaman/payment` endpoint used by Bridge Tracking. Dashboard/Vaults deposit flow using `/api/wallet/xaman/payment/deposit` remains unchanged.
+- **Deposit Cancellation Feature (Nov 18, 2025)**: Complete user-controlled cancellation system for in-progress deposits.
+  - User Interface: Cancel button (X icon) appears in BridgeStatus card header for active deposits.
+  - Safety Confirmation: AlertDialog prompts user confirmation before cancelling ("Cancel Deposit?" with amount display).
+  - Cancellable States: pending, reserving_collateral, bridging, awaiting_payment, xrpl_confirmed, generating_proof, proof_generated, fdc_proof_generated, minting, vault_minting.
+  - Terminal States: Cannot cancel completed, vault_minted, failed, vault_mint_failed, or cancelled deposits.
+  - Backend Cleanup: BridgeService.cancelBridge() stops XRPL monitoring, removes agent listeners, updates database status to 'cancelled', sets cancelledAt timestamp.
+  - API Endpoint: POST `/api/bridges/:id/user-cancel` with wallet ownership validation (only deposit owner can cancel).
+  - Database: Uses existing cancelledAt and cancellationReason fields in xrp_to_fxrp_bridges table.
+  - Position Cleanup: Automatically deletes any associated position records to maintain data consistency.
 - **Real-Time Portfolio Updates (Nov 2025)**: Complete implementation of coordinated polling and status mapping for withdrawal tracking.
   - Status Mapping: Created `statusMapping.ts` utility covering all 17 enum values (userStatus + redemptionStatus + legacy statuses).
   - DisplayStatus Pattern: Consistent fallback logic `displayStatus = userStatus || status` used across rendering, polling guards, and refetchInterval.
