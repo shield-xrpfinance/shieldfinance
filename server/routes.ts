@@ -1308,10 +1308,10 @@ export async function registerRoutes(
   // Create Xaman payment request for bridge deposit
   app.post("/api/wallet/xaman/payment", async (req, res) => {
     try {
-      const { destination, amountDrops, memo, network } = req.body;
+      const { account, destination, amountDrops, memo, network } = req.body;
 
-      if (!destination || !amountDrops || !memo) {
-        return res.status(400).json({ error: "Missing required fields: destination, amountDrops, memo" });
+      if (!account || !destination || !amountDrops || !memo) {
+        return res.status(400).json({ error: "Missing required fields: account, destination, amountDrops, memo" });
       }
 
       const apiKey = process.env.XUMM_API_KEY?.trim();
@@ -1331,6 +1331,7 @@ export async function registerRoutes(
 
       const payload = await xumm.payload?.create({
         TransactionType: "Payment",
+        Account: account,
         Destination: destination,
         Amount: amountDrops,
         Memos: [

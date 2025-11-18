@@ -188,6 +188,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            account: address,
             destination: paymentRequest.destination,
             amountDrops: paymentRequest.amountDrops,
             memo: paymentRequest.memo,
