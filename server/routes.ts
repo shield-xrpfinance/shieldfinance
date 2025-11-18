@@ -788,6 +788,47 @@ export async function registerRoutes(
     }
   });
 
+  // User-initiated bridge cancellation
+  app.post("/api/bridges/:id/user-cancel", async (req, res) => {
+    try {
+      const { id: bridgeId } = req.params;
+      const { walletAddress } = req.body;
+
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Missing required field: walletAddress" });
+      }
+
+      if (!bridgeId) {
+        return res.status(400).json({ error: "Missing required field: bridgeId" });
+      }
+
+      console.log(`🚫 User-initiated cancellation for bridge ${bridgeId} by ${walletAddress}`);
+
+      // Call BridgeService to cancel the bridge
+      const result = await bridgeService.cancelBridge(bridgeId, walletAddress, "Cancelled by user");
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.message });
+      }
+
+      // Fetch updated bridge to return to client
+      const updatedBridge = await storage.getBridgeById(bridgeId);
+
+      res.json({
+        success: true,
+        message: result.message,
+        bridge: updatedBridge
+      });
+    } catch (error) {
+      console.error("Bridge cancellation error:", error);
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+      } else {
+        res.status(500).json({ error: "Failed to cancel bridge" });
+      }
+    }
+  });
+
   // Create deposit via FAssets bridge
   app.post("/api/deposits", async (req, res) => {
     try {

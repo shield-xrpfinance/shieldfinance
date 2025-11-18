@@ -233,6 +233,82 @@ export class BridgeService {
   }
 
   /**
+   * Cancel a bridge request initiated by the user.
+   * This method validates the bridge can be cancelled, updates the status,
+   * and cleans up any monitoring/listeners.
+   * 
+   * @param bridgeId - Bridge ID to cancel
+   * @param walletAddress - Wallet address requesting cancellation (for ownership validation)
+   * @param reason - Reason for cancellation (default: "Cancelled by user")
+   * @returns Object with success status and message
+   */
+  async cancelBridge(
+    bridgeId: string, 
+    walletAddress: string, 
+    reason: string = "Cancelled by user"
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      // 1. Get the bridge
+      const bridge = await this.config.storage.getBridgeById(bridgeId);
+      if (!bridge) {
+        return { success: false, message: "Bridge not found" };
+      }
+
+      // 2. Validate ownership
+      if (bridge.walletAddress !== walletAddress) {
+        return { success: false, message: "Unauthorized - you can only cancel your own deposits" };
+      }
+
+      // 3. Check if bridge is in a cancellable state (not already terminal)
+      if (this.isBridgeTerminal(bridge)) {
+        return { 
+          success: false, 
+          message: `Cannot cancel bridge in ${bridge.status} state` 
+        };
+      }
+
+      // 4. Update bridge status to cancelled
+      const now = new Date();
+      await this.config.storage.updateBridge(bridgeId, {
+        status: 'cancelled',
+        cancelledAt: now,
+        cancellationReason: reason
+      });
+
+      // 5. Clean up XRPL listener monitoring if agent address exists
+      if (bridge.agentUnderlyingAddress && this.xrplListener) {
+        await this.xrplListener.removeAgentAddress(bridge.agentUnderlyingAddress);
+        console.log(`🧹 Removed XRPL monitoring for agent: ${bridge.agentUnderlyingAddress}`);
+      }
+
+      // 6. Delete the associated position if it exists (since deposit didn't complete)
+      if (bridge.positionId) {
+        try {
+          await this.config.storage.deletePosition(bridge.positionId);
+          console.log(`🧹 Deleted incomplete position: ${bridge.positionId}`);
+        } catch (positionError) {
+          console.warn(`Failed to delete position ${bridge.positionId}:`, positionError);
+          // Don't fail the cancellation if position cleanup fails
+        }
+      }
+
+      console.log(`✅ Bridge ${bridgeId} cancelled by user: ${walletAddress}`);
+      console.log(`   Reason: ${reason}`);
+
+      return { 
+        success: true, 
+        message: "Bridge deposit cancelled successfully" 
+      };
+    } catch (error) {
+      console.error("❌ Error cancelling bridge:", error);
+      return { 
+        success: false, 
+        message: error instanceof Error ? error.message : "Failed to cancel bridge" 
+      };
+    }
+  }
+
+  /**
    * Stop the cleanup scheduler (for graceful shutdown).
    */
   stopCleanupScheduler(): void {
