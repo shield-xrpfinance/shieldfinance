@@ -72,6 +72,25 @@ export class SmartAccountClient {
     return this.smartAccountAddress;
   }
 
+  /**
+   * Check if an error is retryable (bundler rejection that can be fixed with fee bumping)
+   */
+  private isRetryableError(error: any): boolean {
+    const errorMessage = error?.message?.toLowerCase() || error?.error?.toLowerCase() || '';
+    const retryablePatterns = [
+      'user op cannot be replaced',
+      'fee too low',
+      'insufficient fee',
+      'replacement transaction underpriced',
+      'nonce too low',
+    ];
+    return retryablePatterns.some(pattern => errorMessage.includes(pattern));
+  }
+
+  /**
+   * Send transaction with automatic retry and fee bumping
+   * Implements exponential backoff (1s, 2s, 4s, 8s, 16s) and 20% fee increase per retry
+   */
   async sendTransaction(tx: {
     to: string;
     value?: bigint | string;
@@ -81,40 +100,90 @@ export class SmartAccountClient {
       throw new Error('Smart account not initialized. Call initialize() first.');
     }
 
-    try {
-      await this.primeSdk.clearUserOpsFromBatch();
+    const MAX_RETRIES = 5;
+    const FEE_BUMP_MULTIPLIER = 1.2; // Increase fees by 20% each retry
+    const INITIAL_BACKOFF_MS = 1000;
 
-      const txData: any = {
-        to: tx.to,
-      };
+    let lastError: any;
 
-      if (tx.value) {
-        txData.value = typeof tx.value === 'string' 
-          ? BigInt(tx.value)
-          : tx.value;
+    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+      try {
+        await this.primeSdk.clearUserOpsFromBatch();
+
+        const txData: any = {
+          to: tx.to,
+        };
+
+        if (tx.value) {
+          txData.value = typeof tx.value === 'string' 
+            ? BigInt(tx.value)
+            : tx.value;
+        }
+
+        if (tx.data) {
+          txData.data = tx.data;
+        }
+
+        await this.primeSdk.addUserOpsToBatch(txData);
+
+        let userOp = await this.primeSdk.estimate();
+        
+        // Apply fee bumping on retries
+        if (attempt > 0) {
+          const feeMultiplier = Math.pow(FEE_BUMP_MULTIPLIER, attempt);
+          
+          if (userOp.maxFeePerGas) {
+            const originalMaxFee = BigInt(userOp.maxFeePerGas.toString());
+            userOp.maxFeePerGas = BigInt(Math.floor(Number(originalMaxFee) * feeMultiplier));
+          }
+          
+          if (userOp.maxPriorityFeePerGas) {
+            const originalPriorityFee = BigInt(userOp.maxPriorityFeePerGas.toString());
+            userOp.maxPriorityFeePerGas = BigInt(Math.floor(Number(originalPriorityFee) * feeMultiplier));
+          }
+          
+          console.log(`🔄 Retry ${attempt}/${MAX_RETRIES - 1} with ${(feeMultiplier * 100).toFixed(0)}% fees`);
+        }
+
+        console.log('📊 Estimated UserOp:', {
+          sender: userOp.sender,
+          nonce: userOp.nonce,
+          callGasLimit: userOp.callGasLimit?.toString(),
+          maxFeePerGas: userOp.maxFeePerGas?.toString(),
+          maxPriorityFeePerGas: userOp.maxPriorityFeePerGas?.toString(),
+        });
+
+        const userOpHash = await this.primeSdk.send(userOp);
+        console.log(`✅ UserOp sent: ${userOpHash}`);
+
+        return userOpHash;
+      } catch (error) {
+        lastError = error;
+        
+        // Check if error is retryable
+        if (!this.isRetryableError(error)) {
+          console.error('❌ Non-retryable error:', error);
+          throw error;
+        }
+
+        // If this was the last attempt, throw
+        if (attempt === MAX_RETRIES - 1) {
+          console.error(`❌ Failed after ${MAX_RETRIES} attempts:`, error);
+          throw error;
+        }
+
+        // Calculate exponential backoff
+        const backoffMs = INITIAL_BACKOFF_MS * Math.pow(2, attempt);
+        const errorMsg = (error as any)?.error || (error as any)?.message || String(error);
+        console.warn(`⚠️ Retryable error (attempt ${attempt + 1}/${MAX_RETRIES}):`, errorMsg);
+        console.log(`⏳ Waiting ${backoffMs}ms before retry...`);
+        
+        await new Promise(resolve => setTimeout(resolve, backoffMs));
       }
-
-      if (tx.data) {
-        txData.data = tx.data;
-      }
-
-      await this.primeSdk.addUserOpsToBatch(txData);
-
-      const userOp = await this.primeSdk.estimate();
-      console.log('📊 Estimated UserOp:', {
-        sender: userOp.sender,
-        nonce: userOp.nonce,
-        callGasLimit: userOp.callGasLimit?.toString(),
-      });
-
-      const userOpHash = await this.primeSdk.send(userOp);
-      console.log(`✅ UserOp sent: ${userOpHash}`);
-
-      return userOpHash;
-    } catch (error) {
-      console.error('❌ Failed to send transaction:', error);
-      throw error;
     }
+
+    // Should never reach here, but TypeScript wants it
+    throw lastError;
   }
 
   async sendBatchTransactions(txs: Array<{
