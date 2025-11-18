@@ -90,11 +90,12 @@ export function ProgressStepsModal({
 }: ProgressStepsModalProps) {
   const [internalStep, setInternalStep] = useState<ProgressStep>(currentStep);
 
-  const shouldPoll = !!bridgeId && (internalStep === 'awaiting_payment' || internalStep === 'finalizing');
+  // Start polling as soon as we have a bridgeId to detect all status transitions
+  const shouldPoll = !!bridgeId && open;
   
   const { data: depositStatus } = useQuery<{ status: string }>({
     queryKey: ['/api/deposits', bridgeId, 'status'],
-    enabled: shouldPoll && open,
+    enabled: shouldPoll,
     refetchInterval: shouldPoll ? 5000 : false,
     refetchIntervalInBackground: false,
   });
