@@ -65,33 +65,33 @@ const requireAdminAuth = (req: Request, res: Response, next: NextFunction) => {
  * Get the latest deployed vault address from deployment files
  */
 function getVaultAddress(): string {
-  let vaultAddress: string | undefined;
+  // Prioritize environment variable (source of truth for production)
+  let vaultAddress = process.env.VITE_SHXRP_VAULT_ADDRESS;
   
-  try {
-    const deploymentsDir = path.join(process.cwd(), "deployments");
-    const files = fs.readdirSync(deploymentsDir)
-      .filter(f => 
-        f.startsWith("coston2-") && 
-        f.endsWith(".json") && 
-        f !== "coston2-latest.json" &&
-        f !== "coston2-deployment.json" &&
-        /coston2-\d+\.json/.test(f)
-      )
-      .sort()
-      .reverse();
-    
-    if (files.length > 0) {
-      const latestDeployment = JSON.parse(
-        fs.readFileSync(path.join(deploymentsDir, files[0]), "utf-8")
-      );
-      vaultAddress = latestDeployment.contracts?.ShXRPVault?.address;
-    }
-  } catch (error) {
-    console.warn("Failed to read deployment file:", error);
-  }
-  
+  // Fall back to deployment files if env var not set
   if (!vaultAddress || vaultAddress === "0x...") {
-    vaultAddress = process.env.VITE_SHXRP_VAULT_ADDRESS;
+    try {
+      const deploymentsDir = path.join(process.cwd(), "deployments");
+      const files = fs.readdirSync(deploymentsDir)
+        .filter(f => 
+          f.startsWith("coston2-") && 
+          f.endsWith(".json") && 
+          f !== "coston2-latest.json" &&
+          f !== "coston2-deployment.json" &&
+          /coston2-\d+\.json/.test(f)
+        )
+        .sort()
+        .reverse();
+      
+      if (files.length > 0) {
+        const latestDeployment = JSON.parse(
+          fs.readFileSync(path.join(deploymentsDir, files[0]), "utf-8")
+        );
+        vaultAddress = latestDeployment.contracts?.ShXRPVault?.address;
+      }
+    } catch (error) {
+      console.warn("Failed to read deployment file:", error);
+    }
   }
   
   if (!vaultAddress || vaultAddress === "0x...") {
@@ -199,34 +199,39 @@ export async function registerRoutes(
       const vaults = await storage.getVaults();
       
       // Enrich with live contract data if flareClient is available
+      // Note: P0 features (depositLimit, paused) require updated contract deployment
       if (flareClient && vaults.length > 0) {
         try {
           const vaultAddress = getVaultAddress();
           const vaultContract = flareClient.getShXRPVault(vaultAddress) as any;
           
-          // Fetch P0 security state from contract
+          // Try to fetch P0 security state from contract (may not be deployed yet)
           const [depositLimitRaw, paused] = await Promise.all([
-            vaultContract.depositLimit(),
-            vaultContract.paused()
+            vaultContract.depositLimit().catch(() => null),
+            vaultContract.paused().catch(() => null)
           ]);
           
-          // Add P0 fields to the first vault (Shield XRP)
-          const enrichedVaults = vaults.map((vault, index) => {
-            if (index === 0) {
-              return {
-                ...vault,
-                depositLimit: ethers.formatUnits(depositLimitRaw, 6).toString(), // Always string for JSON precision
-                depositLimitRaw: depositLimitRaw.toString(), // Raw contract value
-                paused
-              };
-            }
-            return vault;
-          });
-          
-          res.json(enrichedVaults);
+          // Only add P0 fields if methods exist on contract
+          if (depositLimitRaw !== null && paused !== null) {
+            const enrichedVaults = vaults.map((vault, index) => {
+              if (index === 0) {
+                return {
+                  ...vault,
+                  depositLimit: ethers.formatUnits(depositLimitRaw, 6).toString(),
+                  depositLimitRaw: depositLimitRaw.toString(),
+                  paused
+                };
+              }
+              return vault;
+            });
+            res.json(enrichedVaults);
+          } else {
+            // P0 methods not available on this contract deployment
+            res.json(vaults);
+          }
         } catch (contractError) {
-          console.error("Failed to fetch contract state, returning vaults without P0 data:", contractError);
-          res.json(vaults); // Return vaults without P0 data if contract fetch fails
+          // Silently fall back to vaults without P0 data
+          res.json(vaults);
         }
       } else {
         res.json(vaults);
