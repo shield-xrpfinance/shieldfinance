@@ -6,6 +6,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect, useRef } from "react";
 import { useWallet } from "@/lib/walletContext";
+import XamanSigningModal from "./XamanSigningModal";
 
 export type ProgressStep = 'creating' | 'reserving' | 'ready' | 'awaiting_payment' | 'finalizing' | 'completed' | 'error';
 
@@ -90,10 +91,14 @@ export function ProgressStepsModal({
   onNavigateToPortfolio,
 }: ProgressStepsModalProps) {
   const [internalStep, setInternalStep] = useState<ProgressStep>(currentStep);
-  const { requestPayment } = useWallet();
+  const { requestPayment, provider } = useWallet();
   
   // Track if we've already triggered payment to prevent duplicate calls
   const paymentTriggeredRef = useRef(false);
+  
+  // State for Xaman payment modal
+  const [xamanPaymentModalOpen, setXamanPaymentModalOpen] = useState(false);
+  const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
 
   // Start polling as soon as we have a bridgeId to detect all status transitions
   const shouldPoll = !!bridgeId && open;
@@ -142,13 +147,24 @@ export function ProgressStepsModal({
         destination: depositStatus.paymentRequest.destination,
         amountDrops: depositStatus.paymentRequest.amountDrops,
         memo: depositStatus.paymentRequest.memo,
-        network: depositStatus.paymentRequest.network,
+        network: (depositStatus.paymentRequest.network || 'testnet') as 'mainnet' | 'testnet',
+      }).then((result) => {
+        if (result.success && provider === 'xaman') {
+          // For Xaman, open the QR code modal
+          setXamanPayload({
+            uuid: result.payloadUuid || '',
+            qrUrl: result.qrUrl || '',
+            deepLink: result.deepLink || '',
+          });
+          setXamanPaymentModalOpen(true);
+        }
+        // For WalletConnect, the wallet handles the payment directly (no modal needed)
       }).catch((error) => {
         console.error("❌ Failed to trigger payment modal:", error);
         paymentTriggeredRef.current = false; // Reset on error to allow retry
       });
     }
-  }, [depositStatus, bridgeId, requestPayment]);
+  }, [depositStatus, bridgeId, requestPayment, provider]);
 
   const displayStep = internalStep;
 
@@ -170,6 +186,7 @@ export function ProgressStepsModal({
   const canDismiss = displayStep === 'error' || displayStep === 'ready' || displayStep === 'awaiting_payment' || displayStep === 'finalizing' || displayStep === 'completed';
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
         className="sm:max-w-md" 
@@ -394,5 +411,26 @@ export function ProgressStepsModal({
         )}
       </DialogContent>
     </Dialog>
+    
+    {/* Xaman Payment Modal for QR code scanning */}
+    <XamanSigningModal
+      open={xamanPaymentModalOpen}
+      onOpenChange={setXamanPaymentModalOpen}
+      payloadUuid={xamanPayload?.uuid || null}
+      qrUrl={xamanPayload?.qrUrl || null}
+      deepLink={xamanPayload?.deepLink || null}
+      onSuccess={(txHash) => {
+        console.log("✅ Xaman payment signed:", txHash);
+        setXamanPaymentModalOpen(false);
+      }}
+      onError={(error) => {
+        console.error("❌ Xaman payment error:", error);
+        setXamanPaymentModalOpen(false);
+        paymentTriggeredRef.current = false; // Allow retry
+      }}
+      title="Complete XRP Payment"
+      description="Scan the QR code with Xaman to send your XRP to the FAssets bridge agent"
+    />
+    </>
   );
 }
