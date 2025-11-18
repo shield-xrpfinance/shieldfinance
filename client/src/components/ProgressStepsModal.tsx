@@ -1,10 +1,12 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Loader2, Circle, ExternalLink, Info } from "lucide-react";
+import { CheckCircle2, Loader2, Circle, ExternalLink, Info, PartyPopper } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 
-export type ProgressStep = 'creating' | 'reserving' | 'ready' | 'awaiting_payment' | 'error';
+export type ProgressStep = 'creating' | 'reserving' | 'ready' | 'awaiting_payment' | 'finalizing' | 'completed' | 'error';
 
 interface ProgressStepsModalProps {
   open: boolean;
@@ -15,6 +17,7 @@ interface ProgressStepsModalProps {
   bridgeId?: string;
   onOpenChange?: (open: boolean) => void;
   onNavigateToBridgeTracking?: () => void;
+  onNavigateToPortfolio?: () => void;
 }
 
 interface StepConfig {
@@ -44,7 +47,35 @@ const steps: StepConfig[] = [
     title: 'Processing Bridge',
     description: 'Payment signed. Waiting for transaction confirmation...',
   },
+  {
+    id: 'finalizing',
+    title: 'Finalizing on Flare',
+    description: 'Generating FDC proof and minting vault shares...',
+  },
+  {
+    id: 'completed',
+    title: 'Deposit Complete!',
+    description: 'Your vault shares are ready in Portfolio',
+  },
 ];
+
+function mapBackendStatusToStep(backendStatus: string): ProgressStep | null {
+  const statusMap: Record<string, ProgressStep> = {
+    'pending': 'creating',
+    'creating': 'creating',
+    'reserving_collateral': 'reserving',
+    'awaiting_payment': 'awaiting_payment',
+    'xrpl_confirmed': 'finalizing',
+    'generating_proof': 'finalizing',
+    'proof_generated': 'finalizing',
+    'minting': 'finalizing',
+    'vault_minting': 'finalizing',
+    'completed': 'completed',
+    'vault_minted': 'completed',
+  };
+  
+  return statusMap[backendStatus] || null;
+}
 
 export function ProgressStepsModal({
   open,
@@ -55,22 +86,50 @@ export function ProgressStepsModal({
   bridgeId,
   onOpenChange,
   onNavigateToBridgeTracking,
+  onNavigateToPortfolio,
 }: ProgressStepsModalProps) {
+  const [internalStep, setInternalStep] = useState<ProgressStep>(currentStep);
+
+  const shouldPoll = !!bridgeId && (internalStep === 'awaiting_payment' || internalStep === 'finalizing');
+  
+  const { data: depositStatus } = useQuery<{ status: string }>({
+    queryKey: ['/api/deposits', bridgeId, 'status'],
+    enabled: shouldPoll && open,
+    refetchInterval: shouldPoll ? 5000 : false,
+    refetchIntervalInBackground: false,
+  });
+
+  useEffect(() => {
+    if (depositStatus?.status) {
+      const mappedStep = mapBackendStatusToStep(depositStatus.status);
+      if (mappedStep && mappedStep !== internalStep) {
+        setInternalStep(mappedStep);
+      }
+    }
+  }, [depositStatus, internalStep]);
+
+  useEffect(() => {
+    setInternalStep(currentStep);
+  }, [currentStep]);
+
+  const displayStep = internalStep;
+
   const getCurrentStepIndex = () => {
-    if (currentStep === 'error') return -1;
-    return steps.findIndex(s => s.id === currentStep);
+    if (displayStep === 'error') return -1;
+    return steps.findIndex(s => s.id === displayStep);
   };
 
   const currentStepIndex = getCurrentStepIndex();
 
   const getStepStatus = (stepIndex: number): 'completed' | 'active' | 'pending' => {
-    if (currentStep === 'error') return 'pending';
+    if (displayStep === 'error') return 'pending';
+    if (displayStep === 'completed') return 'completed';
     if (stepIndex < currentStepIndex) return 'completed';
     if (stepIndex === currentStepIndex) return 'active';
     return 'pending';
   };
 
-  const canDismiss = currentStep === 'error' || currentStep === 'ready' || currentStep === 'awaiting_payment';
+  const canDismiss = displayStep === 'error' || displayStep === 'ready' || displayStep === 'awaiting_payment' || displayStep === 'finalizing' || displayStep === 'completed';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -90,16 +149,18 @@ export function ProgressStepsModal({
       >
         <DialogHeader>
           <DialogTitle className="text-center">
-            {currentStep === 'error' ? 'Bridge Creation Failed' : 'Preparing Your Deposit'}
+            {displayStep === 'error' ? 'Bridge Creation Failed' : 
+             displayStep === 'completed' ? 'Deposit Complete!' : 
+             'Preparing Your Deposit'}
           </DialogTitle>
-          {amount && vaultName && (
+          {amount && vaultName && displayStep !== 'completed' && (
             <DialogDescription className="text-center">
               {amount} XRP → {vaultName}
             </DialogDescription>
           )}
         </DialogHeader>
 
-        {currentStep === 'error' ? (
+        {displayStep === 'error' ? (
           <div className="py-6 text-center">
             <div className="flex justify-center mb-4">
               <div className="rounded-full bg-destructive/10 p-3">
@@ -110,9 +171,57 @@ export function ProgressStepsModal({
               {errorMessage || 'An error occurred while creating the bridge. Please try again.'}
             </p>
           </div>
+        ) : displayStep === 'completed' ? (
+          <div className="py-6 space-y-6">
+            <div className="text-center">
+              <div className="flex justify-center mb-4">
+                <div className="rounded-full bg-green-100 dark:bg-green-900/20 p-3">
+                  <PartyPopper className="h-8 w-8 text-green-600 dark:text-green-400" />
+                </div>
+              </div>
+              <h3 className="text-lg font-semibold mb-2" data-testid="text-completion-title">
+                Your vault shares are ready!
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {amount && `${amount} XRP `}successfully deposited{vaultName && ` to ${vaultName}`}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {onNavigateToPortfolio && (
+                <Button
+                  variant="default"
+                  onClick={onNavigateToPortfolio}
+                  data-testid="button-view-portfolio"
+                  className="w-full"
+                >
+                  View Portfolio
+                </Button>
+              )}
+              {onNavigateToBridgeTracking && (
+                <Button
+                  variant="outline"
+                  onClick={onNavigateToBridgeTracking}
+                  data-testid="button-view-bridge-tracking-completed"
+                  className="w-full"
+                >
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  View Bridge Tracking
+                </Button>
+              )}
+              <Button
+                variant="outline"
+                onClick={() => onOpenChange?.(false)}
+                data-testid="button-close-completed"
+                className="w-full"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
         ) : (
           <div className="py-6 space-y-4" data-testid="progress-steps-container">
-            {steps.map((step, index) => {
+            {steps.filter(s => s.id !== 'completed').map((step, index) => {
               const status = getStepStatus(index);
               
               return (
@@ -150,7 +259,7 @@ export function ProgressStepsModal({
                       )}
                     </div>
                     
-                    {index < steps.length - 1 && (
+                    {index < steps.filter(s => s.id !== 'completed').length - 1 && (
                       <div
                         className={cn(
                           "w-0.5 h-12 mt-2 transition-all",
@@ -190,13 +299,19 @@ export function ProgressStepsModal({
           </div>
         )}
 
-        {currentStep === 'reserving' && (
+        {displayStep === 'reserving' && (
           <div className="text-center text-xs text-muted-foreground">
             This may take up to 60 seconds...
           </div>
         )}
 
-        {currentStep === 'awaiting_payment' && (
+        {displayStep === 'finalizing' && (
+          <div className="text-center text-xs text-muted-foreground">
+            This may take a few minutes...
+          </div>
+        )}
+
+        {displayStep === 'awaiting_payment' && (
           <div className="space-y-4 pt-2">
             {bridgeId && (
               <div className="rounded-md bg-muted p-4 space-y-2">
