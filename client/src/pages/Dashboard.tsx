@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
-import { Link} from "wouter";
+import { Link, useLocation } from "wouter";
 
 export default function Dashboard() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -36,6 +36,7 @@ export default function Dashboard() {
   const { toast } = useToast();
   const { address, provider, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
+  const [, setLocation] = useLocation();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
     queryKey: ["/api/vaults"],
@@ -190,6 +191,16 @@ export default function Dashboard() {
     setPollingBridgeId(null);
     setBridgeInfo(null);
     setProgressErrorMessage(undefined);
+  };
+
+  const handleNavigateToBridgeTracking = () => {
+    setLocation('/bridge-tracking');
+    handleCloseProgressModal();
+  };
+
+  const handleNavigateToPortfolio = () => {
+    setLocation('/portfolio');
+    handleCloseProgressModal();
   };
 
   // Filter out coming soon vaults and take first 3 active vaults
@@ -740,9 +751,12 @@ export default function Dashboard() {
         currentStep={progressStep}
         amount={bridgeInfo?.amount}
         vaultName={bridgeInfo?.vaultName}
+        bridgeId={bridgeInfo?.bridgeId}
         errorMessage={progressErrorMessage}
+        onNavigateToBridgeTracking={handleNavigateToBridgeTracking}
+        onNavigateToPortfolio={handleNavigateToPortfolio}
         onOpenChange={(open) => {
-          if (!open && (progressStep === 'error' || progressStep === 'ready')) {
+          if (!open && (progressStep === 'error' || progressStep === 'ready' || progressStep === 'awaiting_payment' || progressStep === 'finalizing' || progressStep === 'completed')) {
             handleCloseProgressModal();
           }
         }}

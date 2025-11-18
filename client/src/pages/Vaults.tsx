@@ -219,6 +219,11 @@ export default function Vaults() {
     handleCloseProgressModal();
   };
 
+  const handleNavigateToPortfolio = () => {
+    setLocation('/portfolio');
+    handleCloseProgressModal();
+  };
+
   const vaultEscrowStats = useMemo(() => {
     const stats: Record<string, { 
       pendingCount: number; 
@@ -816,8 +821,9 @@ export default function Vaults() {
         bridgeId={bridgeInfo?.bridgeId}
         errorMessage={progressErrorMessage}
         onNavigateToBridgeTracking={handleNavigateToBridgeTracking}
+        onNavigateToPortfolio={handleNavigateToPortfolio}
         onOpenChange={(open) => {
-          if (!open && (progressStep === 'error' || progressStep === 'ready' || progressStep === 'awaiting_payment')) {
+          if (!open && (progressStep === 'error' || progressStep === 'ready' || progressStep === 'awaiting_payment' || progressStep === 'finalizing' || progressStep === 'completed')) {
             handleCloseProgressModal();
           }
         }}
