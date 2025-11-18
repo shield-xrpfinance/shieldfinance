@@ -75,6 +75,13 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
   - Info Alert: Clear messaging that users can check bridge status anytime in Bridge Tracking.
   - State Machine: Updates to 'awaiting_payment' step after signature; supports Xaman, WalletConnect, and fallback flows.
   - Automatic Payment Trigger (Nov 18, 2025): ProgressStepsModal now automatically triggers wallet payment modal when bridge status reaches 'awaiting_payment' with paymentRequest data available.
+- **Xaman Payment Pre-fill Fix (Nov 18, 2025)**: Fixed Bridge Tracking manual payment QR codes to show pre-filled transaction details.
+  - Root Cause: XUMM SDK payload was missing the `Account` field, causing Xaman to show generic signing requests instead of pre-filled transactions.
+  - Frontend Fix: walletContext.tsx now passes `account: address` when calling `/api/wallet/xaman/payment` endpoint.
+  - Backend Fix: Server extracts `account` from request and includes `Account` field in XUMM payload creation.
+  - Validation: Added `account` to required fields alongside destination, amountDrops, and memo.
+  - Impact: Bridge Tracking manual payments now display pre-filled amount (including 0.25% FAssets fee), destination address, and payment reference memo.
+  - Scope: Only affects `/api/wallet/xaman/payment` endpoint used by Bridge Tracking. Dashboard/Vaults deposit flow using `/api/wallet/xaman/payment/deposit` remains unchanged.
 - **Real-Time Portfolio Updates (Nov 2025)**: Complete implementation of coordinated polling and status mapping for withdrawal tracking.
   - Status Mapping: Created `statusMapping.ts` utility covering all 17 enum values (userStatus + redemptionStatus + legacy statuses).
   - DisplayStatus Pattern: Consistent fallback logic `displayStatus = userStatus || status` used across rendering, polling guards, and refetchInterval.
