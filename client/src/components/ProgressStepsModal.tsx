@@ -4,7 +4,8 @@ import { CheckCircle2, Loader2, Circle, ExternalLink, Info, PartyPopper } from "
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
+import { useWallet } from "@/lib/walletContext";
 
 export type ProgressStep = 'creating' | 'reserving' | 'ready' | 'awaiting_payment' | 'finalizing' | 'completed' | 'error';
 
@@ -89,11 +90,18 @@ export function ProgressStepsModal({
   onNavigateToPortfolio,
 }: ProgressStepsModalProps) {
   const [internalStep, setInternalStep] = useState<ProgressStep>(currentStep);
+  const { requestPayment } = useWallet();
+  
+  // Track if we've already triggered payment to prevent duplicate calls
+  const paymentTriggeredRef = useRef(false);
 
   // Start polling as soon as we have a bridgeId to detect all status transitions
   const shouldPoll = !!bridgeId && open;
   
-  const { data: depositStatus } = useQuery<{ status: string }>({
+  const { data: depositStatus } = useQuery<{ 
+    status: string; 
+    paymentRequest?: { destination: string; amountDrops: string; memo: string; network: string };
+  }>({
     queryKey: ['/api/deposits', bridgeId, 'status'],
     enabled: shouldPoll,
     refetchInterval: shouldPoll ? 5000 : false,
@@ -112,6 +120,35 @@ export function ProgressStepsModal({
   useEffect(() => {
     setInternalStep(currentStep);
   }, [currentStep]);
+
+  // Reset payment trigger flag when bridgeId changes or modal opens
+  useEffect(() => {
+    paymentTriggeredRef.current = false;
+  }, [bridgeId, open]);
+
+  // Trigger Xaman/WalletConnect payment when bridge reaches awaiting_payment
+  useEffect(() => {
+    if (
+      depositStatus?.status === 'awaiting_payment' && 
+      depositStatus?.paymentRequest && 
+      !paymentTriggeredRef.current
+    ) {
+      paymentTriggeredRef.current = true;
+      console.log("🔔 Payment ready - triggering wallet payment modal...", depositStatus.paymentRequest);
+      
+      // Call requestPayment from wallet context with error handling
+      requestPayment({
+        bridgeId: bridgeId || '',
+        destination: depositStatus.paymentRequest.destination,
+        amountDrops: depositStatus.paymentRequest.amountDrops,
+        memo: depositStatus.paymentRequest.memo,
+        network: depositStatus.paymentRequest.network,
+      }).catch((error) => {
+        console.error("❌ Failed to trigger payment modal:", error);
+        paymentTriggeredRef.current = false; // Reset on error to allow retry
+      });
+    }
+  }, [depositStatus, bridgeId, requestPayment]);
 
   const displayStep = internalStep;
 

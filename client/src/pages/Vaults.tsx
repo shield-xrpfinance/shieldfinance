@@ -279,7 +279,7 @@ export default function Vaults() {
           amount: totalAmount.toString(),
         });
 
-        // ProgressStepsModal will now handle polling using bridgeId
+        // ProgressStepsModal will now handle polling and triggering Xaman payment
 
       } catch (error) {
         console.error("Bridge creation error:", error);

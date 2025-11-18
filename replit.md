@@ -74,6 +74,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
   - Dismissible Modal: Users can close modal manually or let it persist while they complete other tasks.
   - Info Alert: Clear messaging that users can check bridge status anytime in Bridge Tracking.
   - State Machine: Updates to 'awaiting_payment' step after signature; supports Xaman, WalletConnect, and fallback flows.
+  - Automatic Payment Trigger (Nov 18, 2025): ProgressStepsModal now automatically triggers wallet payment modal when bridge status reaches 'awaiting_payment' with paymentRequest data available.
 - **Real-Time Portfolio Updates (Nov 2025)**: Complete implementation of coordinated polling and status mapping for withdrawal tracking.
   - Status Mapping: Created `statusMapping.ts` utility covering all 17 enum values (userStatus + redemptionStatus + legacy statuses).
   - DisplayStatus Pattern: Consistent fallback logic `displayStatus = userStatus || status` used across rendering, polling guards, and refetchInterval.
