@@ -400,6 +400,13 @@ export default function Portfolio() {
 
   // Handle withdrawal progress modal dismissal
   const handleWithdrawProgressDismiss = () => {
+    // If withdrawal completed successfully, invalidate positions to refresh UI
+    if (withdrawProgressStep === 'complete' && address) {
+      queryClient.invalidateQueries({ queryKey: ['/api/positions', address] });
+      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', address] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', address] });
+    }
+    
     setWithdrawProgressModalOpen(false);
     setWithdrawRedemptionId(null);
     setWithdrawXrplTxHash(null);

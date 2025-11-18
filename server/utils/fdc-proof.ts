@@ -300,13 +300,14 @@ export async function generateFDCProof(
    * 
    * 4. DA Layer Indexing: After finalization
    *    - Merkle proofs become available in Data Availability Layer
-   *    - Estimated time: ~30-60 seconds
+   *    - Estimated time: ~20-30 seconds (faster than initially expected)
    * 
-   * Total Wait Strategy:
+   * Total Wait Strategy (OPTIMIZED):
    * - Calculate time remaining in current voting round
    * - Add choose phase time (~113 seconds from round start)
-   * - Add finalization + DA indexing buffer (~60 seconds)
-   * - This ensures we don't poll too early and waste API calls
+   * - Add smart finalization buffer (30s standard, 20s for late submissions >70s)
+   * - Reduced from 60s based on test evidence showing proofs ready faster
+   * - This balances efficiency with reliability, reducing wait by ~30-45s
    */
   
   // Calculate position within current voting round
@@ -319,12 +320,19 @@ export async function generateFDCProof(
   const choosePhaseTiming = 113; // Average of 90-135s range
   const timeUntilChoosePhase = Math.max(0, choosePhaseTiming - secondsIntoRound);
   
-  // Add buffer for finalization and DA Layer indexing (~60 seconds total)
-  const finalizationBuffer = 60;
+  // Smart finalization buffer based on test evidence:
+  // - Reduced from 60s to 30s (proofs ready faster than expected)
+  // - If submitted late in round (>70s), finalization is imminent so use even shorter buffer
+  let finalizationBuffer = 30;
+  if (secondsIntoRound > 70) {
+    // Very late submission - finalization happening soon, use minimal buffer
+    finalizationBuffer = 20;
+    console.log("  ⚡ Late submission detected (>70s into round) - using reduced buffer");
+  }
   
   // Calculate optimal wait time
   const optimalWaitTime = remainingInRound + timeUntilChoosePhase + finalizationBuffer;
-  const waitTime = Math.max(optimalWaitTime, 90) * 1000; // Minimum 90s, convert to ms
+  const waitTime = Math.max(optimalWaitTime, 60) * 1000; // Minimum 60s (reduced from 90s), convert to ms
   
   console.log("\n⏰ FDC Timing Calculation:");
   console.log(`  Block Timestamp: ${attestationSubmission.blockTimestamp} (${new Date(attestationSubmission.blockTimestamp * 1000).toISOString()})`);
