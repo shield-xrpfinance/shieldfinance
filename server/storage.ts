@@ -14,6 +14,7 @@ export interface IStorage {
   
   getPositions(walletAddress?: string): Promise<Position[]>;
   getPosition(id: string): Promise<Position | undefined>;
+  getPositionByWalletAndVault(walletAddress: string, vaultId: string): Promise<Position | undefined>;
   createPosition(position: InsertPosition): Promise<Position>;
   updatePosition(id: string, updates: Partial<Position>): Promise<Position>;
   deletePosition(id: string): Promise<boolean>;
@@ -170,13 +171,30 @@ export class DatabaseStorage implements IStorage {
 
   async getPositions(walletAddress?: string): Promise<Position[]> {
     if (walletAddress) {
-      return await db.select().from(positions).where(eq(positions.walletAddress, walletAddress));
+      return await db.select().from(positions).where(
+        and(
+          eq(positions.walletAddress, walletAddress),
+          eq(positions.status, "active")
+        )
+      );
     }
-    return await db.select().from(positions);
+    return await db.select().from(positions).where(eq(positions.status, "active"));
   }
 
   async getPosition(id: string): Promise<Position | undefined> {
     const [position] = await db.select().from(positions).where(eq(positions.id, id));
+    return position || undefined;
+  }
+
+  async getPositionByWalletAndVault(walletAddress: string, vaultId: string): Promise<Position | undefined> {
+    const [position] = await db.select()
+      .from(positions)
+      .where(and(
+        eq(positions.walletAddress, walletAddress),
+        eq(positions.vaultId, vaultId)
+      ))
+      // No status filter - return closed positions too (will be reactivated on deposit)
+      .limit(1);
     return position || undefined;
   }
 

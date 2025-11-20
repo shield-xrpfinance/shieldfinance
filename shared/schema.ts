@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, decimal, integer, timestamp, pgEnum, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, integer, timestamp, pgEnum, boolean, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -71,12 +71,15 @@ export const vaults = pgTable("vaults", {
 
 export const positions = pgTable("positions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  walletAddress: text("wallet_address").notNull(),
-  vaultId: varchar("vault_id").notNull().references(() => vaults.id),
-  amount: decimal("amount", { precision: 18, scale: 2 }).notNull(),
-  rewards: decimal("rewards", { precision: 18, scale: 2 }).notNull().default("0"),
-  depositedAt: timestamp("deposited_at").notNull().defaultNow(),
-});
+  walletAddress: varchar("wallet_address").notNull(),
+  vaultId: varchar("vault_id").notNull().references(() => vaults.id, { onDelete: "cascade" }),
+  amount: varchar("amount").notNull(), // Changed from decimal(18,2) to varchar for precision safety
+  rewards: varchar("rewards").notNull().default("0"),
+  status: varchar("status").notNull().default("active"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueWalletVault: unique().on(table.walletAddress, table.vaultId),
+}));
 
 export const transactions = pgTable("transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -299,7 +302,7 @@ export const insertVaultSchema = createInsertSchema(vaults).omit({
 
 export const insertPositionSchema = createInsertSchema(positions).omit({
   id: true,
-  depositedAt: true,
+  createdAt: true,
 });
 
 export const insertTransactionSchema = createInsertSchema(transactions).omit({

@@ -106,7 +106,7 @@ export default function Portfolio() {
       currentValue: (amount + rewards).toLocaleString(),
       rewards: rewards.toLocaleString(),
       apy: vault?.apy || "0",
-      depositDate: new Date(pos.depositedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      depositDate: new Date(pos.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     };
   });
 

@@ -6,35 +6,35 @@ export const DEMO_POSITIONS: Omit<InsertPosition, "id">[] = [
     vaultId: "vault-1",
     amount: "1250.50",
     rewards: "23.45",
-    depositedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000), // 14 days ago
+    status: "active",
   },
   {
     walletAddress: "rDemo1WalletAddress1234567890",
     vaultId: "vault-2",
     amount: "5000.00",
     rewards: "187.50",
-    depositedAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000), // 45 days ago
+    status: "active",
   },
   {
     walletAddress: "rDemo1WalletAddress1234567890",
     vaultId: "vault-3",
     amount: "750.25",
     rewards: "48.12",
-    depositedAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000), // 30 days ago
+    status: "active",
   },
   {
     walletAddress: "rDemo2WalletAddress9876543210",
     vaultId: "vault-4",
     amount: "2500.00",
     rewards: "231.25",
-    depositedAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000), // 60 days ago
+    status: "active",
   },
   {
     walletAddress: "rDemo2WalletAddress9876543210",
     vaultId: "vault-5",
     amount: "3200.75",
     rewards: "147.39",
-    depositedAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000), // 21 days ago
+    status: "active",
   },
 ];
 
@@ -51,7 +51,6 @@ export const DEMO_ESCROWS: Omit<InsertEscrow, "id">[] = [
     destinationAddress: "rDemo1WalletAddress1234567890",
     finishAfter: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days from now
     cancelAfter: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
     releasedAt: null,
     cancelledAt: null,
     txHash: "ABC123DEF456TESTNET789HASH001",
@@ -68,7 +67,6 @@ export const DEMO_ESCROWS: Omit<InsertEscrow, "id">[] = [
     destinationAddress: "rDemo1WalletAddress1234567890",
     finishAfter: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
     cancelAfter: new Date(Date.now() + 15 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
     releasedAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
     cancelledAt: null,
     txHash: "ABC123DEF456TESTNET789HASH002",
@@ -85,7 +83,6 @@ export const DEMO_ESCROWS: Omit<InsertEscrow, "id">[] = [
     destinationAddress: "rDemo2WalletAddress9876543210",
     finishAfter: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
     cancelAfter: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
     releasedAt: null,
     cancelledAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
     txHash: "ABC123DEF456TESTNET789HASH003",
@@ -102,7 +99,6 @@ export const DEMO_ESCROWS: Omit<InsertEscrow, "id">[] = [
     destinationAddress: "rDemo2WalletAddress9876543210",
     finishAfter: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
     cancelAfter: new Date(Date.now() + 25 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
     releasedAt: null,
     cancelledAt: null,
     txHash: "ABC123DEF456TESTNET789HASH004",
@@ -119,7 +115,6 @@ export const DEMO_ESCROWS: Omit<InsertEscrow, "id">[] = [
     destinationAddress: "rDemo1WalletAddress1234567890",
     finishAfter: new Date(Date.now() + 20 * 24 * 60 * 60 * 1000),
     cancelAfter: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
     releasedAt: null,
     cancelledAt: null,
     txHash: "ABC123DEF456TESTNET789HASH005",
@@ -136,7 +131,6 @@ export const DEMO_TRANSACTIONS: Omit<InsertTransaction, "id">[] = [
     status: "completed",
     txHash: "TX123DEPOSIT001TESTNET",
     network: "testnet",
-    createdAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
   },
   {
     vaultId: "vault-2",
@@ -147,7 +141,6 @@ export const DEMO_TRANSACTIONS: Omit<InsertTransaction, "id">[] = [
     status: "completed",
     txHash: "TX123DEPOSIT002TESTNET",
     network: "testnet",
-    createdAt: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000),
   },
   {
     vaultId: "vault-3",
@@ -158,7 +151,6 @@ export const DEMO_TRANSACTIONS: Omit<InsertTransaction, "id">[] = [
     status: "completed",
     txHash: "TX123DEPOSIT003TESTNET",
     network: "testnet",
-    createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
   },
   {
     vaultId: "vault-2",
@@ -169,7 +161,6 @@ export const DEMO_TRANSACTIONS: Omit<InsertTransaction, "id">[] = [
     status: "completed",
     txHash: "TX123CLAIM001TESTNET",
     network: "testnet",
-    createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
   },
   {
     vaultId: "vault-1",
@@ -180,7 +171,6 @@ export const DEMO_TRANSACTIONS: Omit<InsertTransaction, "id">[] = [
     status: "pending",
     txHash: null,
     network: "testnet",
-    createdAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
   },
   {
     vaultId: "vault-4",
@@ -191,7 +181,6 @@ export const DEMO_TRANSACTIONS: Omit<InsertTransaction, "id">[] = [
     status: "completed",
     txHash: "TX123DEPOSIT004TESTNET",
     network: "testnet",
-    createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
   },
   {
     vaultId: "vault-4",
@@ -202,7 +191,6 @@ export const DEMO_TRANSACTIONS: Omit<InsertTransaction, "id">[] = [
     status: "failed",
     txHash: null,
     network: "testnet",
-    createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
   },
   {
     vaultId: "vault-5",
@@ -213,7 +201,6 @@ export const DEMO_TRANSACTIONS: Omit<InsertTransaction, "id">[] = [
     status: "completed",
     txHash: "TX123DEPOSIT005TESTNET",
     network: "testnet",
-    createdAt: new Date(Date.now() - 21 * 24 * 60 * 60 * 1000),
   },
 ];
 
@@ -227,7 +214,6 @@ export const DEMO_WITHDRAWAL_REQUESTS: Omit<InsertWithdrawalRequest, "id">[] = [
     asset: "XRP",
     status: "pending",
     network: "testnet",
-    requestedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
     processedAt: null,
     txHash: null,
     rejectionReason: null,
@@ -241,7 +227,6 @@ export const DEMO_WITHDRAWAL_REQUESTS: Omit<InsertWithdrawalRequest, "id">[] = [
     asset: "XRP",
     status: "approved",
     network: "testnet",
-    requestedAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
     processedAt: new Date(Date.now() - 14 * 24 * 60 * 60 * 1000),
     txHash: "TX123CLAIM001TESTNET",
     rejectionReason: null,
@@ -255,7 +240,6 @@ export const DEMO_WITHDRAWAL_REQUESTS: Omit<InsertWithdrawalRequest, "id">[] = [
     asset: "XRP",
     status: "rejected",
     network: "testnet",
-    requestedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
     processedAt: new Date(Date.now() - 4 * 24 * 60 * 60 * 1000),
     txHash: null,
     rejectionReason: "Insufficient liquidity in vault",
@@ -269,7 +253,6 @@ export const DEMO_WITHDRAWAL_REQUESTS: Omit<InsertWithdrawalRequest, "id">[] = [
     asset: "XRP",
     status: "pending",
     network: "testnet",
-    requestedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
     processedAt: null,
     txHash: null,
     rejectionReason: null,

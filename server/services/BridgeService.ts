@@ -281,13 +281,16 @@ export class BridgeService {
         console.log(`🧹 Removed XRPL monitoring for agent: ${bridge.agentUnderlyingAddress}`);
       }
 
-      // 6. Delete the associated position if it exists (since deposit didn't complete)
+      // 6. Mark the associated position as cancelled if it exists (since deposit didn't complete)
       if (bridge.positionId) {
         try {
-          await this.config.storage.deletePosition(bridge.positionId);
-          console.log(`🧹 Deleted incomplete position: ${bridge.positionId}`);
+          await this.config.storage.updatePosition(bridge.positionId, {
+            amount: "0",
+            status: "closed"
+          });
+          console.log(`🧹 Marked incomplete position as closed: ${bridge.positionId}`);
         } catch (positionError) {
-          console.warn(`Failed to delete position ${bridge.positionId}:`, positionError);
+          console.warn(`Failed to mark position ${bridge.positionId} as closed:`, positionError);
           // Don't fail the cancellation if position cleanup fails
         }
       }
@@ -1781,9 +1784,17 @@ export class BridgeService {
     }
     
     const newBalance = parseFloat(position.amount) - parseFloat(redemption.shareAmount);
-    await this.config.storage.updatePosition(redemption.positionId, {
-      amount: newBalance.toFixed(6),
-    });
+    if (newBalance <= 0.000001) { // Allow for rounding errors
+      console.log(`   🗑️  Position fully withdrawn - marking as closed`);
+      await this.config.storage.updatePosition(redemption.positionId, {
+        amount: "0",
+        status: "closed"
+      });
+    } else {
+      await this.config.storage.updatePosition(redemption.positionId, {
+        amount: newBalance.toFixed(6)
+      });
+    }
     
     // Create withdrawal transaction record
     await this.config.storage.createTransaction({
@@ -2056,9 +2067,17 @@ export class BridgeService {
       console.log(`      Withdraw: ${withdrawAmount.toFixed(6)} shXRP`);
       console.log(`      New Balance: ${newBalance.toFixed(6)} shXRP`);
       
-      await this.config.storage.updatePosition(redemption.positionId, {
-        amount: newBalance.toFixed(6)
-      });
+      if (newBalance <= 0.000001) { // Allow for rounding errors
+        console.log(`   🗑️  Position fully withdrawn - marking as closed`);
+        await this.config.storage.updatePosition(redemption.positionId, {
+          amount: "0",
+          status: "closed"
+        });
+      } else {
+        await this.config.storage.updatePosition(redemption.positionId, {
+          amount: newBalance.toFixed(6)
+        });
+      }
       console.log(`   ✅ Step 3/5: Position balance updated`);
       
       // Step 4: Create withdrawal transaction record

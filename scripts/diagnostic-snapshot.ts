@@ -21,7 +21,7 @@ interface DatabaseData {
     walletAddress: string;
     vaultId: string;
     amount: string;
-    depositedAt: Date;
+    createdAt: Date;
   }>;
   redemptions: Array<{
     id: string;
@@ -174,7 +174,7 @@ async function collectDatabaseData(): Promise<DatabaseData> {
         walletAddress: p.walletAddress,
         vaultId: p.vaultId,
         amount: p.amount,
-        depositedAt: p.depositedAt,
+        createdAt: p.createdAt,
       })),
       redemptions: allRedemptions.map(r => ({
         id: r.id,

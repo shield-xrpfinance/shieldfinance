@@ -22,7 +22,7 @@ const RECOVERY_DATA = {
     xrplTxHash: "0AD2565D2E6AE5E5F18B072284DCCF4F4C35A3DA594F54983431CAFCA6D3F0FB",
     fassetsRedemptionTxHash: "0x600711b7b047569b169f4ce77b6e3e0b557f0fab879ae383c730c8cc2e1e37e3",
     vaultMintTxHash: "0xed05adf8350a263ec06b7bd2863c73fb8bb3f68f3a2afabf02d7979d8c38ecac",
-    depositedAt: new Date("2025-11-14T07:30:00Z"), // Approximate time from user report
+    createdAt: new Date("2025-11-14T07:30:00Z"), // Approximate time from user report
   },
   
   // Withdrawal transaction (30 shXRP → 29.85 XRP received)
@@ -88,10 +88,10 @@ async function recoverDepositWithdrawal() {
       xrplTxHash: RECOVERY_DATA.deposit.xrplTxHash,
       flareTxHash: RECOVERY_DATA.deposit.fassetsRedemptionTxHash,
       vaultMintTxHash: RECOVERY_DATA.deposit.vaultMintTxHash,
-      createdAt: RECOVERY_DATA.deposit.depositedAt,
-      xrplConfirmedAt: RECOVERY_DATA.deposit.depositedAt,
-      fxrpReceivedAt: RECOVERY_DATA.deposit.depositedAt,
-      completedAt: RECOVERY_DATA.deposit.depositedAt,
+      createdAt: RECOVERY_DATA.deposit.createdAt,
+      xrplConfirmedAt: RECOVERY_DATA.deposit.createdAt,
+      fxrpReceivedAt: RECOVERY_DATA.deposit.createdAt,
+      completedAt: RECOVERY_DATA.deposit.createdAt,
     }).returning();
     
     console.log(`✅ Bridge created: ${bridge.id}`);
@@ -105,7 +105,7 @@ async function recoverDepositWithdrawal() {
       vaultId: vault.id,
       amount: RECOVERY_DATA.deposit.xrpAmount,
       rewards: "0",
-      depositedAt: RECOVERY_DATA.deposit.depositedAt,
+      status: "active",
     }).returning();
     
     console.log(`✅ Position created: ${position.id}`);
@@ -122,7 +122,6 @@ async function recoverDepositWithdrawal() {
       status: "completed",
       txHash: RECOVERY_DATA.deposit.vaultMintTxHash,
       network: "testnet",
-      createdAt: RECOVERY_DATA.deposit.depositedAt,
     }).returning();
     
     console.log(`✅ Deposit transaction created: ${depositTx.id}`);

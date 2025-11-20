@@ -119,15 +119,37 @@ export class VaultService {
       const receipt = await depositTx.wait();
       console.log(`✅ Shares minted: ${receipt.hash}`);
 
-      // Create position in database
-      const position = await this.config.storage.createPosition({
-        walletAddress: userAddress,
-        vaultId,
-        amount: fxrpAmount,
-        rewards: "0",
-      });
+      // Check for existing position and accumulate if found
+      let position = await this.config.storage.getPositionByWalletAndVault(userAddress, vaultId);
 
-      console.log(`✅ Position created: ${position.id}`);
+      if (position) {
+        // Existing position found (may be closed) - accumulate and reactivate
+        const oldAmount = parseFloat(position.amount || "0");
+        const newAmount = oldAmount + parseFloat(fxrpAmount);
+        
+        if (position.status === "closed") {
+          console.log(`  🔄 Reactivating closed position: adding ${parseFloat(fxrpAmount).toFixed(6)} shXRP`);
+        } else {
+          console.log(`  📊 Updating existing position: ${oldAmount.toFixed(6)} + ${parseFloat(fxrpAmount).toFixed(6)} = ${newAmount.toFixed(6)} shXRP`);
+        }
+        
+        position = await this.config.storage.updatePosition(position.id, {
+          amount: newAmount.toFixed(6),
+          status: "active", // ALWAYS reactivate on new deposit
+        });
+        console.log(`✅ Position updated: ${position.id}`);
+      } else {
+        // No existing position - create new
+        console.log(`  ✨ Creating new position: ${parseFloat(fxrpAmount).toFixed(6)} shXRP`);
+        position = await this.config.storage.createPosition({
+          walletAddress: userAddress,
+          vaultId,
+          amount: fxrpAmount,
+          rewards: "0",
+          status: "active", // Explicitly set active for new positions
+        });
+        console.log(`✅ Position created: ${position.id}`);
+      }
 
       // Create transaction record for deposit
       await this.config.storage.createTransaction({
