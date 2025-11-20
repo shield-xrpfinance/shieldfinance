@@ -2,6 +2,51 @@
 
 All notable changes to the XRP Liquid Staking Protocol Dashboard will be documented in this file.
 
+## [1.2.0] - 2025-11-20
+
+### 🔒 Security - Wallet-Scoped Transaction History
+
+#### Critical Security Fix
+- **Transaction Privacy**: Implemented complete end-to-end wallet authentication for transaction history access
+  - Added `wallet_address varchar NOT NULL` column to transactions table
+  - API endpoints now REQUIRE wallet parameter (returns 400 error if missing)
+  - Direct column filtering prevents JOIN-based security bypasses
+  - All transaction creation (deposits, claims, withdrawals) includes wallet address
+  - Users can only access their own transaction data
+
+#### Database Changes
+- **Schema Update**: Added `wallet_address` column to transactions table with backfill migration
+- **Storage Layer**: Updated `getTransactions()` and `getTransactionSummary()` to filter directly by `wallet_address` column
+- **Service Layer**: Updated BridgeService and VaultService transaction creation to include wallet address
+
+### 🎨 UX - Withdrawal History Consolidation
+
+#### UI/UX Improvements
+- **Portfolio Page**: Streamlined to show only active positions + in-flight withdrawal alert banner
+- **Transaction History Page**: Now displays complete wallet-scoped transaction history including withdrawals
+- **Bridge Tracking Page**: Real-time detailed status of all bridge operations
+- **Portfolio Polling**: Restored automatic 5-second refresh during active withdrawals
+- **In-Flight Alerts**: Count badge with direct navigation to Bridge Tracking for withdrawal details
+- **Transaction Type Normalization**: Frontend handles both "withdraw" and "withdrawal" types for backward compatibility
+
+#### Separation of Concerns
+- Portfolio: Active positions + alerts (no history list)
+- Transactions: Complete transaction history (deposits, claims, withdrawals)
+- Bridge Tracking: Real-time status with detailed progress information
+
+### Changed - API Security
+- `/api/transactions` endpoint now requires `walletAddress` parameter
+- `/api/transactions/summary` endpoint now requires `walletAddress` parameter
+- Both endpoints return 400 error if wallet parameter is missing
+
+### Security Enhancements
+- Wallet-scoped authentication prevents unauthorized access to global transaction data
+- Direct column filtering eliminates JOIN-based security vulnerabilities
+- All transaction creation includes wallet address validation
+- No fallback path for unauthenticated access
+
+---
+
 ## [1.1.0] - 2025-11-09
 
 ### 🎉 Deployed - Smart Contracts Live on Flare Coston2 Testnet

@@ -13,6 +13,8 @@ Production: https://shyield.finance/api
 
 The API uses session-based authentication with wallet addresses. No API keys required for public endpoints.
 
+**Wallet-Scoped Access**: All transaction endpoints require a `walletAddress` parameter. This ensures users can only access their own transaction data, providing privacy and security.
+
 ## Endpoints Overview
 
 ### Vaults
@@ -27,8 +29,8 @@ The API uses session-based authentication with wallet addresses. No API keys req
 - `POST /api/positions/:id/claim` - Claim rewards
 
 ### Transactions
-- `GET /api/transactions` - List all transactions
-- `GET /api/transactions/user/:address` - Get user transactions
+- `GET /api/transactions?walletAddress=<address>` - List wallet-scoped transactions (REQUIRED parameter)
+- `GET /api/transactions/summary?walletAddress=<address>` - Get transaction summary (REQUIRED parameter)
 
 ### Wallet
 - `POST /api/wallet/xaman/payload` - Create Xaman sign-in payload
@@ -62,6 +64,27 @@ Common HTTP status codes:
 - `400` - Bad Request (invalid parameters)
 - `404` - Not Found
 - `500` - Internal Server Error
+
+### Wallet-Scoped Security Errors
+
+Transaction endpoints require the `walletAddress` parameter. Missing this parameter returns a `400` error:
+
+**Request:**
+```
+GET /api/transactions
+```
+
+**Response (400):**
+```json
+{
+  "error": "walletAddress parameter is required"
+}
+```
+
+**Correct Request:**
+```
+GET /api/transactions?walletAddress=rN7n7otQDd6FczFgLdlqtyMVUE1FiFzN9K
+```
 
 ## Rate Limiting
 

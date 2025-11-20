@@ -30,13 +30,15 @@ This project enables users to:
 - Automated XRP to FXRP bridging via FAssets protocol
 - ERC-4626 compliant vault deposits and withdrawals
 - Gasless transactions using Etherspot smart accounts
-- Complete transaction history and analytics
+- **Wallet-scoped transaction history** with privacy controls
+- Separate views: Portfolio (positions + alerts), Transactions (history), Bridge Tracking (real-time status)
 
 ### 📊 Dashboard Features
-- Portfolio overview with total value locked
-- Active vault statistics
-- Historical APY trends with charts
-- Transaction history with filtering
+- **Portfolio Page**: Active positions with automatic 5s refresh during withdrawals
+- **Transaction History**: Complete wallet-scoped transaction history (deposits, claims, withdrawals)
+- **Bridge Tracking**: Real-time status of all bridge operations with detailed progress
+- In-flight withdrawal alerts with direct navigation to detailed status
+- Active vault statistics and historical APY trends with charts
 - Network switching (Mainnet/Testnet)
 
 ## 🏗️ Tech Stack
@@ -183,10 +185,12 @@ VITE_SHXRP_VAULT_ADDRESS=0x8fe09217445e90DA692D29F30859dafA4eb281d1
 - All deposit/withdrawal/claim activities
 - Transaction status and history
 - Blockchain transaction hashes
+- **Wallet-scoped**: `wallet_address` column ensures users only access their own data
 
-**withdrawal_requests**
-- Withdrawal transaction tracking
-- Redemption status monitoring
+**fxrp_to_xrp_redemptions**
+- Withdrawal transaction tracking with dual-status model
+- Real-time redemption status monitoring with userStatus/backendStatus
+- FDC proof generation and confirmation tracking
 - Historical withdrawal records
 
 **vault_metrics_daily**
@@ -385,14 +389,22 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 
 ## 🔒 Security Features
 
+### Smart Contract Security
 - **ERC-4626 Standard Compliance**: Industry-standard tokenized vault implementation
 - **Smart Account Security**: ERC-4337 compliant smart accounts via Etherspot Prime SDK
 - **ReentrancyGuard Protection**: Smart contracts protected against reentrancy attacks
-- **Automated Bridge Verification**: FDC attestation proofs verify cross-chain transactions
-- **Secure Key Management**: Environment-based secret storage
-- **Transaction Verification**: All blockchain transactions verified on-chain
 - **Minimum Deposit Enforcement**: 0.01 FXRP minimum prevents dust attacks
+
+### Platform Security
+- **Wallet-Scoped Transactions**: Complete end-to-end wallet authentication for transaction history
+  - API requires wallet parameter (returns 400 if missing)
+  - Direct column filtering prevents JOIN-based security bypasses
+  - Users can only access their own transaction data
+- **Automated Bridge Verification**: FDC attestation proofs verify cross-chain transactions
+- **Secure Key Management**: Environment-based secret storage with Replit integration
+- **Transaction Verification**: All blockchain transactions verified on-chain
 - **Double-Mint Prevention**: Idempotent bridge operations with unique transaction tracking
+- **Data Integrity**: All transaction creation includes wallet address validation
 
 ## 🌐 Network Support
 

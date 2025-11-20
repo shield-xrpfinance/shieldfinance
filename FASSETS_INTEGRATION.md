@@ -1,6 +1,117 @@
 # FAssets Integration Guide
 
-This document explains how to transition from demo mode to production mode with real FAssets integration.
+This document explains the FAssets bridge integration, including service architecture, wallet-scoped security, and production deployment details.
+
+## Deployed Contracts (Coston2 Testnet)
+
+Current production deployment addresses:
+
+| Contract | Address | Purpose |
+|----------|---------|---------|
+| **VaultController** | `0x96985bf09eDcD4C2Bf21137d8f97947B96c4eb2c` | Vault management and governance |
+| **ShXRPVault** | `0xeBb4a977492241B06A2423710c03BB63B2c5990e` | ERC-4626 vault for FXRP deposits |
+| **FXRP Token** | `0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3` | FAssets-wrapped XRP on Flare |
+
+**Deployment Date**: November 11, 2025  
+**Network**: Coston2 Testnet (Chain ID: 114)  
+**Deployment File**: `deployments/coston2-latest.json`
+
+## Service Architecture
+
+The FAssets integration uses a multi-service architecture for reliability and automatic recovery:
+
+### 1. BridgeService (`server/services/BridgeService.ts`)
+
+**Responsibility**: Orchestrates XRP → FXRP conversion via FAssets protocol
+
+**Key Features**:
+- Collateral reservation with FAssets agents
+- XRPL payment tracking via listener integration
+- FDC proof generation and submission
+- FXRP minting execution
+- Automatic bridge expiration (30 minutes)
+- Background cleanup scheduler (runs every 5 minutes)
+- Demo mode support for testing
+
+**Critical Operations**:
+```typescript
+// Reserve collateral with agent
+async initiateBridge(walletAddress, vaultId, xrpAmount)
+  → Returns: { bridgeId, agentAddress, paymentReference }
+
+// Complete bridge after XRPL payment
+async completeBridge(bridgeId, xrplTxHash)
+  → Generates FDC proof → Mints FXRP → Triggers vault deposit
+```
+
+**Wallet-Scoped Security**: All bridge records include `wallet_address` for user isolation
+
+### 2. VaultService (`server/services/VaultService.ts`)
+
+**Responsibility**: Manages shXRP vault deposits and share minting
+
+**Key Features**:
+- ERC-4626 compliant vault interactions
+- FXRP approval and deposit execution
+- Position tracking with wallet address mapping
+- Automatic position accumulation for repeat depositors
+- Smart account custodial model
+
+**Critical Operations**:
+```typescript
+// Mint shXRP shares from FXRP
+async mintShares(vaultId, userAddress, fxrpAmount)
+  → Approves FXRP → Deposits to vault → Updates position
+  → Returns: { vaultMintTxHash, positionId }
+```
+
+**Custodial Model**:
+- shXRP shares minted to Smart Account (not user's XRP wallet)
+- Ownership tracked in `positions` table via `walletAddress` column
+- Users can only query their own positions (wallet-scoped)
+
+### 3. DepositWatchdogService (`server/services/DepositWatchdogService.ts`)
+
+**Responsibility**: Automatic recovery for stuck deposits
+
+**Problem Solved**:
+- Deposits stuck at `xrpl_confirmed` status
+- FXRP mint completed but not indexed before initial check
+- Race conditions during FAssets minting
+
+**How It Works**:
+1. Polls every 60 seconds for deposits with `status='xrpl_confirmed'`
+2. Queries AssetManager contract for `MintingExecuted` events
+3. Parses FXRP `Transfer` event to get minted amount and tx hash
+4. Updates bridge record with mint details
+5. Triggers `VaultService.mintShares()` to complete deposit
+
+**Benefits**: Zero manual intervention for stuck deposits
+
+### 4. WithdrawalRetryService (`server/services/WithdrawalRetryService.ts`)
+
+**Responsibility**: Automatic retry for failed withdrawal confirmations
+
+**Problem Solved**:
+- Withdrawals stuck in `manual_review` when Smart Account lacks FLR for gas
+- `confirmRedemptionPayment` requires direct gas payment (not on paymaster allowlist)
+- User successfully received XRP but backend reconciliation incomplete
+
+**How It Works**:
+1. Polls every 60 seconds for redemptions with `backendStatus='manual_review'` or `'retry_pending'`
+2. Checks Smart Account native FLR balance (requires minimum 0.1 FLR)
+3. Retries `confirmRedemptionPayment` transaction
+4. Uses exponential backoff: wait = 60s * 2^retryCount
+5. Maximum 10 retry attempts before abandoning
+6. Auto-prefunding: Sends 0.5 FLR to Smart Account if balance too low (max 3 attempts)
+
+**Benefits**: Automatic reconciliation without manual intervention
+
+**Dual-Status Model**:
+- `userStatus`: User-facing status (`processing`, `completed`, `failed`)
+- `backendStatus`: Backend reconciliation status (`not_started`, `confirming`, `confirmed`, `manual_review`)
+- User sees `completed` immediately when XRP received
+- Backend continues reconciliation in background
 
 ## Demo Mode (Default)
 
@@ -87,31 +198,54 @@ async executeMinting(
 }
 ```
 
-### 4. Bridge Flow in Production
+### XRP → FXRP → shXRP Flow (Production)
 
-When `DEMO_MODE=false`, the bridge follows this flow:
+Complete end-to-end flow when `DEMO_MODE=false`:
 
-1. **Reserve Collateral** (Step 1)
-   - Call FAssets SDK to reserve collateral
-   - Store agent vault address and underlying payment address
-   - Bridge status: `pending` → `awaiting_payment`
+#### Step 1: Reserve Collateral
+- **Service**: BridgeService
+- **Action**: Call FAssets SDK to reserve collateral with agent
+- **Storage**: Create bridge record with `wallet_address`, `paymentReference`, `agentUnderlyingAddress`
+- **Status**: `pending` → `awaiting_payment`
+- **User sees**: Agent address and payment reference to send XRP
 
-2. **User Sends Payment** (Step 2)
-   - User sends XRP to agent's underlying address
-   - XRPL listener detects payment
-   - Bridge status: `awaiting_payment` → `xrpl_confirmed`
+#### Step 2: XRPL Payment
+- **Service**: XRPL Listener
+- **Action**: User sends XRP to agent's underlying address with payment reference
+- **Detection**: XRPL listener monitors for incoming payments matching payment reference
+- **Validation**: Verify amount matches expected XRP (accounting for lot rounding)
+- **Storage**: Update bridge with `xrplTxHash`, `receivedAmountDrops`
+- **Status**: `awaiting_payment` → `xrpl_confirmed`
 
-3. **Generate FDC Proof** (Step 3)
-   - System generates Flare Data Connector proof
-   - Proof verifies XRPL payment on Flare Network
-   - Bridge status: `xrpl_confirmed` → `fdc_proof_generated`
+#### Step 3: FDC Proof Generation
+- **Service**: BridgeService
+- **Action**: Generate Flare Data Connector attestation proof
+- **Timing**: Wait for DA indexing (30-60s buffer, 20s for late-round submissions)
+- **FDC Request**: Submit Payment Reference, Amount, Destination Tag to FDC Hub
+- **Proof**: Receive merkle proof verifying XRPL payment on Flare
+- **Storage**: Update bridge with `fdcProofData`, `fdcVotingRoundId`
+- **Status**: `xrpl_confirmed` → `fdc_proof_generated`
 
-4. **Execute Minting** (Step 4)
-   - Submit proof to AssetManager contract
-   - Receive FXRP tokens on Flare Network
-   - Deposit FXRP into ShXRPVault
-   - User receives shXRP vault shares
-   - Bridge status: `fdc_proof_generated` → `completed`
+#### Step 4: FXRP Minting
+- **Service**: BridgeService → FAssetsClient
+- **Action**: Submit FDC proof to AssetManager contract
+- **Smart Account**: Execute via ERC-4337 with gasless transaction (paymaster)
+- **Event**: AssetManager emits `MintingExecuted` event
+- **Transfer**: FXRP tokens transferred to Smart Account
+- **Storage**: Update bridge with `fxrpMintTxHash`, `fxrpReceived`
+- **Status**: `fdc_proof_generated` → `vault_minting`
+- **Fallback**: If stuck, DepositWatchdogService auto-recovers
+
+#### Step 5: Vault Share Minting
+- **Service**: VaultService
+- **Action**: Deposit FXRP into ShXRPVault (ERC-4626 `deposit()`)
+- **Approval**: Approve FXRP token for vault (6 decimals, not 18)
+- **Minting**: Vault mints shXRP shares to Smart Account
+- **Position**: Create/update position record with `walletAddress` mapping
+- **Storage**: Update bridge with `vaultMintTxHash`
+- **Transaction**: Create transaction record with `wallet_address` for history
+- **Status**: `vault_minting` → `completed`
+- **User sees**: shXRP balance updated in portfolio
 
 ## Testing Production Mode
 
@@ -170,29 +304,102 @@ npx tsx scripts/get-assetmanager-address.ts
 - Check `OPERATOR_PRIVATE_KEY` is configured
 - Verify the operator wallet has sufficient FLR for transaction fees
 
+## Wallet-Scoped Security
+
+The FAssets integration implements comprehensive wallet-scoped security:
+
+### Transaction Privacy
+- **Bridge Records**: All `xrp_to_fxrp_bridges` include `wallet_address varchar NOT NULL`
+- **Position Tracking**: All `positions` include `walletAddress` linked to user's XRP wallet
+- **Transaction History**: All `transactions` include `wallet_address` for filtering
+- **API Endpoints**: Require `walletAddress` parameter, return 400 if missing
+- **Database Filtering**: Direct column filtering prevents JOIN-based security bypasses
+
+### Custodial Model
+- **Smart Account Ownership**: shXRP shares minted to platform's Smart Account
+- **User Tracking**: Ownership mapped via `walletAddress` in positions table
+- **Query Isolation**: Users can only access their own positions/transactions
+- **Security Enforcement**: Database-level filtering, not application-level
+
+Example Security Flow:
+```typescript
+// User initiates deposit from XRP wallet rABC...
+const bridge = await storage.createBridge({
+  walletAddress: "rABC...",  // Required field
+  xrpAmount: "100",
+  vaultId: "vault-1"
+});
+
+// Later: User queries their positions
+const positions = await storage.getPositionsByWallet("rABC...");
+// ✅ Only returns positions for rABC...
+
+// Attempting to query another wallet's positions
+const otherPositions = await storage.getPositionsByWallet("rXYZ...");
+// ✅ Returns empty array (no access to other wallets)
+```
+
 ## Security Considerations
 
 ⚠️ **IMPORTANT**: 
 - Never commit private keys to version control
 - Use Replit Secrets for all sensitive values
 - Test thoroughly on Coston2 before mainnet deployment
-- Monitor operator wallet balance for transaction fees
+- Monitor Smart Account balance for transaction fees (requires minimum 0.1 FLR for withdrawals)
 - Implement rate limiting for bridge requests
+- All bridge operations include wallet address validation
+- Users can only access their own transaction history
 
 ## Monitoring and Maintenance
 
 ### Recommended Monitoring
-1. Bridge success/failure rates
-2. Average bridge completion time
-3. Operator wallet balance
-4. Agent collateral availability
-5. Failed FDC proofs
+1. **Bridge Operations**:
+   - Success/failure rates
+   - Average completion time per step
+   - Stuck deposits (caught by DepositWatchdogService)
+   - Failed FDC proofs (timeout errors)
+
+2. **Withdrawal Operations**:
+   - Redemption success rate
+   - Backend reconciliation completion rate
+   - Withdrawals in `manual_review` status
+   - Smart Account FLR balance (min 0.1 FLR required)
+
+3. **Smart Account Health**:
+   - Native FLR balance (for non-paymaster transactions)
+   - Pending UserOps in bundler
+   - Failed bundler submissions
+   - Paymaster sponsorship limits
+
+4. **Service Health**:
+   - DepositWatchdogService uptime
+   - WithdrawalRetryService uptime
+   - XRPL listener connection status
+   - Database connection pool status
+
+### Automated Recovery Services
+
+**DepositWatchdogService**:
+- Polls every 60 seconds
+- Auto-recovers stuck deposits at `xrpl_confirmed`
+- Queries AssetManager for mint events
+- No manual intervention required
+
+**WithdrawalRetryService**:
+- Polls every 60 seconds
+- Auto-retries failed withdrawal confirmations
+- Exponential backoff (max 10 retries)
+- Auto-prefunding if Smart Account balance too low
+- Moves to `abandoned` after max retries (user still has XRP)
 
 ### Maintenance Tasks
-- Monitor operator wallet balance
-- Track agent performance
-- Update FAssets SDK to latest version
-- Review and optimize gas costs
+- Monitor Smart Account FLR balance (top up if < 0.5 FLR)
+- Track agent collateral availability
+- Update FAssets SDK to latest version when available
+- Review and optimize gas costs via Etherspot dashboard
+- Monitor paymaster sponsorship usage
+- Check for stuck bridges older than 30 minutes (auto-expired)
+- Verify database indexes on `wallet_address` columns for performance
 
 ## Support
 

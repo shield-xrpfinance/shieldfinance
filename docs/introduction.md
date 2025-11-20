@@ -17,6 +17,7 @@ Liquid staking allows you to earn staking rewards on your crypto assets while ma
 - **Xaman (XUMM)**: Native XRP Ledger wallet with QR code signing
 - **WalletConnect**: Multi-wallet support for broader accessibility
 - **Real Transaction Signing**: All deposits, withdrawals, and claims use actual blockchain transactions
+- **Wallet-Scoped Security**: All transaction data is tied to your wallet address - you can only access your own data
 
 ### 💰 Multi-Asset Vaults
 Choose from various vault strategies:
@@ -25,8 +26,10 @@ Choose from various vault strategies:
 - **Aggressive Vaults**: Higher risk, maximum yields (8-12% APY)
 
 ### 📊 Real-Time Tracking
+- **Portfolio Page**: Active positions with automatic 5-second refresh during withdrawals
+- **Transaction History Page**: Complete wallet-scoped transaction history (deposits, claims, withdrawals)
+- **Bridge Tracking Page**: Real-time status of all bridge operations with detailed progress
 - Live wallet balances with 30-second auto-refresh
-- Transaction history with blockchain verification
 - Portfolio analytics and performance metrics
 - APY trends and historical data
 

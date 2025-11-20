@@ -21,15 +21,34 @@ The system operates **exclusively in smart account mode**:
 - Platform handles gas sponsorship via Etherspot Arka paymaster
 - Etherspot bundler API key required for operation
 
+### Two-SDK Architecture
+
+**Production Optimization**: The system uses **two separate PrimeSdk instances** to handle different transaction types:
+
+1. **primeSdkWithPaymaster** - Gasless transactions via Arka paymaster
+   - Used for: FDC attestations, batch operations, most user actions
+   - Arka paymaster sponsors gas fees
+   - Requires transaction to be on paymaster allowlist
+
+2. **primeSdkWithoutPaymaster** - Direct gas payment from Smart Account balance
+   - Used for: `confirmRedemptionPayment` (not on paymaster allowlist)
+   - Smart Account pays gas directly from its FLR balance
+   - Requires minimum 0.1 FLR balance for withdrawal confirmations
+
+**Automatic SDK Selection**: `sendTransaction()` accepts `usePaymaster` flag to automatically select the appropriate SDK instance.
+
 ### Key Components
 
 #### 1. SmartAccountClient (`server/utils/smart-account-client.ts`)
 
 Wrapper around Etherspot Prime SDK providing:
 - Smart account initialization with proper wallet provider formatting
-- Single transaction execution via `sendTransaction()`
+- **Two-SDK architecture** for paymaster vs. direct gas payment
+- Single transaction execution via `sendTransaction()` with automatic retry
 - Batch transaction execution via `sendBatchTransactions()`
 - UserOp receipt polling with retry logic
+- **Fee bumping retry system** (5 attempts, 20% increase per retry, exponential backoff)
+- Native balance checking for gas prefunding
 - Provider access for read operations
 
 #### 2. SmartAccountSigner (`server/utils/smart-account-signer.ts`)
@@ -80,6 +99,19 @@ OPERATOR_PRIVATE_KEY=your_private_key          # Platform operator private key (
 | **Flare Mainnet** | 14 | https://flare-api.flare.network/ext/C/rpc |
 | **Coston2 Testnet** | 114 | https://coston2-api.flare.network/ext/C/rpc |
 
+## Deployed Contracts (Coston2 Testnet)
+
+Current production deployment addresses:
+
+| Contract | Address | Explorer |
+|----------|---------|----------|
+| **VaultController** | `0x96985bf09eDcD4C2Bf21137d8f97947B96c4eb2c` | [View](https://coston2-explorer.flare.network/address/0x96985bf09eDcD4C2Bf21137d8f97947B96c4eb2c) |
+| **ShXRPVault** | `0xeBb4a977492241B06A2423710c03BB63B2c5990e` | [View](https://coston2-explorer.flare.network/address/0xeBb4a977492241B06A2423710c03BB63B2c5990e) |
+| **FXRP Token** | `0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3` | [View](https://coston2-explorer.flare.network/address/0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3) |
+
+**Deployment Date**: November 11, 2025  
+**Network**: Coston2 Testnet (Chain ID: 114)
+
 ## Usage
 
 ### Initialization
@@ -99,9 +131,10 @@ await flareClient.initialize();
 // Logs: "🔐 Using Smart Account: 0x..."
 ```
 
-### Single Transaction
+### Single Transaction (Gasless)
 
 ```typescript
+// Default: Uses paymaster for gasless transaction
 const txHash = await flareClient.sendTransaction({
   to: recipientAddress,
   value: ethers.parseEther("1.0"),
@@ -110,6 +143,21 @@ const txHash = await flareClient.sendTransaction({
 ```
 
 Returns transaction hash after UserOp execution through ERC-4337 bundler
+
+### Single Transaction (Direct Gas Payment)
+
+```typescript
+// Bypass paymaster: Smart Account pays gas directly
+const txHash = await flareClient.sendTransaction(
+  {
+    to: contractAddress,
+    data: contractCallData,
+  },
+  false // usePaymaster = false
+);
+```
+
+Used for operations not on paymaster allowlist (e.g., `confirmRedemptionPayment`)
 
 ### Batch Transactions
 
@@ -122,6 +170,23 @@ const txHash = await flareClient.sendBatchTransactions([
 ```
 
 Executes all in a single UserOp (gas efficient and atomic)
+
+### Automatic Retry with Fee Bumping
+
+All transactions automatically retry on failure with:
+- **5 retry attempts** maximum
+- **20% fee increase** per retry
+- **Exponential backoff**: 1s, 2s, 4s, 8s, 16s
+- Retries on bundler rejections (fee too low, nonce conflicts, etc.)
+
+```typescript
+// Automatic retry example (internal to SmartAccountClient)
+// Attempt 1: Standard fees
+// Attempt 2: Fees * 1.2 (wait 1s)
+// Attempt 3: Fees * 1.44 (wait 2s)
+// Attempt 4: Fees * 1.73 (wait 4s)
+// Attempt 5: Fees * 2.07 (wait 8s)
+```
 
 ## Benefits
 
@@ -221,20 +286,41 @@ Smart accounts can require multiple signatures:
 - **ERC-4337 Spec**: https://eips.ethereum.org/EIPS/eip-4337
 - **Etherspot Dashboard**: https://dashboard.etherspot.io
 
+## Wallet-Scoped Security
+
+Smart accounts integrate with the platform's wallet-scoped security model:
+
+- **Transaction Privacy**: All bridge operations and vault deposits track `wallet_address`
+- **Position Isolation**: Users can only access their own positions and transaction history
+- **Custodial Model**: shXRP shares minted to Smart Account, ownership tracked by `walletAddress` in database
+- **Direct Column Filtering**: Security enforced at database level, no JOIN-based vulnerabilities
+
+Example flow:
+1. User initiates deposit from XRP wallet `rXXX...`
+2. Bridge operation stores `wallet_address = rXXX...` in database
+3. FXRP minted to Smart Account via ERC-4337
+4. shXRP shares minted to Smart Account
+5. Position record links Smart Account shares to user's `walletAddress`
+6. User can only query transactions/positions for their `walletAddress`
+
 ## Current Status
 
 - ✅ Smart account exclusive mode implemented
-- ✅ SmartAccountClient wrapper complete
+- ✅ Two-SDK architecture for paymaster vs. direct gas payment
+- ✅ SmartAccountClient wrapper with retry logic and fee bumping
 - ✅ SmartAccountSigner implements full ethers.Signer interface
 - ✅ FlareClient smart account integration complete
 - ✅ FAssetsClient works with smart accounts
 - ✅ Paymaster support configured and tested
-- ✅ Successfully initialized on Coston2 testnet
+- ✅ Successfully deployed on Coston2 testnet with production contracts
+- ✅ Wallet-scoped security integration complete
+- ✅ Automatic retry system with exponential backoff
 - ✅ Production-ready smart account system
 
 ## Next Steps
 
-1. Test complete XRP → FXRP bridge flow with gasless transactions
-2. Verify FAssets minting works through smart accounts
-3. Monitor gas sponsorship costs via Etherspot dashboard
-4. Consider deploying to Flare mainnet (Chain ID 14)
+1. ✅ Complete XRP → FXRP bridge flow with gasless transactions
+2. ✅ Verify FAssets minting works through smart accounts
+3. ✅ Implement automatic recovery services (DepositWatchdog, WithdrawalRetry)
+4. ⏳ Monitor gas sponsorship costs via Etherspot dashboard
+5. ⏳ Consider deploying to Flare mainnet (Chain ID 14)
