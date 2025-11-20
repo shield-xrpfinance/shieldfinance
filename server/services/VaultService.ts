@@ -230,33 +230,58 @@ export class VaultService {
       // ERC-4626 Withdraw event: Withdraw(address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)
       const withdrawEventSignature = ethers.id("Withdraw(address,address,address,uint256,uint256)");
       
+      console.log(`🔍 Searching for Withdraw event in ${receipt.logs.length} logs...`);
+      console.log(`   Expected signature: ${withdrawEventSignature}`);
+      
       let fxrpReceived = "0";
+      let withdrawEventFound = false;
+      
       for (const log of receipt.logs) {
+        console.log(`   Log ${receipt.logs.indexOf(log)}: topic[0] = ${log.topics[0]}`);
+        
         if (log.topics[0] === withdrawEventSignature) {
-          // Parse the Withdraw event
-          // topics[1] = caller, topics[2] = receiver, topics[3] = owner
-          // data contains: assets (FXRP received) and shares (shXRP burned)
-          const iface = new ethers.Interface([
-            "event Withdraw(address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)"
-          ]);
-          const parsed = iface.parseLog({ topics: log.topics, data: log.data });
+          withdrawEventFound = true;
+          console.log(`✅ Found Withdraw event!`);
           
-          if (parsed) {
-            // Extract assets (FXRP received)
-            const assetsRaw = parsed.args.assets;
-            fxrpReceived = ethers.formatUnits(assetsRaw, 6); // FXRP uses 6 decimals
+          try {
+            // Parse the Withdraw event
+            // topics[1] = caller, topics[2] = receiver, topics[3] = owner
+            // data contains: assets (FXRP received) and shares (shXRP burned)
+            const iface = new ethers.Interface([
+              "event Withdraw(address indexed caller, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)"
+            ]);
+            const parsed = iface.parseLog({ topics: log.topics, data: log.data });
             
-            console.log(`✅ Parsed Withdraw event:`);
-            console.log(`   shXRP burned: ${ethers.formatUnits(parsed.args.shares, 6)}`);
-            console.log(`   FXRP received: ${fxrpReceived}`);
-            
-            break;
+            if (parsed && parsed.args) {
+              // Extract assets (FXRP received)
+              const assetsRaw = parsed.args.assets;
+              fxrpReceived = ethers.formatUnits(assetsRaw, 6); // FXRP uses 6 decimals
+              
+              console.log(`✅ Parsed Withdraw event:`);
+              console.log(`   Caller: ${parsed.args.caller}`);
+              console.log(`   Receiver: ${parsed.args.receiver}`);
+              console.log(`   Owner: ${parsed.args.owner}`);
+              console.log(`   shXRP burned: ${ethers.formatUnits(parsed.args.shares, 6)}`);
+              console.log(`   FXRP received: ${fxrpReceived}`);
+              
+              break;
+            } else {
+              console.error(`❌ Failed to parse Withdraw event - parsed object is null or missing args`);
+            }
+          } catch (parseError) {
+            console.error(`❌ Error parsing Withdraw event:`, parseError);
           }
         }
       }
 
+      if (!withdrawEventFound) {
+        console.error(`❌ No Withdraw event found in transaction logs`);
+        console.error(`   Transaction hash: ${receipt.hash}`);
+        console.error(`   All log topics:`, receipt.logs.map(l => l.topics[0]));
+      }
+
       if (fxrpReceived === "0") {
-        throw new Error("Failed to parse Withdraw event - could not determine FXRP received");
+        throw new Error("Failed to parse Withdraw event - could not determine FXRP received. Check logs for details.");
       }
 
       return {
