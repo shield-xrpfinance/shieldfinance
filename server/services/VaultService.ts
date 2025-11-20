@@ -277,7 +277,7 @@ export class VaultService {
       if (!withdrawEventFound) {
         console.error(`❌ No Withdraw event found in transaction logs`);
         console.error(`   Transaction hash: ${receipt.hash}`);
-        console.error(`   All log topics:`, receipt.logs.map(l => l.topics[0]));
+        console.error(`   All log topics:`, receipt.logs.map((l: any) => l.topics[0]));
       }
 
       if (fxrpReceived === "0") {
