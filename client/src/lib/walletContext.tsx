@@ -47,6 +47,63 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     initRef.current = true;
 
     const restoreConnection = async () => {
+      // PRIORITY 1: Check for xApp OTT (One-Time Token) parameters
+      // This happens when app is loaded from Xaman as xApp (e.g., https://xumm.app/detect/xapp:...)
+      const urlParams = new URLSearchParams(window.location.search);
+      const ott = urlParams.get('xAppToken') || urlParams.get('ott') || urlParams.get('xApp');
+      
+      if (ott) {
+        console.log(`🔐 xApp OTT detected, attempting auto-signin...`);
+        
+        try {
+          // Call backend to resolve OTT to wallet address
+          const response = await fetch('/api/wallet/xaman/xapp-signin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ott }),
+          });
+
+          if (!response.ok) {
+            const errorData = await response.json();
+            console.error('❌ xApp OTT resolution failed:', errorData.error);
+            throw new Error(errorData.error || 'Failed to resolve OTT');
+          }
+
+          const data = await response.json();
+          
+          if (data.success && data.address) {
+            console.log(`✅ xApp auto-signin successful: ${data.address}`);
+            
+            // Auto-connect the wallet
+            setAddress(data.address);
+            setProvider('xaman');
+            localStorage.setItem('walletAddress', data.address);
+            localStorage.setItem('walletProvider', 'xaman');
+            
+            // Clean up URL by removing OTT parameter
+            urlParams.delete('xAppToken');
+            urlParams.delete('ott');
+            urlParams.delete('xApp');
+            const newUrl = urlParams.toString() 
+              ? `${window.location.pathname}?${urlParams.toString()}`
+              : window.location.pathname;
+            window.history.replaceState({}, '', newUrl);
+            
+            console.log('✅ xApp wallet connected and URL cleaned');
+            
+            // Skip localStorage restoration since we just connected
+            setIsInitialized(true);
+            return;
+          } else {
+            console.error('❌ xApp OTT response missing address:', data);
+          }
+        } catch (error) {
+          console.error('❌ xApp auto-signin error:', error);
+          // Fall through to normal localStorage restoration
+        }
+      }
+
+      // PRIORITY 2: Restore from localStorage (normal flow)
       const savedAddress = localStorage.getItem("walletAddress");
       const savedProvider = localStorage.getItem("walletProvider");
 

@@ -1464,6 +1464,70 @@ export async function registerRoutes(
     }
   });
 
+  // xApp auto-signin: Resolve OTT (One-Time Token) to wallet address
+  app.post("/api/wallet/xaman/xapp-signin", async (req, res) => {
+    try {
+      const { ott } = req.body;
+
+      if (!ott || typeof ott !== 'string') {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Missing required field: ott" 
+        });
+      }
+
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
+
+      if (!apiKey || !apiSecret || apiKey.length === 0 || apiSecret.length === 0) {
+        console.warn("Xaman credentials not configured - xApp signin not available");
+        return res.status(503).json({ 
+          success: false, 
+          error: "Xaman not configured on server" 
+        });
+      }
+
+      console.log(`🔐 Resolving xApp OTT: ${ott.substring(0, 10)}...`);
+
+      const xumm = new XummSdk(apiKey, apiSecret);
+      
+      // Resolve OTT to get payload with user info
+      const payload = await xumm.payload?.get(ott);
+
+      if (!payload) {
+        console.error("❌ Failed to resolve OTT - payload not found");
+        return res.status(404).json({ 
+          success: false, 
+          error: "Invalid or expired OTT" 
+        });
+      }
+
+      // Extract wallet address from payload
+      const address = payload.response?.account;
+
+      if (!address) {
+        console.error("❌ OTT resolved but no account found in payload");
+        return res.status(400).json({ 
+          success: false, 
+          error: "No wallet address in OTT payload" 
+        });
+      }
+
+      console.log(`✅ xApp OTT resolved successfully: ${address}`);
+
+      res.json({
+        success: true,
+        address: address,
+      });
+    } catch (error) {
+      console.error("xApp signin error:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Failed to resolve OTT" 
+      });
+    }
+  });
+
   // Get wallet balance from XRP Ledger (XRP, RLUSD, USDC)
   app.get("/api/wallet/balance/:address", async (req, res) => {
     try {
