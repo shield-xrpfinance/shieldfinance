@@ -99,9 +99,22 @@ export class SmartAccountSigner implements ethers.Signer {
   /**
    * This is the critical method - routes all transaction execution through ERC-4337
    * Returns a fully hydrated TransactionResponse with working wait() method
+   * 
+   * @param transaction - Transaction request
+   * @param usePaymaster - Whether to use paymaster for gas sponsorship (default: true)
+   *                       Can be passed via custom property on transaction object
    */
   async sendTransaction(transaction: ethers.TransactionRequest): Promise<ethers.TransactionResponse> {
     console.log('🔐 SmartAccountSigner: Routing transaction through ERC-4337 bundler');
+    
+    // Check if usePaymaster was passed via custom property
+    // @ts-ignore - Custom property for paymaster control
+    const usePaymaster = transaction.usePaymaster !== false; // Default to true
+    
+    // Debug logging to verify property is being passed through
+    if ((transaction as any).usePaymaster === false) {
+      console.log('   🔓 Detected usePaymaster=false in transaction request');
+    }
     
     const tx = {
       to: transaction.to as string,
@@ -110,7 +123,7 @@ export class SmartAccountSigner implements ethers.Signer {
     };
 
     // Execute transaction through smart account (ERC-4337 UserOp)
-    const userOpHash = await this.smartAccountClient.sendTransaction(tx);
+    const userOpHash = await this.smartAccountClient.sendTransaction(tx, usePaymaster);
     
     console.log('📦 UserOp submitted:', userOpHash);
     

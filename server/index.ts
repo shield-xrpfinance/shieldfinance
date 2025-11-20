@@ -9,6 +9,8 @@ import { YieldService } from "./services/YieldService";
 import { CompoundingService } from "./services/CompoundingService";
 import { VaultService } from "./services/VaultService";
 import { DepositService } from "./services/DepositService";
+import { DepositWatchdogService } from "./services/DepositWatchdogService";
+import { WithdrawalRetryService } from "./services/WithdrawalRetryService";
 import { readinessRegistry } from "./services/ReadinessRegistry";
 
 const app = express();
@@ -318,7 +320,14 @@ async function initializeServices() {
         }
         
         console.log(`✅ Payment validated successfully for bridge ${bridge.id}`);
+        
+        // Execute FAssets minting with FDC proof
         await bridgeService!.executeMintingWithProof(bridge.id, payment.txHash);
+        
+        // Complete the mint by tracking FXRP Transfer event and triggering vault minting
+        // This fetches the actual minted amount from the Transfer event and creates vault position
+        await bridgeService!.completeMint(bridge.id, payment.txHash);
+        
         console.log(`🎉 Bridge ${bridge.id} completed successfully!`);
       } catch (error) {
         console.error(`❌ Error completing bridge for agent ${payment.agentAddress}:`, error);
@@ -439,6 +448,69 @@ async function initializeServices() {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       readinessRegistry.setError('depositService', errorMsg);
     }
+  }
+
+  // Step 6: Initialize Deposit Watchdog Service (production mode only)
+  // This service polls for stuck deposits at xrpl_confirmed status and completes them
+  if (!demoMode && bridgeService && flareClient) {
+    try {
+      console.log(`🐕 Initializing DepositWatchdogService...`);
+      
+      // Get FAssetsClient from BridgeService
+      const fassetsClient = (bridgeService as any).fassetsClient;
+      
+      if (fassetsClient) {
+        const watchdog = new DepositWatchdogService({
+          storage,
+          flareClient,
+          fassetsClient,
+          bridgeService,
+          pollIntervalMs: 60000, // 60 seconds
+        });
+        
+        watchdog.start();
+        readinessRegistry.setReady('depositWatchdog');
+        console.log(`✅ DepositWatchdogService started`);
+      } else {
+        const errorMsg = 'FAssetsClient not available - watchdog disabled';
+        console.warn(`⚠️  ${errorMsg}`);
+        readinessRegistry.setError('depositWatchdog', errorMsg);
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      readinessRegistry.setError('depositWatchdog', errorMsg);
+      console.error(`❌ DepositWatchdogService initialization failed:`, errorMsg);
+    }
+  } else {
+    readinessRegistry.setError('depositWatchdog', demoMode ? 'Disabled in demo mode' : 'Required services unavailable');
+  }
+
+  // Step 7: Initialize Withdrawal Retry Service (production mode only)
+  // This service polls for failed withdrawal confirmations and retries them when balance is sufficient
+  if (!demoMode && bridgeService && flareClient) {
+    try {
+      console.log(`🔄 Initializing WithdrawalRetryService...`);
+      
+      const retryService = new WithdrawalRetryService({
+        storage,
+        flareClient,
+        bridgeService,
+        pollIntervalMs: 60000, // 60 seconds
+        minBalanceFLR: "0.1", // Minimum 0.1 FLR required for gas
+        maxRetries: 10,
+        retryBackoffMs: 60000, // 1 minute base backoff
+      });
+      
+      retryService.start();
+      readinessRegistry.setReady('withdrawalRetry');
+      console.log(`✅ WithdrawalRetryService started`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      readinessRegistry.setError('withdrawalRetry', errorMsg);
+      console.error(`❌ WithdrawalRetryService initialization failed:`, errorMsg);
+    }
+  } else {
+    readinessRegistry.setError('withdrawalRetry', demoMode ? 'Disabled in demo mode' : 'Required services unavailable');
   }
 
   console.log("✅ All services initialized");

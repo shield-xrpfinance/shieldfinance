@@ -156,6 +156,7 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   
   xrplTxHash: text("xrpl_tx_hash"),
   flareTxHash: text("flare_tx_hash"),
+  fxrpMintTxHash: text("fxrp_mint_tx_hash").default(sql`NULL`), // FAssets mint transaction (FXRP Transfer event)
   vaultMintTxHash: text("vault_mint_tx_hash"),
   
   collateralReservationId: varchar("collateral_reservation_id"),
@@ -179,6 +180,7 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   
   createdAt: timestamp("created_at").notNull().defaultNow(),
   xrplConfirmedAt: timestamp("xrpl_confirmed_at"),
+  paymentConfirmedAt: timestamp("payment_confirmed_at").default(sql`NULL`), // When XRPL payment was validated and FXRP mint triggered
   bridgeStartedAt: timestamp("bridge_started_at"),
   fxrpReceivedAt: timestamp("fxrp_received_at"),
   completedAt: timestamp("completed_at"),
@@ -191,6 +193,7 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   receivedAmountDrops: varchar("received_amount_drops"),
   expectedAmountDrops: varchar("expected_amount_drops"),
   errorMessage: text("error_message"),
+  lastError: text("last_error").default(sql`NULL`), // Latest error encountered (for watchdog/retry debugging)
   retryCount: integer("retry_count").notNull().default(0),
 });
 
@@ -224,7 +227,7 @@ export const fxrpToXrpRedemptions = pgTable("fxrp_to_xrp_redemptions", {
   agentVaultAddress: varchar("agent_vault_address"), // Agent's Flare contract address
   agentUnderlyingAddress: varchar("agent_underlying_address"), // Agent's XRPL address (payment source)
   expectedXrpDrops: varchar("expected_xrp_drops"), // Expected XRP amount in drops for matching
-  confirmationTxHash: varchar("confirmation_tx_hash"), // Flare TX: Confirmation of redemption payment
+  confirmationTxHash: varchar("confirmation_tx_hash").default(sql`NULL`), // Flare TX: Confirmation of redemption payment
   fdcAttestationTxHash: varchar("fdc_attestation_tx_hash"),
   fdcVotingRoundId: varchar("fdc_voting_round_id"),
   fdcRequestBytes: text("fdc_request_bytes"),
@@ -240,7 +243,13 @@ export const fxrpToXrpRedemptions = pgTable("fxrp_to_xrp_redemptions", {
   
   // Error handling
   errorMessage: text("error_message"),
+  lastError: text("last_error").default(sql`NULL`), // Latest error encountered (for retry debugging)
   retryCount: integer("retry_count").notNull().default(0),
+  lastRetryAt: timestamp("last_retry_at").default(sql`NULL`), // When last retry was attempted
+  
+  // Auto-prefund tracking (for low balance remediation)
+  lastFundingTxHash: varchar("last_funding_tx_hash").default(sql`NULL`), // Operator EOA → Smart Account prefund tx
+  fundingAttempts: integer("funding_attempts").notNull().default(0), // Number of times we've auto-prefunded this redemption
 });
 
 export const firelightPositions = pgTable("firelight_positions", {
@@ -275,6 +284,13 @@ export const compoundingRuns = pgTable("compounding_runs", {
   
   startedAt: timestamp("started_at").notNull().defaultNow(),
   completedAt: timestamp("completed_at"),
+});
+
+// Service state table for persistent watchdog/service configuration
+export const serviceState = pgTable("service_state", {
+  key: text("key").primaryKey(), // e.g., "deposit_watchdog_last_block"
+  value: text("value").notNull(), // JSON-stringified value
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
 export const insertVaultSchema = createInsertSchema(vaults).omit({
@@ -330,6 +346,10 @@ export const insertCompoundingRunSchema = createInsertSchema(compoundingRuns).om
   startedAt: true,
 });
 
+export const insertServiceStateSchema = createInsertSchema(serviceState).omit({
+  updatedAt: true,
+});
+
 export type InsertVault = z.infer<typeof insertVaultSchema>;
 export type Vault = typeof vaults.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
@@ -350,6 +370,8 @@ export type InsertFirelightPosition = z.infer<typeof insertFirelightPositionSche
 export type SelectFirelightPosition = typeof firelightPositions.$inferSelect;
 export type InsertCompoundingRun = z.infer<typeof insertCompoundingRunSchema>;
 export type SelectCompoundingRun = typeof compoundingRuns.$inferSelect;
+export type InsertServiceState = z.infer<typeof insertServiceStateSchema>;
+export type ServiceState = typeof serviceState.$inferSelect;
 
 export interface PaymentRequest {
   bridgeId: string;

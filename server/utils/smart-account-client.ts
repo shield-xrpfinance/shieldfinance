@@ -10,7 +10,8 @@ export interface SmartAccountConfig {
 }
 
 export class SmartAccountClient {
-  private primeSdk: PrimeSdk | null = null;
+  private primeSdkWithPaymaster: PrimeSdk | null = null;
+  private primeSdkWithoutPaymaster: PrimeSdk | null = null;
   private config: SmartAccountConfig;
   private smartAccountAddress: string | null = null;
 
@@ -37,24 +38,41 @@ export class SmartAccountClient {
         this.config.bundlerApiKey
       );
 
-      const sdkConfig: any = {
+      // Create SDK without paymaster (for direct gas payment from Smart Account)
+      const sdkConfigWithoutPaymaster: any = {
         chainId: this.config.chainId,
         bundlerProvider: bundlerProvider,
       };
 
-      if (this.config.enablePaymaster) {
-        sdkConfig.paymaster = {
-          url: `https://arka.etherspot.io?apiKey=${this.config.bundlerApiKey}&chainId=${this.config.chainId}`,
-        };
-        console.log('   ⛽ Paymaster enabled for gasless transactions');
-      }
-
-      this.primeSdk = new PrimeSdk(
+      this.primeSdkWithoutPaymaster = new PrimeSdk(
         { privateKey: privateKey },
-        sdkConfig
+        sdkConfigWithoutPaymaster
       );
 
-      this.smartAccountAddress = await this.primeSdk.getCounterFactualAddress();
+      console.log('   💳 SDK without paymaster initialized (for direct gas payment)');
+
+      // Create SDK with paymaster if enabled (for gasless transactions)
+      if (this.config.enablePaymaster) {
+        const sdkConfigWithPaymaster: any = {
+          chainId: this.config.chainId,
+          bundlerProvider: bundlerProvider,
+          paymaster: {
+            url: `https://arka.etherspot.io?apiKey=${this.config.bundlerApiKey}&chainId=${this.config.chainId}`,
+          },
+        };
+
+        this.primeSdkWithPaymaster = new PrimeSdk(
+          { privateKey: privateKey },
+          sdkConfigWithPaymaster
+        );
+
+        console.log('   ⛽ SDK with paymaster initialized (for gasless transactions)');
+      } else {
+        // If paymaster disabled, use same instance for both
+        this.primeSdkWithPaymaster = this.primeSdkWithoutPaymaster;
+      }
+
+      this.smartAccountAddress = await this.primeSdkWithoutPaymaster.getCounterFactualAddress();
       
       console.log(`✅ Smart Account initialized`);
       console.log(`   Address: ${this.smartAccountAddress}`);
@@ -70,6 +88,29 @@ export class SmartAccountClient {
       throw new Error('Smart account not initialized. Call initialize() first.');
     }
     return this.smartAccountAddress;
+  }
+
+  /**
+   * Get the Smart Account's native FLR balance
+   * Returns balance in wei as a BigInt
+   */
+  async getNativeBalance(): Promise<bigint> {
+    if (!this.smartAccountAddress) {
+      throw new Error('Smart account not initialized. Call initialize() first.');
+    }
+
+    try {
+      // Create a provider to check the balance
+      const provider = new ethers.JsonRpcProvider(this.config.rpcUrl);
+      const balance = await provider.getBalance(this.smartAccountAddress);
+      
+      console.log(`💰 Smart Account Balance: ${ethers.formatEther(balance)} FLR (${balance} wei)`);
+      
+      return balance;
+    } catch (error) {
+      console.error('❌ Failed to check Smart Account balance:', error);
+      throw error;
+    }
   }
 
   /**
@@ -90,13 +131,17 @@ export class SmartAccountClient {
   /**
    * Send transaction with automatic retry and fee bumping
    * Implements exponential backoff (1s, 2s, 4s, 8s, 16s) and 20% fee increase per retry
+   * 
+   * @param tx - Transaction to send
+   * @param usePaymaster - Whether to use paymaster for gas sponsorship (default: true)
+   *                       Set to false to pay gas directly from Smart Account's native FLR balance
    */
   async sendTransaction(tx: {
     to: string;
     value?: bigint | string;
     data?: string;
-  }): Promise<string> {
-    if (!this.primeSdk) {
+  }, usePaymaster: boolean = true): Promise<string> {
+    if (!this.primeSdkWithPaymaster || !this.primeSdkWithoutPaymaster) {
       throw new Error('Smart account not initialized. Call initialize() first.');
     }
 
@@ -104,11 +149,21 @@ export class SmartAccountClient {
     const FEE_BUMP_MULTIPLIER = 1.2; // Increase fees by 20% each retry
     const INITIAL_BACKOFF_MS = 1000;
 
+    // Select the appropriate SDK instance based on paymaster usage
+    const selectedSdk = usePaymaster ? this.primeSdkWithPaymaster : this.primeSdkWithoutPaymaster;
+
+    // Log paymaster usage
+    if (!usePaymaster) {
+      console.log('🔓 Bypassing paymaster - Smart Account paying gas directly');
+      const balance = await this.getNativeBalance();
+      console.log(`   Smart Account balance: ${ethers.formatEther(balance)} FLR`);
+    }
+
     let lastError: any;
 
     for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
       try {
-        await this.primeSdk.clearUserOpsFromBatch();
+        await selectedSdk.clearUserOpsFromBatch();
 
         const txData: any = {
           to: tx.to,
@@ -124,9 +179,10 @@ export class SmartAccountClient {
           txData.data = tx.data;
         }
 
-        await this.primeSdk.addUserOpsToBatch(txData);
+        await selectedSdk.addUserOpsToBatch(txData);
 
-        let userOp = await this.primeSdk.estimate();
+        // Estimate without any special parameters - the SDK instance already has correct configuration
+        let userOp = await selectedSdk.estimate();
         
         // Apply fee bumping on retries using BigInt arithmetic to avoid overflow
         if (attempt > 0) {
@@ -157,7 +213,7 @@ export class SmartAccountClient {
           maxPriorityFeePerGas: userOp.maxPriorityFeePerGas?.toString(),
         });
 
-        const userOpHash = await this.primeSdk.send(userOp);
+        const userOpHash = await selectedSdk.send(userOp);
         console.log(`✅ UserOp sent: ${userOpHash}`);
 
         return userOpHash;
@@ -195,12 +251,13 @@ export class SmartAccountClient {
     value?: bigint | string;
     data?: string;
   }>): Promise<string> {
-    if (!this.primeSdk) {
+    if (!this.primeSdkWithPaymaster) {
       throw new Error('Smart account not initialized. Call initialize() first.');
     }
 
     try {
-      await this.primeSdk.clearUserOpsFromBatch();
+      // Batch transactions always use paymaster for gasless execution
+      await this.primeSdkWithPaymaster.clearUserOpsFromBatch();
 
       for (const tx of txs) {
         const txData: any = {
@@ -217,13 +274,13 @@ export class SmartAccountClient {
           txData.data = tx.data;
         }
 
-        await this.primeSdk.addUserOpsToBatch(txData);
+        await this.primeSdkWithPaymaster.addUserOpsToBatch(txData);
       }
 
       console.log(`📦 Batching ${txs.length} transactions...`);
       
-      const userOp = await this.primeSdk.estimate();
-      const userOpHash = await this.primeSdk.send(userOp);
+      const userOp = await this.primeSdkWithPaymaster.estimate();
+      const userOpHash = await this.primeSdkWithPaymaster.send(userOp);
       
       console.log(`✅ Batch UserOp sent: ${userOpHash}`);
 
@@ -235,7 +292,7 @@ export class SmartAccountClient {
   }
 
   async waitForUserOpReceipt(userOpHash: string, maxRetries = 30): Promise<any> {
-    if (!this.primeSdk) {
+    if (!this.primeSdkWithPaymaster) {
       throw new Error('Smart account not initialized. Call initialize() first.');
     }
 
@@ -243,7 +300,8 @@ export class SmartAccountClient {
 
     for (let i = 0; i < maxRetries; i++) {
       try {
-        const receipt = await this.primeSdk.getUserOpReceipt(userOpHash);
+        // Use primeSdkWithPaymaster to get receipt (works for both paymaster and non-paymaster transactions)
+        const receipt = await this.primeSdkWithPaymaster.getUserOpReceipt(userOpHash);
         
         if (receipt) {
           console.log(`✅ UserOp confirmed in transaction: ${receipt.receipt.transactionHash}`);

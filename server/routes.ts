@@ -2543,6 +2543,7 @@ export async function registerRoutes(
         completedAt: redemption.completedAt,
         error: displayError,
         backendError: redemption.backendError, // Backend errors separate from user-facing errors
+        lastError: redemption.lastError, // Most recent error message (user-friendly)
       });
     } catch (error) {
       console.error("Withdrawal status fetch error:", error);

@@ -28,9 +28,13 @@ export class FlareClient {
   private rpcUrl: string;
   private smartAccountClient: SmartAccountClient;
   private fAssetTokenAddressCache: string | null = null;
+  private operatorPrivateKey: string; // Operator EOA private key (for emergency prefunding)
+  private paymasterEnabled: boolean;
 
   constructor(config: FlareClientConfig) {
     this.network = config.network;
+    this.operatorPrivateKey = config.privateKey;
+    this.paymasterEnabled = config.enablePaymaster || false;
     
     this.rpcUrl = config.network === "mainnet"
       ? "https://flare-api.flare.network/ext/C/rpc"
@@ -55,6 +59,10 @@ export class FlareClient {
 
   getSignerAddress(): string {
     return this.smartAccountClient.getAddress();
+  }
+
+  async getSmartAccountBalance(): Promise<bigint> {
+    return await this.smartAccountClient.getNativeBalance();
   }
 
   getContractSigner(): ethers.Signer {
@@ -152,5 +160,90 @@ export class FlareClient {
 
   getSmartAccountClient(): SmartAccountClient {
     return this.smartAccountClient;
+  }
+
+  /**
+   * Check if paymaster is enabled for gasless transactions
+   */
+  isPaymasterEnabled(): boolean {
+    return this.paymasterEnabled;
+  }
+
+  /**
+   * Auto-prefund Smart Account from operator EOA
+   * 
+   * This is an emergency remediation method used when:
+   * 1. Smart Account has insufficient FLR for gas
+   * 2. Paymaster is not enabled or failed
+   * 3. A transaction needs to be submitted (e.g., redemption confirmation)
+   * 
+   * @param amountFLR - Amount of FLR to send (default: 0.5 FLR)
+   * @returns Transaction hash of the funding transaction
+   */
+  async prefundSmartAccount(amountFLR: string = "0.5"): Promise<string> {
+    console.log(`\n💰 Auto-prefunding Smart Account...`);
+    
+    // Create EOA wallet from operator private key
+    const operatorWallet = new ethers.Wallet(this.operatorPrivateKey, this.provider);
+    const smartAccountAddress = this.smartAccountClient.getAddress();
+    
+    // Check operator balance
+    const operatorBalance = await this.provider.getBalance(operatorWallet.address);
+    const amountWei = ethers.parseEther(amountFLR);
+    
+    console.log(`   Operator EOA: ${operatorWallet.address}`);
+    console.log(`   Operator Balance: ${ethers.formatEther(operatorBalance)} FLR`);
+    console.log(`   Smart Account: ${smartAccountAddress}`);
+    console.log(`   Funding Amount: ${amountFLR} FLR`);
+    
+    // Validate operator has enough balance (including gas buffer)
+    const gasBuffer = ethers.parseEther("0.01"); // 0.01 FLR for gas
+    if (operatorBalance < amountWei + gasBuffer) {
+      throw new Error(
+        `Insufficient operator balance: ${ethers.formatEther(operatorBalance)} FLR ` +
+        `(need ${ethers.formatEther(amountWei + gasBuffer)} FLR including gas)`
+      );
+    }
+    
+    // Send FLR from operator EOA to Smart Account
+    console.log(`   📤 Sending ${amountFLR} FLR from operator EOA to Smart Account...`);
+    
+    const tx = await operatorWallet.sendTransaction({
+      to: smartAccountAddress,
+      value: amountWei,
+    });
+    
+    console.log(`   ⏳ Waiting for funding transaction: ${tx.hash}`);
+    
+    const receipt = await tx.wait();
+    
+    if (!receipt) {
+      throw new Error('Funding transaction failed - no receipt received');
+    }
+    
+    console.log(`   ✅ Smart Account funded: ${tx.hash}`);
+    console.log(`   Gas used: ${receipt.gasUsed} (${ethers.formatEther(receipt.gasUsed * (receipt.gasPrice || 0n))} FLR)`);
+    
+    // Verify new balance
+    const newBalance = await this.provider.getBalance(smartAccountAddress);
+    console.log(`   💰 New Smart Account balance: ${ethers.formatEther(newBalance)} FLR`);
+    
+    return tx.hash;
+  }
+
+  /**
+   * Get operator EOA address (for logging/debugging)
+   */
+  getOperatorEOAAddress(): string {
+    const wallet = new ethers.Wallet(this.operatorPrivateKey);
+    return wallet.address;
+  }
+
+  /**
+   * Get operator EOA balance
+   */
+  async getOperatorEOABalance(): Promise<bigint> {
+    const wallet = new ethers.Wallet(this.operatorPrivateKey);
+    return await this.provider.getBalance(wallet.address);
   }
 }

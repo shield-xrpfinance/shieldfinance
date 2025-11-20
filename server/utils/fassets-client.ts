@@ -141,6 +141,14 @@ export class FAssetsClient {
     return contract;
   }
 
+  /**
+   * Public method to get AssetManager contract instance
+   * Used by DepositWatchdogService to query mint events
+   */
+  async getAssetManagerContract(): Promise<ethers.Contract> {
+    return await this.getAssetManager();
+  }
+
   async findBestAgent(lotsRequired: number): Promise<AgentInfo | null> {
     const assetManager = await this.getAssetManager();
     
@@ -648,15 +656,34 @@ export class FAssetsClient {
     
     console.log(`\n✅ Confirming redemption payment:`);
     console.log(`   Request ID: ${requestId}`);
+    console.log(`   🔓 confirmRedemptionPayment: Using Smart Account balance for gas (paymaster disabled)`);
     
     // Encode proof to proper struct format
     const encodedProof = this.encodeProofForContract(proof);
     
-    const tx = await assetManager.confirmRedemptionPayment(encodedProof, requestId);
+    // Manually encode transaction data to bypass ethers.js contract wrapper
+    // This allows us to pass custom properties (usePaymaster) directly to the signer
+    const signer = this.config.flareClient.getContractSigner();
+    const assetManagerAddress = await this.getAssetManagerAddress();
+    
+    // Encode function call data
+    const iface = assetManager.interface;
+    const data = iface.encodeFunctionData('confirmRedemptionPayment', [encodedProof, requestId]);
+    
+    console.log(`   📤 Manually sending transaction with usePaymaster=false`);
+    console.log(`   Transaction to: ${assetManagerAddress}`);
+    console.log(`   Data length: ${data.length} chars`);
+    
+    // Send transaction directly with usePaymaster flag
+    const tx = await signer.sendTransaction({
+      to: assetManagerAddress,
+      data: data,
+      usePaymaster: false
+    } as any);
+    
     const receipt = await tx.wait();
     
     // Fetch full receipt for ERC-4337 transactions
-    const signer = this.config.flareClient.getContractSigner();
     const provider = signer.provider;
     if (provider) {
       const fullReceipt = await provider.getTransactionReceipt(receipt.hash);

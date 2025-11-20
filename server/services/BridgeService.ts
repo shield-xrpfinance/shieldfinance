@@ -959,6 +959,117 @@ export class BridgeService {
     }
   }
 
+  /**
+   * Complete FXRP minting after XRPL payment is detected
+   * 
+   * This method is called by XRPL listener after detecting agent payment.
+   * It fetches the FAssets mint transaction, parses the actual minted amount,
+   * updates the bridge status, and triggers vault share minting.
+   * 
+   * This method is idempotent and safe to call multiple times.
+   * 
+   * @param bridgeId - Bridge ID to complete minting for
+   * @param xrplTxHash - XRPL transaction hash of the payment
+   */
+  async completeMint(bridgeId: string, xrplTxHash: string): Promise<void> {
+    try {
+      console.log(`\n🎯 ================================`);
+      console.log(`🎯 Completing FXRP Mint`);
+      console.log(`🎯 ================================`);
+      console.log(`   📋 Bridge ID: ${bridgeId}`);
+      console.log(`   🔗 XRPL TX Hash: ${xrplTxHash}`);
+      
+      // Step 1: Fetch bridge from database
+      const bridge = await this.config.storage.getBridgeById(bridgeId);
+      if (!bridge) {
+        console.error(`❌ Bridge ${bridgeId} not found`);
+        return;
+      }
+      
+      console.log(`\n   📊 Bridge Details:`);
+      console.log(`      Wallet: ${bridge.walletAddress}`);
+      console.log(`      Vault: ${bridge.vaultId}`);
+      console.log(`      XRP Amount: ${bridge.xrpAmount}`);
+      console.log(`      Expected FXRP: ${bridge.fxrpExpected}`);
+      console.log(`      Current Status: ${bridge.status}`);
+      
+      // Step 2: Idempotency check - if already completed, skip
+      if (bridge.fxrpMintTxHash) {
+        console.log(`\n   ⏭️  FXRP mint already completed (tx: ${bridge.fxrpMintTxHash}), skipping`);
+        
+        // If mint is done but vault minting not started, trigger it
+        if (!bridge.vaultMintTxHash && bridge.status === "completed") {
+          console.log(`   🔄 Vault minting not started, triggering now...`);
+          await this.completeBridgeWithVaultMinting(bridgeId);
+        }
+        return;
+      }
+      
+      // Step 3: Safety check - only proceed if status is appropriate
+      // Note: xrpl_confirmed is included to support deposit watchdog recovery
+      const validStatuses = ["minting", "proof_generated", "fdc_proof_generated", "xrpl_confirmed"];
+      if (!validStatuses.includes(bridge.status)) {
+        console.warn(`\n   ⚠️  Cannot complete mint for bridge in status '${bridge.status}'`);
+        console.warn(`      Expected one of: ${validStatuses.join(", ")}`);
+        return;
+      }
+      
+      // Step 4: Check if flareTxHash exists (the FAssets mint transaction)
+      if (!bridge.flareTxHash) {
+        console.warn(`\n   ⚠️  No flareTxHash found - cannot parse minted amount`);
+        console.warn(`      Bridge status: ${bridge.status}`);
+        console.warn(`      This might indicate the mint transaction hasn't been executed yet`);
+        return;
+      }
+      
+      console.log(`\n   ⏳ Step 1/3: Parsing actual minted FXRP amount from Transfer event...`);
+      console.log(`      Mint TX Hash: ${bridge.flareTxHash}`);
+      
+      // Step 5: Parse actual minted amount from Transfer event (FXRP uses 6 decimals)
+      const actualFxrpMinted = await this.parseActualMintedAmount(bridge.flareTxHash);
+      console.log(`   ✅ Step 1/3: Actual FXRP minted: ${actualFxrpMinted}`);
+      
+      // Step 6: Update bridge with mint completion details
+      console.log(`\n   ⏳ Step 2/3: Updating bridge with mint completion details...`);
+      await this.config.storage.updateBridgeStatus(bridgeId, "completed", {
+        fxrpMintTxHash: bridge.flareTxHash, // Store the mint tx hash
+        fxrpReceived: actualFxrpMinted,
+        paymentConfirmedAt: new Date(), // Mark when payment was confirmed and mint completed
+        fxrpReceivedAt: new Date(),
+        completedAt: new Date(),
+      });
+      console.log(`   ✅ Step 2/3: Bridge status updated to 'completed'`);
+      console.log(`      FXRP Mint TX: ${bridge.flareTxHash}`);
+      console.log(`      FXRP Received: ${actualFxrpMinted}`);
+      console.log(`      Payment Confirmed At: ${new Date().toISOString()}`);
+      
+      // Step 7: Trigger vault share minting
+      console.log(`\n   ⏳ Step 3/3: Triggering vault share minting...`);
+      await this.completeBridgeWithVaultMinting(bridgeId);
+      console.log(`   ✅ Step 3/3: Vault share minting triggered`);
+      
+      console.log(`\n✅ ================================`);
+      console.log(`✅ FXRP Mint Completed Successfully`);
+      console.log(`✅ ================================`);
+      console.log(`   Bridge ID: ${bridgeId}`);
+      console.log(`   FXRP Minted: ${actualFxrpMinted}`);
+      console.log(`   Mint TX: ${bridge.flareTxHash}`);
+      
+    } catch (error) {
+      console.error(`\n❌ ================================`);
+      console.error(`❌ Failed to complete FXRP mint`);
+      console.error(`❌ ================================`);
+      console.error(`   Bridge ID: ${bridgeId}`);
+      console.error(`   Error:`, error);
+      console.error(`   Stack:`, error instanceof Error ? error.stack : 'N/A');
+      
+      // Update bridge with error
+      await this.config.storage.updateBridge(bridgeId, {
+        status: "failed",
+        errorMessage: error instanceof Error ? error.message : "Unknown error during FXRP mint completion",
+      });
+    }
+  }
 
   /**
    * Retry FDC proof generation for a bridge that timed out
@@ -1558,7 +1669,7 @@ export class BridgeService {
       // Confirm redemption payment to AssetManager
       console.log("⏳ Confirming redemption payment to AssetManager...");
       const confirmTxHash = await this.fassetsClient.confirmRedemptionPayment(
-        proof,
+        proof.proof,
         BigInt(redemption.redemptionRequestId)
       );
 
@@ -1882,6 +1993,44 @@ export class BridgeService {
       console.log(`      Voting Round: ${fdcResult.votingRoundId}`);
       console.log(`      Attestation TX: ${fdcResult.attestationTxHash}`);
       
+      // Pre-Step 2: Check Smart Account balance
+      console.log(`\n   💰 Pre-check: Verifying Smart Account has sufficient FLR for gas...`);
+      if (this.config.flareClient) {
+        try {
+          const balance = await this.config.flareClient.getSmartAccountBalance();
+          const MIN_BALANCE_WEI = BigInt(100000000000000000); // 0.1 FLR minimum
+          
+          if (balance < MIN_BALANCE_WEI) {
+            const balanceEth = Number(balance) / 1e18;
+            const errorMsg = `Smart Account lacks sufficient FLR for gas. Current balance: ${balanceEth.toFixed(4)} FLR. ` +
+              `Minimum required: 0.1 FLR. Please fund the Smart Account at ${this.config.flareClient.getSignerAddress()} with FLR to complete backend confirmation.`;
+            
+            console.error(`\n❌ ================================`);
+            console.error(`❌ Insufficient Smart Account Balance!`);
+            console.error(`❌ ================================`);
+            console.error(`   Smart Account: ${this.config.flareClient.getSignerAddress()}`);
+            console.error(`   Current Balance: ${balanceEth.toFixed(4)} FLR`);
+            console.error(`   Required: 0.1 FLR minimum`);
+            console.error(`   Action: Fund the Smart Account with FLR`);
+            
+            // Store error in database
+            await this.config.storage.updateRedemption(redemptionId, {
+              backendStatus: "manual_review",
+              backendError: errorMsg,
+              lastError: errorMsg,
+            });
+            
+            // Don't throw - user already has XRP
+            console.warn(`\n⚠️  Backend confirmation skipped due to insufficient balance - user has XRP successfully`);
+            return; // Exit early - user has XRP, backend confirmation will be retried later
+          }
+          
+          console.log(`   ✅ Smart Account balance sufficient: ${(Number(balance) / 1e18).toFixed(4)} FLR`);
+        } catch (balanceCheckError) {
+          console.warn(`   ⚠️  Could not check Smart Account balance - proceeding with confirmation anyway`, balanceCheckError);
+        }
+      }
+      
       // Step 2: Confirm redemption payment on FAssets contract
       console.log(`\n   ⏳ Step 2/5: Confirming redemption payment on FAssets contract...`);
       console.log(`      Request ID: ${redemption.redemptionRequestId}`);
@@ -1994,11 +2143,18 @@ export class BridgeService {
       // Update backend status based on error type
       const backendStatus = isGasError ? "retry_pending" : "manual_review";
       
+      // Create user-friendly error message
+      let userFriendlyError = errorMessage;
+      if (isGasError) {
+        userFriendlyError = `Backend confirmation requires FLR for gas fees. Please fund the Smart Account to complete the process. ${errorMessage}`;
+      }
+      
       await this.config.storage.updateRedemption(redemptionId, {
         status: "xrpl_received", // Keep at xrpl_received, not failed
         errorMessage: `Backend confirmation issue: ${errorMessage}`,
         backendStatus,
         backendError: `${error instanceof Error ? error.stack : errorMessage}`,
+        lastError: userFriendlyError, // Store user-friendly error message
       });
       
       // Log for operations team but don't throw (user already succeeded)

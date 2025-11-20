@@ -1,4 +1,4 @@
-import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFxrpToXrpRedemption, type SelectFxrpToXrpRedemption, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, fxrpToXrpRedemptions, firelightPositions, compoundingRuns } from "@shared/schema";
+import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFxrpToXrpRedemption, type SelectFxrpToXrpRedemption, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, type InsertServiceState, type ServiceState, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, fxrpToXrpRedemptions, firelightPositions, compoundingRuns, serviceState } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, gt } from "drizzle-orm";
 
@@ -52,6 +52,7 @@ export interface IStorage {
   updateRedemptionStatus(id: string, status: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void>;
   getAllPendingRedemptions(): Promise<SelectFxrpToXrpRedemption[]>;
   getRedemptionByMatch(userAddress: string, agentAddress: string, amountDrops: string): Promise<SelectFxrpToXrpRedemption | null>;
+  getRedemptionsNeedingRetry(): Promise<SelectFxrpToXrpRedemption[]>;
   
   createFirelightPosition(position: InsertFirelightPosition): Promise<SelectFirelightPosition>;
   getFirelightPositionByVault(vaultId: string): Promise<SelectFirelightPosition | undefined>;
@@ -59,6 +60,9 @@ export interface IStorage {
   
   createCompoundingRun(run: InsertCompoundingRun): Promise<SelectCompoundingRun>;
   completeCompoundingRun(id: string, txHash: string, newBalance: string): Promise<void>;
+  
+  getServiceState(key: string): Promise<ServiceState | undefined>;
+  setServiceState(key: string, value: string): Promise<void>;
   
   getProtocolOverview(): Promise<{ tvl: string; avgApy: string; activeVaults: number; totalStakers: number }>;
   getApyHistory(days?: number): Promise<Array<{ date: string; stable: number; high: number; maximum: number }>>;
@@ -552,6 +556,22 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async getRedemptionsNeedingRetry(): Promise<SelectFxrpToXrpRedemption[]> {
+    const { inArray } = await import("drizzle-orm");
+    
+    // Query redemptions with:
+    // - backendStatus IN ('manual_review', 'retry_pending')
+    // - userStatus = 'completed' (user has XRP successfully)
+    // - status IN ('awaiting_proof', 'xrpl_received')
+    return db.query.fxrpToXrpRedemptions.findMany({
+      where: and(
+        inArray(fxrpToXrpRedemptions.backendStatus, ["manual_review", "retry_pending"]),
+        eq(fxrpToXrpRedemptions.userStatus, "completed")
+      ),
+      orderBy: desc(fxrpToXrpRedemptions.createdAt),
+    });
+  }
+
   async getRedemptionByMatch(
     userAddress: string,
     agentAddress: string,
@@ -678,6 +698,20 @@ export class DatabaseStorage implements IStorage {
         completedAt: new Date(),
       })
       .where(eq(compoundingRuns.id, id));
+  }
+
+  async getServiceState(key: string): Promise<ServiceState | undefined> {
+    return db.query.serviceState.findFirst({ where: eq(serviceState.key, key) });
+  }
+
+  async setServiceState(key: string, value: string): Promise<void> {
+    // Use upsert pattern: try insert, if conflict update
+    await db.insert(serviceState)
+      .values({ key, value, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: serviceState.key,
+        set: { value, updatedAt: new Date() },
+      });
   }
 }
 
