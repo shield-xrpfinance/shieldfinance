@@ -20,7 +20,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 
 ### Data Storage
 - **Database**: PostgreSQL (Neon serverless) with Drizzle ORM.
-- **Schema**: Includes `vaults`, `positions`, `transactions`, `vault_metrics_daily`, `xrp_to_fxrp_bridges`, `fxrp_to_xrp_redemptions`, `firelight_positions`, `compounding_runs`.
+- **Schema**: Includes `vaults`, `positions`, `transactions` (with `wallet_address` column for security), `vault_metrics_daily`, `xrp_to_fxrp_bridges`, `fxrp_to_xrp_redemptions`, `firelight_positions`, `compounding_runs`, `service_state`.
 
 ### System Design
 - **Separation of Concerns**: Monorepo structure with `/client`, `/server`, and `/shared` directories.
@@ -53,6 +53,19 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **FDC Proof Generation Lock**: Implemented sentinel-based locking mechanism using `fdcAttestationTxHash: "PENDING"` to prevent concurrent proof generation attempts from multiple services (startup reconciliation + watchdog), eliminating nonce conflicts and "fee too low" UserOp errors.
 - **Reconciliation Recovery Patterns**: Added comprehensive recovery logic for all bridge statuses including vault_minting, ensuring automatic recovery from any intermediate state without manual intervention.
 - **Immediate Position Updates on XRP Receipt**: Position balances now update immediately when user receives XRP (when userStatus becomes "completed"), not after backend confirmation completes. This eliminates confusing UX where users see outdated balances while backend processes are still running.
+- **Wallet-Scoped Transaction Security**: Complete end-to-end wallet authentication for transaction history access:
+  - Database: Added `wallet_address varchar NOT NULL` column to transactions table with backfill migration
+  - Storage: Direct filtering by `wallet_address` column (no JOIN-based bypasses)
+  - API: Wallet parameter REQUIRED for `/api/transactions` and `/api/transactions/summary` endpoints (returns 400 if missing)
+  - Services: All transaction creation (deposits, claims, withdrawals) includes wallet address
+  - Frontend: All queries wallet-scoped, eliminating unauthorized access to global transaction data
+- **Withdrawal History Consolidation**: Streamlined UI with clear separation of concerns:
+  - Portfolio page: Active positions + in-flight withdrawal alert banner (no history list)
+  - Transaction History page: Complete wallet-scoped transaction history including withdrawals
+  - Bridge Tracking page: Real-time detailed status of all bridge operations
+  - Portfolio polling: Restored automatic 5s refresh during active withdrawals via redemptions query
+  - In-flight alerts: Count badge with direct navigation to Bridge Tracking for withdrawal details
+- **Transaction Type Normalization**: Frontend handles both "withdraw" and "withdrawal" types for backward compatibility with consistent badging and iconography.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
@@ -62,6 +75,8 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 ### Security Features
 - **Smart Contracts**: ERC-4626 standard, OpenZeppelin AccessControl, ReentrancyGuard.
 - **Platform**: Minimum deposits, transparent accounting, double-mint prevention, idempotency, crash recovery.
+- **Transaction Privacy**: Wallet-scoped authentication on all transaction endpoints. Users can only access their own transaction history, with API-level validation requiring wallet parameter (returns 400 error if missing).
+- **Data Integrity**: Direct column filtering prevents JOIN-based security bypasses. All transaction creation includes wallet address validation.
 
 ## External Dependencies
 
