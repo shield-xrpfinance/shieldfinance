@@ -736,17 +736,25 @@ export class BridgeService {
       throw new Error(`Bridge ${bridgeId} is in terminal state: ${bridge.status}. Cannot process minting.`);
     }
     
+    // CRITICAL: Prevent concurrent proof generation attempts
+    // If fdcAttestationTxHash exists, proof generation is already in progress or completed
+    if (bridge.fdcAttestationTxHash) {
+      console.log(`⏭️  Bridge ${bridgeId} already has FDC attestation (txHash: ${bridge.fdcAttestationTxHash}), skipping duplicate proof generation`);
+      return;
+    }
+    
     if (!bridge.collateralReservationId) {
       throw new Error("No collateral reservation found for this bridge");
     }
     
-    // Update status to xrpl_confirmed BEFORE starting proof generation
-    // This shows the user that payment was detected and proof generation is in progress
+    // CRITICAL: Set lock IMMEDIATELY to prevent other services from starting concurrent proof generation
+    // Use "PENDING" as sentinel value while proof is being generated
     await this.config.storage.updateBridgeStatus(bridgeId, "xrpl_confirmed", {
       xrplTxHash,
       xrplConfirmedAt: new Date(),
+      fdcAttestationTxHash: "PENDING", // Lock to prevent concurrent attempts
     });
-    console.log(`✅ Bridge status updated to xrpl_confirmed, starting proof generation...`);
+    console.log(`✅ Bridge status updated to xrpl_confirmed, starting proof generation (lock acquired)...`);
     
     try {
       // Fetch XRPL transaction to get accurate timestamp for voting round calculation
