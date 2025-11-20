@@ -2012,6 +2012,35 @@ export class BridgeService {
       console.log(`   ✅ User status: "completed" (frozen - will never change)`);
       console.log(`   ✅ Backend status: "confirming" (backend confirmation in progress)`);
       
+      // CRITICAL: Update position balance immediately when user receives XRP
+      // This ensures frontend shows correct balance even while backend confirmation is in progress
+      console.log(`\n   💰 Updating position balance (user has received XRP)...`);
+      const currentPosition = await this.config.storage.getPosition(redemption.positionId);
+      if (currentPosition) {
+        const oldBalance = parseFloat(currentPosition.amount);
+        const withdrawAmount = parseFloat(redemption.shareAmount);
+        const newBalance = oldBalance - withdrawAmount;
+        
+        console.log(`      Old Balance: ${oldBalance.toFixed(6)} shXRP`);
+        console.log(`      Withdraw: ${withdrawAmount.toFixed(6)} shXRP`);
+        console.log(`      New Balance: ${newBalance.toFixed(6)} shXRP`);
+        
+        if (newBalance <= 0.000001) { // Allow for rounding errors
+          console.log(`   🗑️  Position fully withdrawn - marking as closed`);
+          await this.config.storage.updatePosition(redemption.positionId, {
+            amount: "0",
+            status: "closed"
+          });
+        } else {
+          await this.config.storage.updatePosition(redemption.positionId, {
+            amount: newBalance.toFixed(6)
+          });
+        }
+        console.log(`   ✅ Position balance updated immediately`);
+      } else {
+        console.warn(`   ⚠️  Position ${redemption.positionId} not found - skipping balance update`);
+      }
+      
       // Step 1: Generate FDC proof of agent→user payment
       console.log(`\n   ⏳ Step 1/5: Generating FDC proof...`);
       console.log(`      TX Hash: ${xrplTxHash}`);
