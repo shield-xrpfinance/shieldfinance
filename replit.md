@@ -50,6 +50,8 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
   - Smart Account automatically selects appropriate SDK based on usePaymaster flag
 - **FDC Proof Structure Fix**: Corrected confirmRedemptionPayment to pass proof.proof instead of entire proof object to encodeProofForContract(), resolving TypeError on merkle proof encoding.
 - **Enhanced Schema Tracking**: Added paymentConfirmedAt, fxrpMintTxHash to xrp_to_fxrp_bridges; confirmationTxHash, lastError, lastRetryAt to fxrp_to_xrp_redemptions; service_state table for persistent block tracking; fundingAttempts and lastFundingTxHash for redemption retry diagnostics.
+- **FDC Proof Generation Lock**: Implemented sentinel-based locking mechanism using `fdcAttestationTxHash: "PENDING"` to prevent concurrent proof generation attempts from multiple services (startup reconciliation + watchdog), eliminating nonce conflicts and "fee too low" UserOp errors.
+- **Reconciliation Recovery Patterns**: Added comprehensive recovery logic for all bridge statuses including vault_minting, ensuring automatic recovery from any intermediate state without manual intervention.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.

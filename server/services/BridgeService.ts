@@ -1378,6 +1378,17 @@ export class BridgeService {
         };
       }
 
+      // Stuck at vault_minting without completion
+      if (bridge.status === "vault_minting" && !bridge.vaultMintTxHash) {
+        console.log(`   ✅ Recoverable: Stuck at vault_minting - continuing vault mint`);
+        await this.completeBridgeWithVaultMinting(bridgeId);
+        return { 
+          success: true, 
+          message: "Continuing vault share minting",
+          action: "continue_vault_minting" 
+        };
+      }
+
       // Not recoverable
       console.log(`   ❌ Not recoverable: Status=${bridge.status}, no matching recovery pattern`);
       return { 
