@@ -203,13 +203,13 @@ export class WithdrawalRetryService {
       console.log(`      Last Error: ${redemption.lastError || '(none)'}`);
 
       // Safety check: Don't retry if max retries exceeded
-      if (redemption.retryCount >= this.maxRetries) {
-        console.warn(`   ⚠️  Max retries (${this.maxRetries}) exceeded for redemption ${redemptionId}`);
-        console.warn(`      Leaving in manual_review - requires manual intervention`);
+      if (redemption.retryCount && redemption.retryCount >= this.maxRetries) {
+        console.error(`❌ Max retries exceeded for redemption ${redemptionId} - requires manual intervention`);
         
         await this.config.storage.updateRedemption(redemptionId, {
           backendStatus: "abandoned",
-          lastError: `Max retries (${this.maxRetries}) exceeded - manual intervention required`,
+          userStatus: "failed",
+          lastError: `Maximum retry attempts exceeded (${this.maxRetries}). Manual intervention required.`,
         });
         
         return false;
@@ -218,13 +218,16 @@ export class WithdrawalRetryService {
       // Check if enough time has passed since last retry (exponential backoff)
       if (redemption.lastRetryAt) {
         const timeSinceLastRetry = Date.now() - redemption.lastRetryAt.getTime();
-        const minWaitTime = this.retryBackoffMs * Math.pow(2, redemption.retryCount); // Exponential backoff
+        const minWaitTime = this.retryBackoffMs * Math.pow(2, redemption.retryCount || 0); // Exponential backoff
         
         if (timeSinceLastRetry < minWaitTime) {
           const waitSecondsRemaining = Math.ceil((minWaitTime - timeSinceLastRetry) / 1000);
           console.log(`   ⏰ Too soon to retry (wait ${waitSecondsRemaining}s more)`);
           return false;
         }
+      } else {
+        // First retry attempt - no previous retry timestamp
+        console.log(`   🆕 First retry attempt for redemption ${redemptionId}`);
       }
 
       // Required fields check

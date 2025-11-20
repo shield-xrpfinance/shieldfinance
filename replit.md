@@ -42,6 +42,14 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **ERC-4337 Bundler Retry Logic with Fee Bumping**: Robust retry system for UserOp submission with exponential backoff and 20% fee increase per retry.
 - **FDC Timing Optimizations**: Reduced DA indexing buffer from 60s to 30s (20s for late-round submissions >70s into 90s round) based on test evidence showing proofs ready faster than initially expected. Minimum wait reduced from 90s to 60s. Expected improvement: ~163s wait reduced to ~90-120s, improving deposit UX by 30-45 seconds.
 - **Withdrawal Position Refresh**: Query invalidation added to withdrawal completion handler to refresh positions, withdrawals, and transactions immediately after successful withdrawal, ensuring UI updates reflect balance changes without requiring manual refresh.
+- **Deposit Watchdog Service**: Automatic recovery system for stuck deposits at xrpl_confirmed status. Polls every 60s to query FAssets AssetManager for MintingExecuted events, extracts mint tx hash, and completes vault share minting via completeMint().
+- **Withdrawal Retry Service**: Exponential backoff retry system for failed withdrawal confirmations. Polls every 60s, checks Smart Account balance >= 0.1 FLR, retries confirmRedemptionPayment with exponential backoff (wait = 60s * 2^retryCount, max 10 retries). Stores lastRetryAt and retryCount in database for crash recovery.
+- **Two-SDK Smart Account Architecture**: Separate PrimeSdk instances for different transaction types:
+  - `primeSdkWithPaymaster`: Gasless transactions via Arka paymaster (FdcHub attestations, batch operations)
+  - `primeSdkWithoutPaymaster`: Direct gas payment from Smart Account balance (confirmRedemptionPayment not on paymaster allowlist)
+  - Smart Account automatically selects appropriate SDK based on usePaymaster flag
+- **FDC Proof Structure Fix**: Corrected confirmRedemptionPayment to pass proof.proof instead of entire proof object to encodeProofForContract(), resolving TypeError on merkle proof encoding.
+- **Enhanced Schema Tracking**: Added paymentConfirmedAt, fxrpMintTxHash to xrp_to_fxrp_bridges; confirmationTxHash, lastError, lastRetryAt to fxrp_to_xrp_redemptions; service_state table for persistent block tracking; fundingAttempts and lastFundingTxHash for redemption retry diagnostics.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
