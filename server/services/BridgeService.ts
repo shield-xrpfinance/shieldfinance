@@ -2042,6 +2042,27 @@ export class BridgeService {
         console.warn(`   ⚠️  Position ${redemption.positionId} not found - skipping balance update`);
       }
       
+      // CRITICAL: Create withdrawal transaction record IMMEDIATELY when user receives XRP
+      // This ensures transaction history shows the withdrawal right away (not after backend confirmation)
+      const existingWithdrawalTx = await this.config.storage.getTransactionByTxHash(xrplTxHash);
+      if (!existingWithdrawalTx) {
+        console.log(`\n   💳 Creating withdrawal transaction record (user has XRP)...`);
+        await this.config.storage.createTransaction({
+          walletAddress: redemption.walletAddress,
+          vaultId: redemption.vaultId,
+          positionId: redemption.positionId,
+          type: "withdrawal",
+          amount: redemption.xrpSent ?? redemption.fxrpRedeemed ?? redemption.shareAmount,
+          rewards: "0",
+          status: "completed",
+          txHash: xrplTxHash,
+          network: this.config.network === "mainnet" ? "mainnet" : "testnet",
+        });
+        console.log(`   ✅ Withdrawal transaction record created`);
+      } else {
+        console.log(`   ⏭️  Transaction record already exists (skipping)`);
+      }
+      
       // Step 1: Generate FDC proof of agent→user payment
       console.log(`\n   ⏳ Step 1/5: Generating FDC proof...`);
       console.log(`      TX Hash: ${xrplTxHash}`);
