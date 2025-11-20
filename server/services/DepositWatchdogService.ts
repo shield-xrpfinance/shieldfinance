@@ -8,10 +8,12 @@ import type { BridgeService } from "./BridgeService";
 const LAST_CHECKED_BLOCK_KEY = "deposit_watchdog_last_block";
 
 // Maximum block range to query in a single scan (for safety and RPC limits)
-const MAX_BLOCK_RANGE = 10000;
+// Flare RPC only allows max 30 blocks per getLogs query
+// Block range is INCLUSIVE, so max 30 blocks means toBlock - fromBlock = 29
+const MAX_BLOCK_RANGE = 29;
 
 // Default starting block offset (if no persisted state)
-const DEFAULT_BLOCK_LOOKBACK = 10000;
+const DEFAULT_BLOCK_LOOKBACK = 29;
 
 export interface DepositWatchdogConfig {
   storage: IStorage;
@@ -245,10 +247,6 @@ export class DepositWatchdogService {
       // Get AssetManager contract instance from FAssetsClient
       const assetManagerContract = await this.config.fassetsClient.getAssetManagerContract();
       
-      // Query MintingExecuted events filtered by collateralReservationId
-      // Event: MintingExecuted(uint64 indexed collateralReservationId, address indexed agentVault, address indexed pool, uint256 mintedAmountUBA, uint256 feeUBA)
-      const mintingExecutedFilter = assetManagerContract.filters.MintingExecuted(reservationId);
-      
       // Get current block number
       const currentBlock = await this.config.flareClient.provider.getBlockNumber();
       
@@ -275,7 +273,18 @@ export class DepositWatchdogService {
       
       console.log(`         Querying blocks ${fromBlock} to ${currentBlock}...`);
       
-      const events = await assetManagerContract.queryFilter(mintingExecutedFilter, fromBlock, currentBlock);
+      // Query ALL MintingExecuted events and filter in code
+      // Event: MintingExecuted(uint64 indexed collateralReservationId, address indexed agentVault, address indexed pool, uint256 mintedAmountUBA, uint256 feeUBA)
+      const mintingExecutedFilter = assetManagerContract.filters.MintingExecuted();
+      const allEvents = await assetManagerContract.queryFilter(mintingExecutedFilter, fromBlock, currentBlock);
+      
+      // Filter events by reservationId in code (safer than ethers filter)
+      // Type guard: only EventLog has args property, Log does not
+      const events = allEvents.filter((event): event is ethers.EventLog => {
+        if (!('args' in event)) return false;
+        const eventReservationId = event.args[0];
+        return eventReservationId === reservationId;
+      });
       
       if (events.length === 0) {
         console.log(`         No MintingExecuted events found for reservation ${reservationId}`);
@@ -286,7 +295,7 @@ export class DepositWatchdogService {
         return null;
       }
 
-      console.log(`         Found ${events.length} MintingExecuted event(s)`);
+      console.log(`         Found ${events.length} MintingExecuted event(s) for reservation ${reservationId}`);
       
       // Take the first (and should be only) event
       const mintEvent = events[0];
