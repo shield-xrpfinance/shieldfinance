@@ -1080,6 +1080,7 @@ export async function registerRoutes(
       
       // 3. Create transaction record for deposit
       await storage.createTransaction({
+        walletAddress: position.walletAddress,
         vaultId: position.vaultId,
         positionId: position.id,
         type: "deposit",
@@ -1118,6 +1119,7 @@ export async function registerRoutes(
       
       // Create transaction record for claim with real or mock txHash
       await storage.createTransaction({
+        walletAddress: position.walletAddress,
         vaultId: position.vaultId,
         positionId: position.id,
         type: "claim",
@@ -2877,20 +2879,28 @@ export async function registerRoutes(
     }
   });
 
-  // Get all transactions
-  app.get("/api/transactions", async (_req, res) => {
+  // Get all transactions (wallet-scoped - requires walletAddress)
+  app.get("/api/transactions", async (req, res) => {
     try {
-      const transactions = await storage.getTransactions(50);
+      const walletAddress = req.query.walletAddress as string | undefined;
+      if (!walletAddress) {
+        return res.status(400).json({ error: "walletAddress parameter is required" });
+      }
+      const transactions = await storage.getTransactions(50, walletAddress);
       res.json(transactions);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch transactions" });
     }
   });
 
-  // Get transaction summary
-  app.get("/api/transactions/summary", async (_req, res) => {
+  // Get transaction summary (wallet-scoped - requires walletAddress)
+  app.get("/api/transactions/summary", async (req, res) => {
     try {
-      const summary = await storage.getTransactionSummary();
+      const walletAddress = req.query.walletAddress as string | undefined;
+      if (!walletAddress) {
+        return res.status(400).json({ error: "walletAddress parameter is required" });
+      }
+      const summary = await storage.getTransactionSummary(walletAddress);
       res.json(summary);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch transaction summary" });

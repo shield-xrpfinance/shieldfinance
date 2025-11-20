@@ -83,6 +83,7 @@ export const positions = pgTable("positions", {
 
 export const transactions = pgTable("transactions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: varchar("wallet_address").notNull(),
   vaultId: varchar("vault_id").notNull().references(() => vaults.id),
   positionId: varchar("position_id").references(() => positions.id),
   type: text("type").notNull(),

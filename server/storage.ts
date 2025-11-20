@@ -19,10 +19,10 @@ export interface IStorage {
   updatePosition(id: string, updates: Partial<Position>): Promise<Position>;
   deletePosition(id: string): Promise<boolean>;
   
-  getTransactions(limit?: number): Promise<Transaction[]>;
+  getTransactions(limit?: number, walletAddress?: string): Promise<Transaction[]>;
   getTransactionByTxHash(txHash: string): Promise<Transaction | undefined>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
-  getTransactionSummary(): Promise<{ totalDeposits: string; totalWithdrawals: string; totalRewards: string; depositCount: number; withdrawalCount: number; claimCount: number }>;
+  getTransactionSummary(walletAddress?: string): Promise<{ totalDeposits: string; totalWithdrawals: string; totalRewards: string; depositCount: number; withdrawalCount: number; claimCount: number }>;
   
   getWithdrawalRequests(status?: string, walletAddress?: string): Promise<WithdrawalRequest[]>;
   getWithdrawalRequest(id: string): Promise<WithdrawalRequest | undefined>;
@@ -219,7 +219,16 @@ export class DatabaseStorage implements IStorage {
     return result.rowCount !== null && result.rowCount > 0;
   }
 
-  async getTransactions(limit: number = 50): Promise<Transaction[]> {
+  async getTransactions(limit: number = 50, walletAddress?: string): Promise<Transaction[]> {
+    if (walletAddress) {
+      // Filter directly by wallet address column
+      return await db.select()
+        .from(transactions)
+        .where(eq(transactions.walletAddress, walletAddress))
+        .orderBy(desc(transactions.createdAt))
+        .limit(limit);
+    }
+    
     return await db.select()
       .from(transactions)
       .orderBy(desc(transactions.createdAt))
@@ -238,8 +247,21 @@ export class DatabaseStorage implements IStorage {
     return transaction;
   }
 
-  async getTransactionSummary(): Promise<{ totalDeposits: string; totalWithdrawals: string; totalRewards: string; depositCount: number; withdrawalCount: number; claimCount: number }> {
-    const allTransactions = await db.select().from(transactions);
+  async getTransactionSummary(walletAddress?: string): Promise<{ totalDeposits: string; totalWithdrawals: string; totalRewards: string; depositCount: number; withdrawalCount: number; claimCount: number }> {
+    let allTransactions;
+    
+    if (walletAddress) {
+      // Filter directly by wallet address column
+      allTransactions = await db.select({
+        type: transactions.type,
+        amount: transactions.amount,
+        rewards: transactions.rewards,
+      })
+        .from(transactions)
+        .where(eq(transactions.walletAddress, walletAddress));
+    } else {
+      allTransactions = await db.select().from(transactions);
+    }
     
     let totalDeposits = 0;
     let totalWithdrawals = 0;
@@ -255,7 +277,7 @@ export class DatabaseStorage implements IStorage {
       if (tx.type === "deposit") {
         totalDeposits += amount;
         depositCount++;
-      } else if (tx.type === "withdraw") {
+      } else if (tx.type === "withdraw" || tx.type === "withdrawal") {
         totalWithdrawals += amount;
         withdrawalCount++;
       } else if (tx.type === "claim") {

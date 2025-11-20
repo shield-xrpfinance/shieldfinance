@@ -7,6 +7,7 @@ import { formatDistanceToNow } from "date-fns";
 import { useQuery } from "@tanstack/react-query";
 import type { Transaction } from "@shared/schema";
 import { useLocation } from "wouter";
+import { useWallet } from "@/lib/walletContext";
 
 interface TransactionSummary {
   totalDeposits: string;
@@ -22,6 +23,7 @@ function getTransactionIcon(type: string) {
     case "deposit":
       return <ArrowDownCircle className="h-5 w-5 text-chart-2" />;
     case "withdraw":
+    case "withdrawal":
       return <ArrowUpCircle className="h-5 w-5 text-destructive" />;
     case "claim":
       return <Gift className="h-5 w-5 text-chart-1" />;
@@ -34,25 +36,41 @@ function getTransactionBadge(type: string) {
   const variants: Record<string, "default" | "destructive" | "secondary"> = {
     deposit: "default",
     withdraw: "destructive",
+    withdrawal: "destructive",
     claim: "secondary",
   };
 
   return (
-    <Badge variant={variants[type]} className="capitalize" data-testid={`badge-${type}`}>
-      {type}
+    <Badge variant={variants[type] || "secondary"} className="capitalize" data-testid={`badge-${type}`}>
+      {type === "withdrawal" ? "withdraw" : type}
     </Badge>
   );
 }
 
 export default function Transactions() {
   const [, navigate] = useLocation();
+  const { address } = useWallet();
   
   const { data: transactions = [], isLoading: transactionsLoading } = useQuery<Transaction[]>({
-    queryKey: ["/api/transactions"],
+    queryKey: ["/api/transactions", address],
+    queryFn: async () => {
+      if (!address) return [];
+      const response = await fetch(`/api/transactions?walletAddress=${encodeURIComponent(address)}`);
+      if (!response.ok) throw new Error('Failed to fetch transactions');
+      return response.json();
+    },
+    enabled: !!address,
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery<TransactionSummary>({
-    queryKey: ["/api/transactions/summary"],
+    queryKey: ["/api/transactions/summary", address],
+    queryFn: async () => {
+      if (!address) return { totalDeposits: "0", totalWithdrawals: "0", totalRewards: "0", depositCount: 0, withdrawalCount: 0, claimCount: 0 };
+      const response = await fetch(`/api/transactions/summary?walletAddress=${encodeURIComponent(address)}`);
+      if (!response.ok) throw new Error('Failed to fetch transaction summary');
+      return response.json();
+    },
+    enabled: !!address,
   });
 
   return (
@@ -164,7 +182,7 @@ export default function Transactions() {
                   </div>
                   <div className="text-right">
                     <div className="text-lg font-mono font-bold tabular-nums" data-testid={`text-amount-${tx.id}`}>
-                      {tx.type === "withdraw" ? "-" : "+"}{parseFloat(tx.type === "claim" ? tx.rewards || "0" : tx.amount).toLocaleString()} XRP
+                      {(tx.type === "withdraw" || tx.type === "withdrawal") ? "-" : "+"}{parseFloat(tx.type === "claim" ? tx.rewards || "0" : tx.amount).toLocaleString()} XRP
                     </div>
                     {tx.txHash && (
                       <div className="text-xs text-muted-foreground font-mono">

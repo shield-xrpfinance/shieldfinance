@@ -1817,6 +1817,7 @@ export class BridgeService {
     
     // Create withdrawal transaction record
     await this.config.storage.createTransaction({
+      walletAddress: redemption.walletAddress,
       vaultId: redemption.vaultId,
       positionId: redemption.positionId,
       type: "withdrawal",
@@ -2136,6 +2137,7 @@ export class BridgeService {
       } else {
         console.log(`   ⏳ Step 4/5: Creating transaction record...`);
         await this.config.storage.createTransaction({
+          walletAddress: redemption.walletAddress,
           vaultId: redemption.vaultId,
           positionId: redemption.positionId,
           type: "withdrawal",

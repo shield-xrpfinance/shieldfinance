@@ -12,13 +12,13 @@ import { WithdrawProgressModal, type WithdrawProgressStep } from "@/components/W
 import XamanSigningModal from "@/components/XamanSigningModal";
 import EmptyState from "@/components/EmptyState";
 import { PortfolioStatsSkeleton, PortfolioTableSkeleton } from "@/components/skeletons/PortfolioSkeleton";
-import { TrendingUp, Coins, Gift, Package, Loader2 } from "lucide-react";
+import { TrendingUp, Coins, Gift, Package, AlertCircle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useLocation } from "wouter";
-import { getUserStatusLabel, getUserStatusIcon } from "@/lib/statusMapping";
 import { usePortfolioPolling } from "@/hooks/usePortfolioPolling";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
@@ -58,6 +58,7 @@ export default function Portfolio() {
     enabled: !!address,
   });
 
+  // Query for active withdrawals to enable polling (not displayed in UI)
   const { data: redemptions = [] } = useQuery<any[]>({
     queryKey: ["/api/withdrawals/wallet", address],
     queryFn: async () => {
@@ -68,7 +69,7 @@ export default function Portfolio() {
     },
     enabled: !!address,
     refetchInterval: (query) => {
-      // Check for active redemptions using displayStatus fallback (matches polling guard logic)
+      // Check for active redemptions using displayStatus fallback
       const hasActiveRedemptions = query.state.data?.some((r: any) => {
         const displayStatus = r.userStatus || r.status;
         return displayStatus && !['completed', 'xrpl_received', 'failed', 'cancelled'].includes(displayStatus);
@@ -81,8 +82,7 @@ export default function Portfolio() {
     queryKey: ["/api/vaults"],
   });
 
-  // Check if there are any active (non-terminal) withdrawals
-  // Use displayStatus to handle both userStatus and status fields
+  // Check if there are any active withdrawals
   const hasActiveWithdrawals = redemptions?.some(w => {
     const displayStatus = w.userStatus || w.status;
     return displayStatus && !['completed', 'xrpl_received', 'failed', 'cancelled'].includes(displayStatus);
@@ -517,6 +517,31 @@ export default function Portfolio() {
         </Card>
       </div>
 
+      {/* In-flight withdrawals alert */}
+      {hasActiveWithdrawals && (
+        <Alert className="bg-accent/5 border-accent" data-testid="alert-active-withdrawals">
+          <AlertCircle className="h-4 w-4 text-accent" />
+          <AlertDescription className="flex items-center justify-between gap-2">
+            <span className="text-sm">
+              You have {redemptions.filter(r => {
+                const displayStatus = r.userStatus || r.status;
+                return displayStatus && !['completed', 'xrpl_received', 'failed', 'cancelled'].includes(displayStatus);
+              }).length} withdrawal(s) in progress.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/bridge-tracking")}
+              className="flex items-center gap-1"
+              data-testid="button-view-withdrawals"
+            >
+              View Details
+              <ExternalLink className="h-3 w-3" />
+            </Button>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold">Active Positions</h2>
@@ -565,86 +590,6 @@ export default function Portfolio() {
             onWithdraw={handleWithdraw}
             onClaim={handleClaim}
           />
-        )}
-
-        {/* Pending Withdrawals Section */}
-        {redemptions.length > 0 && (
-          <Card className="mt-6">
-            <CardHeader>
-              <CardTitle>Withdrawal History</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {redemptions.map((redemption) => {
-                  // Use userStatus if available, fall back to status for backward compatibility
-                  const displayStatus = redemption.userStatus || redemption.status;
-                  
-                  const statusBadgeVariant = 
-                    displayStatus === "completed" || displayStatus === "xrpl_received" ? "default" :
-                    displayStatus === "failed" ? "destructive" :
-                    "secondary";
-                  
-                  const statusLabel = getUserStatusLabel(displayStatus);
-                  
-                  const isActive = displayStatus && !["completed", "xrpl_received", "failed", "cancelled"].includes(displayStatus);
-
-                  return (
-                    <div 
-                      key={redemption.id}
-                      className={`flex items-center justify-between p-4 rounded-md border ${isActive ? 'bg-accent/5' : ''}`}
-                      data-testid={`redemption-${redemption.id}`}
-                    >
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3">
-                          {isActive && (
-                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                          )}
-                          <Badge variant={statusBadgeVariant} data-testid={`status-${redemption.id}`}>
-                            {statusLabel}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(redemption.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                        <div className="mt-2 space-y-1">
-                          <p className="text-sm font-medium">
-                            Amount: {parseFloat(redemption.shareAmount).toFixed(6)} shXRP
-                            {redemption.xrpSent && (
-                              <span className="text-muted-foreground"> → {parseFloat(redemption.xrpSent).toFixed(6)} XRP</span>
-                            )}
-                          </p>
-                          {redemption.errorMessage && (
-                            <p className="text-sm text-destructive">
-                              Error: {redemption.errorMessage}
-                            </p>
-                          )}
-                          {redemption.xrplPayoutTxHash && (
-                            <a
-                              href={`${network === 'mainnet' ? 'https://livenet.xrpl.org' : 'https://testnet.xrpl.org'}/transactions/${redemption.xrplPayoutTxHash}`}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                              data-testid={`link-xrpl-tx-${redemption.id}`}
-                            >
-                              View Transaction
-                              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                              </svg>
-                            </a>
-                          )}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground">
-                          ID: {redemption.id.slice(0, 8)}...
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </CardContent>
-          </Card>
         )}
       </div>
 

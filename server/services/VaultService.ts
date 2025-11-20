@@ -153,6 +153,7 @@ export class VaultService {
 
       // Create transaction record for deposit
       await this.config.storage.createTransaction({
+        walletAddress: userAddress,
         vaultId,
         positionId: position.id,
         type: "deposit",
