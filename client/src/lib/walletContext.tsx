@@ -50,7 +50,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // PRIORITY 1: Check for xApp OTT (One-Time Token) parameters
       // This happens when app is loaded from Xaman as xApp (e.g., https://xumm.app/detect/xapp:...)
       const urlParams = new URLSearchParams(window.location.search);
+      console.log(`🔍 Checking for xApp parameters in URL: ${window.location.href}`);
+      console.log(`🔍 URL search params:`, Array.from(urlParams.entries()));
+      
       const ott = urlParams.get('xAppToken') || urlParams.get('ott') || urlParams.get('xApp');
+      console.log(`🔍 OTT detected:`, ott ? `${ott.substring(0, 10)}...` : 'none');
       
       if (ott) {
         console.log(`🔐 xApp OTT detected, attempting auto-signin...`);
