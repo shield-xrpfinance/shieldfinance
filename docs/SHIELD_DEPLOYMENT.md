@@ -153,21 +153,30 @@ cast call <STAKING_BOOST_ADDRESS> "LOCK_PERIOD()" --rpc-url <FLARE_RPC>
 ```
 
 **💡 Integration with ShXRPVault:**  
-When deploying or upgrading `ShXRPVault`, pass the `STAKING_BOOST_ADDRESS` to the vault constructor:
+**NOTE:** The ShXRPVault deployment is a **separate step** not included in this fair launch script.
+
+When deploying `ShXRPVault` (typically after shield-finance.ts completes), pass the `STAKING_BOOST_ADDRESS` to the vault constructor:
+```bash
+# Deploy vault separately (example using Hardhat)
+npx hardhat run scripts/deploy-vault.ts --network flare
+```
+
+Vault constructor signature:
 ```solidity
 constructor(
     IERC20 _fxrpToken,
     string memory _name,
     string memory _symbol,
-    address _revenueRouter,
-    address _stakingBoost  // ← StakingBoost address from Step 3
+    address _revenueRouter,    // ← From Step 2
+    address _stakingBoost      // ← From Step 3
 )
 ```
 
 This enables the APY boost mechanism:
 - Users stake SHIELD tokens (30-day lock)
 - +1% APY boost per 100 SHIELD staked
-- Boost applies to ALL shXRP deposits automatically
+- Boost applies during redemption via `_withdraw()` using owner's stake
+- ERC-4626 compliant: `previewRedeem()` remains pure, boost calculated separately via `previewRedeemWithBoost(shares, user)`
 - Economic flywheel: Higher APY → More deposits → More SHIELD demand → Buyback & burn
 
 **Frontend Integration:**  

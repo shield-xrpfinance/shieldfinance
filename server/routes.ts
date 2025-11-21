@@ -2971,6 +2971,155 @@ export async function registerRoutes(
     }
   });
 
+  // Get SHIELD staking info for wallet address
+  app.get("/api/staking/:address", async (req, res) => {
+    try {
+      const { address } = req.params;
+      
+      // Query database for staking position
+      const stakeInfo = await storage.getStakeInfo(address);
+      
+      if (!stakeInfo) {
+        // No staking position found - return zero state
+        return res.json({
+          amount: "0",
+          stakedAt: "0",
+          unlockTime: "0",
+          boostPercentage: 0,
+          isLocked: false
+        });
+      }
+      
+      // Calculate boost percentage (+1% per 100 SHIELD staked)
+      const amountInTokens = parseFloat(stakeInfo.amount) / 1e18; // Convert from wei to tokens
+      const boostPercentage = Math.floor(amountInTokens / 100); // 1% per 100 SHIELD
+      
+      // Check if tokens are locked (current time < unlock time)
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+      const unlockTimestamp = parseFloat(stakeInfo.unlockTime);
+      const isLocked = currentTimestamp < unlockTimestamp;
+      
+      res.json({
+        amount: stakeInfo.amount,
+        stakedAt: stakeInfo.stakedAt,
+        unlockTime: stakeInfo.unlockTime,
+        boostPercentage,
+        isLocked
+      });
+    } catch (error) {
+      console.error("Failed to fetch staking info:", error);
+      res.status(500).json({ error: "Failed to fetch staking info" });
+    }
+  });
+
+  // Stake SHIELD tokens (MVP: database only, no contract interaction)
+  app.post("/api/staking/stake", async (req, res) => {
+    try {
+      const { address, amount } = req.body;
+      
+      if (!address || !amount) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Missing required fields: address and amount" 
+        });
+      }
+
+      // Validate amount is positive
+      const amountNum = parseFloat(amount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Amount must be a positive number"
+        });
+      }
+
+      // Convert amount to wei (18 decimals)
+      const amountWei = BigInt(Math.floor(amountNum * 1e18)).toString();
+      
+      // Calculate timestamps (in seconds)
+      const stakedAt = Math.floor(Date.now() / 1000).toString();
+      const unlockTime = (Math.floor(Date.now() / 1000) + 2592000).toString(); // 30 days = 2592000 seconds
+      
+      // Store in database
+      await storage.recordStake(address, amountWei, stakedAt, unlockTime);
+      
+      // Generate mock txHash for MVP
+      const mockTxHash = `0x${Math.random().toString(16).substring(2, 66)}`;
+      
+      res.json({
+        success: true,
+        txHash: mockTxHash
+      });
+    } catch (error) {
+      console.error("Failed to stake:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Failed to stake tokens" 
+      });
+    }
+  });
+
+  // Unstake SHIELD tokens (MVP: database only, no contract interaction)
+  app.post("/api/staking/unstake", async (req, res) => {
+    try {
+      const { address, amount } = req.body;
+      
+      if (!address || !amount) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Missing required fields: address and amount" 
+        });
+      }
+
+      // Validate amount is positive
+      const amountNum = parseFloat(amount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        return res.status(400).json({
+          success: false,
+          error: "Amount must be a positive number"
+        });
+      }
+
+      // Get current staking position to check lock status
+      const stakeInfo = await storage.getStakeInfo(address);
+      if (!stakeInfo) {
+        return res.status(400).json({
+          success: false,
+          error: "No staking position found"
+        });
+      }
+
+      // Validate unlock time has passed
+      const currentTimestamp = Math.floor(Date.now() / 1000);
+      const unlockTimestamp = parseFloat(stakeInfo.unlockTime);
+      
+      if (currentTimestamp < unlockTimestamp) {
+        const timeRemaining = unlockTimestamp - currentTimestamp;
+        const daysRemaining = Math.ceil(timeRemaining / 86400);
+        return res.status(400).json({
+          success: false,
+          error: `Tokens are locked for ${daysRemaining} more day(s)`
+        });
+      }
+
+      // Convert amount to wei (18 decimals)
+      const amountWei = BigInt(Math.floor(amountNum * 1e18)).toString();
+      
+      // Update database
+      await storage.recordUnstake(address, amountWei);
+      
+      res.json({
+        success: true
+      });
+    } catch (error) {
+      console.error("Failed to unstake:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : "Failed to unstake tokens" 
+      });
+    }
+  });
+
   // Get protocol overview analytics
   app.get("/api/analytics/overview", async (_req, res) => {
     try {

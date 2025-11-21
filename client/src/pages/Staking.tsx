@@ -11,6 +11,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, TrendingUp, Lock, Unlock, Clock, Info } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { queryClient } from "@/lib/queryClient";
+
+// Type for staking API response
+interface StakingApiResponse {
+  amount: string;
+  stakedAt: string;
+  unlockTime: string;
+  boostPercentage: number;
+  isLocked: boolean;
+}
 
 export default function Staking() {
   const { evmAddress, isConnected } = useWallet();
@@ -18,17 +28,24 @@ export default function Staking() {
   const [stakeAmount, setStakeAmount] = useState("");
   const [unstakeAmount, setUnstakeAmount] = useState("");
 
-  // Fetch user's staking info
-  const { data: stakeInfo, isLoading } = useQuery({
+  // Fetch user's staking info from real API
+  const { data: stakeInfo, isLoading } = useQuery<StakingApiResponse>({
     queryKey: ['/api/staking', evmAddress],
+    queryFn: async () => {
+      const response = await fetch(`/api/staking/${evmAddress}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch staking info');
+      }
+      return response.json();
+    },
     enabled: !!evmAddress,
   });
 
-  // Calculate derived values
+  // Calculate derived values from real API response
   const stakedBalance = stakeInfo?.amount ? parseFloat(stakeInfo.amount) / 1e18 : 0;
-  const boostPercentage = stakedBalance > 0 ? Math.floor(stakedBalance / 100) : 0;
-  const unlockTime = stakeInfo?.unlockTime || 0;
-  const isLocked = unlockTime > Date.now() / 1000;
+  const boostPercentage = stakeInfo?.boostPercentage || 0;
+  const unlockTime = stakeInfo?.unlockTime ? parseFloat(stakeInfo.unlockTime) : 0;
+  const isLocked = stakeInfo?.isLocked ?? false; // Use backend-validated lock status
   const timeUntilUnlock = isLocked ? unlockTime - Math.floor(Date.now() / 1000) : 0;
 
   // Format countdown timer
@@ -73,6 +90,8 @@ export default function Staking() {
       return res.json();
     },
     onSuccess: () => {
+      // Invalidate staking query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ['/api/staking', evmAddress] });
       toast({
         title: "Stake Successful",
         description: "Your SHIELD tokens have been staked for 30 days",
@@ -99,6 +118,8 @@ export default function Staking() {
       return res.json();
     },
     onSuccess: () => {
+      // Invalidate staking query to refetch updated data
+      queryClient.invalidateQueries({ queryKey: ['/api/staking', evmAddress] });
       toast({
         title: "Unstake Successful",
         description: "Your SHIELD tokens have been returned",

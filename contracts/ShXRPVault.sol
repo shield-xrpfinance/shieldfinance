@@ -521,6 +521,16 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
             // This was calculated in previewWithdraw() or previewRedeem()
             super._withdraw(caller, receiver, owner, assets, shares);
             
+            // AFTER standard withdrawal, apply SHIELD staking boost bonus
+            // Use owner parameter (not msg.sender) to query boost
+            uint256 boostBps = stakingBoost.getBoost(owner);
+            if (boostBps > 0) {
+                uint256 boostBonus = (assets * boostBps) / 10000;
+                if (boostBonus > 0) {
+                    fxrp.safeTransfer(receiver, boostBonus);
+                }
+            }
+            
             // Collect 0.2% withdrawal fee and transfer to RevenueRouter
             if (withdrawFee > 0) {
                 fxrp.safeTransfer(revenueRouter, withdrawFee);
@@ -540,6 +550,16 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         
         // Use standard ERC4626 flow with fee-adjusted shares
         super._withdraw(caller, receiver, owner, assets, shares);
+        
+        // AFTER standard withdrawal, apply SHIELD staking boost bonus
+        // Use owner parameter (not msg.sender) to query boost
+        uint256 boostBps = stakingBoost.getBoost(owner);
+        if (boostBps > 0) {
+            uint256 boostBonus = (assets * boostBps) / 10000;
+            if (boostBonus > 0) {
+                fxrp.safeTransfer(receiver, boostBonus);
+            }
+        }
         
         // Collect 0.2% withdrawal fee and transfer to RevenueRouter
         if (withdrawFee > 0) {
@@ -1209,34 +1229,62 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
      * @dev Preview how many assets will be received for share redemption
      * 
      * ERC4626 Compliance (Critical):
-     * This MUST reflect the actual assets received after accounting for fees.
+     * This MUST be a pure view function that reflects base redemption without user-specific boosts.
      * 
-     * Fee Logic + SHIELD Staking Boost:
+     * Fee Logic:
      * 1. Convert shares to gross assets using standard ERC4626 math
      * 2. Deduct 0.2% withdrawal fee
-     * 3. Apply SHIELD staking boost (+1% per 100 SHIELD staked)
-     * 4. User receives net assets + boost
+     * 3. Return net assets (NO BOOST - that's applied in _withdraw)
      * 
      * Example:
      * - User redeems shares worth 1000 FXRP
      * - Gross assets: 1000 FXRP
      * - Fee: 1000 * 0.002 = 2 FXRP (sent to RevenueRouter)
-     * - Net: 998 FXRP
-     * - User has 500 SHIELD staked → boost = 5% = 500 bps
-     * - Boost bonus: 998 * 500 / 10000 = 49.9 FXRP
-     * - Final: 998 + 49.9 = 1047.9 FXRP (transferred to user)
+     * - Net: 998 FXRP (returned)
+     * 
+     * NOTE: Boost is NOT applied here to maintain ERC-4626 compliance.
+     * Use previewRedeemWithBoost() for frontend display of boosted amounts.
+     * Actual boost is applied in _withdraw() using the owner parameter.
      * 
      * @param shares Amount of shXRP to redeem
-     * @return assets Amount of FXRP that will be received (fee-adjusted + boosted)
+     * @return assets Amount of FXRP that will be received (fee-adjusted, NO boost)
      */
     function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
         uint256 grossAssets = super.previewRedeem(shares);
         uint256 fee = (grossAssets * WITHDRAW_FEE_BPS) / 10000;
-        uint256 netAssets = grossAssets - fee;
-        
-        // Apply SHIELD staking boost (+1% per 100 SHIELD)
-        uint256 boostBps = stakingBoost.getBoost(msg.sender);
-        return netAssets + (netAssets * boostBps / 10000);
+        return grossAssets - fee;
+    }
+    
+    /**
+     * @dev Preview how many assets will be received for share redemption WITH boost
+     * 
+     * Helper function for frontends to query boosted redemption amounts.
+     * This is NOT part of ERC-4626 standard, but useful for UX.
+     * 
+     * Flow:
+     * 1. Get base redemption amount from previewRedeem() (fee-adjusted)
+     * 2. Query user's SHIELD staking boost
+     * 3. Apply boost bonus
+     * 
+     * Example:
+     * - User redeems shares worth 1000 FXRP
+     * - Base redemption: 998 FXRP (after 0.2% fee)
+     * - User has 500 SHIELD staked → boost = 5% = 500 bps
+     * - Boost bonus: 998 * 500 / 10000 = 49.9 FXRP
+     * - Total: 998 + 49.9 = 1047.9 FXRP
+     * 
+     * @param shares Amount of shXRP to redeem
+     * @param user Address of the user (to query their boost)
+     * @return assets Amount of FXRP that will be received (fee-adjusted + boosted)
+     */
+    function previewRedeemWithBoost(uint256 shares, address user) public view returns (uint256) {
+        uint256 baseAssets = previewRedeem(shares);
+        uint256 boostBps = stakingBoost.getBoost(user);
+        if (boostBps == 0) {
+            return baseAssets;
+        }
+        uint256 boostBonus = (baseAssets * boostBps) / 10000;
+        return baseAssets + boostBonus;
     }
     
     // ========================================

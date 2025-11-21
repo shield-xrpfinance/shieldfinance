@@ -1,4 +1,4 @@
-import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFxrpToXrpRedemption, type SelectFxrpToXrpRedemption, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, type InsertServiceState, type ServiceState, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, fxrpToXrpRedemptions, firelightPositions, compoundingRuns, serviceState } from "@shared/schema";
+import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFxrpToXrpRedemption, type SelectFxrpToXrpRedemption, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, type InsertServiceState, type ServiceState, type InsertStakingPosition, type StakingPosition, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, fxrpToXrpRedemptions, firelightPositions, compoundingRuns, serviceState, stakingPositions } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, gt } from "drizzle-orm";
 
@@ -64,6 +64,10 @@ export interface IStorage {
   
   getServiceState(key: string): Promise<ServiceState | undefined>;
   setServiceState(key: string, value: string): Promise<void>;
+  
+  getStakeInfo(walletAddress: string): Promise<StakingPosition | null>;
+  recordStake(walletAddress: string, amount: string, stakedAt: string, unlockTime: string): Promise<void>;
+  recordUnstake(walletAddress: string, amount: string): Promise<void>;
   
   getProtocolOverview(): Promise<{ tvl: string; avgApy: string; activeVaults: number; totalStakers: number }>;
   getApyHistory(days?: number): Promise<Array<{ date: string; stable: number; high: number; maximum: number }>>;
@@ -752,6 +756,60 @@ export class DatabaseStorage implements IStorage {
         target: serviceState.key,
         set: { value, updatedAt: new Date() },
       });
+  }
+
+  async getStakeInfo(walletAddress: string): Promise<StakingPosition | null> {
+    const position = await db.query.stakingPositions.findFirst({
+      where: eq(stakingPositions.walletAddress, walletAddress)
+    });
+    return position || null;
+  }
+
+  async recordStake(walletAddress: string, amount: string, stakedAt: string, unlockTime: string): Promise<void> {
+    // Use upsert pattern: insert new stake or update existing stake
+    await db.insert(stakingPositions)
+      .values({
+        walletAddress,
+        amount,
+        stakedAt,
+        unlockTime
+      })
+      .onConflictDoUpdate({
+        target: stakingPositions.walletAddress,
+        set: {
+          amount,
+          stakedAt,
+          unlockTime
+        }
+      });
+  }
+
+  async recordUnstake(walletAddress: string, amount: string): Promise<void> {
+    // Get current staking position
+    const currentPosition = await this.getStakeInfo(walletAddress);
+    if (!currentPosition) {
+      throw new Error("No staking position found");
+    }
+
+    // Calculate new amount (subtract unstake amount from current)
+    const currentAmount = BigInt(currentPosition.amount);
+    const unstakeAmount = BigInt(amount);
+    const newAmount = currentAmount - unstakeAmount;
+
+    if (newAmount < 0n) {
+      throw new Error("Unstake amount exceeds staked balance");
+    }
+
+    if (newAmount === 0n) {
+      // Delete the position if fully unstaked
+      await db.delete(stakingPositions)
+        .where(eq(stakingPositions.walletAddress, walletAddress));
+    } else {
+      // Update the position with reduced amount
+      await db.update(stakingPositions)
+        .set({ amount: newAmount.toString() })
+        .where(eq(stakingPositions.walletAddress, walletAddress));
+    }
   }
 }
 

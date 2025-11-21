@@ -297,6 +297,15 @@ export const serviceState = pgTable("service_state", {
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
 
+// SHIELD Staking positions for APY boost
+export const stakingPositions = pgTable("staking_positions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: varchar("wallet_address").notNull().unique(),
+  amount: varchar("amount").notNull(), // wei format (18 decimals)
+  stakedAt: varchar("staked_at").notNull(), // timestamp in seconds
+  unlockTime: varchar("unlock_time").notNull(), // timestamp in seconds
+});
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -354,6 +363,10 @@ export const insertServiceStateSchema = createInsertSchema(serviceState).omit({
   updatedAt: true,
 });
 
+export const insertStakingPositionSchema = createInsertSchema(stakingPositions).omit({
+  id: true,
+});
+
 export type InsertVault = z.infer<typeof insertVaultSchema>;
 export type Vault = typeof vaults.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
@@ -376,6 +389,8 @@ export type InsertCompoundingRun = z.infer<typeof insertCompoundingRunSchema>;
 export type SelectCompoundingRun = typeof compoundingRuns.$inferSelect;
 export type InsertServiceState = z.infer<typeof insertServiceStateSchema>;
 export type ServiceState = typeof serviceState.$inferSelect;
+export type InsertStakingPosition = z.infer<typeof insertStakingPositionSchema>;
+export type StakingPosition = typeof stakingPositions.$inferSelect;
 
 export interface PaymentRequest {
   bridgeId: string;
