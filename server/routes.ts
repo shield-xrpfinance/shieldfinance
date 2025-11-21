@@ -3572,6 +3572,141 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================================
+  // SHIELD AIRDROP ENDPOINTS
+  // ============================================================
+
+  /**
+   * Check if an address is eligible for SHIELD airdrop
+   * GET /api/airdrop/check/:address
+   * 
+   * Returns: { eligible: boolean, amount?: string, proof?: string[] }
+   */
+  app.get("/api/airdrop/check/:address", async (req: Request, res: Response) => {
+    try {
+      const address = req.params.address;
+
+      // Validate address format
+      if (!ethers.isAddress(address)) {
+        return res.status(400).json({ error: "Invalid Ethereum address" });
+      }
+
+      // Checksum the address
+      const checksummedAddress = ethers.getAddress(address);
+
+      // Load merkle tree data
+      const merkleTreePath = path.join(process.cwd(), "data/merkle-tree.json");
+      
+      if (!fs.existsSync(merkleTreePath)) {
+        return res.status(500).json({ error: "Airdrop data not available" });
+      }
+
+      const merkleTreeData = JSON.parse(fs.readFileSync(merkleTreePath, "utf-8"));
+
+      // Find user's entry in merkle tree
+      const userEntry = merkleTreeData.entries.find(
+        (entry: any) => entry.address.toLowerCase() === checksummedAddress.toLowerCase()
+      );
+
+      if (!userEntry) {
+        return res.json({ eligible: false });
+      }
+
+      res.json({
+        eligible: true,
+        amount: userEntry.amount,
+        proof: userEntry.proof,
+      });
+    } catch (error) {
+      console.error("Airdrop check error:", error);
+      res.status(500).json({ 
+        error: "Failed to check airdrop eligibility",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Get merkle proof for an address
+   * GET /api/airdrop/proof/:address
+   * 
+   * Returns: { proof: string[], amount: string }
+   */
+  app.get("/api/airdrop/proof/:address", async (req: Request, res: Response) => {
+    try {
+      const address = req.params.address;
+
+      // Validate address format
+      if (!ethers.isAddress(address)) {
+        return res.status(400).json({ error: "Invalid Ethereum address" });
+      }
+
+      // Checksum the address
+      const checksummedAddress = ethers.getAddress(address);
+
+      // Load merkle tree data
+      const merkleTreePath = path.join(process.cwd(), "data/merkle-tree.json");
+      
+      if (!fs.existsSync(merkleTreePath)) {
+        return res.status(500).json({ error: "Airdrop data not available" });
+      }
+
+      const merkleTreeData = JSON.parse(fs.readFileSync(merkleTreePath, "utf-8"));
+
+      // Find user's entry in merkle tree
+      const userEntry = merkleTreeData.entries.find(
+        (entry: any) => entry.address.toLowerCase() === checksummedAddress.toLowerCase()
+      );
+
+      if (!userEntry) {
+        return res.status(404).json({ error: "Address not eligible for airdrop" });
+      }
+
+      res.json({
+        proof: userEntry.proof,
+        amount: userEntry.amount,
+      });
+    } catch (error) {
+      console.error("Proof generation error:", error);
+      res.status(500).json({ 
+        error: "Failed to generate merkle proof",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Get merkle root for airdrop
+   * GET /api/airdrop/root
+   * 
+   * Returns: { root: string, totalAmount: string, totalEntries: number }
+   */
+  app.get("/api/airdrop/root", async (req: Request, res: Response) => {
+    try {
+      // Load merkle tree data
+      const merkleTreePath = path.join(process.cwd(), "data/merkle-tree.json");
+      
+      if (!fs.existsSync(merkleTreePath)) {
+        return res.status(500).json({ error: "Airdrop data not available" });
+      }
+
+      const merkleTreeData = JSON.parse(fs.readFileSync(merkleTreePath, "utf-8"));
+
+      res.json({
+        root: merkleTreeData.root,
+        totalAmount: merkleTreeData.totalAmount,
+        totalEntries: merkleTreeData.totalEntries,
+        timestamp: merkleTreeData.timestamp,
+      });
+    } catch (error) {
+      console.error("Merkle root retrieval error:", error);
+      res.status(500).json({ 
+        error: "Failed to retrieve merkle root",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
