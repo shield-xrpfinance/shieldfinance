@@ -32,11 +32,13 @@ export async function initWeb3Auth(config: Web3AuthConfig): Promise<Web3Auth> {
 
   currentNetwork = networkToUse;
 
+  // Note: For Web3Auth v10+, chain configuration must be done in the Web3Auth Dashboard
+  // at https://dashboard.web3auth.io under your project settings
   web3auth = new Web3Auth({
     clientId: config.clientId,
     web3AuthNetwork: networkToUse,
     uiConfig: {
-      appName: "XRP Liquid Staking Protocol",
+      appName: "Shield Finance",
       appUrl: window.location.origin,
       logoLight: window.location.origin + "/favicon.ico",
       logoDark: window.location.origin + "/favicon.ico",
@@ -79,8 +81,11 @@ export async function loginWithWeb3Auth(): Promise<{ address: string; privateKey
     ? privateKeyHex.slice(2) 
     : privateKeyHex;
 
+  // Convert hex string to Uint8Array for secp256k1
+  const privateKeyBytes = new Uint8Array(cleanPrivateKey.match(/.{1,2}/g)!.map(byte => parseInt(byte, 16)));
+  
   // Derive the public key from the private key using @noble/secp256k1 (browser-native, no Buffer required)
-  const publicKeyBytes = secp256k1.getPublicKey(cleanPrivateKey, true); // true = compressed format
+  const publicKeyBytes = secp256k1.getPublicKey(privateKeyBytes, true); // true = compressed format
   
   // Convert Uint8Array to hex string and uppercase
   const compressedPublicKey = Array.from(publicKeyBytes)
