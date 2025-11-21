@@ -7,6 +7,7 @@ export * as test from './test/index.js';
 export { BuybackBurn__factory } from './BuybackBurn__factory.js';
 export { FirelightStrategy__factory } from './FirelightStrategy__factory.js';
 export { KineticStrategy__factory } from './KineticStrategy__factory.js';
+export { MerkleDistributor__factory } from './MerkleDistributor__factory.js';
 export { RevenueRouter__factory } from './RevenueRouter__factory.js';
 export { ShXRPVault__factory } from './ShXRPVault__factory.js';
 export { ShieldToken__factory } from './ShieldToken__factory.js';

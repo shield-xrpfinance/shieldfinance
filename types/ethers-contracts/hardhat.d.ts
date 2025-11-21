@@ -13,6 +13,7 @@ declare module "@nomicfoundation/hardhat-ethers/types" {
   getContractFactory(name: 'BuybackBurn', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.BuybackBurn__factory>
 getContractFactory(name: 'FirelightStrategy', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.FirelightStrategy__factory>
 getContractFactory(name: 'KineticStrategy', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.KineticStrategy__factory>
+getContractFactory(name: 'MerkleDistributor', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.MerkleDistributor__factory>
 getContractFactory(name: 'RevenueRouter', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.RevenueRouter__factory>
 getContractFactory(name: 'ShXRPVault', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ShXRPVault__factory>
 getContractFactory(name: 'ShieldToken', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ShieldToken__factory>
@@ -30,6 +31,7 @@ getContractFactory(name: 'MockStrategy', signerOrOptions?: ethers.Signer | Facto
   getContractAt(name: 'BuybackBurn', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.BuybackBurn>
 getContractAt(name: 'FirelightStrategy', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.FirelightStrategy>
 getContractAt(name: 'KineticStrategy', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.KineticStrategy>
+getContractAt(name: 'MerkleDistributor', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.MerkleDistributor>
 getContractAt(name: 'RevenueRouter', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.RevenueRouter>
 getContractAt(name: 'ShXRPVault', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ShXRPVault>
 getContractAt(name: 'ShieldToken', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ShieldToken>
@@ -47,6 +49,7 @@ getContractAt(name: 'MockStrategy', address: string | ethers.Addressable, signer
   deployContract(name: 'BuybackBurn', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.BuybackBurn>
 deployContract(name: 'FirelightStrategy', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.FirelightStrategy>
 deployContract(name: 'KineticStrategy', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.KineticStrategy>
+deployContract(name: 'MerkleDistributor', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MerkleDistributor>
 deployContract(name: 'RevenueRouter', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RevenueRouter>
 deployContract(name: 'ShXRPVault', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShXRPVault>
 deployContract(name: 'ShieldToken', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShieldToken>
@@ -64,6 +67,7 @@ deployContract(name: 'MockStrategy', signerOrOptions?: ethers.Signer | DeployCon
   deployContract(name: 'BuybackBurn', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.BuybackBurn>
 deployContract(name: 'FirelightStrategy', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.FirelightStrategy>
 deployContract(name: 'KineticStrategy', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.KineticStrategy>
+deployContract(name: 'MerkleDistributor', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MerkleDistributor>
 deployContract(name: 'RevenueRouter', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RevenueRouter>
 deployContract(name: 'ShXRPVault', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShXRPVault>
 deployContract(name: 'ShieldToken', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShieldToken>

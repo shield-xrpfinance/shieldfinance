@@ -1,0 +1,51 @@
+name: Weekly SHIELD Burn
+
+# Restrict permissions to minimum required (security hardening)
+permissions:
+  contents: read
+
+on:
+  schedule:
+    # Every Sunday at 00:00 UTC (midnight)
+    - cron: '0 0 * * 0'
+  workflow_dispatch: # Allow manual trigger for testing
+
+jobs:
+  burn:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run weekly burn
+        env:
+          DEPLOYER_PRIVATE_KEY: ${{ secrets.DEPLOYER_PRIVATE_KEY }}
+          REVENUE_ROUTER_ADDRESS: ${{ secrets.REVENUE_ROUTER_ADDRESS }}
+        run: |
+          set +e  # Don't exit on error
+          npx hardhat run scripts/burn.ts --network flare > burn_output.txt 2>&1
+          BURN_EXIT_CODE=$?
+          
+          # Only log success/failure, never detailed errors (security)
+          if [ $BURN_EXIT_CODE -eq 0 ]; then
+            echo "✅ Weekly burn completed successfully"
+            # Extract only non-sensitive summary
+            grep -E "^(Balance|Threshold|Executing)" burn_output.txt || echo "Burn executed"
+          else
+            echo "❌ Weekly burn failed"
+            echo "Contact team for investigation - details not logged for security"
+          fi
+          
+          # Clean up
+          rm -f burn_output.txt
+          exit $BURN_EXIT_CODE

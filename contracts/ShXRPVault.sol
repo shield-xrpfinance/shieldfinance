@@ -1069,39 +1069,15 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         require(strategies[strategy].status == StrategyStatus.Active, "Strategy not active");
         
         // Trigger strategy report (returns profit, loss, totalAssets)
-        // Note: Profit is REINVESTED in strategy, not transferred to vault
         (uint256 profit, uint256 loss, uint256 assetsAfter) = IStrategy(strategy).report();
         
-        IERC20 fxrp = IERC20(asset());
-        
-        // Apply yield routing fee to profits (if any)
-        if (profit > 0 && yieldRoutingFeeBps > 0) {
-            // Calculate 0.1% yield fee (or current yieldRoutingFeeBps setting)
-            uint256 yieldFee = (profit * yieldRoutingFeeBps) / 10000;
-            
-            // CRITICAL FIX (ERC4626 Compliance):
-            // Profit is reinvested in strategy, so we must PULL the fee first
-            // This prevents accounting mismatch where vault tries to pay fee from buffer
-            // that doesn't actually have the profit yet
-            uint256 actualWithdrawn = IStrategy(strategy).withdraw(yieldFee, address(this));
-            
-            // Transfer fee to RevenueRouter for SHIELD buyback & burn
-            fxrp.safeTransfer(revenueRouter, actualWithdrawn);
-            emit FeeTransferred("yield", actualWithdrawn, revenueRouter);
-            
-            // Update strategy tracking: assetsAfter - actualWithdrawn
-            // (assetsAfter was before fee withdrawal, so we deduct what we pulled)
-            strategies[strategy].totalDeployed = assetsAfter - actualWithdrawn;
-        } else {
-            // No fee taken, update totalDeployed to match strategy's reported assets
-            strategies[strategy].totalDeployed = assetsAfter;
-        }
-        
-        // Update timestamp
+        // Update strategy accounting
+        // NOTE: Yield routing fees disabled pending architectural rework
+        strategies[strategy].totalDeployed = assetsAfter;
         strategies[strategy].lastReportTimestamp = block.timestamp;
         
-        // Emit event with gross profit/loss and final strategy assets
-        emit StrategyReported(strategy, profit, loss, strategies[strategy].totalDeployed);
+        // Emit event
+        emit StrategyReported(strategy, profit, loss, assetsAfter);
     }
     
     /**
@@ -1126,27 +1102,8 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         emit BufferTargetUpdated(newTargetBps);
     }
     
-    /**
-     * @dev Update yield routing fee (0-100 bps, max 1%)
-     * 
-     * Yield Routing Fee:
-     * - Deducted from strategy profits when reportStrategy() is called
-     * - Sent to RevenueRouter for SHIELD buyback & burn
-     * - Does not affect deposits or withdrawals, only yield generation
-     * 
-     * Conservative Range:
-     * - Min: 0 bps (0% - no yield fee)
-     * - Max: 100 bps (1% - reasonable cap to remain competitive)
-     * - Default: 10 bps (0.1% - minimal impact on APY)
-     * 
-     * @param newFeeBps New yield routing fee in basis points (0-100)
-     */
-    function setYieldRoutingFeeBps(uint256 newFeeBps) external onlyOwner {
-        require(newFeeBps <= 100, "Yield fee cannot exceed 1%");
-        
-        yieldRoutingFeeBps = newFeeBps;
-        emit YieldRoutingFeeUpdated(newFeeBps);
-    }
+    // NOTE: setYieldRoutingFeeBps() temporarily disabled pending architectural rework
+    // See architect review feedback regarding ERC4626 accounting complexity
     
     // ========================================
     // ERC4626 PREVIEW FUNCTIONS (FEE-ADJUSTED)

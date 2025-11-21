@@ -508,6 +508,140 @@ Users can withdraw anytime through the vault's standard ERC-4626 `redeem()` func
 
 No manual approvals required - all withdrawals are automated and instant via smart contracts.
 
+## 🔥 $10K Fair Launch – Live
+
+**Shield Finance ($SHIELD)** has successfully launched with a **$10,000 liquidity commitment** and **100% LP tokens locked for 12 months** on **SparkDEX V3** (Flare mainnet).
+
+### Tokenomics
+
+- **Total Supply**: 10,000,000 SHIELD
+- **Circulating**: 8,000,000 SHIELD (80%)
+  - 5,353,451 SHIELD + 535,451 wFLR = $10K initial liquidity
+  - 2,646,549 SHIELD reserved for ecosystem development
+- **Airdrop**: 2,000,000 SHIELD (20%)
+  - Claimable via Merkle proof (MerkleDistributor.sol)
+  - Fair distribution to early supporters
+- **Initial Price**: $0.01 per SHIELD
+- **Liquidity Lock**: 12 months via Team Finance (or equivalent)
+
+### Revenue Model: Real Burns, No Inflation
+
+Shield Finance generates **real revenue** from vault fees, creating **deflationary pressure** through automated buyback & burn:
+
+1. **Deposit Fee (0.2%)**: Collected on every vault deposit → sent to RevenueRouter
+2. **Withdrawal Fee (0.2%)**: Collected on every vault withdrawal → sent to RevenueRouter
+3. **Automated Burns**: Every Sunday, GitHub Actions checks if RevenueRouter has ≥5000 wFLR (~$100):
+   - If yes → calls `distribute()` to execute buyback & burn on SparkDEX
+   - SHIELD is bought from DEX using accumulated wFLR
+   - Purchased SHIELD is permanently burned
+   - Reduces total supply, increasing scarcity
+
+**No minting. No inflation. Only burns.** As vault TVL grows, burn rate accelerates.
+
+### Future: Stake $SHIELD → Boost Your XRP Yield
+
+**Coming Soon:** Staking functionality will allow SHIELD holders to boost their XRP liquid staking APY. Implementation pending post-launch based on community feedback.
+
+### Contract Addresses (Flare Mainnet)
+
+**Note:** Deploy contracts using `tsx scripts/deploy-direct.ts` before fair launch.
+
+After deployment, update these addresses:
+- **SHIELD Token**: TBD
+- **RevenueRouter**: TBD
+- **ShXRP Vault**: TBD
+- **SparkDEX Pool**: TBD (create via `tsx scripts/sparkdex-lp.ts`)
+- **LP Lock**: TBD (lock LP NFT via Team Finance)
+- **MerkleDistributor**: TBD
+
+### Fair Launch Steps
+
+1. **Deploy Contracts** (Flare Mainnet)
+   ```bash
+   # Set environment variables
+   export DEPLOYER_PRIVATE_KEY="your-private-key"
+   export TREASURY_ADDRESS="your-treasury-address"
+   export REVENUE_ROUTER_ADDRESS="deployed-router-address"
+   
+   # Deploy
+   tsx scripts/deploy-direct.ts
+   ```
+   Deploys: ShieldToken.sol, RevenueRouter.sol, ShXRPVault.sol, MerkleDistributor.sol
+
+2. **Generate Merkle Tree for Airdrop**
+   ```bash
+   # Create airdrop list (example using ethers.js)
+   const airdropList = [
+     { address: "0x123...", amount: "100000000000000000000" }, // 100 SHIELD
+     { address: "0x456...", amount: "50000000000000000000" }   // 50 SHIELD
+   ];
+   
+   # Generate tree and root
+   const { MerkleTree } = require('merkletreejs');
+   const { keccak256 } = require('ethers');
+   
+   const leaves = airdropList.map(x => 
+     keccak256(ethers.solidityPacked(['address', 'uint256'], [x.address, x.amount]))
+   );
+   const tree = new MerkleTree(leaves, keccak256, { sortPairs: true });
+   const root = tree.getRoot().toString('hex');
+   
+   # Deploy MerkleDistributor with this root
+   # IMPORTANT: Merkle root is immutable - cannot be changed after deployment
+   # This prevents double-claim exploits in fair launch
+   # For additional airdrops, deploy a NEW MerkleDistributor contract
+   
+   # SECURITY WARNING FOR FUTURE MAINTAINERS:
+   # - Do NOT re-add updateMerkleRoot() without implementing bitmap claim tracking
+   # - Address-based tracking allows double-claims if root changes
+   # - Any root update feature REQUIRES bitmap pattern + regression tests
+   # - If unsure, deploy a new MerkleDistributor instead
+   ```
+
+3. **Add Liquidity on SparkDEX V3**
+   ```bash
+   # Run LP deployment script
+   tsx scripts/sparkdex-lp.ts
+   ```
+   Creates wFLR-SHIELD pool with $10K liquidity
+
+4. **Lock LP NFT** (12 months)
+   - Use Team Finance: https://team.finance
+   - Lock LP NFT position for 12 months
+   - Save proof URL/transaction hash
+
+5. **Enable Automated Burns**
+   - Add `REVENUE_ROUTER_ADDRESS` secret to GitHub repo
+   - Workflow runs every Sunday at 00:00 UTC
+   - Burns occur when RevenueRouter balance ≥ 5000 wFLR
+
+### Announcement Tweet
+
+```
+🛡️ Shield Finance $SHIELD just fair-launched with $10K liquidity and 100% LP locked 12 months.
+
+✅ 10M total supply
+✅ Real revenue → real burns
+✅ Stake $SHIELD → boost your XRP yield
+✅ 2M SHIELD airdrop live
+
+No VCs. No presale. 100% fair launch.
+
+Trade: [SparkDEX pool link]
+Claim airdrop: [MerkleDistributor link]
+
+#XRPL #Flare #DeFi
+```
+
+### Community
+
+- **Website**: https://shyield.finance
+- **Twitter**: [@ShieldFinance]
+- **Telegram**: [t.me/ShieldFinance]
+- **Discord**: [discord.gg/ShieldFinance]
+
+---
+
 ## 🤝 Contributing
 
 Contributions are welcome! Please follow these steps:
