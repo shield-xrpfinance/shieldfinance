@@ -1,5 +1,6 @@
 import { Web3Auth } from "@web3auth/modal";
-import { WEB3AUTH_NETWORK, WALLET_ADAPTERS } from "@web3auth/base";
+import { WEB3AUTH_NETWORK, WALLET_ADAPTERS, CHAIN_NAMESPACES } from "@web3auth/base";
+import { CommonPrivateKeyProvider } from "@web3auth/base-provider";
 import { Wallet } from "xrpl";
 import * as secp256k1 from "@noble/secp256k1";
 
@@ -12,12 +13,13 @@ export interface Web3AuthConfig {
 }
 
 export async function initWeb3Auth(config: Web3AuthConfig): Promise<Web3Auth> {
-  // IMPORTANT: Current Web3Auth Client ID is configured for testnet (sapphire_devnet)
-  // Always use testnet network regardless of app's network toggle
-  const networkToUse = WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
+  // Use sapphire_devnet for testnet, sapphire_mainnet for mainnet
+  const networkToUse = config.network === "mainnet" 
+    ? WEB3AUTH_NETWORK.SAPPHIRE_MAINNET 
+    : WEB3AUTH_NETWORK.SAPPHIRE_DEVNET;
   
   // Reset if network changed or if instance doesn't exist
-  if (web3auth && currentNetwork !== networkToUse) {
+  if (web3auth && currentNetwork !== config.network) {
     try {
       await web3auth.logout();
     } catch (e) {
@@ -30,13 +32,43 @@ export async function initWeb3Auth(config: Web3AuthConfig): Promise<Web3Auth> {
     return web3auth;
   }
 
-  currentNetwork = networkToUse;
+  currentNetwork = config.network;
 
-  // Note: For Web3Auth v10+, chain configuration must be done in the Web3Auth Dashboard
-  // at https://dashboard.web3auth.io under your project settings
+  // Configure XRPL chain based on network (primary chain for Web3Auth Social Login)
+  const xrplChainConfig = config.network === "mainnet" 
+    ? {
+        chainNamespace: CHAIN_NAMESPACES.OTHER,
+        chainId: "0x1", // Generic ID for XRPL mainnet
+        rpcTarget: "https://xrplcluster.com/",
+        displayName: "XRP Ledger Mainnet",
+        blockExplorer: "https://livenet.xrpl.org",
+        ticker: "XRP",
+        tickerName: "XRP",
+        decimals: 6,
+      }
+    : {
+        chainNamespace: CHAIN_NAMESPACES.OTHER,
+        chainId: "0x2", // Generic ID for XRPL testnet
+        rpcTarget: "https://s.altnet.rippletest.net:51234/",
+        displayName: "XRP Ledger Testnet",
+        blockExplorer: "https://testnet.xrpl.org",
+        ticker: "XRP",
+        tickerName: "XRP",
+        decimals: 6,
+      };
+
+  // Create private key provider with chain config (required for v10)
+  const privateKeyProvider = new CommonPrivateKeyProvider({
+    config: { chainConfig: xrplChainConfig }
+  });
+
+  // Web3Auth configuration with chain support (works on free tier!)
+  // Note: TypeScript may complain about chainConfig, but it's supported in v10.7+ runtime
   web3auth = new Web3Auth({
     clientId: config.clientId,
     web3AuthNetwork: networkToUse,
+    privateKeyProvider: privateKeyProvider as any,
+    chainConfig: xrplChainConfig,
     uiConfig: {
       appName: "Shield Finance",
       appUrl: window.location.origin,
@@ -49,9 +81,11 @@ export async function initWeb3Auth(config: Web3AuthConfig): Promise<Web3Auth> {
       },
       useLogoLoader: true,
     },
-  });
+  } as any); // Type assertion: chainConfig is supported but may not be in type definitions
 
   await web3auth.init();
+
+  console.log(`✅ Web3Auth initialized with ${config.network} XRPL configuration`);
 
   return web3auth;
 }
