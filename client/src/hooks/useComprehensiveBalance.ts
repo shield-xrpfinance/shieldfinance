@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { ethers } from "ethers";
@@ -28,6 +28,16 @@ export function useComprehensiveBalance() {
   const { address, evmAddress, walletConnectProvider, isConnected, isEvmConnected } = useWallet();
   const { network } = useNetwork();
   const ftsoPrices = useFtsoPrice();
+  
+  // Memoize the JsonRpcProvider to avoid creating new instances on every refresh
+  const provider = useMemo(() => {
+    const isTestnet = network === 'testnet';
+    const rpcUrl = isTestnet 
+      ? 'https://coston2-api.flare.network/ext/C/rpc'
+      : 'https://flare-api.flare.network/ext/C/rpc';
+    return new ethers.JsonRpcProvider(rpcUrl);
+  }, [network]);
+  
   const [balances, setBalances] = useState<ComprehensiveBalances>({
     flr: "0",
     shield: "0",
@@ -84,13 +94,6 @@ export function useComprehensiveBalance() {
 
         // 1. Fetch FLR balance (native token on Flare)
         if (evmAddress && isEvmConnected) {
-          // Use direct JsonRpcProvider for fast read-only queries (same as FTSO integration)
-          const isTestnet = network === 'testnet';
-          const rpcUrl = isTestnet 
-            ? 'https://coston2-api.flare.network/ext/C/rpc'
-            : 'https://flare-api.flare.network/ext/C/rpc';
-          const provider = new ethers.JsonRpcProvider(rpcUrl);
-          
           promises.push(
             withTimeout(
               (async () => {

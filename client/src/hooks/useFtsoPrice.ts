@@ -31,17 +31,12 @@ export function useFtsoPrice() {
     const fetchPrices = async () => {
       try {
         setPrices(prev => ({ ...prev, isLoading: true, error: null }));
-
-        console.log('🔍 useFtsoPrice: Fetching prices...');
-        console.log('   isTestnet:', isTestnet);
         
         // Create read-only JsonRpcProvider for Flare network
         // No wallet needed - this is just for reading oracle data
         const rpcUrl = isTestnet 
           ? FLARE_CONTRACTS.coston2.rpcUrl 
           : FLARE_CONTRACTS.mainnet.rpcUrl;
-        
-        console.log('   RPC URL:', rpcUrl);
         
         const provider = new ethers.JsonRpcProvider(rpcUrl);
         
