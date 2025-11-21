@@ -25,17 +25,28 @@ export interface ComprehensiveBalances {
 }
 
 export function useComprehensiveBalance() {
-  const { address, evmAddress, walletConnectProvider, isConnected, isEvmConnected } = useWallet();
+  const { address, evmAddress, isConnected, isEvmConnected } = useWallet();
   const { network } = useNetwork();
   const ftsoPrices = useFtsoPrice();
   
   // Memoize the JsonRpcProvider to avoid creating new instances on every refresh
   const provider = useMemo(() => {
-    const isTestnet = network === 'testnet';
-    const rpcUrl = isTestnet 
-      ? 'https://coston2-api.flare.network/ext/C/rpc'
-      : 'https://flare-api.flare.network/ext/C/rpc';
-    return new ethers.JsonRpcProvider(rpcUrl);
+    try {
+      const isTestnet = network === 'testnet';
+      const rpcUrl = isTestnet 
+        ? 'https://coston2-api.flare.network/ext/C/rpc'
+        : 'https://flare-api.flare.network/ext/C/rpc';
+      
+      if (!rpcUrl) {
+        console.error("Failed to create provider: Invalid RPC URL");
+        return null;
+      }
+      
+      return new ethers.JsonRpcProvider(rpcUrl);
+    } catch (error) {
+      console.error("Failed to instantiate JsonRpcProvider:", error);
+      return null;
+    }
   }, [network]);
   
   const [balances, setBalances] = useState<ComprehensiveBalances>({
@@ -74,6 +85,11 @@ export function useComprehensiveBalance() {
       setBalances(prev => ({ ...prev, isLoading: true, error: null }));
 
       try {
+        // Check if provider instantiation failed
+        if (!provider) {
+          throw new Error("RPC provider not available");
+        }
+
         const results = {
           flr: "0",
           shield: "0",
@@ -223,7 +239,7 @@ export function useComprehensiveBalance() {
     // Refresh balances every 15 seconds
     const interval = setInterval(fetchBalances, 15000);
     return () => clearInterval(interval);
-  }, [address, evmAddress, walletConnectProvider, isConnected, isEvmConnected, network, ftsoPrices.flrUsd, ftsoPrices.xrpUsd]);
+  }, [address, evmAddress, isConnected, isEvmConnected, network, ftsoPrices.flrUsd, ftsoPrices.xrpUsd, provider]);
 
   return balances;
 }

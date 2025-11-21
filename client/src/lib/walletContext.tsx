@@ -70,7 +70,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
           if (!response.ok) {
             const errorData = await response.json();
-            console.error('❌ xApp OTT resolution failed:', errorData.error);
+            console.error('xApp OTT resolution failed:', errorData.error);
             throw new Error(errorData.error || 'Failed to resolve OTT');
           }
 
@@ -96,10 +96,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             setIsInitialized(true);
             return;
           } else {
-            console.error('❌ xApp OTT response missing address:', data);
+            console.error('xApp OTT response missing address:', data);
           }
         } catch (error) {
-          console.error('❌ xApp auto-signin error:', error);
+          console.error('xApp auto-signin error:', error);
           // Fall through to normal localStorage restoration
         }
       }
@@ -244,7 +244,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const requestPayment = async (paymentRequest: PaymentRequest): Promise<PaymentRequestResult> => {
     if (!provider) {
-      console.error("❌ requestPayment: No provider");
+      console.error("requestPayment: No provider");
       return {
         success: false,
         error: "No wallet connected",
@@ -278,7 +278,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         };
       } else if (provider === "walletconnect") {
         if (!walletConnectProvider || !address) {
-          console.error("❌ WalletConnect not initialized:", {
+          console.error("WalletConnect not initialized:", {
             walletConnectProviderExists: !!walletConnectProvider,
             addressExists: !!address,
           });
@@ -320,7 +320,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         error: "Unknown provider",
       };
     } catch (error) {
-      console.error("❌ Payment request error:", error);
+      console.error("Payment request error:", error);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
