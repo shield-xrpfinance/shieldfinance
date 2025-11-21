@@ -1,0 +1,87 @@
+You are now implementing the final missing piece of the $10K playbook: full Staking + APY Boost for $SHIELD.
+
+Do ALL of this in one go:
+
+1. Replace or create contracts/StakingBoost.sol with this exact code (clean, audited-style, 30-day lock, +1% per 100 $SHIELD):
+
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.20;
+
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+
+interface IShieldVault {
+    function previewRedeem(uint256 shares) external view returns (uint256);
+}
+
+contract StakingBoost is Ownable {
+    using SafeERC20 for IERC20;
+
+    IERC20 public immutable shieldToken;
+    IShieldVault public immutable vault;
+
+    mapping(address => uint256) public stakedBalance;
+    mapping(address => uint256) public unlockTime;
+
+    uint256 public constant LOCK_PERIOD = 30 days;
+
+    event Staked(address indexed user, uint256 amount);
+    event Withdrawn(address indexed user, uint256 amount);
+
+    constructor(address _shieldToken, address _vault) {
+        shieldToken = IERC20(_shieldToken);
+        vault = IShieldVault(_vault);
+    }
+
+    function stake(uint256 amount) external {
+        require(amount > 0, "Zero");
+        shieldToken.safeTransferFrom(msg.sender, address(this), amount);
+        stakedBalance[msg.sender] += amount;
+        unlockTime[msg.sender] = block.timestamp + LOCK_PERIOD;
+        emit Staked(msg.sender, amount);
+    }
+
+    function withdraw(uint256 amount) external {
+        require(block.timestamp >= unlockTime[msg.sender], "Locked");
+        require(stakedBalance[msg.sender] >= amount, "Insufficient");
+        stakedBalance[msg.sender] -= amount;
+        if (stakedBalance[msg.sender] == 0) unlockTime[msg.sender] = 0;
+        shieldToken.safeTransfer(msg.sender, amount);
+        emit Withdrawn(msg.sender, amount);
+    }
+
+    // Returns boost in basis points (e.g. 1000 = 10%)
+    function getBoost(address user) external view returns (uint256) {
+        return (stakedBalance[user] / 1e18) * 100; // +1% per full 100 $SHIELD
+    }
+}
+
+2. Immediately modify Shield XRP Vault.sol:
+   - Add interface:
+     interface IStakingBoost {
+         function getBoost(address user) external view returns (uint256);
+     }
+   - Add immutable public stakingBoost;
+   - In constructor: stakingBoost = IStakingBoost(_stakingBoost);
+   - Replace previewRedeem() with this exact boosted version:
+
+function previewRedeem(uint256 shares) public view override returns (uint256) {
+    uint256 assets = convertToAssets(shares);
+    uint256 boostBps = stakingBoost.getBoost(msg.sender);
+    return assets + (assets * boostBps / 10000);
+}
+
+3. Create beautiful /staking page (src/pages/Staking.tsx) that matches the app design with:
+   - Your staked $SHIELD balance
+   - Current APY boost percentage
+   - Stake input + "Lock 30 days" button
+   - Unstake button (disabled if locked)
+   - Countdown timer if locked
+   - "100 $SHIELD = +1% APY on all your shXRP" explanation
+
+4. Update deploy-shield-finance.ts to deploy StakingBoost after ShieldToken and before Vault, then pass its address to Vault constructor/upgrade.
+
+5. Add to SHIELD_DEPLOYMENT.md:
+   "Step 5.5: Deploy StakingBoost and upgrade Vault with boost integration"
+
+Do everything above perfectly right now. No questions. This is the final flywheel piece.
