@@ -41,6 +41,13 @@ This project enables users to:
 - Active vault statistics and historical APY trends with charts
 - Network switching (Mainnet/Testnet)
 
+### 🔄 Multi-Asset Swap
+- **Instant bidirectional trading** (FLR, wFLR, USDT ↔ SHIELD) via SparkDEX V3 integration
+- **Real-time price quotes** with automatic exchange rate updates
+- **ERC-20 approval flow** with one-click token allowance management
+- **Slippage protection** with customizable tolerance settings
+- **Liquidity detection** to ensure sufficient pool depth before execution
+
 ## 🏗️ Tech Stack
 
 ### Frontend
@@ -67,6 +74,8 @@ This project enables users to:
   - `@walletconnect/universal-provider` for WalletConnect
   - `@web3auth/modal` for social login
 - **Key Management**: `@noble/secp256k1` for wallet derivation
+- **Blockchain Protocols**:
+  - **SparkDEX V3**: Uniswap V2-compatible DEX on Flare Network for token swaps
 
 ### Smart Contract Development
 - **Development Framework**: Hardhat for Solidity development
