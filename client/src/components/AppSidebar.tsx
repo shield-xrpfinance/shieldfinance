@@ -160,24 +160,25 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
-      <SidebarFooter className="p-6">
-        <div className="relative rounded-lg border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 overflow-hidden" data-testid="help-card">
-          <div className="absolute top-4 left-4 rounded-lg bg-primary/20 p-3 backdrop-blur-sm">
+      <SidebarFooter className="p-3 md:p-6">
+        <div className="relative rounded-lg border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-3 md:p-6 overflow-hidden" data-testid="help-card">
+          <div className="absolute top-3 left-3 md:top-4 md:left-4 rounded-lg bg-primary/20 p-2 md:p-3 backdrop-blur-sm hidden md:block">
             <div className="relative">
               <div className="absolute inset-0 rounded-lg bg-primary/30 blur-xl" />
-              <HelpCircle className="relative h-6 w-6 text-primary" />
+              <HelpCircle className="relative h-5 w-5 md:h-6 md:w-6 text-primary" />
             </div>
           </div>
           
-          <div className="mt-16 space-y-3">
+          <div className="mt-0 md:mt-16 space-y-2 md:space-y-3">
             <div>
-              <h3 className="font-semibold text-base" data-testid="text-help-title">Need help?</h3>
+              <h3 className="font-semibold text-sm md:text-base" data-testid="text-help-title">Need help?</h3>
               <p className="text-xs text-muted-foreground" data-testid="text-help-subtitle">Please check our docs</p>
             </div>
             
             <Button 
               variant="secondary" 
-              className="w-full justify-between group"
+              size="sm"
+              className="w-full justify-between group md:h-9"
               asChild
               data-testid="button-documentation"
             >
@@ -187,53 +188,53 @@ export function AppSidebar() {
                 rel="noopener noreferrer"
               >
                 <span className="flex items-center gap-2">
-                  <BookOpen className="h-4 w-4" />
-                  Documentation
+                  <BookOpen className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                  <span className="text-xs md:text-sm">Documentation</span>
                 </span>
-                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                <ArrowRight className="h-3.5 w-3.5 md:h-4 md:w-4 transition-transform group-hover:translate-x-1" />
               </a>
             </Button>
 
-            <div className="flex items-center justify-center gap-3 pt-2">
+            <div className="flex items-center justify-center gap-2 md:gap-3 pt-1 md:pt-2">
               <a 
                 href="https://twitter.com/shieldfinance" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-md p-2 hover-elevate active-elevate-2 transition-colors"
+                className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-twitter"
               >
-                <SiX className="h-4 w-4" />
+                <SiX className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
               <a 
                 href="https://linkedin.com/company/shieldfinance" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-md p-2 hover-elevate active-elevate-2 transition-colors"
+                className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-linkedin"
               >
-                <SiLinkedin className="h-4 w-4" />
+                <SiLinkedin className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
               <a 
                 href="https://discord.gg/shieldfinance" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-md p-2 hover-elevate active-elevate-2 transition-colors"
+                className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-discord"
               >
-                <SiDiscord className="h-4 w-4" />
+                <SiDiscord className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
               <a 
                 href="https://shield-finance.gitbook.io/shield-finance-docs/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-md p-2 hover-elevate active-elevate-2 transition-colors"
+                className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-gitbook"
               >
-                <BookOpen className="h-4 w-4" />
+                <BookOpen className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
             </div>
 
-            <p className="text-center text-[10px] text-muted-foreground pt-2" data-testid="text-copyright">
+            <p className="text-center text-[9px] md:text-[10px] text-muted-foreground pt-1 md:pt-2" data-testid="text-copyright">
               Copyright© 2025 Shield Yield Vaults Ltd. - All Rights Reserved
             </p>
           </div>
