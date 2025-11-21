@@ -472,20 +472,20 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Card className="relative rounded-2xl border-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 overflow-hidden hover-elevate transition-all duration-200">
-          <div className="absolute top-6 left-6 rounded-xl bg-primary/20 p-4 backdrop-blur-sm">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-xl bg-primary/30 blur-xl" />
-              <div className="relative text-primary">
-                <Wallet className="h-6 w-6" />
-              </div>
+      <Card className="relative rounded-2xl border-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 overflow-hidden hover-elevate transition-all duration-200">
+        <div className="absolute top-6 left-6 rounded-xl bg-primary/20 p-4 backdrop-blur-sm">
+          <div className="relative">
+            <div className="absolute inset-0 rounded-xl bg-primary/30 blur-xl" />
+            <div className="relative text-primary">
+              <Wallet className="h-6 w-6" />
             </div>
           </div>
-          
-          <div className="mt-24 space-y-3">
+        </div>
+        
+        <div className="mt-24 space-y-6">
+          <div className="space-y-3">
             <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Total Wallet Holdings
+              Portfolio Overview
             </p>
             {comprehensiveBalances.isLoading ? (
               <Skeleton className="h-10 w-full" data-testid="skeleton-wallet-balance" />
@@ -543,25 +543,31 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-        </Card>
-        <GlassStatsCard
-          label="Average APY"
-          value="8.2%"
-          change={{ value: 0.8, positive: true }}
-          icon={<TrendingUp className="h-6 w-6" />}
-        />
-        <GlassStatsCard 
-          label="Active Vaults" 
-          value="12" 
-          icon={<Vault className="h-6 w-6" />} 
-        />
-        <GlassStatsCard
-          label="Total Stakers"
-          value="3,421"
-          change={{ value: 5.2, positive: true }}
-          icon={<Users className="h-6 w-6" />}
-        />
-      </div>
+
+          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border/50">
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Average APY</p>
+              <p className="text-2xl font-bold tabular-nums" data-testid="stats-value-average-apy">8.2%</p>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="h-4 w-4 text-chart-2" />
+                <span className="text-sm font-medium text-chart-2">+0.8%</span>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Active Vaults</p>
+              <p className="text-2xl font-bold tabular-nums" data-testid="stats-value-active-vaults">12</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Stakers</p>
+              <p className="text-2xl font-bold tabular-nums" data-testid="stats-value-total-stakers">3,421</p>
+              <div className="flex items-center gap-1">
+                <TrendingUp className="h-4 w-4 text-chart-2" />
+                <span className="text-sm font-medium text-chart-2">+5.2%</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </Card>
 
       <div className="space-y-6">
         <div className="space-y-2">
