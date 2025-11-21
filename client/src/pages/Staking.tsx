@@ -204,35 +204,31 @@ export default function Staking() {
       </Alert>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <GlassStatsCard
-          title="Your Staked Balance"
-          value={stakedBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })}
-          subtitle="SHIELD"
-          icon={Shield}
-          trend={null}
-          isLoading={isLoading}
-          data-testid="stat-staked-balance"
-        />
-        <GlassStatsCard
-          title="Current APY Boost"
-          value={`+${boostPercentage}%`}
-          subtitle="on shXRP deposits"
-          icon={TrendingUp}
-          trend={null}
-          isLoading={isLoading}
-          data-testid="stat-boost-percentage"
-        />
-        <GlassStatsCard
-          title="Lock Status"
-          value={isLocked ? timeRemaining : "Unlocked"}
-          subtitle={isLocked ? "Time remaining" : "Ready to unstake"}
-          icon={isLocked ? Lock : Unlock}
-          trend={null}
-          isLoading={isLoading}
-          data-testid="stat-lock-status"
-        />
-      </div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <GlassStatsCard
+            label="Your Staked Balance"
+            value={`${stakedBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} SHIELD`}
+            icon={<Shield className="h-6 w-6" />}
+          />
+          <GlassStatsCard
+            label="Current APY Boost"
+            value={`+${boostPercentage}%`}
+            icon={<TrendingUp className="h-6 w-6" />}
+          />
+          <GlassStatsCard
+            label="Lock Status"
+            value={isLocked ? timeRemaining : "Unlocked"}
+            icon={isLocked ? <Lock className="h-6 w-6" /> : <Unlock className="h-6 w-6" />}
+          />
+        </div>
+      )}
 
       {/* Staking Forms */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
