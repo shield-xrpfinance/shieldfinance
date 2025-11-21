@@ -12,6 +12,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, TrendingUp, Lock, Unlock, Clock, Info, Coins } from "lucide-react";
+import shieldLogo from "@assets/shield_logo_1763761188895.png";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { queryClient } from "@/lib/queryClient";
 
@@ -190,7 +191,12 @@ export default function Staking() {
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
-          <Shield className="h-10 w-10 text-primary" />
+          <img 
+            src={shieldLogo} 
+            alt="Shield Finance" 
+            className="h-10 w-10"
+            data-testid="logo-staking-header"
+          />
           SHIELD Staking
         </h1>
         <p className="text-muted-foreground text-lg">
