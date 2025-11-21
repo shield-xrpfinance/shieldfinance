@@ -9,6 +9,7 @@ Welcome to the Shield Yield Vaults documentation. This comprehensive guide cover
 - [Features](features/README.md)
   - [Wallet Integration](features/wallet-integration.md)
   - [Vault Management](features/vault-management.md)
+  - [Token Swapping](features/swap.md)
   - [Transaction Signing](features/transaction-signing.md)
 - [Technical Architecture](technical/README.md)
 - [API Reference](api/README.md)
