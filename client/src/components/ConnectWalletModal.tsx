@@ -136,6 +136,8 @@ export default function ConnectWalletModal({
 
       // XRPL WalletConnect chain IDs: mainnet = xrpl:0, testnet = xrpl:1
       const chainId = isTestnet ? "xrpl:1" : "xrpl:0";
+      // Flare EVM chain IDs: mainnet = eip155:14, testnet (Coston2) = eip155:114
+      const evmChainId = isTestnet ? "eip155:114" : "eip155:14";
 
       // Check if there's an existing session - if so, disconnect it first
       if (wcProviderRef.current?.session) {
@@ -145,10 +147,10 @@ export default function ConnectWalletModal({
         wcModalRef.current = null;
       }
 
-      // Initialize WalletConnect Modal
+      // Initialize WalletConnect Modal with BOTH chains
       wcModalRef.current = new WalletConnectModal({
         projectId,
-        chains: [chainId],
+        chains: [chainId, evmChainId], // Request both XRPL and Flare chains
         themeMode: "light",
       });
 
@@ -171,7 +173,7 @@ export default function ConnectWalletModal({
         // Show the WalletConnect modal with all wallet options (desktop, mobile, etc.)
         wcModalRef.current?.openModal({ 
           uri,
-          standaloneChains: [chainId]
+          standaloneChains: [chainId, evmChainId] // Support both chains
         });
       });
 
@@ -190,8 +192,6 @@ export default function ConnectWalletModal({
 
       // Connect to BOTH XRPL and EVM (Flare Network) namespaces
       // This enables multi-chain wallets like Bifrost to connect to both networks
-      const evmChainId = isTestnet ? "eip155:114" : "eip155:14"; // Coston2 testnet : Flare mainnet
-      
       await provider.connect({
         namespaces: {
           xrpl: {
