@@ -9,8 +9,8 @@ import DepositModal from "@/components/DepositModal";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import { ProgressStepsModal, type ProgressStep } from "@/components/ProgressStepsModal";
-import { useFlrBalance } from "@/hooks/useFlrBalance";
-import { Coins, TrendingUp, Vault, Users, Loader2, CheckCircle2 } from "lucide-react";
+import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
+import { Coins, TrendingUp, Vault, Users, Loader2, CheckCircle2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -37,7 +37,7 @@ export default function Dashboard() {
   const { address, provider, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
   const [, setLocation] = useLocation();
-  const { balance: flrBalance } = useFlrBalance();
+  const comprehensiveBalances = useComprehensiveBalance();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
     queryKey: ["/api/vaults"],
@@ -494,11 +494,44 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <GlassStatsCard
-          label="Your FLR Balance"
-          value={parseFloat(flrBalance).toFixed(4)}
-          icon={<Coins className="h-6 w-6" />}
-        />
+        <Card className="relative rounded-2xl border-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 overflow-hidden hover-elevate transition-all duration-200">
+          <div className="absolute top-6 left-6 rounded-xl bg-primary/20 p-4 backdrop-blur-sm">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-xl bg-primary/30 blur-xl" />
+              <div className="relative text-primary">
+                <Wallet className="h-6 w-6" />
+              </div>
+            </div>
+          </div>
+          
+          <div className="mt-24 space-y-3">
+            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+              Your Wallet Holdings
+            </p>
+            {comprehensiveBalances.isLoading ? (
+              <Skeleton className="h-10 w-full" />
+            ) : (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">FLR</span>
+                  <span className="text-lg font-bold tabular-nums">{parseFloat(comprehensiveBalances.flr).toFixed(4)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">SHIELD</span>
+                  <span className="text-lg font-bold tabular-nums">{parseFloat(comprehensiveBalances.shield).toFixed(2)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">shXRP</span>
+                  <span className="text-lg font-bold tabular-nums">{parseFloat(comprehensiveBalances.shxrp).toFixed(4)}</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">XRP</span>
+                  <span className="text-lg font-bold tabular-nums">{parseFloat(comprehensiveBalances.xrp).toFixed(2)}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
         <GlassStatsCard
           label="Average APY"
           value="8.2%"
