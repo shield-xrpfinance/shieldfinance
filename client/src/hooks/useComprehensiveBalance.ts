@@ -3,16 +3,23 @@ import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { ethers } from "ethers";
 import { ERC20_ABI } from "@/lib/sparkdex";
+import { useFtsoPrice } from "./useFtsoPrice";
 
 /**
  * Comprehensive wallet balance hook
  * Fetches all token balances: FLR, SHIELD, shXRP, and XRP
+ * Includes USD values calculated from FTSO price feeds
  */
 export interface ComprehensiveBalances {
   flr: string;
   shield: string;
   shxrp: string;
   xrp: string;
+  flrUsd: number;
+  shieldUsd: number;
+  shxrpUsd: number;
+  xrpUsd: number;
+  totalUsd: number;
   isLoading: boolean;
   error: string | null;
 }
@@ -20,11 +27,17 @@ export interface ComprehensiveBalances {
 export function useComprehensiveBalance() {
   const { address, evmAddress, walletConnectProvider, isConnected, isEvmConnected } = useWallet();
   const { network } = useNetwork();
+  const ftsoPrices = useFtsoPrice();
   const [balances, setBalances] = useState<ComprehensiveBalances>({
     flr: "0",
     shield: "0",
     shxrp: "0",
     xrp: "0",
+    flrUsd: 0,
+    shieldUsd: 0,
+    shxrpUsd: 0,
+    xrpUsd: 0,
+    totalUsd: 0,
     isLoading: true,
     error: null,
   });
@@ -36,6 +49,11 @@ export function useComprehensiveBalance() {
         shield: "0",
         shxrp: "0",
         xrp: "0",
+        flrUsd: 0,
+        shieldUsd: 0,
+        shxrpUsd: 0,
+        xrpUsd: 0,
+        totalUsd: 0,
         isLoading: false,
         error: null,
       });
@@ -125,8 +143,22 @@ export function useComprehensiveBalance() {
         // Wait for all balance fetches to complete
         await Promise.all(promises);
 
+        // Calculate USD values using FTSO prices
+        const flrUsd = parseFloat(results.flr) * ftsoPrices.flrUsd;
+        const xrpUsd = parseFloat(results.xrp) * ftsoPrices.xrpUsd;
+        // shXRP tracks XRP 1:1 (vault shares backed by FXRP which is backed by XRP)
+        const shxrpUsd = parseFloat(results.shxrp) * ftsoPrices.xrpUsd;
+        // SHIELD price would need SparkDEX integration - for now set to 0
+        const shieldUsd = 0;
+        const totalUsd = flrUsd + xrpUsd + shxrpUsd + shieldUsd;
+
         setBalances({
           ...results,
+          flrUsd,
+          shieldUsd,
+          shxrpUsd,
+          xrpUsd,
+          totalUsd,
           isLoading: false,
           error: null,
         });
@@ -145,7 +177,7 @@ export function useComprehensiveBalance() {
     // Refresh balances every 15 seconds
     const interval = setInterval(fetchBalances, 15000);
     return () => clearInterval(interval);
-  }, [address, evmAddress, walletConnectProvider, isConnected, isEvmConnected, network]);
+  }, [address, evmAddress, walletConnectProvider, isConnected, isEvmConnected, network, ftsoPrices.flrUsd, ftsoPrices.xrpUsd]);
 
   return balances;
 }
