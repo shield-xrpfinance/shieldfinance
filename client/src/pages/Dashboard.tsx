@@ -13,6 +13,7 @@ import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
 import { Coins, TrendingUp, Vault, Users, Loader2, CheckCircle2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useWallet } from "@/lib/walletContext";
