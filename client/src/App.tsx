@@ -23,6 +23,7 @@ import Analytics from "@/pages/Analytics";
 import BridgeTracking from "@/pages/BridgeTracking";
 import Airdrop from "@/pages/Airdrop";
 import Staking from "@/pages/Staking";
+import Swap from "@/pages/Swap";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/bridge-tracking" component={BridgeTracking} />
       <Route path="/airdrop" component={Airdrop} />
       <Route path="/staking" component={Staking} />
+      <Route path="/swap" component={Swap} />
       <Route component={NotFound} />
     </RouterSwitch>
   );
