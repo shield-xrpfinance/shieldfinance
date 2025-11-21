@@ -11,6 +11,7 @@ import {
   SidebarFooter,
 } from "@/components/ui/sidebar";
 import { LayoutDashboard, Vault, Wallet, History, BarChart3, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles } from "lucide-react";
+import shieldLogo from "@assets/shield_logo_1763761188895.png";
 import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
@@ -87,7 +88,7 @@ export function AppSidebar() {
           <div className="relative rounded-md bg-shieldDark border border-shieldSilver/20 p-2 group hover-elevate">
             <div className="absolute inset-0 rounded-md bg-shieldCyan/10 blur-lg group-hover:bg-shieldCyan/20 transition-colors" />
             <img 
-              src="/logo.png" 
+              src={shieldLogo} 
               alt="Shield Finance" 
               className="relative h-6 w-6 object-contain"
               data-testid="logo-sidebar"
