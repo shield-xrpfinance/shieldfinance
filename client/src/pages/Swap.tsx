@@ -14,6 +14,7 @@ import confetti from "canvas-confetti";
 import { ethers } from "ethers";
 import {
   getContracts,
+  validateContracts,
   ROUTER_ABI,
   ERC20_ABI,
   getSwapQuote,
@@ -21,7 +22,7 @@ import {
   getDeadline,
   formatTokenAmount,
   parseTokenAmount,
-  calculatePriceImpact,
+  estimatePriceImpact,
 } from "@/lib/sparkdex";
 import {
   Dialog,
@@ -42,19 +43,21 @@ export default function Swap() {
   const [isSwapping, setIsSwapping] = useState(false);
   const [isLoadingQuote, setIsLoadingQuote] = useState(false);
   const [isFLRToSHIELD, setIsFLRToSHIELD] = useState(true);
-  const [priceImpact, setPriceImpact] = useState(0);
   const [exchangeRate, setExchangeRate] = useState(0);
   const [successModalOpen, setSuccessModalOpen] = useState(false);
   const [swappedAmount, setSwappedAmount] = useState("");
 
   const contracts = getContracts(isTestnet);
+  const isConfigured = validateContracts(contracts);
   const slippageTolerance = 0.5; // 0.5% slippage
+  
+  // Conservative price impact estimation based on trade size
+  const priceImpact = estimatePriceImpact(inputAmount);
 
   // Get real-time quote when input changes
   useEffect(() => {
-    if (!inputAmount || parseFloat(inputAmount) <= 0 || !evmAddress || !walletConnectProvider) {
+    if (!inputAmount || parseFloat(inputAmount) <= 0 || !evmAddress || !walletConnectProvider || !isConfigured) {
       setOutputAmount("");
-      setPriceImpact(0);
       return;
     }
 
@@ -74,17 +77,9 @@ export default function Swap() {
         
         setOutputAmount(outputFormatted);
         
-        // Calculate exchange rate and price impact
+        // Calculate exchange rate
         const rate = parseFloat(outputFormatted) / parseFloat(inputAmount);
         setExchangeRate(rate);
-        
-        // Estimate price impact (simplified - in production use pool reserves)
-        const impact = calculatePriceImpact(
-          parseFloat(inputAmount),
-          parseFloat(outputFormatted),
-          rate
-        );
-        setPriceImpact(impact);
       } catch (error) {
         console.error("Failed to get quote:", error);
         setOutputAmount("");
@@ -100,7 +95,7 @@ export default function Swap() {
 
     const debounce = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounce);
-  }, [inputAmount, isFLRToSHIELD, evmAddress, walletConnectProvider, contracts, toast]);
+  }, [inputAmount, isFLRToSHIELD, evmAddress, walletConnectProvider, contracts, toast, isConfigured]);
 
   const handleSwapDirection = () => {
     setIsFLRToSHIELD(!isFLRToSHIELD);
@@ -227,6 +222,26 @@ export default function Swap() {
     );
   }
 
+  if (!isConfigured) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+          <AlertTriangle className="h-16 w-16 text-yellow-500" />
+          <h2 className="text-2xl font-semibold">Swap Not Available</h2>
+          <p className="text-muted-foreground text-center max-w-md">
+            $SHIELD token address not configured. Please set VITE_SHIELD_TOKEN_ADDRESS environment variable.
+          </p>
+          <Alert className="max-w-md border-yellow-500/50 bg-yellow-500/10">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="ml-2 text-sm">
+              This feature will be available once $SHIELD is deployed on {isTestnet ? "Coston2 testnet" : "Flare mainnet"}.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
@@ -313,11 +328,11 @@ export default function Swap() {
               </div>
 
               {/* Price Impact Warning */}
-              {priceImpact > 1 && (
+              {priceImpact > 2 && (
                 <Alert variant="destructive" className="border-yellow-500/50 bg-yellow-500/10">
                   <AlertTriangle className="h-4 w-4" />
                   <AlertDescription className="ml-2">
-                    <strong>High Price Impact:</strong> {priceImpact.toFixed(2)}% - Consider a smaller amount
+                    <strong>High Price Impact:</strong> ~{priceImpact.toFixed(1)}% estimated - Consider a smaller amount
                   </AlertDescription>
                 </Alert>
               )}
@@ -326,6 +341,11 @@ export default function Swap() {
               {exchangeRate > 0 && (
                 <div className="text-sm text-muted-foreground text-center">
                   1 {isFLRToSHIELD ? "FLR" : "SHIELD"} ≈ {exchangeRate.toFixed(6)} {isFLRToSHIELD ? "SHIELD" : "FLR"}
+                  {priceImpact > 0 && (
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      (Est. impact: ~{priceImpact.toFixed(1)}%)
+                    </span>
+                  )}
                 </div>
               )}
 
@@ -364,8 +384,8 @@ export default function Swap() {
             icon={<TrendingUp className="h-6 w-6" />}
           />
           <GlassStatsCard
-            label="Price Impact"
-            value={priceImpact > 0 ? `${priceImpact.toFixed(2)}%` : "—"}
+            label="Est. Price Impact"
+            value={priceImpact > 0 ? `~${priceImpact.toFixed(1)}%` : "—"}
             icon={<Info className="h-6 w-6" />}
           />
           <GlassStatsCard

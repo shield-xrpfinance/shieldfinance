@@ -12,12 +12,12 @@ export const CONTRACTS = {
   mainnet: {
     WFLR: "0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d",
     SPARKDEX_ROUTER: "0x8a1E35F5c98C4E85B36B7B253222eE17773b2781", // SparkDEX V3 SwapRouter
-    SHIELD_TOKEN: process.env.VITE_SHIELD_TOKEN_ADDRESS || "0x0000000000000000000000000000000000000000", // Deployed address
+    SHIELD_TOKEN: import.meta.env.VITE_SHIELD_TOKEN_ADDRESS || "", // Must be set before swaps work
   },
   testnet: {
     WFLR: "0xC67DCE33D7A8efA5FfEB961899C73fe01bCe9273", // Coston2
     SPARKDEX_ROUTER: "0x8a1E35F5c98C4E85B36B7B253222eE17773b2781", // Same as mainnet
-    SHIELD_TOKEN: process.env.VITE_SHIELD_TOKEN_ADDRESS || "0x0000000000000000000000000000000000000000",
+    SHIELD_TOKEN: import.meta.env.VITE_SHIELD_TOKEN_ADDRESS || "", // Must be set before swaps work
   },
 };
 
@@ -48,6 +48,20 @@ export function getContracts(isTestnet: boolean) {
 }
 
 /**
+ * Validate that all required contract addresses are set
+ * @param contracts - Contract addresses object
+ * @returns true if all addresses are valid, false otherwise
+ */
+export function validateContracts(contracts: typeof CONTRACTS.mainnet): boolean {
+  return (
+    contracts.WFLR !== "" &&
+    contracts.SPARKDEX_ROUTER !== "" &&
+    contracts.SHIELD_TOKEN !== "" &&
+    contracts.SHIELD_TOKEN !== "0x0000000000000000000000000000000000000000"
+  );
+}
+
+/**
  * Get price quote for swapping tokens
  * @param router - Ethers contract instance of SparkDEX router
  * @param amountIn - Amount of input tokens (in wei)
@@ -69,21 +83,37 @@ export async function getSwapQuote(
 }
 
 /**
- * Calculate price impact percentage
- * @param amountIn - Input amount (human-readable)
- * @param amountOut - Output amount (human-readable)
- * @param expectedRate - Expected exchange rate (output per input)
- * @returns Price impact as percentage (e.g., 0.5 for 0.5%)
+ * Estimate price impact percentage
+ * Note: This is a conservative estimation based on trade size.
+ * For accurate price impact, query pool reserves from SparkDEX V3.
+ * 
+ * Conservative rules:
+ * - Trades < 100 FLR: Low impact (< 0.5%)
+ * - Trades 100-1000 FLR: Medium impact (0.5-2%)
+ * - Trades > 1000 FLR: High impact (> 2%)
+ * 
+ * @param amountIn - Input amount in human-readable format (e.g., "50.5")
+ * @returns Estimated price impact as percentage (e.g., 0.5 for 0.5%)
  */
-export function calculatePriceImpact(
-  amountIn: number,
-  amountOut: number,
-  expectedRate: number
-): number {
-  if (amountIn === 0 || expectedRate === 0) return 0;
-  const expectedOut = amountIn * expectedRate;
-  const impact = ((expectedOut - amountOut) / expectedOut) * 100;
-  return Math.max(0, impact); // Never negative
+export function estimatePriceImpact(amountIn: string): number {
+  const amount = parseFloat(amountIn);
+  
+  if (isNaN(amount) || amount <= 0) {
+    return 0;
+  }
+  
+  // Conservative thresholds based on typical SparkDEX V3 liquidity
+  if (amount < 100) {
+    return 0.3; // Low impact for small trades
+  } else if (amount < 500) {
+    return 0.8; // Medium-low impact
+  } else if (amount < 1000) {
+    return 1.5; // Medium impact
+  } else if (amount < 5000) {
+    return 3.0; // High impact
+  } else {
+    return 5.0; // Very high impact - caution recommended
+  }
 }
 
 /**
