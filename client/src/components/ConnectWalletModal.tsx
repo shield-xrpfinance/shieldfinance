@@ -66,7 +66,8 @@ export default function ConnectWalletModal({
 
         if (data.signed && data.account) {
           clearInterval(pollInterval);
-          connect(data.account, "xaman");
+          // Xaman only provides XRPL address, no EVM address
+          connect(data.account, "xaman", null, undefined);
           if (onConnect) {
             onConnect(data.account, "xaman");
           }
@@ -187,7 +188,10 @@ export default function ConnectWalletModal({
       // Close our shadcn dialog - WalletConnect modal will handle the UI
       onOpenChange(false);
 
-      // Connect to XRPL namespace with the correct chain ID based on network
+      // Connect to BOTH XRPL and EVM (Flare Network) namespaces
+      // This enables multi-chain wallets like Bifrost to connect to both networks
+      const evmChainId = isTestnet ? "eip155:114" : "eip155:14"; // Coston2 testnet : Flare mainnet
+      
       await provider.connect({
         namespaces: {
           xrpl: {
@@ -199,31 +203,73 @@ export default function ConnectWalletModal({
             chains: [chainId],
             events: ["chainChanged", "accountsChanged"],
           },
+          eip155: {
+            methods: [
+              "eth_sendTransaction",
+              "eth_signTransaction",
+              "eth_sign",
+              "personal_sign",
+              "eth_signTypedData",
+            ],
+            chains: [evmChainId],
+            events: ["chainChanged", "accountsChanged"],
+          },
         },
       });
 
       // Close the WalletConnect modal
       wcModalRef.current.closeModal();
 
-      // Get connected accounts
-      const accounts = provider.session?.namespaces?.xrpl?.accounts || [];
+      // Get connected accounts from BOTH namespaces
+      const xrplAccounts = provider.session?.namespaces?.xrpl?.accounts || [];
+      const evmAccounts = provider.session?.namespaces?.eip155?.accounts || [];
       
-      console.log("WalletConnect connection complete. Accounts:", accounts);
+      console.log("WalletConnect connection complete:", {
+        xrplAccounts,
+        evmAccounts,
+      });
       
-      if (accounts.length > 0) {
-        // Extract address from account format "xrpl:0:rAddress..." or "xrpl:1:rAddress..."
-        const address = accounts[0].split(":")[2];
-        
-        console.log("Storing WalletConnect provider for address:", address);
-        
-        // Store the provider instance in the wallet context
-        connect(address, "walletconnect", provider);
+      // Extract addresses from CAIP-10 format
+      let xrplAddress: string | null = null;
+      let evmAddress: string | null = null;
+      
+      if (xrplAccounts.length > 0) {
+        // Format: "xrpl:0:rAddress..." or "xrpl:1:rAddress..."
+        xrplAddress = xrplAccounts[0].split(":")[2];
+      }
+      
+      if (evmAccounts.length > 0) {
+        // Format: "eip155:14:0x..." or "eip155:114:0x..."
+        evmAddress = evmAccounts[0].split(":")[2];
+      }
+      
+      console.log("Extracted addresses:", {
+        xrpl: xrplAddress,
+        evm: evmAddress,
+      });
+      
+      // Connect if at least one address is available
+      if (xrplAddress || evmAddress) {
+        // Store both addresses in the wallet context
+        connect(xrplAddress, "walletconnect", evmAddress, provider);
         if (onConnect) {
-          onConnect(address, "walletconnect");
+          onConnect(xrplAddress || evmAddress || "", "walletconnect");
         }
+        
+        // Show connection success toast
+        const addressDisplay = xrplAddress 
+          ? `${xrplAddress.slice(0, 8)}...${xrplAddress.slice(-6)}`
+          : evmAddress
+          ? `${evmAddress.slice(0, 6)}...${evmAddress.slice(-4)}`
+          : "Unknown";
+        
+        const connectedChains = [];
+        if (xrplAddress) connectedChains.push("XRPL");
+        if (evmAddress) connectedChains.push("Flare");
+        
         toast({
           title: "Wallet Connected",
-          description: `Connected to ${address.slice(0, 8)}...${address.slice(-6)} on ${isTestnet ? 'Testnet' : 'Mainnet'}`,
+          description: `Connected to ${addressDisplay} on ${connectedChains.join(" + ")} (${isTestnet ? 'Testnet' : 'Mainnet'})`,
         });
         setConnecting(false);
       } else {
@@ -254,7 +300,7 @@ export default function ConnectWalletModal({
       setTimeout(() => {
         // Note: Demo mode doesn't have a real provider instance, so pass null
         // This means auto-payment won't work in demo mode (expected behavior)
-        connect(mockAddress, "walletconnect");
+        connect(mockAddress, "walletconnect", null, undefined);
         if (onConnect) {
           onConnect(mockAddress, "walletconnect");
         }
@@ -308,7 +354,8 @@ export default function ConnectWalletModal({
       const result = await loginWithWeb3Auth();
 
       if (result) {
-        connect(result.address, "web3auth");
+        // Web3Auth provides XRPL address only, no EVM address
+        connect(result.address, "web3auth", null, undefined);
         if (onConnect) {
           onConnect(result.address, "web3auth");
         }
