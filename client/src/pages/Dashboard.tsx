@@ -472,7 +472,7 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <div className="grid gap-6">
+      <div className="grid gap-6 lg:grid-cols-2">
         <Card className="relative rounded-2xl border-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 overflow-hidden hover-elevate transition-all duration-200">
           <div className="absolute top-6 left-6 rounded-xl bg-primary/20 p-4 backdrop-blur-sm">
             <div className="relative">
@@ -544,9 +544,6 @@ export default function Dashboard() {
             )}
           </div>
         </Card>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
         <GlassStatsCard
           label="Average APY"
           value="8.2%"
