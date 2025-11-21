@@ -9,21 +9,21 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Wallet, ExternalLink, Loader2, QrCode, X, Mail, Beaker, Info } from "lucide-react";
-import { SiGoogle, SiFacebook, SiX, SiDiscord } from "react-icons/si";
+import { Wallet, ExternalLink, Loader2, QrCode, X, Beaker } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { QRCodeSVG } from "qrcode.react";
 import UniversalProvider from "@walletconnect/universal-provider";
 import { WalletConnectModal } from "@walletconnect/modal";
-import { initWeb3Auth, loginWithWeb3Auth } from "@/lib/web3auth";
 import { getTooltipContent } from "@/lib/tooltipCopy";
+import xamanLogo from "@assets/xaman-logo.svg";
+import walletConnectLogo from "@assets/walletconnect-logo.svg";
 
 interface ConnectWalletModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConnect?: (address: string, provider: "xaman" | "walletconnect" | "web3auth") => void;
+  onConnect?: (address: string, provider: "xaman" | "walletconnect") => void;
 }
 
 type ConnectionStep = "select" | "xaman-qr";
@@ -355,58 +355,6 @@ export default function ConnectWalletModal({
     }
   };
 
-  const handleWeb3Auth = async () => {
-    setConnecting(true);
-    
-    try {
-      const clientId = import.meta.env.VITE_WEB3AUTH_CLIENT_ID;
-      
-      if (!clientId) {
-        throw new Error("Web3Auth Client ID not configured");
-      }
-
-      // Note: Web3Auth Client ID is currently configured for testnet
-      // Always pass "testnet" to match the Web3Auth project configuration
-      await initWeb3Auth({
-        clientId,
-        network: "testnet",
-      });
-
-      // Close the ConnectWallet modal before opening Web3Auth modal
-      // This prevents the dialog overlay from blocking Web3Auth interactions
-      onOpenChange(false);
-      
-      // Give the dialog time to actually close before opening Web3Auth
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const result = await loginWithWeb3Auth();
-
-      if (result) {
-        // Web3Auth provides XRPL address only, no EVM address
-        connect(result.address, "web3auth", null, undefined);
-        if (onConnect) {
-          onConnect(result.address, "web3auth");
-        }
-        toast({
-          title: "Wallet Connected",
-          description: `Connected to ${result.address.slice(0, 8)}...${result.address.slice(-6)}`,
-        });
-        setConnecting(false);
-      } else {
-        throw new Error("Login cancelled or failed");
-      }
-    } catch (error) {
-      console.error("Web3Auth error:", error);
-      setConnecting(false);
-      
-      toast({
-        title: "Connection Failed",
-        description: error instanceof Error ? error.message : "Failed to connect with Web3Auth",
-        variant: "destructive",
-      });
-    }
-  };
-
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md" data-testid="modal-connect-wallet">
@@ -440,8 +388,8 @@ export default function ConnectWalletModal({
               data-testid="button-connect-xaman"
             >
               <div className="flex items-center gap-3 w-full">
-                <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center">
-                  <Wallet className="h-5 w-5 text-primary" />
+                <div className="h-10 w-10 rounded-md flex items-center justify-center">
+                  <img src={xamanLogo} alt="Xaman" className="h-10 w-10" />
                 </div>
                 <div className="flex-1 text-left">
                   <div className="flex items-center gap-2 mb-1">
@@ -470,8 +418,8 @@ export default function ConnectWalletModal({
               data-testid="button-connect-walletconnect"
             >
               <div className="flex items-center gap-3 w-full">
-                <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center">
-                  <QrCode className="h-5 w-5 text-primary" />
+                <div className="h-10 w-10 rounded-md flex items-center justify-center">
+                  <img src={walletConnectLogo} alt="WalletConnect" className="h-10 w-10" />
                 </div>
                 <div className="flex-1 text-left">
                   <div className="flex items-center gap-2 mb-1">
@@ -492,47 +440,8 @@ export default function ConnectWalletModal({
               </div>
             </Button>
 
-            <div className="relative flex items-center justify-center py-2">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-muted" />
-              </div>
-              <div className="relative bg-background px-3">
-                <span className="text-xs text-muted-foreground">OR</span>
-              </div>
-            </div>
-
-            <Button
-              variant="outline"
-              className="w-full justify-start h-auto py-4"
-              onClick={handleWeb3Auth}
-              disabled={connecting}
-              data-testid="button-connect-web3auth"
-            >
-              <div className="flex items-center gap-3 w-full">
-                <div className="h-10 w-10 rounded-md bg-primary/10 flex items-center justify-center">
-                  <SiGoogle className="h-5 w-5 text-primary" />
-                </div>
-                <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-semibold">Social Login</p>
-                    {isTestnet && (
-                      <Badge variant="outline" className="text-xs bg-chart-4/10 text-chart-4 border-chart-4">
-                        Demo
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    {isTestnet
-                      ? "Demo wallet via social login - safe to test"
-                      : "Sign in with Google, Facebook, Twitter, or Email"}
-                  </p>
-                </div>
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
-              </div>
-            </Button>
-
-            <div className="text-xs text-muted-foreground text-center border-t pt-4">
-              Self-custody wallet via Web3Auth • Non-custodial
+            <div className="text-xs text-muted-foreground text-center border-t pt-4 mt-2">
+              Non-custodial wallet connections only
               {isTestnet && " • Testnet Mode Active"}
             </div>
           </div>
