@@ -507,27 +507,51 @@ export default function Dashboard() {
           
           <div className="mt-24 space-y-3">
             <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-              Your Wallet Holdings
+              Total Wallet Holdings
             </p>
             {comprehensiveBalances.isLoading ? (
-              <Skeleton className="h-10 w-full" />
+              <Skeleton className="h-10 w-full" data-testid="skeleton-wallet-balance" />
             ) : (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">FLR</span>
-                  <span className="text-lg font-bold tabular-nums">{parseFloat(comprehensiveBalances.flr).toFixed(4)}</span>
+              <div className="space-y-3">
+                <div className="space-y-1 pb-2 border-b border-border/50">
+                  <p className="text-xs text-muted-foreground">Total Assets (Count)</p>
+                  <p className="text-3xl font-bold tabular-nums" data-testid="text-total-asset-count">
+                    {[
+                      parseFloat(comprehensiveBalances.flr) > 0,
+                      parseFloat(comprehensiveBalances.shield) > 0,
+                      parseFloat(comprehensiveBalances.shxrp) > 0,
+                      parseFloat(comprehensiveBalances.xrp) > 0
+                    ].filter(Boolean).length} Assets
+                  </p>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">SHIELD</span>
-                  <span className="text-lg font-bold tabular-nums">{parseFloat(comprehensiveBalances.shield).toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">shXRP</span>
-                  <span className="text-lg font-bold tabular-nums">{parseFloat(comprehensiveBalances.shxrp).toFixed(4)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">XRP</span>
-                  <span className="text-lg font-bold tabular-nums">{parseFloat(comprehensiveBalances.xrp).toFixed(2)}</span>
+                <div className="space-y-2">
+                  {parseFloat(comprehensiveBalances.flr) > 0 && (
+                    <div className="flex items-center justify-between" data-testid="balance-flr">
+                      <span className="text-sm text-muted-foreground">FLR</span>
+                      <span className="text-lg font-bold tabular-nums" data-testid="text-balance-flr">{parseFloat(comprehensiveBalances.flr).toFixed(4)}</span>
+                    </div>
+                  )}
+                  {parseFloat(comprehensiveBalances.shield) > 0 && (
+                    <div className="flex items-center justify-between" data-testid="balance-shield">
+                      <span className="text-sm text-muted-foreground">SHIELD</span>
+                      <span className="text-lg font-bold tabular-nums" data-testid="text-balance-shield">{parseFloat(comprehensiveBalances.shield).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {parseFloat(comprehensiveBalances.shxrp) > 0 && (
+                    <div className="flex items-center justify-between" data-testid="balance-shxrp">
+                      <span className="text-sm text-muted-foreground">shXRP</span>
+                      <span className="text-lg font-bold tabular-nums" data-testid="text-balance-shxrp">{parseFloat(comprehensiveBalances.shxrp).toFixed(4)}</span>
+                    </div>
+                  )}
+                  {parseFloat(comprehensiveBalances.xrp) > 0 && (
+                    <div className="flex items-center justify-between" data-testid="balance-xrp">
+                      <span className="text-sm text-muted-foreground">XRP</span>
+                      <span className="text-lg font-bold tabular-nums" data-testid="text-balance-xrp">{parseFloat(comprehensiveBalances.xrp).toFixed(2)}</span>
+                    </div>
+                  )}
+                  {[parseFloat(comprehensiveBalances.flr), parseFloat(comprehensiveBalances.shield), parseFloat(comprehensiveBalances.shxrp), parseFloat(comprehensiveBalances.xrp)].every(v => v === 0) && (
+                    <p className="text-sm text-muted-foreground text-center py-2" data-testid="text-no-balances">No assets found</p>
+                  )}
                 </div>
               </div>
             )}
