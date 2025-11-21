@@ -92,14 +92,15 @@ contract StakingBoost is ReentrancyGuard {
     }
     
     /**
-     * @dev Get boost multiplier for a user
+     * @dev Get boost multiplier for a user in basis points
      * @param user Address of user
-     * @return Boost level (number of full 100 SHIELD staked)
+     * @return Boost in basis points (e.g., 500 = 5%)
      * 
-     * Example: 550 SHIELD → boost = 5 → +5% APY
+     * Calculation: +1% (100 bps) per full 100 SHIELD staked
+     * Example: 550 SHIELD → 5 * 100 = 500 bps → +5% APY on shXRP
      */
     function getBoost(address user) external view returns (uint256) {
-        return stakes[user].amount / BOOST_PER_TOKENS;
+        return (stakes[user].amount / BOOST_PER_TOKENS) * 100; // Return in basis points
     }
     
     /**

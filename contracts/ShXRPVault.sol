@@ -13,6 +13,14 @@ import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./interfaces/IStrategy.sol";
 
 /**
+ * @dev Interface for StakingBoost contract
+ * Used to query user's SHIELD staking boost for enhanced APY
+ */
+interface IStakingBoost {
+    function getBoost(address user) external view returns (uint256);
+}
+
+/**
  * @title Shield XRP Vault (shXRP)
  * @dev ERC-4626 compliant tokenized vault for XRP on Flare Network
  * 
@@ -80,6 +88,9 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     // Revenue Router for automatic fee distribution (buyback & burn)
     address public immutable revenueRouter;
     
+    // Staking Boost for APY enhancement (+1% per 100 SHIELD staked)
+    IStakingBoost public immutable stakingBoost;
+    
     // Fee Configuration (in basis points, 10000 = 100%)
     uint256 public constant DEPOSIT_FEE_BPS = 20;  // 0.2% deposit fee
     uint256 public constant WITHDRAW_FEE_BPS = 20; // 0.2% withdraw fee
@@ -137,6 +148,7 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
      * @param _name Name of the share token (e.g., "Shield XRP")
      * @param _symbol Symbol of the share token (e.g., "shXRP")
      * @param _revenueRouter Address of RevenueRouter for fee distribution
+     * @param _stakingBoost Address of StakingBoost contract for APY enhancement
      * 
      * Example deployment:
      * FXRP Mainnet: 0xAd552A648C74D49E10027AB8a618A3ad4901c5bE
@@ -146,12 +158,15 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         IERC20 _fxrpToken,
         string memory _name,
         string memory _symbol,
-        address _revenueRouter
+        address _revenueRouter,
+        address _stakingBoost
     ) ERC4626(_fxrpToken) ERC20(_name, _symbol) Ownable(msg.sender) {
         require(address(_fxrpToken) != address(0), "Invalid FXRP token address");
         require(_revenueRouter != address(0), "Invalid revenue router address");
+        require(_stakingBoost != address(0), "Invalid staking boost address");
         
         revenueRouter = _revenueRouter;
+        stakingBoost = IStakingBoost(_stakingBoost);
         
         // Deployer is first operator
         operators[msg.sender] = true;
@@ -1196,24 +1211,32 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
      * ERC4626 Compliance (Critical):
      * This MUST reflect the actual assets received after accounting for fees.
      * 
-     * Fee Logic:
+     * Fee Logic + SHIELD Staking Boost:
      * 1. Convert shares to gross assets using standard ERC4626 math
      * 2. Deduct 0.2% withdrawal fee
-     * 3. User receives net assets
+     * 3. Apply SHIELD staking boost (+1% per 100 SHIELD staked)
+     * 4. User receives net assets + boost
      * 
      * Example:
      * - User redeems shares worth 1000 FXRP
      * - Gross assets: 1000 FXRP
      * - Fee: 1000 * 0.002 = 2 FXRP (sent to RevenueRouter)
-     * - Net: 998 FXRP (transferred to user)
+     * - Net: 998 FXRP
+     * - User has 500 SHIELD staked → boost = 5% = 500 bps
+     * - Boost bonus: 998 * 500 / 10000 = 49.9 FXRP
+     * - Final: 998 + 49.9 = 1047.9 FXRP (transferred to user)
      * 
      * @param shares Amount of shXRP to redeem
-     * @return assets Amount of FXRP that will be received (fee-adjusted)
+     * @return assets Amount of FXRP that will be received (fee-adjusted + boosted)
      */
     function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
         uint256 grossAssets = super.previewRedeem(shares);
         uint256 fee = (grossAssets * WITHDRAW_FEE_BPS) / 10000;
-        return grossAssets - fee;
+        uint256 netAssets = grossAssets - fee;
+        
+        // Apply SHIELD staking boost (+1% per 100 SHIELD)
+        uint256 boostBps = stakingBoost.getBoost(msg.sender);
+        return netAssets + (netAssets * boostBps / 10000);
     }
     
     // ========================================

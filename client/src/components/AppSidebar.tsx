@@ -10,7 +10,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Vault, Wallet, History, BarChart3, Coins, Loader2, HelpCircle, ArrowRight, BookOpen, Activity, Gift } from "lucide-react";
+import { LayoutDashboard, Vault, Wallet, History, BarChart3, Coins, Loader2, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
@@ -35,6 +35,11 @@ const menuItems = [
     title: "Portfolio",
     url: "/portfolio",
     icon: Wallet,
+  },
+  {
+    title: "Staking",
+    url: "/staking",
+    icon: Shield,
   },
   {
     title: "Airdrop",

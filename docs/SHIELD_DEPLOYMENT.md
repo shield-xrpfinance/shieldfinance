@@ -152,6 +152,27 @@ cast call <STAKING_BOOST_ADDRESS> "LOCK_PERIOD()" --rpc-url <FLARE_RPC>
 # Expected: 2592000 (30 days in seconds)
 ```
 
+**💡 Integration with ShXRPVault:**  
+When deploying or upgrading `ShXRPVault`, pass the `STAKING_BOOST_ADDRESS` to the vault constructor:
+```solidity
+constructor(
+    IERC20 _fxrpToken,
+    string memory _name,
+    string memory _symbol,
+    address _revenueRouter,
+    address _stakingBoost  // ← StakingBoost address from Step 3
+)
+```
+
+This enables the APY boost mechanism:
+- Users stake SHIELD tokens (30-day lock)
+- +1% APY boost per 100 SHIELD staked
+- Boost applies to ALL shXRP deposits automatically
+- Economic flywheel: Higher APY → More deposits → More SHIELD demand → Buyback & burn
+
+**Frontend Integration:**  
+Set `VITE_STAKING_BOOST_ADDRESS` in `.env` for the `/staking` page to connect to the contract.
+
 ---
 
 ### Step 4: Deploy MerkleDistributor
