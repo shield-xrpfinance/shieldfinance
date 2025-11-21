@@ -18,7 +18,7 @@ const assetLogos: Record<AssetType, string> = {
   FLR: flrLogo,
   WFLR: "https://res.cloudinary.com/sparkdex/image/upload/q_100/v1/website-assets/coins/wflr?_a=DATAiZAAZAA0",
   USDT: "https://res.cloudinary.com/metavault/image/upload/q_100/v1/website-assets/coins/usdt?_a=DATAiZAAZAA0",
-  SHIELD: "https://res.cloudinary.com/sparkdex/image/upload/q_100/v1/website-assets/coins/shield?_a=DATAiZAAZAA0",
+  SHIELD: "/shield-logo.png",
   shXRP: xrpLogo,
 };
 
