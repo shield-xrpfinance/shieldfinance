@@ -91,9 +91,6 @@ export default function DepositModal({
   const { toast } = useToast();
   const gasEstimate = "0.00012";
 
-  // Debug: Log provider state when modal opens
-  console.log("DepositModal - address:", address, "provider:", provider, "isConnected:", isConnected);
-
   const availableBalances: { [key: string]: number } = {
     XRP: balances?.balances.XRP || 0,
     RLUSD: balances?.balances.RLUSD || 0,

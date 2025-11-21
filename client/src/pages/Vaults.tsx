@@ -172,13 +172,11 @@ export default function Vaults() {
     
     // Block deposit flow if vault is coming soon
     if (vault.comingSoon) {
-      console.warn(`[DEPOSIT_BLOCKED] Vault ${vault.name} is coming soon`);
       return;
     }
     
     // Block deposit flow if vault is paused
     if (vault.paused === true) {
-      console.warn(`[DEPOSIT_BLOCKED] Vault ${vault.name} is currently paused`);
       return;
     }
     
@@ -194,7 +192,6 @@ export default function Vaults() {
 
   const depositMutation = useMutation({
     mutationFn: async (data: { walletAddress: string; vaultId: string; amount: string; network: string; txHash?: string }) => {
-      console.log("depositMutation.mutationFn called with data:", data);
       const res = await apiRequest("POST", "/api/positions", data);
       return await res.json();
     },
@@ -204,14 +201,6 @@ export default function Vaults() {
   });
 
   const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
-    console.log("=== handleConfirmDeposit CALLED ===", { 
-      amounts, 
-      provider, 
-      address, 
-      walletConnectProvider: !!walletConnectProvider,
-      walletConnectProviderSession: walletConnectProvider?.session ? "exists" : "missing",
-    });
-    
     if (!selectedVault || !address) {
       console.error("❌ Missing selectedVault or address:", { selectedVault: !!selectedVault, address });
       return;
@@ -227,7 +216,6 @@ export default function Vaults() {
     const isXRPDeposit = selectedVault.depositAssets.includes("XRP");
 
     if (isXRPDeposit) {
-      console.log("📍 XRP Deposit Flow - Starting bridge creation...");
       // Use bridge flow for XRP deposits
       try {
         // Close deposit modal and show progress modal immediately
@@ -242,13 +230,6 @@ export default function Vaults() {
           amount: totalAmount.toString(),
         });
         
-        console.log("📡 Calling POST /api/deposits with:", { 
-          walletAddress: address,
-          vaultId: selectedVault.id,
-          amount: totalAmount.toString(),
-          network,
-        });
-        
         const response = await fetch("/api/deposits", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -261,12 +242,6 @@ export default function Vaults() {
         });
 
         const data = await response.json();
-
-        console.log("=== POST /api/deposits RESPONSE ===", {
-          success: data.success,
-          bridgeId: data.bridgeId,
-          demo: data.demo,
-        });
 
         if (!response.ok || !data.success) {
           throw new Error(data.error || "Failed to create deposit");
@@ -301,8 +276,6 @@ export default function Vaults() {
       });
       setDepositModalOpen(false);
 
-      console.log("Deposit routing - provider:", provider, "address:", address, "walletConnectProvider:", !!walletConnectProvider);
-
       if (!provider) {
         toast({
           title: "Connection Lost",
@@ -314,10 +287,8 @@ export default function Vaults() {
       }
 
       if (provider === "walletconnect") {
-        console.log("Routing to WalletConnect deposit");
         await handleWalletConnectDeposit(paymentAmount, paymentAsset);
       } else {
-        console.log("Routing to Xaman deposit");
         await handleXamanDeposit(paymentAmount, paymentAsset);
       }
     }

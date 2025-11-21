@@ -141,7 +141,6 @@ export default function ConnectWalletModal({
 
       // Check if there's an existing session - if so, disconnect it first
       if (wcProviderRef.current?.session) {
-        console.log("Disconnecting existing WalletConnect session");
         await wcProviderRef.current.disconnect();
         wcProviderRef.current = null;
         wcModalRef.current = null;
@@ -169,7 +168,6 @@ export default function ConnectWalletModal({
 
       // Set up display_uri listener
       provider.on("display_uri", (uri: string) => {
-        console.log("WalletConnect URI:", uri);
         // Show the WalletConnect modal with all wallet options (desktop, mobile, etc.)
         wcModalRef.current?.openModal({ 
           uri,
@@ -179,7 +177,6 @@ export default function ConnectWalletModal({
 
       // Set up session_delete listener
       provider.on("session_delete", () => {
-        console.log("WalletConnect session deleted");
         disconnect();
         setConnecting(false);
         // Clean up refs
@@ -224,13 +221,6 @@ export default function ConnectWalletModal({
       const xrplAccounts = provider.session?.namespaces?.xrpl?.accounts || [];
       const evmAccounts = provider.session?.namespaces?.eip155?.accounts || [];
       
-      console.log("WalletConnect connection complete:", {
-        xrplNamespace: provider.session?.namespaces?.xrpl ? "available" : "missing",
-        evmNamespace: provider.session?.namespaces?.eip155 ? "available" : "missing",
-        xrplAccounts,
-        evmAccounts,
-      });
-      
       // Extract addresses from CAIP-10 format
       let xrplAddress: string | null = null;
       let evmAddress: string | null = null;
@@ -248,11 +238,6 @@ export default function ConnectWalletModal({
       } else {
         console.warn("⚠️ EVM namespace not approved by wallet - airdrop claims will not be available");
       }
-      
-      console.log("Extracted addresses:", {
-        xrpl: xrplAddress || "NOT CONNECTED",
-        evm: evmAddress || "NOT CONNECTED",
-      });
       
       // Connect if at least one address is available (partial connection supported)
       if (xrplAddress || evmAddress) {

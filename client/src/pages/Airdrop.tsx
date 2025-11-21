@@ -69,7 +69,6 @@ export default function Airdrop() {
         // MerkleDistributor contract address (set after deployment)
         const distributorAddress = import.meta.env.VITE_MERKLE_DISTRIBUTOR_ADDRESS;
         if (!distributorAddress || distributorAddress === "0x...") {
-          console.log("MerkleDistributor not deployed yet");
           return;
         }
 
@@ -157,11 +156,6 @@ export default function Airdrop() {
       }
       
       const amountWei = ethers.parseEther(eligibility.amount);
-
-      console.log("Submitting claim transaction...");
-      console.log("Amount:", eligibility.amount, "SHIELD");
-      console.log("AmountWei:", amountWei.toString());
-      console.log("Proof:", eligibility.proof);
 
       // Submit claim transaction
       const tx = await contract.claim(amountWei, eligibility.proof);

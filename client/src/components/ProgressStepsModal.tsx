@@ -139,7 +139,6 @@ export function ProgressStepsModal({
       !paymentTriggeredRef.current
     ) {
       paymentTriggeredRef.current = true;
-      console.log("🔔 Payment ready - triggering wallet payment modal...", depositStatus.paymentRequest);
       
       // Call requestPayment from wallet context with error handling
       requestPayment({
@@ -160,7 +159,7 @@ export function ProgressStepsModal({
         }
         // For WalletConnect, the wallet handles the payment directly (no modal needed)
       }).catch((error) => {
-        console.error("❌ Failed to trigger payment modal:", error);
+        console.error("Failed to trigger payment modal:", error);
         paymentTriggeredRef.current = false; // Reset on error to allow retry
       });
     }
@@ -420,11 +419,10 @@ export function ProgressStepsModal({
       qrUrl={xamanPayload?.qrUrl || null}
       deepLink={xamanPayload?.deepLink || null}
       onSuccess={(txHash) => {
-        console.log("✅ Xaman payment signed:", txHash);
         setXamanPaymentModalOpen(false);
       }}
       onError={(error) => {
-        console.error("❌ Xaman payment error:", error);
+        console.error("Xaman payment error:", error);
         setXamanPaymentModalOpen(false);
         paymentTriggeredRef.current = false; // Allow retry
       }}

@@ -72,16 +72,6 @@ export default function Swap() {
           return;
         }
 
-        console.log("📊 [Swap] Fetching quote:", {
-          inputAmount,
-          isFLRToSHIELD,
-          contracts: {
-            WFLR: contracts.WFLR,
-            SHIELD: contracts.SHIELD_TOKEN,
-            ROUTER: contracts.SPARKDEX_ROUTER,
-          },
-        });
-
         const provider = new ethers.BrowserProvider(walletConnectProvider);
         const router = new ethers.Contract(contracts.SPARKDEX_ROUTER, ROUTER_ABI, provider);
 
@@ -89,14 +79,8 @@ export default function Swap() {
         const path = isFLRToSHIELD
           ? [contracts.WFLR, contracts.SHIELD_TOKEN]
           : [contracts.SHIELD_TOKEN, contracts.WFLR];
-
-        console.log("📊 [Swap] Calling getAmountsOut with path:", path);
         
         const outputWei = await getSwapQuote(router, inputAmountWei, path);
-        console.log("📊 [Swap] Quote received:", {
-          inputWei: inputAmountWei.toString(),
-          outputWei: outputWei.toString(),
-        });
 
         const outputFormatted = formatTokenAmount(outputWei, 18, 6);
         
@@ -105,8 +89,6 @@ export default function Swap() {
         // Calculate exchange rate
         const rate = parseFloat(outputFormatted) / parseFloat(inputAmount);
         setExchangeRate(rate);
-        
-        console.log("✅ [Swap] Quote formatted:", outputFormatted, "Rate:", rate);
       } catch (error) {
         console.error("🚨 [Swap] Failed to get quote:", error);
         setOutputAmount("");

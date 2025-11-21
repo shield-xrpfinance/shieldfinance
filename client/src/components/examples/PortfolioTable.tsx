@@ -26,8 +26,8 @@ export default function PortfolioTableExample() {
     <div className="p-6">
       <PortfolioTable
         positions={positions}
-        onWithdraw={(id) => console.log("Withdraw", id)}
-        onClaim={(id) => console.log("Claim", id)}
+        onWithdraw={(id) => {}}
+        onClaim={(id) => {}}
       />
     </div>
   );

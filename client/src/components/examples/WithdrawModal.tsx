@@ -14,7 +14,7 @@ export default function WithdrawModalExample() {
         vaultName="XRP Stable Yield"
         depositedAmount="5,000"
         rewards="325.50"
-        onConfirm={(amount) => console.log("Withdrawn:", amount)}
+        onConfirm={(amount) => {}}
       />
     </div>
   );

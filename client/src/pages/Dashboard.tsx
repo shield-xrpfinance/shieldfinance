@@ -127,14 +127,6 @@ export default function Dashboard() {
   });
 
   const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
-    console.log("=== handleConfirmDeposit CALLED ===", { 
-      amounts, 
-      provider, 
-      address, 
-      walletConnectProvider: !!walletConnectProvider,
-      walletConnectProviderSession: walletConnectProvider?.session ? "exists" : "missing",
-    });
-    
     if (!selectedVault || !address) {
       console.error("❌ Missing selectedVault or address:", { selectedVault: !!selectedVault, address });
       return;
@@ -150,7 +142,6 @@ export default function Dashboard() {
     const isXRPDeposit = selectedVault.depositAssets.includes("XRP");
 
     if (isXRPDeposit) {
-      console.log("📍 XRP Deposit Flow - Starting bridge creation...");
       // Use bridge flow for XRP deposits
       try {
         // Close deposit modal and show progress modal immediately
@@ -165,13 +156,6 @@ export default function Dashboard() {
           amount: totalAmount.toString(),
         });
         
-        console.log("📡 Calling POST /api/deposits with:", { 
-          walletAddress: address,
-          vaultId: selectedVault.id,
-          amount: totalAmount.toString(),
-          network,
-        });
-        
         const response = await fetch("/api/deposits", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -184,12 +168,6 @@ export default function Dashboard() {
         });
 
         const data = await response.json();
-
-        console.log("=== POST /api/deposits RESPONSE ===", {
-          success: data.success,
-          bridgeId: data.bridgeId,
-          demo: data.demo,
-        });
 
         if (!response.ok || !data.success) {
           throw new Error(data.error || "Failed to create deposit");

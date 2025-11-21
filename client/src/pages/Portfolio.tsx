@@ -192,7 +192,6 @@ export default function Portfolio() {
         description: "A vault operator will review and approve your claim request shortly.",
       });
     } catch (error) {
-      console.error("Error creating claim request:", error);
       toast({
         title: "Claim Failed",
         description: error instanceof Error ? error.message : "Failed to create claim request. Please try again.",
@@ -263,7 +262,6 @@ export default function Portfolio() {
       setPendingAction(null);
       setXamanPayload(null);
     } catch (error) {
-      console.error("Transaction completion error:", error);
       toast({
         title: "Transaction Failed",
         description: "Transaction signed but failed to complete. Please contact support.",
@@ -306,8 +304,6 @@ export default function Portfolio() {
         
         // Check if timeout exceeded
         if (pollAttempts > MAX_POLL_ATTEMPTS || elapsedMs > MAX_POLL_TIME_MS) {
-          console.warn(`Withdrawal polling timeout after ${pollAttempts} attempts (${Math.round(elapsedMs / 1000)}s)`);
-          
           setWithdrawProgressStep('error');
           setWithdrawErrorMessage(
             `Withdrawal is taking longer than expected. Your withdrawal request (ID: ${withdrawRedemptionId}) is still processing in the background. ` +

@@ -55,14 +55,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // PRIORITY 1: Check for xApp OTT (One-Time Token) parameters
       // This happens when app is loaded from Xaman as xApp (e.g., https://xumm.app/detect/xapp:...)
       const urlParams = new URLSearchParams(window.location.search);
-      console.log(`🔍 Checking for xApp parameters in URL: ${window.location.href}`);
-      console.log(`🔍 URL search params:`, Array.from(urlParams.entries()));
       
       const ott = urlParams.get('xAppToken') || urlParams.get('ott') || urlParams.get('xApp');
-      console.log(`🔍 OTT detected:`, ott ? `${ott.substring(0, 10)}...` : 'none');
       
       if (ott) {
-        console.log(`🔐 xApp OTT detected, attempting auto-signin...`);
         
         try {
           // Call backend to resolve OTT to wallet address
@@ -81,8 +77,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           const data = await response.json();
           
           if (data.success && data.address) {
-            console.log(`✅ xApp auto-signin successful: ${data.address}`);
-            
             // Auto-connect the wallet
             setAddress(data.address);
             setProvider('xaman');
@@ -97,8 +91,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               ? `${window.location.pathname}?${urlParams.toString()}`
               : window.location.pathname;
             window.history.replaceState({}, '', newUrl);
-            
-            console.log('✅ xApp wallet connected and URL cleaned');
             
             // Skip localStorage restoration since we just connected
             setIsInitialized(true);
@@ -121,14 +113,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         if (savedProvider === "xaman") {
           setAddress(savedAddress);
           setProvider(savedProvider);
-          console.log(`Restored wallet connection: ${savedProvider} - ${savedAddress}`);
         } else if (savedProvider === "walletconnect") {
           const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
           if (!projectId || projectId === "demo-project-id") {
             // Clear and skip - WC not configured
             localStorage.removeItem("walletAddress");
             localStorage.removeItem("walletProvider");
-            console.log("WalletConnect not configured - cleared saved connection");
           } else {
             // Lazy load WalletConnect SDK only when needed
             let timeoutId: NodeJS.Timeout | undefined;
@@ -179,23 +169,17 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                   setEvmAddress(restoredEvmAddress);
                   setProvider("walletconnect");
                   setWalletConnectProvider(wcProvider);
-                  console.log("✅ WalletConnect session restored:", {
-                    xrpl: restoredXrplAddress,
-                    evm: restoredEvmAddress,
-                  });
                 } else {
                   // Address mismatch - clear localStorage
                   localStorage.removeItem("walletAddress");
                   localStorage.removeItem("evmAddress");
                   localStorage.removeItem("walletProvider");
-                  console.log("WalletConnect address mismatch - cleared");
                 }
               } else {
                 // No active session - clear localStorage
                 localStorage.removeItem("walletAddress");
                 localStorage.removeItem("evmAddress");
                 localStorage.removeItem("walletProvider");
-                console.log("No WalletConnect session found - cleared");
               }
             } catch (error) {
               console.error("WalletConnect restoration error:", error);
@@ -259,13 +243,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const requestPayment = async (paymentRequest: PaymentRequest): Promise<PaymentRequestResult> => {
-    console.log("=== requestPayment CALLED ===", {
-      provider,
-      paymentRequest,
-      address,
-      walletConnectProviderExists: !!walletConnectProvider,
-    });
-
     if (!provider) {
       console.error("❌ requestPayment: No provider");
       return {
@@ -276,7 +253,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
     try {
       if (provider === "xaman") {
-        console.log("📱 Routing to Xaman payment...");
         const response = await fetch("/api/wallet/xaman/payment", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -294,7 +270,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
 
         const data = await response.json();
-        console.log("✅ Xaman payment payload created:", data);
         return {
           success: true,
           payloadUuid: data.uuid,
@@ -302,8 +277,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           deepLink: data.deepLink,
         };
       } else if (provider === "walletconnect") {
-        console.log("🔗 Routing to WalletConnect payment...");
-        
         if (!walletConnectProvider || !address) {
           console.error("❌ WalletConnect not initialized:", {
             walletConnectProviderExists: !!walletConnectProvider,
@@ -329,8 +302,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           ],
         };
 
-        console.log("📤 Sending WalletConnect transaction:", tx);
-
         const result = await walletConnectProvider.request({
           method: "xrpl_signAndSubmit",
           params: {
@@ -338,15 +309,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           },
         }) as any;
 
-        console.log("✅ WalletConnect result:", result);
-
         return {
           success: true,
           txHash: result?.tx_json?.hash || "pending",
         };
       }
 
-      console.error("❌ Unknown provider:", provider);
       return {
         success: false,
         error: "Unknown provider",

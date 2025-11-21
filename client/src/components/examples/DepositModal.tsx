@@ -14,7 +14,7 @@ export default function DepositModalExample() {
         vaultName="RLUSD + USDC Pool"
         vaultApy="12.8"
         depositAssets={["RLUSD", "USDC"]}
-        onConfirm={(amounts) => console.log("Deposited:", amounts)}
+        onConfirm={(amounts) => {}}
       />
     </div>
   );

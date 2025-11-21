@@ -14,7 +14,7 @@ export default function VaultCardExample() {
         depositors={1245}
         status="Active"
         depositAssets={["XRP"]}
-        onDeposit={(id) => console.log("Deposit to", id)}
+        onDeposit={(id) => {}}
       />
       <VaultCard
         id="vault-2"
@@ -27,7 +27,7 @@ export default function VaultCardExample() {
         depositors={892}
         status="Active"
         depositAssets={["RLUSD", "USDC"]}
-        onDeposit={(id) => console.log("Deposit to", id)}
+        onDeposit={(id) => {}}
       />
       <VaultCard
         id="vault-3"
@@ -40,7 +40,7 @@ export default function VaultCardExample() {
         depositors={423}
         status="Active"
         depositAssets={["XRP", "RLUSD", "USDC"]}
-        onDeposit={(id) => console.log("Deposit to", id)}
+        onDeposit={(id) => {}}
       />
     </div>
   );

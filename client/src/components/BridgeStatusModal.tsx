@@ -122,7 +122,6 @@ export default function BridgeStatusModal({
           shouldContinuePolling = false;
         }
       } catch (error) {
-        console.error("Error polling bridge status:", error);
         toast({
           title: "Error",
           description: "Failed to fetch bridge status",
@@ -325,8 +324,6 @@ export default function BridgeStatusModal({
     setShowCancelDialog(false);
 
     try {
-      console.log("Requesting server-controlled cancel payload...");
-      
       // Request server to create canonical cancel payload (prevents message forgery)
       const payloadResponse = await fetch(`/api/bridges/${bridge.id}/cancel-request`, {
         method: "POST",
@@ -343,7 +340,6 @@ export default function BridgeStatusModal({
       const payloadData = await payloadResponse.json();
       
       // Open Xaman for signing
-      console.log("Opening Xaman for signature...");
       if (payloadData.deepLink) {
         window.open(payloadData.deepLink, "_blank");
       }
@@ -360,7 +356,6 @@ export default function BridgeStatusModal({
         
         if (statusData.signed && statusData.signedTxBlob) {
           signedTxBlob = statusData.signedTxBlob;
-          console.log("✅ Xaman signature received");
           break;
         } else if (statusData.cancelled) {
           throw new Error("Signature request cancelled in Xaman");
