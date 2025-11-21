@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export function MobileBottomNav() {
   const [location] = useLocation();
-  const { setOpen } = useSidebar();
+  const { toggleSidebar } = useSidebar();
 
   const navItems = [
     { icon: Home, label: "Dashboard", url: "/" },
@@ -47,7 +47,7 @@ export function MobileBottomNav() {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => setOpen(true)}
+          onClick={toggleSidebar}
           className="flex flex-col items-center gap-1 text-muted-foreground"
           data-testid="mobile-nav-more"
         >
