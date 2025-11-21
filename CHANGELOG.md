@@ -2,6 +2,89 @@
 
 All notable changes to the XRP Liquid Staking Protocol Dashboard will be documented in this file.
 
+## [1.4.0] - 2025-11-21
+
+### 🔄 Multi-Asset Swap Feature - Complete SparkDEX V3 Integration
+
+#### New Features
+- **Bidirectional Token Swaps**: Buy and sell SHIELD with FLR, wFLR, or USDT
+  - Buy direction: FLR/wFLR/USDT → SHIELD
+  - Sell direction: SHIELD → FLR/wFLR/USDT
+  - Dynamic asset selection with balance-aware UI
+  - Buy/Sell toggle for seamless direction switching
+
+- **SparkDEX V3 Integration**: Uniswap V2-compatible DEX integration on Flare Network
+  - Real-time price quotes via getAmountsOut
+  - Optimal swap path construction (direct and multi-hop routing)
+  - 0.5% slippage tolerance with price impact warnings
+  - Three swap methods: swapExactETHForTokens, swapExactTokensForETH, swapExactTokensForTokens
+
+- **ERC-20 Approval Flow**: Smart token approval system
+  - Pre-flight allowance checking before swap attempts
+  - Unlimited approval option (MaxUint256) to reduce repeat approvals
+  - Exact amount approval for security-conscious users
+  - Clear UI feedback during approval process
+  - Approval state tracking with "Needs Approval" alerts
+
+- **AssetSelector Component**: Reusable multi-asset selection dropdown
+  - Token icons with AssetIcon integration (FLR, wFLR, USDT, SHIELD)
+  - Real-time balance display with safe formatting
+  - Crash-proof balance guards (formatBalance helper)
+  - Disabled state during swap/approval operations
+
+#### Safety Features
+- **Swap Path Validation**: Pre-execution route checking
+  - Detects missing liquidity pools before transaction
+  - Validates multi-hop routes (e.g., USDT → wFLR → SHIELD)
+  - Clear error messaging for unsupported pairs
+  - Swap button disabled when validation fails
+
+- **Liquidity Detection**: Real-time pool availability checks
+  - Catches "INSUFFICIENT_LIQUIDITY" errors from router
+  - User-friendly warnings with suggested alternatives
+  - Prevents failed transactions and wasted gas
+
+- **Balance Guards**: Comprehensive null/undefined protection
+  - formatBalance() helper with NaN checks
+  - Loading state handling ("..." display)
+  - Prevents crashes from missing balance data
+
+#### UX Improvements
+- **Post-Swap Celebration**: Confetti animation on successful swaps
+- **Success Modal**: Transaction confirmation with staking call-to-action
+- **Real-Time Stats**: Dynamic balance display in sidebar (updates with selected asset)
+- **Exchange Rate Display**: Live price quotes with price impact percentage
+- **Responsive Feedback**: Loading states for quotes, approvals, and swaps
+
+#### Technical Implementation
+- **New Components**:
+  - `client/src/components/AssetSelector.tsx` - Multi-asset selection dropdown
+  - `client/src/lib/sparkdex.ts` - SparkDEX V3 router integration
+
+- **Updated Pages**:
+  - `client/src/pages/Swap.tsx` - Complete bidirectional swap implementation
+  - Removed hardcoded FLR-only swaps
+  - Added dynamic asset lists and routing logic
+  - Integrated approval flow with unlimited option
+
+#### Contract Addresses (Flare Mainnet)
+- **WFLR**: 0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d
+- **USDT**: 0xF013406A0B1d544238083DF0B93ad0d2cBE0f65f
+- **SparkDEX V3 Router**: 0x4DaE0a4ec7e360Af1a4705F558bfBd79c8c005a8
+
+#### Documentation
+- **New**: docs/features/swap.md - Complete swap feature documentation
+- **Updated**: replit.md - Multi-Asset Swap Integration section
+- **Updated**: README.md - Features and Tech Stack
+- **Updated**: docs/DOCUMENTATION_INDEX.md - Swap use case paths
+
+#### Expected Impact
+- 3-5× increase in staking adoption via instant SHIELD acquisition
+- Reduced friction for new users (no external DEX required)
+- Enhanced liquidity for SHIELD token ecosystem
+
+---
+
 ## [1.3.0] - 2025-11-21
 
 ### 🚀 Shield Finance Fair Launch - Complete Documentation & Production-Ready Deployment
