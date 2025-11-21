@@ -77,6 +77,17 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     // STATE VARIABLES
     // ========================================
     
+    // Revenue Router for automatic fee distribution (buyback & burn)
+    address public immutable revenueRouter;
+    
+    // Fee Configuration (in basis points, 10000 = 100%)
+    uint256 public constant DEPOSIT_FEE_BPS = 20;  // 0.2% deposit fee
+    uint256 public constant WITHDRAW_FEE_BPS = 20; // 0.2% withdraw fee
+    
+    // NOTE: Yield routing fee temporarily disabled pending architectural rework
+    // See architect review feedback regarding ERC4626 accounting complexity
+    // uint256 public yieldRoutingFeeBps = 10;     // 0.1% yield routing fee (future)
+    
     // Mapping of approved operators who can manage strategies
     mapping(address => bool) public operators;
     
@@ -104,6 +115,7 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     event MinDepositUpdated(uint256 newMinDeposit);
     event BufferTargetUpdated(uint256 newTargetBps);
     event DepositLimitUpdated(uint256 newDepositLimit);
+    event FeeTransferred(string indexed feeType, uint256 amount, address indexed recipient);
     
     // Strategy Events
     event StrategyAdded(address indexed strategy, uint256 targetBps);
@@ -124,6 +136,7 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
      * @param _fxrpToken Address of FXRP token (FAssets-wrapped XRP)
      * @param _name Name of the share token (e.g., "Shield XRP")
      * @param _symbol Symbol of the share token (e.g., "shXRP")
+     * @param _revenueRouter Address of RevenueRouter for fee distribution
      * 
      * Example deployment:
      * FXRP Mainnet: 0xAd552A648C74D49E10027AB8a618A3ad4901c5bE
@@ -132,9 +145,13 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     constructor(
         IERC20 _fxrpToken,
         string memory _name,
-        string memory _symbol
+        string memory _symbol,
+        address _revenueRouter
     ) ERC4626(_fxrpToken) ERC20(_name, _symbol) Ownable(msg.sender) {
         require(address(_fxrpToken) != address(0), "Invalid FXRP token address");
+        require(_revenueRouter != address(0), "Invalid revenue router address");
+        
+        revenueRouter = _revenueRouter;
         
         // Deployer is first operator
         operators[msg.sender] = true;
@@ -171,10 +188,9 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
      * - Current TVL: 750K FXRP
      * - maxDeposit() returns: 250K FXRP (remaining capacity)
      * 
-     * @param receiver Address that would receive shares (unused, per ERC4626 spec)
      * @return Maximum amount of assets that can be deposited
      */
-    function maxDeposit(address receiver) public view virtual override returns (uint256) {
+    function maxDeposit(address /* receiver */) public view virtual override returns (uint256) {
         // If paused, no deposits allowed
         if (paused()) {
             return 0;
@@ -201,10 +217,9 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
      * 1. Get remaining capacity in assets (depositLimit - totalAssets())
      * 2. Convert to shares using current exchange rate
      * 
-     * @param receiver Address that would receive shares (unused, per ERC4626 spec)
      * @return Maximum amount of shares that can be minted
      */
-    function maxMint(address receiver) public view virtual override returns (uint256) {
+    function maxMint(address /* receiver */) public view virtual override returns (uint256) {
         // If paused, no mints allowed
         if (paused()) {
             return 0;
@@ -382,25 +397,31 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
-     * @dev Override ERC4626 _deposit to enforce deposit limit
+     * @dev Override ERC4626 _deposit to enforce deposit limit and collect fees
+     * 
+     * ERC4626 Compliance (Critical):
+     * The 'shares' parameter is already fee-adjusted from previewDeposit() or previewMint().
+     * This ensures preview functions accurately reflect actual deposit outcomes.
+     * 
+     * Flow:
+     * 1. User deposits 'assets' FXRP
+     * 2. previewDeposit() calculated 'shares' accounting for 0.2% fee
+     * 3. super._deposit() transfers assets and mints fee-adjusted shares
+     * 4. Fee is collected from vault balance and sent to RevenueRouter
+     * 
+     * Example:
+     * - User deposits 1000 FXRP
+     * - previewDeposit(1000) returns shares worth 998 FXRP (2 FXRP fee deducted)
+     * - super._deposit() mints shares worth 998 FXRP
+     * - 2 FXRP fee transferred to RevenueRouter for buyback & burn
      * 
      * SECURITY (Firelight Protocol Pattern):
-     * Prevents uncontrolled TVL growth by enforcing maximum deposit cap.
-     * 
-     * Benefits:
-     * - Risk Management: Limit exposure during beta/audit phase
-     * - Strategy Capacity: Some strategies have TVL caps (e.g., Firelight max capacity)
-     * - Gradual Launch: Start with conservative limit, increase as strategies scale
-     * 
-     * Example Limits:
-     * - Beta Launch: 100K FXRP (~$210K)
-     * - Post-Audit: 1M FXRP (~$2.1M)
-     * - Mature Protocol: 10M+ FXRP (uncapped if strategies support it)
+     * Deposit limit prevents uncontrolled TVL growth during beta/audit phase.
      * 
      * @param caller Address initiating deposit
      * @param receiver Address receiving shares
-     * @param assets Amount of FXRP being deposited
-     * @param shares Amount of shares being minted
+     * @param assets Amount of FXRP being deposited (gross amount)
+     * @param shares Amount of shares being minted (fee-adjusted, fewer than without fee)
      */
     function _deposit(
         address caller,
@@ -411,41 +432,56 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         // Enforce deposit limit BEFORE accepting assets
         require(totalAssets() + assets <= depositLimit, "Deposit limit exceeded");
         
-        // Proceed with standard ERC4626 deposit flow
+        // Standard ERC4626 deposit flow with fee-adjusted shares
+        // The 'shares' parameter is already reduced to account for 0.2% deposit fee
+        // This was calculated in previewDeposit() which deducts fee before share conversion
         super._deposit(caller, receiver, assets, shares);
+        
+        // Collect 0.2% deposit fee and transfer to RevenueRouter
+        // Fee is taken from vault's balance (already received from caller)
+        IERC20 fxrp = IERC20(asset());
+        uint256 depositFee = (assets * DEPOSIT_FEE_BPS) / 10000;
+        if (depositFee > 0) {
+            fxrp.safeTransfer(revenueRouter, depositFee);
+            emit FeeTransferred("deposit", depositFee, revenueRouter);
+        }
     }
     
     /**
-     * @dev Override ERC4626 _withdraw to implement buffer-aware withdrawals
+     * @dev Override ERC4626 _withdraw to implement buffer-aware withdrawals and collect fees
      * 
-     * PHASE 1.5 (Architect Revised):
-     * Replenishes buffer from strategies if needed, then uses standard ERC4626 flow.
-     * 
-     * CRITICAL FIX (Architect Review):
-     * - Preserves ERC4626 hook chain by calling super._withdraw()
-     * - Pulls from strategies into buffer BEFORE standard flow
-     * - Prevents breaking parent logic and future extensions
+     * ERC4626 Compliance (Critical):
+     * The 'shares' parameter is already fee-adjusted from previewWithdraw() or previewRedeem().
+     * This ensures preview functions accurately reflect actual withdrawal outcomes.
      * 
      * Flow:
-     * 1. Check if buffer has enough FXRP
-     * 2. If yes: use standard ERC4626 flow (instant withdrawal)
-     * 3. If no:
-     *    a. Calculate shortfall
-     *    b. Pull from strategies into buffer (proportionally)
-     *    c. Verify buffer now has enough
-     *    d. Call super._withdraw() for standard flow (burn → transfer → emit)
+     * 1. Calculate gross assets from fee-adjusted shares
+     * 2. Check if buffer has enough FXRP (user withdrawal + fee)
+     * 3. If insufficient, pull from strategies into buffer
+     * 4. super._withdraw() burns shares and transfers assets to user
+     * 5. Fee is collected from vault balance and sent to RevenueRouter
      * 
-     * This approach:
-     * - ✅ Preserves ERC4626 hook chain
-     * - ✅ Pulls liquidity before burning
-     * - ✅ Reuses parent's SafeERC20 and event logic
-     * - ✅ Works with future extensions
+     * Example (withdraw path):
+     * - User calls withdraw(1000 FXRP)
+     * - previewWithdraw(1000) returns shares worth 1002 FXRP (2 FXRP fee included)
+     * - super._withdraw() burns shares worth 1002 FXRP, transfers 1000 to user
+     * - 2 FXRP fee transferred to RevenueRouter for buyback & burn
+     * 
+     * Example (redeem path):
+     * - User calls redeem(shares worth 1000 FXRP)
+     * - previewRedeem(shares) returns 998 FXRP (2 FXRP fee deducted)
+     * - super._withdraw() burns shares worth 1000 FXRP, transfers 998 to user
+     * - 2 FXRP fee transferred to RevenueRouter for buyback & burn
+     * 
+     * Buffer Replenishment:
+     * If vault buffer insufficient, pulls liquidity from strategies proportionally.
+     * Preserves instant withdrawal UX when buffer has capacity.
      * 
      * @param caller Address initiating withdrawal
      * @param receiver Address receiving withdrawn FXRP
      * @param owner Address whose shares are being burned
-     * @param assets Amount of FXRP to withdraw
-     * @param shares Amount of shares to burn
+     * @param assets Amount of FXRP to withdraw (what user receives)
+     * @param shares Amount of shares to burn (fee-adjusted, more than just for assets)
      */
     function _withdraw(
         address caller,
@@ -455,27 +491,46 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         uint256 shares
     ) internal override {
         IERC20 fxrp = IERC20(asset());
+        
+        // Calculate gross assets represented by shares (before fee deduction)
+        // This includes both the user's withdrawal and the fee
+        uint256 grossAssets = super.previewRedeem(shares);
+        uint256 withdrawFee = grossAssets - assets;
+        
         uint256 bufferBalance = fxrp.balanceOf(address(this));
         
-        // Case 1: Buffer has enough - use standard ERC4626 flow
-        if (bufferBalance >= assets) {
+        // Case 1: Buffer has enough for withdrawal + fee
+        if (bufferBalance >= grossAssets) {
+            // Use standard ERC4626 flow with fee-adjusted shares
+            // The 'shares' parameter is already adjusted to account for 0.2% withdrawal fee
+            // This was calculated in previewWithdraw() or previewRedeem()
             super._withdraw(caller, receiver, owner, assets, shares);
+            
+            // Collect 0.2% withdrawal fee and transfer to RevenueRouter
+            if (withdrawFee > 0) {
+                fxrp.safeTransfer(revenueRouter, withdrawFee);
+                emit FeeTransferred("withdraw", withdrawFee, revenueRouter);
+            }
             return;
         }
         
         // Case 2: Buffer insufficient - replenish from strategies FIRST
-        uint256 shortfall = assets - bufferBalance;
+        uint256 shortfall = grossAssets - bufferBalance;
         
-        // Pull liquidity from strategies into buffer
-        // This happens BEFORE any state changes (allowance, burn, transfer)
+        // Pull liquidity from strategies into buffer (including fee amount)
         _withdrawFromStrategies(shortfall);
         
-        // Verify buffer now has enough for standard withdrawal flow
-        require(fxrp.balanceOf(address(this)) >= assets, "Insufficient liquidity in vault and strategies");
+        // Verify buffer now has enough for withdrawal + fee
+        require(fxrp.balanceOf(address(this)) >= grossAssets, "Insufficient liquidity in vault and strategies");
         
-        // Now use standard ERC4626 flow (preserves hook chain)
-        // This handles: allowance check, burn, transfer, emit
+        // Use standard ERC4626 flow with fee-adjusted shares
         super._withdraw(caller, receiver, owner, assets, shares);
+        
+        // Collect 0.2% withdrawal fee and transfer to RevenueRouter
+        if (withdrawFee > 0) {
+            fxrp.safeTransfer(revenueRouter, withdrawFee);
+            emit FeeTransferred("withdraw", withdrawFee, revenueRouter);
+        }
     }
     
     /**
@@ -980,10 +1035,30 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     /**
      * @dev Report strategy performance and harvest profits
      * 
-     * This triggers strategy.report() which:
-     * - Updates internal accounting
-     * - Harvests rewards/fees
-     * - Reports profit/loss to vault
+     * ERC4626 Compliance (Critical):
+     * This function ensures accurate accounting by properly handling yield fees.
+     * 
+     * Strategy Profit Flow:
+     * 1. Strategies REINVEST profits (not transferred to vault buffer)
+     * 2. strategy.report() returns profit/loss amounts, but assets stay in strategy
+     * 3. Vault must PULL fee from strategy to collect it
+     * 
+     * Yield Fee Application:
+     * - Deducts 0.1% (adjustable) yield routing fee from profits
+     * - Fee PULLED from strategy to vault, then transferred to RevenueRouter
+     * - Net profit remains in strategy, increasing share value
+     * 
+     * Accounting Flow:
+     * 1. Strategy reports: profit=10, loss=0, assetsAfter=110 (reinvested)
+     * 2. Calculate yieldFee = 10 * 0.001 = 0.01
+     * 3. Pull 0.01 from strategy to vault
+     * 4. Transfer 0.01 from vault to revenueRouter
+     * 5. Update totalDeployed = 110 - 0.01 = 109.99
+     * 
+     * This ensures totalAssets() accurately reflects vault holdings:
+     * - Buffer + strategy.totalAssets() = buffer + 109.99 (correct)
+     * - Fee sent to revenueRouter (not counted in totalAssets)
+     * - No double-counting, no under-collateralization
      * 
      * Can be called by anyone (useful for keepers/bots).
      * 
@@ -994,12 +1069,39 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         require(strategies[strategy].status == StrategyStatus.Active, "Strategy not active");
         
         // Trigger strategy report (returns profit, loss, totalAssets)
+        // Note: Profit is REINVESTED in strategy, not transferred to vault
         (uint256 profit, uint256 loss, uint256 assetsAfter) = IStrategy(strategy).report();
+        
+        IERC20 fxrp = IERC20(asset());
+        
+        // Apply yield routing fee to profits (if any)
+        if (profit > 0 && yieldRoutingFeeBps > 0) {
+            // Calculate 0.1% yield fee (or current yieldRoutingFeeBps setting)
+            uint256 yieldFee = (profit * yieldRoutingFeeBps) / 10000;
+            
+            // CRITICAL FIX (ERC4626 Compliance):
+            // Profit is reinvested in strategy, so we must PULL the fee first
+            // This prevents accounting mismatch where vault tries to pay fee from buffer
+            // that doesn't actually have the profit yet
+            uint256 actualWithdrawn = IStrategy(strategy).withdraw(yieldFee, address(this));
+            
+            // Transfer fee to RevenueRouter for SHIELD buyback & burn
+            fxrp.safeTransfer(revenueRouter, actualWithdrawn);
+            emit FeeTransferred("yield", actualWithdrawn, revenueRouter);
+            
+            // Update strategy tracking: assetsAfter - actualWithdrawn
+            // (assetsAfter was before fee withdrawal, so we deduct what we pulled)
+            strategies[strategy].totalDeployed = assetsAfter - actualWithdrawn;
+        } else {
+            // No fee taken, update totalDeployed to match strategy's reported assets
+            strategies[strategy].totalDeployed = assetsAfter;
+        }
         
         // Update timestamp
         strategies[strategy].lastReportTimestamp = block.timestamp;
         
-        emit StrategyReported(strategy, profit, loss, assetsAfter);
+        // Emit event with gross profit/loss and final strategy assets
+        emit StrategyReported(strategy, profit, loss, strategies[strategy].totalDeployed);
     }
     
     /**
@@ -1024,76 +1126,138 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         emit BufferTargetUpdated(newTargetBps);
     }
     
-    // ========================================
-    // VIEW FUNCTIONS
-    // ========================================
-    
     /**
-     * @dev Get the underlying asset (FXRP token address)
+     * @dev Update yield routing fee (0-100 bps, max 1%)
      * 
-     * Inherited from ERC4626, but documented for clarity
+     * Yield Routing Fee:
+     * - Deducted from strategy profits when reportStrategy() is called
+     * - Sent to RevenueRouter for SHIELD buyback & burn
+     * - Does not affect deposits or withdrawals, only yield generation
      * 
-     * @return Address of FXRP token
+     * Conservative Range:
+     * - Min: 0 bps (0% - no yield fee)
+     * - Max: 100 bps (1% - reasonable cap to remain competitive)
+     * - Default: 10 bps (0.1% - minimal impact on APY)
+     * 
+     * @param newFeeBps New yield routing fee in basis points (0-100)
      */
-    // function asset() public view override returns (address)
-    // Already implemented in ERC4626
+    function setYieldRoutingFeeBps(uint256 newFeeBps) external onlyOwner {
+        require(newFeeBps <= 100, "Yield fee cannot exceed 1%");
+        
+        yieldRoutingFeeBps = newFeeBps;
+        emit YieldRoutingFeeUpdated(newFeeBps);
+    }
+    
+    // ========================================
+    // ERC4626 PREVIEW FUNCTIONS (FEE-ADJUSTED)
+    // ========================================
     
     /**
-     * @dev Preview how many shares will be minted for asset amount
+     * @dev Preview how many shares will be minted for asset deposit
      * 
-     * Inherited from ERC4626
-     * Formula: shares = (assets * totalSupply()) / totalAssets()
+     * ERC4626 Compliance (Critical):
+     * This MUST reflect the actual shares received after accounting for fees.
      * 
-     * @param assets Amount of FXRP to deposit
-     * @return shares Amount of shXRP that will be minted
+     * Fee Logic:
+     * 1. Deduct 0.2% deposit fee from assets
+     * 2. Convert net assets to shares using standard ERC4626 math
+     * 
+     * Example:
+     * - User deposits 1000 FXRP
+     * - Fee: 1000 * 0.002 = 2 FXRP (sent to RevenueRouter)
+     * - Net: 998 FXRP (converted to shares)
+     * - User receives shares worth 998 FXRP, not 1000 FXRP
+     * 
+     * @param assets Amount of FXRP to deposit (gross amount)
+     * @return shares Amount of shXRP that will be minted (fee-adjusted)
      */
-    // function previewDeposit(uint256 assets) public view override returns (uint256)
-    // Already implemented in ERC4626
+    function previewDeposit(uint256 assets) public view virtual override returns (uint256) {
+        uint256 fee = (assets * DEPOSIT_FEE_BPS) / 10000;
+        uint256 netAssets = assets - fee;
+        return super.previewDeposit(netAssets);
+    }
     
     /**
-     * @dev Preview how many assets are needed for share amount
+     * @dev Preview how many assets are needed to mint exact shares
      * 
-     * Inherited from ERC4626
-     * Formula: assets = (shares * totalAssets()) / totalSupply()
+     * ERC4626 Compliance (Critical):
+     * This MUST reflect the actual assets needed after accounting for fees.
+     * 
+     * Fee Logic:
+     * 1. Calculate net assets needed for shares (using standard ERC4626 math)
+     * 2. Gross up to account for 0.2% deposit fee
+     * 
+     * Math:
+     * - grossAssets * (1 - 0.002) = netAssets
+     * - grossAssets = netAssets / 0.998
+     * - grossAssets = netAssets * 10000 / 9980
+     * 
+     * Example:
+     * - User wants shares worth 998 FXRP
+     * - Net assets needed: 998 FXRP
+     * - Gross assets: 998 * 10000 / 9980 = 1000 FXRP
+     * - User deposits 1000 FXRP, fee is 2 FXRP, net is 998 FXRP
      * 
      * @param shares Amount of shXRP to mint
-     * @return assets Amount of FXRP needed
+     * @return assets Amount of FXRP needed (fee-adjusted)
      */
-    // function previewMint(uint256 shares) public view override returns (uint256)
-    // Already implemented in ERC4626
+    function previewMint(uint256 shares) public view virtual override returns (uint256) {
+        uint256 netAssets = super.previewMint(shares);
+        return (netAssets * 10000) / (10000 - DEPOSIT_FEE_BPS);
+    }
     
     /**
      * @dev Preview how many shares will be burned for asset withdrawal
      * 
-     * Inherited from ERC4626
+     * ERC4626 Compliance (Critical):
+     * This MUST reflect the actual shares burned after accounting for fees.
+     * 
+     * Fee Logic:
+     * 1. User wants 'assets' FXRP
+     * 2. Vault needs to provide assets + 0.2% fee
+     * 3. Convert total assets to shares using standard ERC4626 math
+     * 
+     * Example:
+     * - User wants 1000 FXRP
+     * - Fee: 1000 * 0.002 = 2 FXRP (sent to RevenueRouter)
+     * - Total needed: 1002 FXRP
+     * - Burn shares worth 1002 FXRP
+     * - User receives 1000 FXRP, fee is 2 FXRP
      * 
      * @param assets Amount of FXRP to withdraw
-     * @return shares Amount of shXRP that will be burned
+     * @return shares Amount of shXRP that will be burned (fee-adjusted)
      */
-    // function previewWithdraw(uint256 assets) public view override returns (uint256)
-    // Already implemented in ERC4626
+    function previewWithdraw(uint256 assets) public view virtual override returns (uint256) {
+        uint256 fee = (assets * WITHDRAW_FEE_BPS) / 10000;
+        uint256 totalAssetsNeeded = assets + fee;
+        return super.previewWithdraw(totalAssetsNeeded);
+    }
     
     /**
      * @dev Preview how many assets will be received for share redemption
      * 
-     * Inherited from ERC4626
+     * ERC4626 Compliance (Critical):
+     * This MUST reflect the actual assets received after accounting for fees.
+     * 
+     * Fee Logic:
+     * 1. Convert shares to gross assets using standard ERC4626 math
+     * 2. Deduct 0.2% withdrawal fee
+     * 3. User receives net assets
+     * 
+     * Example:
+     * - User redeems shares worth 1000 FXRP
+     * - Gross assets: 1000 FXRP
+     * - Fee: 1000 * 0.002 = 2 FXRP (sent to RevenueRouter)
+     * - Net: 998 FXRP (transferred to user)
      * 
      * @param shares Amount of shXRP to redeem
-     * @return assets Amount of FXRP that will be received
+     * @return assets Amount of FXRP that will be received (fee-adjusted)
      */
-    // function previewRedeem(uint256 shares) public view override returns (uint256)
-    // Already implemented in ERC4626
-    
-    /**
-     * @dev Returns the number of decimals (6, matches FXRP)
-     * 
-     * Note: shXRP inherits decimals from the underlying FXRP asset (6 decimals)
-     * Inherited from ERC4626 which uses the same decimals as the underlying asset
-     * 
-     * @return uint8 Number of decimals
-     */
-    // function decimals() public view override returns (uint8)
-    // Already implemented in ERC4626, automatically matches FXRP's 6 decimals
+    function previewRedeem(uint256 shares) public view virtual override returns (uint256) {
+        uint256 grossAssets = super.previewRedeem(shares);
+        uint256 fee = (grossAssets * WITHDRAW_FEE_BPS) / 10000;
+        return grossAssets - fee;
+    }
     
     // ========================================
     // BUFFER & STRATEGY VIEW FUNCTIONS

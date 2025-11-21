@@ -18,8 +18,10 @@ getContractFactory(name: 'ShXRPVault', signerOrOptions?: ethers.Signer | Factory
 getContractFactory(name: 'ShieldToken', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ShieldToken__factory>
 getContractFactory(name: 'StakingBoost', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.StakingBoost__factory>
 getContractFactory(name: 'VaultController', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.VaultController__factory>
+getContractFactory(name: 'INonfungiblePositionManager', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.INonfungiblePositionManager__factory>
 getContractFactory(name: 'IShieldToken', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IShieldToken__factory>
 getContractFactory(name: 'IStrategy', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IStrategy__factory>
+getContractFactory(name: 'IUniswapV3Pool', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IUniswapV3Pool__factory>
 getContractFactory(name: 'IUniswapV3Router', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IUniswapV3Router__factory>
 getContractFactory(name: 'IWFLR', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IWFLR__factory>
 getContractFactory(name: 'MockERC20', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.MockERC20__factory>
@@ -33,8 +35,10 @@ getContractAt(name: 'ShXRPVault', address: string | ethers.Addressable, signer?:
 getContractAt(name: 'ShieldToken', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ShieldToken>
 getContractAt(name: 'StakingBoost', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.StakingBoost>
 getContractAt(name: 'VaultController', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.VaultController>
+getContractAt(name: 'INonfungiblePositionManager', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.INonfungiblePositionManager>
 getContractAt(name: 'IShieldToken', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IShieldToken>
 getContractAt(name: 'IStrategy', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IStrategy>
+getContractAt(name: 'IUniswapV3Pool', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IUniswapV3Pool>
 getContractAt(name: 'IUniswapV3Router', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IUniswapV3Router>
 getContractAt(name: 'IWFLR', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IWFLR>
 getContractAt(name: 'MockERC20', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.MockERC20>
@@ -48,8 +52,10 @@ deployContract(name: 'ShXRPVault', signerOrOptions?: ethers.Signer | DeployContr
 deployContract(name: 'ShieldToken', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShieldToken>
 deployContract(name: 'StakingBoost', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.StakingBoost>
 deployContract(name: 'VaultController', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.VaultController>
+deployContract(name: 'INonfungiblePositionManager', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.INonfungiblePositionManager>
 deployContract(name: 'IShieldToken', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IShieldToken>
 deployContract(name: 'IStrategy', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IStrategy>
+deployContract(name: 'IUniswapV3Pool', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IUniswapV3Pool>
 deployContract(name: 'IUniswapV3Router', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IUniswapV3Router>
 deployContract(name: 'IWFLR', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IWFLR>
 deployContract(name: 'MockERC20', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MockERC20>
@@ -63,8 +69,10 @@ deployContract(name: 'ShXRPVault', args: any[], signerOrOptions?: ethers.Signer 
 deployContract(name: 'ShieldToken', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShieldToken>
 deployContract(name: 'StakingBoost', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.StakingBoost>
 deployContract(name: 'VaultController', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.VaultController>
+deployContract(name: 'INonfungiblePositionManager', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.INonfungiblePositionManager>
 deployContract(name: 'IShieldToken', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IShieldToken>
 deployContract(name: 'IStrategy', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IStrategy>
+deployContract(name: 'IUniswapV3Pool', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IUniswapV3Pool>
 deployContract(name: 'IUniswapV3Router', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IUniswapV3Router>
 deployContract(name: 'IWFLR', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IWFLR>
 deployContract(name: 'MockERC20', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MockERC20>

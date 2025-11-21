@@ -13,11 +13,13 @@ export declare namespace ShXRPVault {
     }
 
   export interface ShXRPVaultInterface extends Interface {
-    getFunction(nameOrSignature: "activateStrategy" | "addOperator" | "addStrategy" | "allowance" | "approve" | "asset" | "balanceOf" | "bufferTargetBps" | "convertToAssets" | "convertToShares" | "decimals" | "deployToStrategy" | "deposit" | "depositLimit" | "getActiveStrategies" | "getAllStrategies" | "getBufferBalance" | "getBufferStatus" | "getBufferTarget" | "getCurrentAllocations" | "getStrategyInfo" | "getTotalDeployed" | "maxDeposit" | "maxMint" | "maxRedeem" | "maxWithdraw" | "minDeposit" | "mint" | "name" | "operators" | "owner" | "pause" | "pauseStrategy" | "paused" | "previewDeposit" | "previewMint" | "previewRedeem" | "previewWithdraw" | "redeem" | "removeOperator" | "removeStrategy" | "renounceOwnership" | "reportStrategy" | "resumeStrategy" | "setBufferTarget" | "setDepositLimit" | "setMinDeposit" | "strategies" | "strategyList" | "symbol" | "totalAssets" | "totalStrategyTargetBps" | "totalSupply" | "transfer" | "transferFrom" | "transferOwnership" | "unpause" | "updateAllocation" | "withdraw" | "withdrawFromStrategy"): FunctionFragment;
+    getFunction(nameOrSignature: "DEPOSIT_FEE_BPS" | "WITHDRAW_FEE_BPS" | "activateStrategy" | "addOperator" | "addStrategy" | "allowance" | "approve" | "asset" | "balanceOf" | "bufferTargetBps" | "convertToAssets" | "convertToShares" | "decimals" | "deployToStrategy" | "deposit" | "depositLimit" | "getActiveStrategies" | "getAllStrategies" | "getBufferBalance" | "getBufferStatus" | "getBufferTarget" | "getCurrentAllocations" | "getStrategyInfo" | "getTotalDeployed" | "maxDeposit" | "maxMint" | "maxRedeem" | "maxWithdraw" | "minDeposit" | "mint" | "name" | "operators" | "owner" | "pause" | "pauseStrategy" | "paused" | "previewDeposit" | "previewMint" | "previewRedeem" | "previewWithdraw" | "redeem" | "removeOperator" | "removeStrategy" | "renounceOwnership" | "reportStrategy" | "resumeStrategy" | "revenueRouter" | "setBufferTarget" | "setDepositLimit" | "setMinDeposit" | "setYieldRoutingFeeBps" | "strategies" | "strategyList" | "symbol" | "totalAssets" | "totalStrategyTargetBps" | "totalSupply" | "transfer" | "transferFrom" | "transferOwnership" | "unpause" | "updateAllocation" | "withdraw" | "withdrawFromStrategy" | "yieldRoutingFeeBps"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "Approval" | "BufferTargetUpdated" | "DeployedToStrategy" | "Deposit" | "DepositLimitUpdated" | "MinDepositUpdated" | "OperatorAdded" | "OperatorRemoved" | "OwnershipTransferred" | "Paused" | "StrategyAdded" | "StrategyAllocationUpdated" | "StrategyRemoved" | "StrategyReported" | "StrategyStatusUpdated" | "Transfer" | "Unpaused" | "Withdraw" | "WithdrawnFromStrategy"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "Approval" | "BufferTargetUpdated" | "DeployedToStrategy" | "Deposit" | "DepositLimitUpdated" | "FeeTransferred" | "MinDepositUpdated" | "OperatorAdded" | "OperatorRemoved" | "OwnershipTransferred" | "Paused" | "StrategyAdded" | "StrategyAllocationUpdated" | "StrategyRemoved" | "StrategyReported" | "StrategyStatusUpdated" | "Transfer" | "Unpaused" | "Withdraw" | "WithdrawnFromStrategy" | "YieldRoutingFeeUpdated"): EventFragment;
 
-    encodeFunctionData(functionFragment: 'activateStrategy', values: [AddressLike]): string;
+    encodeFunctionData(functionFragment: 'DEPOSIT_FEE_BPS', values?: undefined): string;
+encodeFunctionData(functionFragment: 'WITHDRAW_FEE_BPS', values?: undefined): string;
+encodeFunctionData(functionFragment: 'activateStrategy', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'addOperator', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'addStrategy', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'allowance', values: [AddressLike, AddressLike]): string;
@@ -61,9 +63,11 @@ encodeFunctionData(functionFragment: 'removeStrategy', values: [AddressLike]): s
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
 encodeFunctionData(functionFragment: 'reportStrategy', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'resumeStrategy', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'revenueRouter', values?: undefined): string;
 encodeFunctionData(functionFragment: 'setBufferTarget', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'setDepositLimit', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'setMinDeposit', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'setYieldRoutingFeeBps', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'strategies', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'strategyList', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'symbol', values?: undefined): string;
@@ -77,8 +81,11 @@ encodeFunctionData(functionFragment: 'unpause', values?: undefined): string;
 encodeFunctionData(functionFragment: 'updateAllocation', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'withdraw', values: [BigNumberish, AddressLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'withdrawFromStrategy', values: [AddressLike, BigNumberish]): string;
+encodeFunctionData(functionFragment: 'yieldRoutingFeeBps', values?: undefined): string;
 
-    decodeFunctionResult(functionFragment: 'activateStrategy', data: BytesLike): Result;
+    decodeFunctionResult(functionFragment: 'DEPOSIT_FEE_BPS', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'WITHDRAW_FEE_BPS', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'activateStrategy', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'addOperator', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'addStrategy', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'allowance', data: BytesLike): Result;
@@ -122,9 +129,11 @@ decodeFunctionResult(functionFragment: 'removeStrategy', data: BytesLike): Resul
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'reportStrategy', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'resumeStrategy', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'revenueRouter', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setBufferTarget', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setDepositLimit', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setMinDeposit', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setYieldRoutingFeeBps', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'strategies', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'strategyList', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'symbol', data: BytesLike): Result;
@@ -138,6 +147,7 @@ decodeFunctionResult(functionFragment: 'unpause', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'updateAllocation', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'yieldRoutingFeeBps', data: BytesLike): Result;
   }
 
   
@@ -193,6 +203,18 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
       export type InputTuple = [newDepositLimit: BigNumberish];
       export type OutputTuple = [newDepositLimit: bigint];
       export interface OutputObject {newDepositLimit: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace FeeTransferredEvent {
+      export type InputTuple = [feeType: string, amount: BigNumberish, recipient: AddressLike];
+      export type OutputTuple = [feeType: string, amount: bigint, recipient: string];
+      export interface OutputObject {feeType: string, amount: bigint, recipient: string };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -369,6 +391,18 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
 
   
 
+    export namespace YieldRoutingFeeUpdatedEvent {
+      export type InputTuple = [newFeeBps: BigNumberish];
+      export type OutputTuple = [newFeeBps: bigint];
+      export interface OutputObject {newFeeBps: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
   export interface ShXRPVault extends BaseContract {
     
     connect(runner?: ContractRunner | null): ShXRPVault;
@@ -402,6 +436,22 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
 
 
     
+    
+    DEPOSIT_FEE_BPS: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
+    
+    WITHDRAW_FEE_BPS: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
     
     activateStrategy: TypedContractMethod<
       [strategy: AddressLike, ],
@@ -580,7 +630,7 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
 
     
     maxDeposit: TypedContractMethod<
-      [receiver: AddressLike, ],
+      [arg0: AddressLike, ],
       [bigint],
       'view'
     >
@@ -588,7 +638,7 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
 
     
     maxMint: TypedContractMethod<
-      [receiver: AddressLike, ],
+      [arg0: AddressLike, ],
       [bigint],
       'view'
     >
@@ -755,6 +805,14 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
     
 
     
+    revenueRouter: TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >
+    
+
+    
     setBufferTarget: TypedContractMethod<
       [newTargetBps: BigNumberish, ],
       [void],
@@ -773,6 +831,14 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
     
     setMinDeposit: TypedContractMethod<
       [newMinDeposit: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    setYieldRoutingFeeBps: TypedContractMethod<
+      [newFeeBps: BigNumberish, ],
       [void],
       'nonpayable'
     >
@@ -882,10 +948,28 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
     >
     
 
+    
+    yieldRoutingFeeBps: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
 
-    getFunction(nameOrSignature: 'activateStrategy'): TypedContractMethod<
+    getFunction(nameOrSignature: 'DEPOSIT_FEE_BPS'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'WITHDRAW_FEE_BPS'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
+getFunction(nameOrSignature: 'activateStrategy'): TypedContractMethod<
       [strategy: AddressLike, ],
       [void],
       'nonpayable'
@@ -996,12 +1080,12 @@ getFunction(nameOrSignature: 'getTotalDeployed'): TypedContractMethod<
       'view'
     >;
 getFunction(nameOrSignature: 'maxDeposit'): TypedContractMethod<
-      [receiver: AddressLike, ],
+      [arg0: AddressLike, ],
       [bigint],
       'view'
     >;
 getFunction(nameOrSignature: 'maxMint'): TypedContractMethod<
-      [receiver: AddressLike, ],
+      [arg0: AddressLike, ],
       [bigint],
       'view'
     >;
@@ -1105,6 +1189,11 @@ getFunction(nameOrSignature: 'resumeStrategy'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'revenueRouter'): TypedContractMethod<
+      [],
+      [string],
+      'view'
+    >;
 getFunction(nameOrSignature: 'setBufferTarget'): TypedContractMethod<
       [newTargetBps: BigNumberish, ],
       [void],
@@ -1117,6 +1206,11 @@ getFunction(nameOrSignature: 'setDepositLimit'): TypedContractMethod<
     >;
 getFunction(nameOrSignature: 'setMinDeposit'): TypedContractMethod<
       [newMinDeposit: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >;
+getFunction(nameOrSignature: 'setYieldRoutingFeeBps'): TypedContractMethod<
+      [newFeeBps: BigNumberish, ],
       [void],
       'nonpayable'
     >;
@@ -1185,12 +1279,18 @@ getFunction(nameOrSignature: 'withdrawFromStrategy'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'yieldRoutingFeeBps'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
 
     getEvent(key: 'Approval'): TypedContractEvent<ApprovalEvent.InputTuple, ApprovalEvent.OutputTuple, ApprovalEvent.OutputObject>;
 getEvent(key: 'BufferTargetUpdated'): TypedContractEvent<BufferTargetUpdatedEvent.InputTuple, BufferTargetUpdatedEvent.OutputTuple, BufferTargetUpdatedEvent.OutputObject>;
 getEvent(key: 'DeployedToStrategy'): TypedContractEvent<DeployedToStrategyEvent.InputTuple, DeployedToStrategyEvent.OutputTuple, DeployedToStrategyEvent.OutputObject>;
 getEvent(key: 'Deposit'): TypedContractEvent<DepositEvent.InputTuple, DepositEvent.OutputTuple, DepositEvent.OutputObject>;
 getEvent(key: 'DepositLimitUpdated'): TypedContractEvent<DepositLimitUpdatedEvent.InputTuple, DepositLimitUpdatedEvent.OutputTuple, DepositLimitUpdatedEvent.OutputObject>;
+getEvent(key: 'FeeTransferred'): TypedContractEvent<FeeTransferredEvent.InputTuple, FeeTransferredEvent.OutputTuple, FeeTransferredEvent.OutputObject>;
 getEvent(key: 'MinDepositUpdated'): TypedContractEvent<MinDepositUpdatedEvent.InputTuple, MinDepositUpdatedEvent.OutputTuple, MinDepositUpdatedEvent.OutputObject>;
 getEvent(key: 'OperatorAdded'): TypedContractEvent<OperatorAddedEvent.InputTuple, OperatorAddedEvent.OutputTuple, OperatorAddedEvent.OutputObject>;
 getEvent(key: 'OperatorRemoved'): TypedContractEvent<OperatorRemovedEvent.InputTuple, OperatorRemovedEvent.OutputTuple, OperatorRemovedEvent.OutputObject>;
@@ -1205,6 +1305,7 @@ getEvent(key: 'Transfer'): TypedContractEvent<TransferEvent.InputTuple, Transfer
 getEvent(key: 'Unpaused'): TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
 getEvent(key: 'Withdraw'): TypedContractEvent<WithdrawEvent.InputTuple, WithdrawEvent.OutputTuple, WithdrawEvent.OutputObject>;
 getEvent(key: 'WithdrawnFromStrategy'): TypedContractEvent<WithdrawnFromStrategyEvent.InputTuple, WithdrawnFromStrategyEvent.OutputTuple, WithdrawnFromStrategyEvent.OutputObject>;
+getEvent(key: 'YieldRoutingFeeUpdated'): TypedContractEvent<YieldRoutingFeeUpdatedEvent.InputTuple, YieldRoutingFeeUpdatedEvent.OutputTuple, YieldRoutingFeeUpdatedEvent.OutputObject>;
 
     filters: {
       
@@ -1226,6 +1327,10 @@ getEvent(key: 'WithdrawnFromStrategy'): TypedContractEvent<WithdrawnFromStrategy
 
       'DepositLimitUpdated(uint256)': TypedContractEvent<DepositLimitUpdatedEvent.InputTuple, DepositLimitUpdatedEvent.OutputTuple, DepositLimitUpdatedEvent.OutputObject>;
       DepositLimitUpdated: TypedContractEvent<DepositLimitUpdatedEvent.InputTuple, DepositLimitUpdatedEvent.OutputTuple, DepositLimitUpdatedEvent.OutputObject>;
+    
+
+      'FeeTransferred(string,uint256,address)': TypedContractEvent<FeeTransferredEvent.InputTuple, FeeTransferredEvent.OutputTuple, FeeTransferredEvent.OutputObject>;
+      FeeTransferred: TypedContractEvent<FeeTransferredEvent.InputTuple, FeeTransferredEvent.OutputTuple, FeeTransferredEvent.OutputObject>;
     
 
       'MinDepositUpdated(uint256)': TypedContractEvent<MinDepositUpdatedEvent.InputTuple, MinDepositUpdatedEvent.OutputTuple, MinDepositUpdatedEvent.OutputObject>;
@@ -1282,6 +1387,10 @@ getEvent(key: 'WithdrawnFromStrategy'): TypedContractEvent<WithdrawnFromStrategy
 
       'WithdrawnFromStrategy(address,uint256,uint256)': TypedContractEvent<WithdrawnFromStrategyEvent.InputTuple, WithdrawnFromStrategyEvent.OutputTuple, WithdrawnFromStrategyEvent.OutputObject>;
       WithdrawnFromStrategy: TypedContractEvent<WithdrawnFromStrategyEvent.InputTuple, WithdrawnFromStrategyEvent.OutputTuple, WithdrawnFromStrategyEvent.OutputObject>;
+    
+
+      'YieldRoutingFeeUpdated(uint256)': TypedContractEvent<YieldRoutingFeeUpdatedEvent.InputTuple, YieldRoutingFeeUpdatedEvent.OutputTuple, YieldRoutingFeeUpdatedEvent.OutputObject>;
+      YieldRoutingFeeUpdated: TypedContractEvent<YieldRoutingFeeUpdatedEvent.InputTuple, YieldRoutingFeeUpdatedEvent.OutputTuple, YieldRoutingFeeUpdatedEvent.OutputObject>;
     
     };
   }
