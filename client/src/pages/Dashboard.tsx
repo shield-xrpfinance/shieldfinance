@@ -20,6 +20,7 @@ import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { Link, useLocation } from "wouter";
 import { AssetIcon } from "@/components/AssetIcon";
+import { useCurrency, convertToSelectedCurrency, getCurrencySymbol } from "@/lib/currencyContext";
 
 export default function Dashboard() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -40,6 +41,7 @@ export default function Dashboard() {
   const { network, isTestnet } = useNetwork();
   const [, setLocation] = useLocation();
   const comprehensiveBalances = useComprehensiveBalance();
+  const { currency, exchangeRates } = useCurrency();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
     queryKey: ["/api/vaults"],
@@ -493,9 +495,9 @@ export default function Dashboard() {
             ) : (
               <div className="space-y-3">
                 <div className="space-y-1 pb-2 border-b border-border/50">
-                  <p className="text-xs text-muted-foreground">Total Value (USD)</p>
+                  <p className="text-xs text-muted-foreground">Total Value ({currency})</p>
                   <p className="text-3xl font-bold tabular-nums" data-testid="text-total-usd-value">
-                    ${comprehensiveBalances.totalUsd.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    {getCurrencySymbol(currency)}{convertToSelectedCurrency(comprehensiveBalances.totalUsd, currency).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
                 <div className="space-y-2">
@@ -507,7 +509,7 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-flr">{parseFloat(comprehensiveBalances.flr).toFixed(4)}</div>
-                        <div className="text-xs text-muted-foreground" data-testid="text-balance-flr-usd">${comprehensiveBalances.flrUsd.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground" data-testid="text-balance-flr-usd">{getCurrencySymbol(currency)}{convertToSelectedCurrency(comprehensiveBalances.flrUsd, currency).toFixed(2)}</div>
                       </div>
                     </div>
                   )}
@@ -519,7 +521,7 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-wflr">{parseFloat(comprehensiveBalances.wflr).toFixed(4)}</div>
-                        <div className="text-xs text-muted-foreground" data-testid="text-balance-wflr-usd">${comprehensiveBalances.wflrUsd.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground" data-testid="text-balance-wflr-usd">{getCurrencySymbol(currency)}{convertToSelectedCurrency(comprehensiveBalances.wflrUsd, currency).toFixed(2)}</div>
                       </div>
                     </div>
                   )}
@@ -531,7 +533,7 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-shield">{parseFloat(comprehensiveBalances.shield).toFixed(2)}</div>
-                        <div className="text-xs text-muted-foreground" data-testid="text-balance-shield-usd">${comprehensiveBalances.shieldUsd.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground" data-testid="text-balance-shield-usd">{getCurrencySymbol(currency)}{convertToSelectedCurrency(comprehensiveBalances.shieldUsd, currency).toFixed(2)}</div>
                       </div>
                     </div>
                   )}
@@ -543,7 +545,7 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-shxrp">{parseFloat(comprehensiveBalances.shxrp).toFixed(4)}</div>
-                        <div className="text-xs text-muted-foreground" data-testid="text-balance-shxrp-usd">${comprehensiveBalances.shxrpUsd.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground" data-testid="text-balance-shxrp-usd">{getCurrencySymbol(currency)}{convertToSelectedCurrency(comprehensiveBalances.shxrpUsd, currency).toFixed(2)}</div>
                       </div>
                     </div>
                   )}
@@ -555,7 +557,7 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-xrp">{parseFloat(comprehensiveBalances.xrp).toFixed(2)}</div>
-                        <div className="text-xs text-muted-foreground" data-testid="text-balance-xrp-usd">${comprehensiveBalances.xrpUsd.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground" data-testid="text-balance-xrp-usd">{getCurrencySymbol(currency)}{convertToSelectedCurrency(comprehensiveBalances.xrpUsd, currency).toFixed(2)}</div>
                       </div>
                     </div>
                   )}
@@ -567,7 +569,7 @@ export default function Dashboard() {
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-usdt">{parseFloat(comprehensiveBalances.usdt).toFixed(2)}</div>
-                        <div className="text-xs text-muted-foreground" data-testid="text-balance-usdt-usd">${comprehensiveBalances.usdtUsd.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground" data-testid="text-balance-usdt-usd">{getCurrencySymbol(currency)}{convertToSelectedCurrency(comprehensiveBalances.usdtUsd, currency).toFixed(2)}</div>
                       </div>
                     </div>
                   )}

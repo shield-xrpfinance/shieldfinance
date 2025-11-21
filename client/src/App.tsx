@@ -10,6 +10,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { TestnetBanner } from "@/components/TestnetBanner";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
+import { CurrencyProvider } from "@/lib/currencyContext";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -101,7 +102,8 @@ function AppContent() {
       <TooltipProvider>
         <NetworkProvider>
           <WalletProvider>
-            <SidebarProvider style={style as React.CSSProperties}>
+            <CurrencyProvider>
+              <SidebarProvider style={style as React.CSSProperties}>
               <div className="flex h-screen w-full">
                 <AppSidebar />
                 <div className="flex flex-col flex-1">
@@ -115,7 +117,8 @@ function AppContent() {
                 </div>
               </div>
             </SidebarProvider>
-            <Toaster />
+              <Toaster />
+            </CurrencyProvider>
           </WalletProvider>
         </NetworkProvider>
       </TooltipProvider>

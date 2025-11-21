@@ -14,9 +14,17 @@ import { LayoutDashboard, Vault, Wallet, History, BarChart3, Coins, HelpCircle, 
 import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
+import { useCurrency, type Currency, getCurrencyName } from "@/lib/currencyContext";
 import { SiX, SiLinkedin, SiDiscord } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const menuItems = [
   {
@@ -69,6 +77,7 @@ const menuItems = [
 export function AppSidebar() {
   const [location] = useLocation();
   const { network, isTestnet, toggleNetwork } = useNetwork();
+  const { currency, setCurrency } = useCurrency();
 
   return (
     <Sidebar>
@@ -85,7 +94,7 @@ export function AppSidebar() {
       </SidebarHeader>
       <SidebarContent>
         <SidebarGroup>
-          <SidebarGroupContent>
+          <SidebarGroupContent className="space-y-3">
             <div className="flex items-center justify-center gap-2 bg-muted px-3 py-2 rounded-md mx-2" data-testid="network-toggle">
               <span className="text-xs font-medium text-muted-foreground">Mainnet</span>
               <Switch
@@ -96,6 +105,22 @@ export function AppSidebar() {
               <span className={`text-xs font-medium ${isTestnet ? 'text-orange-500' : 'text-muted-foreground'}`}>
                 Testnet
               </span>
+            </div>
+
+            <div className="px-2" data-testid="currency-selector">
+              <label className="text-xs font-medium text-muted-foreground block mb-2">Currency</label>
+              <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
+                <SelectTrigger className="h-9" data-testid="select-currency">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="USD" data-testid="option-currency-usd">USD - US Dollar</SelectItem>
+                  <SelectItem value="EUR" data-testid="option-currency-eur">EUR - Euro</SelectItem>
+                  <SelectItem value="GBP" data-testid="option-currency-gbp">GBP - British Pound</SelectItem>
+                  <SelectItem value="JPY" data-testid="option-currency-jpy">JPY - Japanese Yen</SelectItem>
+                  <SelectItem value="CAD" data-testid="option-currency-cad">CAD - Canadian Dollar</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
