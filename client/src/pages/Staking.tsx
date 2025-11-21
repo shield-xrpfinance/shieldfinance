@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useFlrBalance } from "@/hooks/useFlrBalance";
+import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
 import GlassStatsCard from "@/components/GlassStatsCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ export default function Staking() {
   const { evmAddress, isConnected } = useWallet();
   const { toast } = useToast();
   const { balance: flrBalance } = useFlrBalance();
+  const { shield: shieldBalance, isLoading: balancesLoading } = useComprehensiveBalance();
   const [stakeAmount, setStakeAmount] = useState("");
   const [unstakeAmount, setUnstakeAmount] = useState("");
 
@@ -216,9 +218,9 @@ export default function Staking() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <GlassStatsCard
-            label="Your FLR Balance"
-            value={parseFloat(flrBalance).toFixed(4)}
-            icon={<Coins className="h-6 w-6" />}
+            label="Your SHIELD Balance"
+            value={parseFloat(shieldBalance).toFixed(4)}
+            icon={<Shield className="h-6 w-6" />}
           />
           <GlassStatsCard
             label="Your Staked Balance"
