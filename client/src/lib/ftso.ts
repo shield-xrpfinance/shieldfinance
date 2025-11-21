@@ -29,12 +29,12 @@ export const FTSO_V2_ABI = [
 
 /**
  * Get FTSO contract address from Contract Registry
- * @param provider - Ethers BrowserProvider
+ * @param provider - Ethers JsonRpcProvider (read-only RPC connection)
  * @param isTestnet - Whether using testnet (Coston2) or mainnet
  * @returns FTSO contract address
  */
 export async function getFtsoContractAddress(
-  provider: ethers.BrowserProvider,
+  provider: ethers.JsonRpcProvider,
   isTestnet: boolean
 ): Promise<string> {
   const registry = new ethers.Contract(
@@ -52,13 +52,13 @@ export async function getFtsoContractAddress(
 
 /**
  * Fetch price for a single feed
- * @param provider - Ethers BrowserProvider
+ * @param provider - Ethers JsonRpcProvider (read-only RPC connection)
  * @param feedId - FTSO feed ID (21 bytes)
  * @param isTestnet - Whether using testnet
  * @returns Price as a number (already divided by 10^decimals)
  */
 export async function getFtsoPrice(
-  provider: ethers.BrowserProvider,
+  provider: ethers.JsonRpcProvider,
   feedId: string,
   isTestnet: boolean
 ): Promise<number> {
@@ -80,40 +80,47 @@ export async function getFtsoPrice(
 
 /**
  * Fetch multiple prices at once (more efficient)
- * @param provider - Ethers BrowserProvider
+ * @param provider - Ethers JsonRpcProvider (read-only RPC connection)
  * @param feedIds - Array of FTSO feed IDs
  * @param isTestnet - Whether using testnet
  * @returns Map of feedId to price
  */
 export async function getFtsoPrices(
-  provider: ethers.BrowserProvider,
+  provider: ethers.JsonRpcProvider,
   feedIds: string[],
   isTestnet: boolean
 ): Promise<Map<string, number>> {
   try {
-    const ftsoAddress = await getFtsoContractAddress(provider, isTestnet);
-    const ftso = new ethers.Contract(ftsoAddress, FTSO_V2_ABI, provider);
-    
-    console.log('🔍 Fetching FTSO prices...');
-    console.log('   FTSO Address:', ftsoAddress);
+    console.log('🔍 [FTSO] getFtsoPrices called');
     console.log('   Feed IDs:', feedIds);
     console.log('   Is Testnet:', isTestnet);
     
-    const [values, decimals] = await ftso.getFeedsById(feedIds);
+    const ftsoAddress = await getFtsoContractAddress(provider, isTestnet);
+    console.log('   FTSO Contract Address:', ftsoAddress);
     
-    console.log('✅ FTSO prices fetched:');
+    const ftso = new ethers.Contract(ftsoAddress, FTSO_V2_ABI, provider);
+    
+    console.log('   Calling getFeedsById...');
+    const [values, decimals] = await ftso.getFeedsById(feedIds);
+    console.log('   Values received:', values);
+    console.log('   Decimals received:', decimals);
     
     const priceMap = new Map<string, number>();
     
     for (let i = 0; i < feedIds.length; i++) {
       const price = Number(values[i]) / Math.pow(10, Number(decimals[i]));
       priceMap.set(feedIds[i], price);
-      console.log(`   ${feedIds[i]}: $${price.toFixed(4)} (value: ${values[i]}, decimals: ${decimals[i]})`);
+      console.log(`   ${feedIds[i]}: $${price.toFixed(4)}`);
     }
     
     return priceMap;
   } catch (error) {
-    console.error("❌ Failed to fetch FTSO prices:", error);
+    console.error("❌ [FTSO] Failed to fetch FTSO prices:", error);
+    console.error("   Error details:", {
+      message: error instanceof Error ? error.message : String(error),
+      feedIds,
+      isTestnet
+    });
     return new Map();
   }
 }

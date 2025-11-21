@@ -1,11 +1,12 @@
 import { useState, useEffect } from "react";
-import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { ethers } from "ethers";
 import { getFtsoPrices, FTSO_FEED_IDS } from "@/lib/ftso";
+import { FLARE_CONTRACTS } from "@shared/flare-contracts";
 
 /**
  * Hook to fetch real-time prices from FTSO (Flare Time Series Oracle)
+ * Uses a read-only JsonRpcProvider for oracle queries (no wallet needed)
  * Updates every 30 seconds with latest price data from 100+ data providers
  */
 export interface FtsoPrices {
@@ -17,7 +18,6 @@ export interface FtsoPrices {
 }
 
 export function useFtsoPrice() {
-  const { walletConnectProvider, isEvmConnected } = useWallet();
   const { isTestnet } = useNetwork();
   const [prices, setPrices] = useState<FtsoPrices>({
     flrUsd: 0,
@@ -28,34 +28,40 @@ export function useFtsoPrice() {
   });
 
   useEffect(() => {
-    if (!isEvmConnected || !walletConnectProvider) {
-      setPrices({
-        flrUsd: 0,
-        xrpUsd: 0,
-        isLoading: false,
-        error: null,
-        lastUpdate: null,
-      });
-      return;
-    }
-
     const fetchPrices = async () => {
       try {
         setPrices(prev => ({ ...prev, isLoading: true, error: null }));
 
-        // Create ethers provider from WalletConnect provider
-        const ethersProvider = new ethers.BrowserProvider(walletConnectProvider);
+        console.log('🔍 useFtsoPrice: Fetching prices...');
+        console.log('   isTestnet:', isTestnet);
+        
+        // Create read-only JsonRpcProvider for Flare network
+        // No wallet needed - this is just for reading oracle data
+        const rpcUrl = isTestnet 
+          ? FLARE_CONTRACTS.coston2.rpcUrl 
+          : FLARE_CONTRACTS.mainnet.rpcUrl;
+        
+        console.log('   RPC URL:', rpcUrl);
+        
+        const provider = new ethers.JsonRpcProvider(rpcUrl);
         
         // Fetch both prices at once (more efficient)
         const priceMap = await getFtsoPrices(
-          ethersProvider,
+          provider,
           [FTSO_FEED_IDS.FLR_USD, FTSO_FEED_IDS.XRP_USD],
           isTestnet
         );
+        
+        const flrUsd = priceMap.get(FTSO_FEED_IDS.FLR_USD) || 0;
+        const xrpUsd = priceMap.get(FTSO_FEED_IDS.XRP_USD) || 0;
+        
+        console.log('✅ Price map size:', priceMap.size);
+        console.log('   FLR/USD:', flrUsd);
+        console.log('   XRP/USD:', xrpUsd);
 
         setPrices({
-          flrUsd: priceMap.get(FTSO_FEED_IDS.FLR_USD) || 0,
-          xrpUsd: priceMap.get(FTSO_FEED_IDS.XRP_USD) || 0,
+          flrUsd,
+          xrpUsd,
           isLoading: false,
           error: null,
           lastUpdate: Date.now(),
@@ -75,7 +81,7 @@ export function useFtsoPrice() {
     // Refresh prices every 30 seconds (FTSO updates ~every 1.8 seconds)
     const interval = setInterval(fetchPrices, 30000);
     return () => clearInterval(interval);
-  }, [walletConnectProvider, isEvmConnected, isTestnet]);
+  }, [isTestnet]);
 
   return prices;
 }
