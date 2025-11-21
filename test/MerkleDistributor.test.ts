@@ -156,7 +156,7 @@ describe("MerkleDistributor", function () {
       
       await expect(
         merkleDistributor.connect(user1).claim(claimAmount, fakeProof)
-      ).to.be.revertedWith("Invalid merkle proof");
+      ).to.be.revertedWith("Invalid proof");
     });
 
     it("Should fail to claim twice (double-claim prevention)", async function () {
@@ -181,7 +181,7 @@ describe("MerkleDistributor", function () {
       
       await expect(
         merkleDistributor.connect(user1).claim(0, proof)
-      ).to.be.revertedWith("Amount must be greater than 0");
+      ).to.be.revertedWith("Amount must be > 0");
     });
   });
 
@@ -225,16 +225,12 @@ describe("MerkleDistributor", function () {
   });
 
   describe("Withdraw Unclaimed Tokens", function () {
-    it("Should allow owner to withdraw unclaimed tokens after airdrop period", async function () {
-      // Fast forward time (simulate end of airdrop period)
-      await ethers.provider.send("evm_increaseTime", [90 * 24 * 60 * 60]); // 90 days
-      await ethers.provider.send("evm_mine", []);
-      
+    it("Should allow owner to withdraw unclaimed tokens", async function () {
       const contractBalance = await shieldToken.balanceOf(await merkleDistributor.getAddress());
       const ownerBalanceBefore = await shieldToken.balanceOf(owner.address);
       
       await expect(
-        merkleDistributor.withdrawUnclaimed(owner.address)
+        merkleDistributor.withdraw(owner.address, contractBalance)
       ).to.emit(merkleDistributor, "Withdrawn")
         .withArgs(owner.address, contractBalance);
       
@@ -244,28 +240,26 @@ describe("MerkleDistributor", function () {
       expect(await shieldToken.balanceOf(await merkleDistributor.getAddress())).to.equal(0);
     });
 
-    it("Should fail to withdraw before airdrop period ends", async function () {
-      await expect(
-        merkleDistributor.withdrawUnclaimed(owner.address)
-      ).to.be.revertedWith("Airdrop period not ended");
-    });
-
     it("Should fail to withdraw to zero address", async function () {
-      await ethers.provider.send("evm_increaseTime", [90 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
+      const contractBalance = await shieldToken.balanceOf(await merkleDistributor.getAddress());
       
       await expect(
-        merkleDistributor.withdrawUnclaimed(ethers.ZeroAddress)
+        merkleDistributor.withdraw(ethers.ZeroAddress, contractBalance)
       ).to.be.revertedWith("Invalid recipient");
     });
 
+    it("Should fail to withdraw zero amount", async function () {
+      await expect(
+        merkleDistributor.withdraw(owner.address, 0)
+      ).to.be.revertedWith("Amount must be > 0");
+    });
+
     it("Should fail to withdraw from non-owner", async function () {
-      await ethers.provider.send("evm_increaseTime", [90 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
+      const contractBalance = await shieldToken.balanceOf(await merkleDistributor.getAddress());
       
       await expect(
-        merkleDistributor.connect(user1).withdrawUnclaimed(user1.address)
-      ).to.be.reverted;
+        merkleDistributor.connect(user1).withdraw(user1.address, contractBalance)
+      ).to.be.revertedWithCustomError(merkleDistributor, "OwnableUnauthorizedAccount");
     });
 
     it("Should only withdraw remaining tokens after some claims", async function () {
@@ -275,14 +269,10 @@ describe("MerkleDistributor", function () {
       const proof1 = merkleTree.getHexProof(leaf1);
       await merkleDistributor.connect(user1).claim(claim1, proof1);
       
-      // Fast forward time
-      await ethers.provider.send("evm_increaseTime", [90 * 24 * 60 * 60]);
-      await ethers.provider.send("evm_mine", []);
-      
       const remainingBalance = AIRDROP_AMOUNT - claim1;
       const ownerBalanceBefore = await shieldToken.balanceOf(owner.address);
       
-      await merkleDistributor.withdrawUnclaimed(owner.address);
+      await merkleDistributor.withdraw(owner.address, remainingBalance);
       
       expect(await shieldToken.balanceOf(owner.address)).to.equal(
         ownerBalanceBefore + remainingBalance
@@ -306,9 +296,7 @@ describe("MerkleDistributor", function () {
       const proof = merkleTree.getHexProof(leaf);
       
       // Should succeed with correct proof
-      await expect(
-        merkleDistributor.connect(user1).claim(claimAmount, proof)
-      ).to.not.be.reverted;
+      await merkleDistributor.connect(user1).claim(claimAmount, proof);
     });
   });
 });

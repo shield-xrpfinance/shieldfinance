@@ -119,7 +119,7 @@ describe("StakingBoost", function () {
       
       await expect(
         stakingBoost.connect(user1).stake(stakeAmount)
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(shieldToken, "ERC20InsufficientAllowance");
     });
 
     it("Should track total staked across multiple users", async function () {
@@ -331,9 +331,8 @@ describe("StakingBoost", function () {
       await ethers.provider.send("evm_increaseTime", [LOCK_PERIOD]);
       await ethers.provider.send("evm_mine", []);
       
-      await expect(
-        stakingBoost.connect(user1).withdraw(stakeAmount)
-      ).to.not.be.reverted;
+      // Should succeed
+      await stakingBoost.connect(user1).withdraw(stakeAmount);
     });
   });
 
@@ -346,9 +345,7 @@ describe("StakingBoost", function () {
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
       
       // Normal stake should work
-      await expect(
-        stakingBoost.connect(user1).stake(stakeAmount)
-      ).to.not.be.reverted;
+      await stakingBoost.connect(user1).stake(stakeAmount);
     });
 
     it("Should prevent reentrancy attacks on withdraw", async function () {
@@ -361,9 +358,7 @@ describe("StakingBoost", function () {
       await ethers.provider.send("evm_mine", []);
       
       // Normal withdraw should work
-      await expect(
-        stakingBoost.connect(user1).withdraw(stakeAmount)
-      ).to.not.be.reverted;
+      await stakingBoost.connect(user1).withdraw(stakeAmount);
     });
   });
 });

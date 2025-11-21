@@ -73,7 +73,7 @@ describe("ShieldToken", function () {
       
       await expect(
         shieldToken.connect(user1).transfer(owner.address, ethers.parseEther("1"))
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(shieldToken, "ERC20InsufficientBalance");
       
       expect(await shieldToken.balanceOf(owner.address)).to.equal(initialOwnerBalance);
     });
@@ -139,7 +139,7 @@ describe("ShieldToken", function () {
       
       await expect(
         shieldToken.connect(user1).burn(userBalance + 1n)
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(shieldToken, "ERC20InsufficientBalance");
     });
   });
 
@@ -167,7 +167,7 @@ describe("ShieldToken", function () {
     it("Should fail transferFrom without allowance", async function () {
       await expect(
         shieldToken.connect(user1).transferFrom(owner.address, user2.address, ethers.parseEther("1"))
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(shieldToken, "ERC20InsufficientAllowance");
     });
   });
 
@@ -180,7 +180,7 @@ describe("ShieldToken", function () {
     it("Should fail to transfer ownership from non-owner", async function () {
       await expect(
         shieldToken.connect(user1).transferOwnership(user2.address)
-      ).to.be.reverted;
+      ).to.be.revertedWithCustomError(shieldToken, "OwnableUnauthorizedAccount");
     });
 
     it("Should allow owner to renounce ownership", async function () {
