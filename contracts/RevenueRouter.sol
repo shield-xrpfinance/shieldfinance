@@ -89,7 +89,7 @@ contract RevenueRouter is Ownable {
      */
     function withdrawReserves(address to, uint256 amount) external onlyOwner {
         require(to != address(0), "Invalid recipient");
-        wflr.safeTransfer(to, amount);
+        IERC20(address(wflr)).safeTransfer(to, amount);
         emit ReservesWithdrawn(to, amount);
     }
     

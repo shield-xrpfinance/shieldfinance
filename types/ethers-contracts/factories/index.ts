@@ -4,8 +4,11 @@
 export * as interfaces from './interfaces/index.js';
 export * as mocks from './mocks/index.js';
 export * as test from './test/index.js';
+export { BuybackBurn__factory } from './BuybackBurn__factory.js';
 export { FirelightStrategy__factory } from './FirelightStrategy__factory.js';
 export { KineticStrategy__factory } from './KineticStrategy__factory.js';
+export { RevenueRouter__factory } from './RevenueRouter__factory.js';
 export { ShXRPVault__factory } from './ShXRPVault__factory.js';
 export { ShieldToken__factory } from './ShieldToken__factory.js';
+export { StakingBoost__factory } from './StakingBoost__factory.js';
 export { VaultController__factory } from './VaultController__factory.js';
