@@ -11,7 +11,15 @@ export default {
         sm: ".1875rem", /* 3px */
       },
       colors: {
-        // Flat / base colors (regular buttons)
+        shieldNavy: '#0B0E17',
+        shieldDark: '#11141D',
+        shieldCyan: '#00E0FF',
+        shieldCyanHover: '#00B8D4',
+        shieldSilver: '#A0B8D0',
+        shieldSuccess: '#00FF9D',
+        shieldWarning: '#FFB800',
+        shieldError: '#FF3B5F',
+        shieldInfo: '#00E0FF',
         background: "hsl(var(--background) / <alpha-value>)",
         foreground: "hsl(var(--foreground) / <alpha-value>)",
         border: "hsl(var(--border) / <alpha-value>)",
@@ -76,9 +84,9 @@ export default {
           border: "var(--sidebar-accent-border)"
         },
         status: {
-          online: "rgb(34 197 94)",
-          away: "rgb(245 158 11)",
-          busy: "rgb(239 68 68)",
+          online: "#00FF9D",
+          away: "#FFB800",
+          busy: "#FF3B5F",
           offline: "rgb(156 163 175)",
         },
       },
