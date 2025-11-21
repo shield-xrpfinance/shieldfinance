@@ -91,36 +91,21 @@ export async function getFtsoPrices(
   isTestnet: boolean
 ): Promise<Map<string, number>> {
   try {
-    console.log('🔍 [FTSO] getFtsoPrices called');
-    console.log('   Feed IDs:', feedIds);
-    console.log('   Is Testnet:', isTestnet);
-    
     const ftsoAddress = await getFtsoContractAddress(provider, isTestnet);
-    console.log('   FTSO Contract Address:', ftsoAddress);
-    
     const ftso = new ethers.Contract(ftsoAddress, FTSO_V2_ABI, provider);
     
-    console.log('   Calling getFeedsById...');
     const [values, decimals] = await ftso.getFeedsById(feedIds);
-    console.log('   Values received:', values);
-    console.log('   Decimals received:', decimals);
     
     const priceMap = new Map<string, number>();
     
     for (let i = 0; i < feedIds.length; i++) {
       const price = Number(values[i]) / Math.pow(10, Number(decimals[i]));
       priceMap.set(feedIds[i], price);
-      console.log(`   ${feedIds[i]}: $${price.toFixed(4)}`);
     }
     
     return priceMap;
   } catch (error) {
-    console.error("❌ [FTSO] Failed to fetch FTSO prices:", error);
-    console.error("   Error details:", {
-      message: error instanceof Error ? error.message : String(error),
-      feedIds,
-      isTestnet
-    });
+    console.error("Failed to fetch FTSO prices:", error);
     return new Map();
   }
 }

@@ -52,16 +52,9 @@ export function useFtsoPrice() {
           isTestnet
         );
         
-        const flrUsd = priceMap.get(FTSO_FEED_IDS.FLR_USD) || 0;
-        const xrpUsd = priceMap.get(FTSO_FEED_IDS.XRP_USD) || 0;
-        
-        console.log('✅ Price map size:', priceMap.size);
-        console.log('   FLR/USD:', flrUsd);
-        console.log('   XRP/USD:', xrpUsd);
-
         setPrices({
-          flrUsd,
-          xrpUsd,
+          flrUsd: priceMap.get(FTSO_FEED_IDS.FLR_USD) || 0,
+          xrpUsd: priceMap.get(FTSO_FEED_IDS.XRP_USD) || 0,
           isLoading: false,
           error: null,
           lastUpdate: Date.now(),

@@ -144,10 +144,6 @@ export function useComprehensiveBalance() {
         await Promise.all(promises);
 
         // Calculate USD values using FTSO prices
-        console.log('🔢 Calculating USD values:');
-        console.log('   FTSO prices:', ftsoPrices);
-        console.log('   Balances:', results);
-        
         const flrUsd = parseFloat(results.flr) * ftsoPrices.flrUsd;
         const xrpUsd = parseFloat(results.xrp) * ftsoPrices.xrpUsd;
         // shXRP tracks XRP 1:1 (vault shares backed by FXRP which is backed by XRP)
@@ -155,9 +151,6 @@ export function useComprehensiveBalance() {
         // SHIELD price would need SparkDEX integration - for now set to 0
         const shieldUsd = 0;
         const totalUsd = flrUsd + xrpUsd + shxrpUsd + shieldUsd;
-        
-        console.log('   USD values: FLR=$' + flrUsd.toFixed(2) + ', XRP=$' + xrpUsd.toFixed(2) + ', shXRP=$' + shxrpUsd.toFixed(2));
-        console.log('   Total USD: $' + totalUsd.toFixed(2));
 
         setBalances({
           ...results,
