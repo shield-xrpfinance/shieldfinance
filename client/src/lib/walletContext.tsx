@@ -14,19 +14,23 @@ interface PaymentRequestResult {
 }
 
 interface WalletContextType {
-  address: string | null;
+  address: string | null; // XRPL address (r...)
+  evmAddress: string | null; // EVM address (0x...) for Flare Network
   provider: "xaman" | "walletconnect" | "web3auth" | null;
   isConnected: boolean;
+  isEvmConnected: boolean;
   walletConnectProvider: UniversalProvider | null;
-  connect: (address: string, provider: "xaman" | "walletconnect" | "web3auth", wcProvider?: UniversalProvider) => void;
+  connect: (xrplAddress: string | null, provider: "xaman" | "walletconnect" | "web3auth", evmAddr?: string | null, wcProvider?: UniversalProvider) => void;
   disconnect: () => void;
   requestPayment: (paymentRequest: PaymentRequest) => Promise<PaymentRequestResult>;
 }
 
 const WalletContext = createContext<WalletContextType>({
   address: null,
+  evmAddress: null,
   provider: null,
   isConnected: false,
+  isEvmConnected: false,
   walletConnectProvider: null,
   connect: () => {},
   disconnect: async () => {},
@@ -34,7 +38,8 @@ const WalletContext = createContext<WalletContextType>({
 });
 
 export function WalletProvider({ children }: { children: ReactNode }) {
-  const [address, setAddress] = useState<string | null>(null);
+  const [address, setAddress] = useState<string | null>(null); // XRPL address
+  const [evmAddress, setEvmAddress] = useState<string | null>(null); // EVM address
   const [provider, setProvider] = useState<"xaman" | "walletconnect" | "web3auth" | null>(null);
   const [walletConnectProvider, setWalletConnectProvider] = useState<UniversalProvider | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
@@ -109,6 +114,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
       // PRIORITY 2: Restore from localStorage (normal flow)
       const savedAddress = localStorage.getItem("walletAddress");
+      const savedEvmAddress = localStorage.getItem("evmAddress");
       const savedProvider = localStorage.getItem("walletProvider");
 
       if (savedAddress && savedProvider) {
@@ -150,38 +156,51 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               
               // Check if session exists (auto-persisted in IndexedDB)
               if (wcProvider?.session) {
-                const accounts = wcProvider.session.namespaces?.xrpl?.accounts || [];
-                if (accounts.length > 0) {
+                // Try to restore XRPL address
+                const xrplAccounts = wcProvider.session.namespaces?.xrpl?.accounts || [];
+                const evmAccounts = wcProvider.session.namespaces?.eip155?.accounts || [];
+                
+                let restoredXrplAddress: string | null = null;
+                let restoredEvmAddress: string | null = null;
+                
+                if (xrplAccounts.length > 0) {
                   // Extract address from CAIP-10 format "xrpl:0:rAddress..." or "xrpl:1:rAddress..."
-                  const restoredAddress = accounts[0].split(":")[2];
-                  
-                  if (restoredAddress === savedAddress) {
-                    // Restore connection
-                    setAddress(restoredAddress);
-                    setProvider("walletconnect");
-                    setWalletConnectProvider(wcProvider);
-                    console.log("✅ WalletConnect session restored:", restoredAddress);
-                  } else {
-                    // Address mismatch - clear localStorage
-                    localStorage.removeItem("walletAddress");
-                    localStorage.removeItem("walletProvider");
-                    console.log("WalletConnect address mismatch - cleared");
-                  }
+                  restoredXrplAddress = xrplAccounts[0].split(":")[2];
+                }
+                
+                if (evmAccounts.length > 0) {
+                  // Extract address from CAIP-10 format "eip155:14:0x..." or "eip155:114:0x..."
+                  restoredEvmAddress = evmAccounts[0].split(":")[2];
+                }
+                
+                // Restore if at least one address matches
+                if (restoredXrplAddress === savedAddress || restoredEvmAddress === savedEvmAddress) {
+                  setAddress(restoredXrplAddress);
+                  setEvmAddress(restoredEvmAddress);
+                  setProvider("walletconnect");
+                  setWalletConnectProvider(wcProvider);
+                  console.log("✅ WalletConnect session restored:", {
+                    xrpl: restoredXrplAddress,
+                    evm: restoredEvmAddress,
+                  });
                 } else {
-                  // No accounts in session - clear localStorage
+                  // Address mismatch - clear localStorage
                   localStorage.removeItem("walletAddress");
+                  localStorage.removeItem("evmAddress");
                   localStorage.removeItem("walletProvider");
-                  console.log("No accounts in WalletConnect session - cleared");
+                  console.log("WalletConnect address mismatch - cleared");
                 }
               } else {
                 // No active session - clear localStorage
                 localStorage.removeItem("walletAddress");
+                localStorage.removeItem("evmAddress");
                 localStorage.removeItem("walletProvider");
                 console.log("No WalletConnect session found - cleared");
               }
             } catch (error) {
               console.error("WalletConnect restoration error:", error);
               localStorage.removeItem("walletAddress");
+              localStorage.removeItem("evmAddress");
               localStorage.removeItem("walletProvider");
             } finally {
               // Always clear timeout to prevent unhandled rejection
@@ -199,13 +218,24 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     restoreConnection();
   }, []);
 
-  const connect = (walletAddress: string, walletProvider: "xaman" | "walletconnect" | "web3auth", wcProvider?: UniversalProvider) => {
-    setAddress(walletAddress);
+  const connect = (xrplAddress: string | null, walletProvider: "xaman" | "walletconnect" | "web3auth", evmAddr?: string | null, wcProvider?: UniversalProvider) => {
+    setAddress(xrplAddress);
+    setEvmAddress(evmAddr || null);
     setProvider(walletProvider);
     if (wcProvider) {
       setWalletConnectProvider(wcProvider);
     }
-    localStorage.setItem("walletAddress", walletAddress);
+    // Save to localStorage (only save non-null values)
+    if (xrplAddress) {
+      localStorage.setItem("walletAddress", xrplAddress);
+    } else {
+      localStorage.removeItem("walletAddress");
+    }
+    if (evmAddr) {
+      localStorage.setItem("evmAddress", evmAddr);
+    } else {
+      localStorage.removeItem("evmAddress");
+    }
     localStorage.setItem("walletProvider", walletProvider);
   };
 
@@ -220,9 +250,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
     
     setAddress(null);
+    setEvmAddress(null);
     setProvider(null);
     setWalletConnectProvider(null);
     localStorage.removeItem("walletAddress");
+    localStorage.removeItem("evmAddress");
     localStorage.removeItem("walletProvider");
   };
 
@@ -335,9 +367,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   };
 
   const isConnected = address !== null;
+  const isEvmConnected = evmAddress !== null;
 
   return (
-    <WalletContext.Provider value={{ address, provider, isConnected, walletConnectProvider, connect, disconnect, requestPayment }}>
+    <WalletContext.Provider value={{ address, evmAddress, provider, isConnected, isEvmConnected, walletConnectProvider, connect, disconnect, requestPayment }}>
       {children}
     </WalletContext.Provider>
   );
