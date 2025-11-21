@@ -10,12 +10,10 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Vault, Wallet, History, BarChart3, Coins, Loader2, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles } from "lucide-react";
+import { LayoutDashboard, Vault, Wallet, History, BarChart3, Coins, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
-import { useWalletBalance } from "@/hooks/use-wallet-balance";
-import { AssetIcon } from "@/components/AssetIcon";
 import { SiX, SiLinkedin, SiDiscord } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -70,8 +68,6 @@ const menuItems = [
 
 export function AppSidebar() {
   const [location] = useLocation();
-  const { isConnected } = useWallet();
-  const { balance, isLoading } = useWalletBalance();
   const { network, isTestnet, toggleNetwork } = useNetwork();
 
   return (
@@ -122,41 +118,6 @@ export function AppSidebar() {
                 );
               })}
             </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
-
-        <SidebarGroup>
-          <SidebarGroupContent>
-            <div className="rounded-lg border bg-card p-4 space-y-2" data-testid="wallet-balance-card">
-              <p className="text-xs font-medium text-muted-foreground">Your Balance</p>
-              {!isConnected ? (
-                <p className="text-sm text-muted-foreground" data-testid="text-connect-wallet-message">Connect your wallet to view balance</p>
-              ) : isLoading ? (
-                <div className="flex items-center gap-2" data-testid="loading-balance">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <p className="text-sm text-muted-foreground">Loading balance...</p>
-                </div>
-              ) : balance ? (
-                <>
-                  <div className="flex items-center gap-2">
-                    <AssetIcon asset="XRP" size={24} />
-                    <div>
-                      <p className="text-2xl font-bold font-mono tabular-nums" data-testid="text-balance-xrp">
-                        {Number(balance.balanceXRP).toLocaleString()} XRP
-                      </p>
-                      <p className="text-xs text-muted-foreground" data-testid="text-balance-usd">
-                        ≈ ${Number(balance.balanceUSD).toLocaleString()} USD
-                      </p>
-                    </div>
-                  </div>
-                  {balance.error && (
-                    <p className="text-xs text-destructive" data-testid="text-balance-error">{balance.error}</p>
-                  )}
-                </>
-              ) : (
-                <p className="text-sm text-muted-foreground" data-testid="text-balance-unavailable">Balance unavailable</p>
-              )}
-            </div>
           </SidebarGroupContent>
         </SidebarGroup>
       </SidebarContent>
