@@ -8,6 +8,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TestnetBanner } from "@/components/TestnetBanner";
+import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import { CurrencyProvider } from "@/lib/currencyContext";
@@ -95,6 +96,7 @@ function AppContent() {
   const style = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
+    "--mobile-nav-height": "68px",
   };
 
   return (
@@ -108,7 +110,7 @@ function AppContent() {
                 <AppSidebar />
                 <div className="flex flex-col flex-1">
                   <Header />
-                  <main className="flex-1 overflow-auto p-8">
+                  <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
                     <div className="max-w-7xl mx-auto">
                       <TestnetBanner />
                       <Router />
@@ -116,6 +118,7 @@ function AppContent() {
                   </main>
                 </div>
               </div>
+              <MobileBottomNav />
             </SidebarProvider>
               <Toaster />
             </CurrencyProvider>
