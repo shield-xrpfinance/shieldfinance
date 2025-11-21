@@ -19,6 +19,9 @@ Secure blockchain transaction signing with Xaman integration.
 ### [Portfolio Tracking](portfolio-tracking.md)
 Real-time monitoring of positions, rewards, and transaction history.
 
+### [Token Swapping](swap.md)
+Instant trading of $SHIELD tokens with FLR, wFLR, and USDT via SparkDEX V3 integration.
+
 ## Additional Features
 
 - **Network Switching**: Toggle between mainnet and testnet
