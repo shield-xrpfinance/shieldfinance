@@ -40,7 +40,7 @@ function Router() {
 }
 
 function Header() {
-  const { address, isConnected, disconnect } = useWallet();
+  const { address, evmAddress, isConnected, isEvmConnected, disconnect } = useWallet();
   const { balance, isLoading } = useWalletBalance();
   const { isTestnet, network } = useNetwork();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
@@ -75,9 +75,27 @@ function Header() {
                 </div>
               </div>
             ) : null}
-            <div className="text-sm font-mono bg-muted px-3 py-1.5 rounded-md" data-testid="text-wallet-address">
-              {address.slice(0, 6)}...{address.slice(-4)}
+            
+            {/* Address Display - Shows both XRPL and EVM addresses if available */}
+            <div className="flex items-center gap-2">
+              {address && (
+                <div className="flex flex-col gap-0.5 bg-muted px-3 py-1.5 rounded-md" data-testid="text-wallet-address-xrpl">
+                  <span className="text-xs text-muted-foreground">XRPL</span>
+                  <span className="text-sm font-mono">
+                    {address.slice(0, 6)}...{address.slice(-4)}
+                  </span>
+                </div>
+              )}
+              {evmAddress && (
+                <div className="flex flex-col gap-0.5 bg-muted px-3 py-1.5 rounded-md" data-testid="text-wallet-address-evm">
+                  <span className="text-xs text-muted-foreground">Flare</span>
+                  <span className="text-sm font-mono">
+                    {evmAddress.slice(0, 6)}...{evmAddress.slice(-4)}
+                  </span>
+                </div>
+              )}
             </div>
+            
             <Button
               variant="ghost"
               size="icon"
