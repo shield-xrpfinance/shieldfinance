@@ -486,7 +486,7 @@ export default function Swap() {
       </div>
 
       {/* Info Alert */}
-      <Alert className="mb-8 border-primary/20 bg-primary/5">
+      <Alert className="mb-8 border-primary/20 bg-primary/5 backdrop-blur-md">
         <Info className="h-5 w-5 text-primary" />
         <AlertDescription className="text-base ml-2">
           <strong>Why buy $SHIELD?</strong> Stake 100 $SHIELD = +1% APY on all your shXRP positions.
@@ -585,7 +585,7 @@ export default function Swap() {
                   />
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
                     {isBuyingShield ? (
-                      <div className="bg-primary/10 px-3 py-1.5 rounded-md">
+                      <div className="bg-primary/10 px-3 py-1.5 rounded-md backdrop-blur-md border border-primary/20">
                         <span className="font-semibold">SHIELD</span>
                       </div>
                     ) : (
@@ -607,7 +607,7 @@ export default function Swap() {
 
               {/* Path Validation Error */}
               {pathValidationError && (
-                <Alert className="border-yellow-500/50 bg-yellow-500/10">
+                <Alert className="border-yellow-500/50 bg-yellow-500/10 backdrop-blur-md">
                   <Info className="h-4 w-4" />
                   <AlertDescription className="ml-2">
                     {pathValidationError}
@@ -640,7 +640,7 @@ export default function Swap() {
               {/* Approval UI */}
               {needsApproval && !selectedInputAsset.isNative && (
                 <div className="space-y-2">
-                  <Alert className="border-primary/20 bg-primary/5">
+                  <Alert className="border-primary/20 bg-primary/5 backdrop-blur-md">
                     <Info className="h-4 w-4 text-primary" />
                     <AlertDescription className="ml-2">
                       <strong>Approval Required:</strong> You need to approve {selectedInputAsset.symbol} before swapping.
@@ -788,7 +788,7 @@ export default function Swap() {
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <Alert className="border-primary/20 bg-primary/5">
+            <Alert className="border-primary/20 bg-primary/5 backdrop-blur-md">
               <TrendingUp className="h-5 w-5 text-primary" />
               <AlertDescription className="ml-2">
                 <strong>Maximize your rewards!</strong> Stake your SHIELD now to boost your shXRP APY.

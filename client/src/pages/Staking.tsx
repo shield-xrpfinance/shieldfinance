@@ -205,7 +205,7 @@ export default function Staking() {
       </div>
 
       {/* Info Alert */}
-      <Alert className="mb-8 border-primary/20 bg-primary/5">
+      <Alert className="mb-8 border-primary/20 bg-primary/5 backdrop-blur-md">
         <Info className="h-5 w-5 text-primary" />
         <AlertDescription className="text-base ml-2">
           <strong>Boost Formula:</strong> Stake 100 SHIELD = +1% APY on all your shXRP deposits. 
@@ -291,7 +291,7 @@ export default function Staking() {
             </div>
 
             {stakeAmount && parseFloat(stakeAmount) > 0 && (
-              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 backdrop-blur-md">
                 <p className="text-sm font-medium">Estimated Boost</p>
                 <p className="text-2xl font-bold text-primary mt-1">
                   +{Math.floor(parseFloat(stakeAmount) / 100)}% APY
@@ -433,7 +433,7 @@ export default function Staking() {
             </div>
           </div>
 
-          <div className="mt-6 p-4 rounded-lg bg-primary/10 border border-primary/20">
+          <div className="mt-6 p-4 rounded-lg bg-primary/10 border border-primary/20 backdrop-blur-md">
             <h4 className="font-semibold text-sm mb-2">Example Scenario</h4>
             <div className="space-y-1 text-sm text-muted-foreground">
               <p>• You have 10,000 FXRP in shXRP vault earning 7% base APY</p>
