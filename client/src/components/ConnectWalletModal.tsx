@@ -225,6 +225,8 @@ export default function ConnectWalletModal({
       const evmAccounts = provider.session?.namespaces?.eip155?.accounts || [];
       
       console.log("WalletConnect connection complete:", {
+        xrplNamespace: provider.session?.namespaces?.xrpl ? "available" : "missing",
+        evmNamespace: provider.session?.namespaces?.eip155 ? "available" : "missing",
         xrplAccounts,
         evmAccounts,
       });
@@ -236,19 +238,23 @@ export default function ConnectWalletModal({
       if (xrplAccounts.length > 0) {
         // Format: "xrpl:0:rAddress..." or "xrpl:1:rAddress..."
         xrplAddress = xrplAccounts[0].split(":")[2];
+      } else {
+        console.warn("⚠️ XRPL namespace not approved by wallet - deposits/withdrawals will not be available");
       }
       
       if (evmAccounts.length > 0) {
         // Format: "eip155:14:0x..." or "eip155:114:0x..."
         evmAddress = evmAccounts[0].split(":")[2];
+      } else {
+        console.warn("⚠️ EVM namespace not approved by wallet - airdrop claims will not be available");
       }
       
       console.log("Extracted addresses:", {
-        xrpl: xrplAddress,
-        evm: evmAddress,
+        xrpl: xrplAddress || "NOT CONNECTED",
+        evm: evmAddress || "NOT CONNECTED",
       });
       
-      // Connect if at least one address is available
+      // Connect if at least one address is available (partial connection supported)
       if (xrplAddress || evmAddress) {
         // Store both addresses in the wallet context
         connect(xrplAddress, "walletconnect", evmAddress, provider);
@@ -256,27 +262,49 @@ export default function ConnectWalletModal({
           onConnect(xrplAddress || evmAddress || "", "walletconnect");
         }
         
-        // Show connection success toast
+        // Build connection status message
+        const connectedChains = [];
+        const missingChains = [];
+        
+        if (xrplAddress) {
+          connectedChains.push("XRPL");
+        } else {
+          missingChains.push("XRPL");
+        }
+        
+        if (evmAddress) {
+          connectedChains.push("Flare");
+        } else {
+          missingChains.push("Flare");
+        }
+        
+        // Show connection success toast with partial connection warning if needed
         const addressDisplay = xrplAddress 
           ? `${xrplAddress.slice(0, 8)}...${xrplAddress.slice(-6)}`
           : evmAddress
           ? `${evmAddress.slice(0, 6)}...${evmAddress.slice(-4)}`
           : "Unknown";
         
-        const connectedChains = [];
-        if (xrplAddress) connectedChains.push("XRPL");
-        if (evmAddress) connectedChains.push("Flare");
+        if (connectedChains.length === 2) {
+          // Full multi-chain connection
+          toast({
+            title: "Wallet Connected",
+            description: `Connected to ${connectedChains.join(" + ")} (${isTestnet ? 'Testnet' : 'Mainnet'})`,
+          });
+        } else {
+          // Partial connection - warn user about missing features
+          toast({
+            title: "Partial Connection",
+            description: `Connected to ${connectedChains[0]} only. ${missingChains[0]} features will not be available.`,
+          });
+        }
         
-        toast({
-          title: "Wallet Connected",
-          description: `Connected to ${addressDisplay} on ${connectedChains.join(" + ")} (${isTestnet ? 'Testnet' : 'Mainnet'})`,
-        });
         setConnecting(false);
       } else {
-        console.error("No accounts found in WalletConnect session");
+        console.error("❌ No accounts found in WalletConnect session - both namespaces were rejected");
         toast({
           title: "Connection Failed",
-          description: "No accounts found. Please try again.",
+          description: "Your wallet did not approve any chain connections. Please try again and approve at least one chain.",
           variant: "destructive",
         });
         setConnecting(false);
