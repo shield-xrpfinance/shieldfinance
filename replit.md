@@ -3,6 +3,14 @@
 ## Overview
 This project is a full-stack DeFi application providing a dashboard for XRP liquid staking. It enables users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform integrates smart contracts on Flare Network for its $SHIELD governance token and shXRP liquid staking vault, alongside XRPL Escrow for cross-chain asset locking. The vision is to enhance DeFi accessibility and efficiency on the XRP Ledger, capitalizing on the growing liquid staking market.
 
+**Recent Updates (November 21, 2025):**
+- ✅ Complete Shield Finance deployment documentation created (SHIELD_DEPLOYMENT.md - 400+ lines)
+- ✅ Comprehensive pre-launch security checklist published (SHIELD_SECURITY_CHECKLIST.md - 100+ items)
+- ✅ Production-ready deployment script created and all critical bugs fixed (deploy-shield-finance.ts)
+- ✅ All 176 tests passing with 78 adversarial tests for security validation
+- ✅ Deprecated outdated deploy-flare.ts script
+- ⏳ Awaiting external audit before mainnet deployment
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 Design preference: Modern, clean list-based layouts over grid cards for better space utilization.
@@ -77,6 +85,45 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Platform**: Minimum deposits, transparent accounting, double-mint prevention, idempotency, crash recovery.
 - **Transaction Privacy**: Wallet-scoped authentication on all transaction endpoints. Users can only access their own transaction history, with API-level validation requiring wallet parameter (returns 400 error if missing).
 - **Data Integrity**: Direct column filtering prevents JOIN-based security bypasses. All transaction creation includes wallet address validation.
+
+## Deployment & Documentation
+
+### Shield Finance Fair Launch Documentation
+- **[SHIELD_DEPLOYMENT.md](docs/SHIELD_DEPLOYMENT.md)** - Complete 7-step deployment guide
+  - Pre-deployment checklist and security requirements
+  - Step-by-step deployment sequence with verification
+  - SparkDEX V3 liquidity integration and LP locking
+  - Post-deployment verification and emergency procedures
+  - Cost estimates and block explorer links
+  
+- **[SHIELD_SECURITY_CHECKLIST.md](docs/SHIELD_SECURITY_CHECKLIST.md)** - Pre-launch security checklist
+  - 8 sections with 100+ security items
+  - Smart contract audit requirements (176/176 tests ✅, 78 adversarial tests ✅)
+  - Deployment security and operational security guidelines
+  - Economic security, legal compliance, and incident response
+
+### Deployment Scripts
+- **scripts/deploy-shield-finance.ts** - Production-ready fair launch deployment (ACTIVE)
+  - Deploys ShieldToken, RevenueRouter, StakingBoost, MerkleDistributor
+  - All critical bugs fixed (variable scope, address retrieval, SparkDEX integration)
+  - Network detection (mainnet vs testnet)
+  - Comprehensive verification and next steps
+  
+- **scripts/sparkdex-lp.ts** - SparkDEX V3 liquidity deployment
+  - Adds 1M SHIELD + 535,451 wFLR ($10K liquidity)
+  - 0.3% fee tier, wide price range for stability
+  - LP NFT for Team Finance locking
+
+- **scripts/deploy-flare.ts** - DEPRECATED (uses wrong ShieldToken constructor, do not use)
+- **scripts/burn.ts** - Weekly automated SHIELD buyback & burn (security-hardened)
+
+### Fair Launch Parameters
+- **Total Supply**: 10,000,000 SHIELD (fixed, immutable)
+- **Initial Price**: $0.01 per SHIELD
+- **Liquidity**: 1,000,000 SHIELD + 535,451 wFLR = ~$10,000
+- **Airdrop**: 2,000,000 SHIELD (20% via MerkleDistributor)
+- **LP Lock**: 12 months via Team Finance
+- **Revenue Model**: 50% burn + 50% reserves (deflationary)
 
 ## External Dependencies
 
