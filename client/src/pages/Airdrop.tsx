@@ -36,7 +36,7 @@ interface AirdropRoot {
 }
 
 export default function Airdrop() {
-  const { address, isConnected, provider: providerType, walletConnectProvider } = useWallet();
+  const { address, evmAddress, isConnected, isEvmConnected, provider: providerType, walletConnectProvider } = useWallet();
   const { isTestnet } = useNetwork();
   const { toast } = useToast();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
@@ -50,20 +50,20 @@ export default function Airdrop() {
     enabled: true,
   });
 
-  // Check eligibility when wallet connects
+  // Check eligibility when wallet connects (using EVM address for Flare Network)
   const {
     data: eligibility,
     isLoading: checkingEligibility,
     refetch: recheckEligibility,
   } = useQuery<AirdropEligibility>({
-    queryKey: ["/api/airdrop/check", address],
-    enabled: !!address && isConnected,
+    queryKey: ["/api/airdrop/check", evmAddress],
+    enabled: !!evmAddress && isEvmConnected,
   });
 
   // Check if user already claimed (on-chain check)
   useEffect(() => {
     async function checkClaimStatus() {
-      if (!address || !isConnected || !walletConnectProvider || isTestnet) return;
+      if (!evmAddress || !isEvmConnected || !walletConnectProvider || isTestnet) return;
 
       try {
         // MerkleDistributor contract address (set after deployment)
@@ -86,7 +86,7 @@ export default function Airdrop() {
           ethersProvider
         );
 
-        const claimed = await contract.hasClaimed(address);
+        const claimed = await contract.hasClaimed(evmAddress);
         setHasClaimed(claimed);
       } catch (error) {
         console.error("Error checking claim status:", error);
@@ -94,13 +94,13 @@ export default function Airdrop() {
     }
 
     checkClaimStatus();
-  }, [address, isConnected, walletConnectProvider, isTestnet]);
+  }, [evmAddress, isEvmConnected, walletConnectProvider, isTestnet]);
 
   const handleClaim = async () => {
-    if (!address || !eligibility || !eligibility.proof || !walletConnectProvider) {
+    if (!evmAddress || !eligibility || !eligibility.proof || !walletConnectProvider) {
       toast({
         title: "Cannot claim",
-        description: "Please connect your wallet via WalletConnect first.",
+        description: "Please connect your wallet with Flare Network support (e.g., Bifrost) to claim.",
         variant: "destructive",
       });
       return;
@@ -140,7 +140,7 @@ export default function Airdrop() {
       );
 
       // Double-check not already claimed
-      const alreadyClaimed = await contract.hasClaimed(address);
+      const alreadyClaimed = await contract.hasClaimed(evmAddress);
       if (alreadyClaimed) {
         setHasClaimed(true);
         toast({
@@ -280,6 +280,18 @@ export default function Airdrop() {
         </Alert>
       )}
 
+      {/* EVM Address Connection Status */}
+      {isConnected && !isEvmConnected && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription>
+            <strong>Flare Network address not detected.</strong> To claim the airdrop, please
+            connect using a multi-chain wallet like Bifrost that supports both XRPL and Flare
+            Network.
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* Main Claim Card */}
       <Card className="p-8">
         {!isConnected ? (
@@ -304,7 +316,7 @@ export default function Airdrop() {
             <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto" />
             <h2 className="text-2xl font-bold">Checking Eligibility...</h2>
             <p className="text-muted-foreground">
-              Verifying your address: {address?.slice(0, 6)}...{address?.slice(-4)}
+              Verifying your Flare address: {evmAddress?.slice(0, 6)}...{evmAddress?.slice(-4)}
             </p>
           </div>
         ) : hasClaimed ? (
@@ -371,11 +383,19 @@ export default function Airdrop() {
                   </span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-muted-foreground">Your Address:</span>
+                  <span className="text-muted-foreground">Your Flare Address:</span>
                   <span className="font-mono text-xs">
-                    {address?.slice(0, 10)}...{address?.slice(-8)}
+                    {evmAddress?.slice(0, 10)}...{evmAddress?.slice(-8)}
                   </span>
                 </div>
+                {address && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Your XRPL Address:</span>
+                    <span className="font-mono text-xs">
+                      {address?.slice(0, 10)}...{address?.slice(-8)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Gas Fee:</span>
                   <span className="text-xs">Paid in FLR (≈ $0.01)</span>
@@ -419,7 +439,7 @@ export default function Airdrop() {
             </div>
             <h2 className="text-2xl font-bold">Not Eligible</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Unfortunately, your address ({address?.slice(0, 6)}...{address?.slice(-4)}) is
+              Unfortunately, your Flare address ({evmAddress?.slice(0, 6)}...{evmAddress?.slice(-4)}) is
               not eligible for the SHIELD airdrop.
             </p>
             <p className="text-xs text-muted-foreground">
