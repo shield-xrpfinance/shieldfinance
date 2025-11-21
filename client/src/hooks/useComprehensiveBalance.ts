@@ -2,8 +2,14 @@ import { useState, useEffect, useMemo } from "react";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { ethers } from "ethers";
-import { ERC20_ABI } from "@/lib/sparkdex";
+import { ERC20_ABI, getContracts } from "@/lib/sparkdex";
 import { useFtsoPrice } from "./useFtsoPrice";
+
+// USDT (Stargate) addresses on Flare Network
+const USDT_ADDRESSES = {
+  mainnet: "0x9C3046C0DaA60b6F061f123CccfC29B7920d0d4f", // Stargate USDT on Flare
+  testnet: "0x3E8B8d9B9ee8C1E0D6d10Ea03e1F6eB8e3d1e8a0", // Coston2 testnet USDT
+};
 
 /**
  * Comprehensive wallet balance hook
@@ -187,6 +193,54 @@ export function useComprehensiveBalance() {
               ).then((result) => {
                 if (result === null) {
                   results.shxrp = "0";
+                }
+                return result;
+              })
+            );
+          }
+
+          // 3b. Fetch WFLR balance (ERC20)
+          const contracts = getContracts(network === 'testnet');
+          if (contracts.WFLR && contracts.WFLR !== "0x0000000000000000000000000000000000000000") {
+            promises.push(
+              withTimeout(
+                (async () => {
+                  try {
+                    const wflrContract = new ethers.Contract(contracts.WFLR, ERC20_ABI, provider);
+                    const balanceWei = await wflrContract.balanceOf(evmAddress);
+                    results.wflr = ethers.formatUnits(balanceWei, 18);
+                  } catch (err: any) {
+                    results.wflr = "0";
+                  }
+                })(),
+                5000
+              ).then((result) => {
+                if (result === null) {
+                  results.wflr = "0";
+                }
+                return result;
+              })
+            );
+          }
+
+          // 3c. Fetch USDT balance (ERC20) - Stargate USDT
+          const usdtAddress = network === 'testnet' ? USDT_ADDRESSES.testnet : USDT_ADDRESSES.mainnet;
+          if (usdtAddress && usdtAddress !== "0x0000000000000000000000000000000000000000") {
+            promises.push(
+              withTimeout(
+                (async () => {
+                  try {
+                    const usdtContract = new ethers.Contract(usdtAddress, ERC20_ABI, provider);
+                    const balanceWei = await usdtContract.balanceOf(evmAddress);
+                    results.usdt = ethers.formatUnits(balanceWei, 6); // USDT has 6 decimals
+                  } catch (err: any) {
+                    results.usdt = "0";
+                  }
+                })(),
+                5000
+              ).then((result) => {
+                if (result === null) {
+                  results.usdt = "0";
                 }
                 return result;
               })
