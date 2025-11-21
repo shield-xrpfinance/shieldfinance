@@ -135,6 +135,24 @@ Complete guide to all documentation files in the XRP Liquid Staking Protocol pro
 
 ---
 
+### [docs/features/swap.md](features/swap.md)
+**Purpose**: Multi-Asset Swap feature user and technical documentation  
+**Audience**: Users, developers, integrators  
+**Contents**:
+- Token swapping overview and supported pairs
+- Step-by-step swap guide (buy and sell directions)
+- SparkDEX V3 integration details
+- Swap routing logic and path construction
+- ERC-20 approval flow (unlimited vs exact)
+- Price quote system and slippage protection
+- Safety features (validation, liquidity detection)
+- Comprehensive troubleshooting guide
+- Post-swap UX (confetti, success modal, staking CTA)
+
+**When to Read**: Swapping tokens, understanding approval flow, troubleshooting swap errors, integrating swap functionality
+
+---
+
 ## 🔧 Configuration Files
 
 ### [.env.example](../.env.example)
@@ -232,6 +250,12 @@ See **DEPLOYMENT_GUIDE.md** for quick command reference
 2. **SMART_ACCOUNTS.md** → "Troubleshooting"
 3. **replit.md** → "Deposit Watchdog Service" and "Withdrawal Retry Service"
 
+### "I want to swap tokens"
+1. **docs/features/swap.md** - Complete swap guide
+2. **replit.md** → "Multi-Asset Swap Integration" - Technical architecture
+3. **client/src/pages/Swap.tsx** - Swap page implementation
+4. **client/src/lib/sparkdex.ts** - SparkDEX V3 integration
+
 ---
 
 ## 🔄 Keeping Documentation Updated
@@ -297,4 +321,4 @@ All documentation should:
 
 ---
 
-Last Updated: 2025-11-20
+Last Updated: 2025-11-21
