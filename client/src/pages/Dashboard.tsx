@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { Link, useLocation } from "wouter";
+import { AssetIcon } from "@/components/AssetIcon";
 
 export default function Dashboard() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -500,16 +501,34 @@ export default function Dashboard() {
                 <div className="space-y-2">
                   {parseFloat(comprehensiveBalances.flr) > 0 && (
                     <div className="flex items-center justify-between" data-testid="balance-flr">
-                      <span className="text-sm text-muted-foreground">FLR</span>
+                      <div className="flex items-center gap-2">
+                        <AssetIcon asset="FLR" size={20} />
+                        <span className="text-sm text-muted-foreground">FLR</span>
+                      </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-flr">{parseFloat(comprehensiveBalances.flr).toFixed(4)}</div>
                         <div className="text-xs text-muted-foreground" data-testid="text-balance-flr-usd">${comprehensiveBalances.flrUsd.toFixed(2)}</div>
                       </div>
                     </div>
                   )}
+                  {parseFloat(comprehensiveBalances.wflr) > 0 && (
+                    <div className="flex items-center justify-between" data-testid="balance-wflr">
+                      <div className="flex items-center gap-2">
+                        <AssetIcon asset="WFLR" size={20} />
+                        <span className="text-sm text-muted-foreground">WFLR</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold tabular-nums" data-testid="text-balance-wflr">{parseFloat(comprehensiveBalances.wflr).toFixed(4)}</div>
+                        <div className="text-xs text-muted-foreground" data-testid="text-balance-wflr-usd">${comprehensiveBalances.wflrUsd.toFixed(2)}</div>
+                      </div>
+                    </div>
+                  )}
                   {parseFloat(comprehensiveBalances.shield) > 0 && (
                     <div className="flex items-center justify-between" data-testid="balance-shield">
-                      <span className="text-sm text-muted-foreground">SHIELD</span>
+                      <div className="flex items-center gap-2">
+                        <AssetIcon asset="SHIELD" size={20} />
+                        <span className="text-sm text-muted-foreground">SHIELD</span>
+                      </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-shield">{parseFloat(comprehensiveBalances.shield).toFixed(2)}</div>
                         <div className="text-xs text-muted-foreground" data-testid="text-balance-shield-usd">${comprehensiveBalances.shieldUsd.toFixed(2)}</div>
@@ -518,7 +537,10 @@ export default function Dashboard() {
                   )}
                   {parseFloat(comprehensiveBalances.shxrp) > 0 && (
                     <div className="flex items-center justify-between" data-testid="balance-shxrp">
-                      <span className="text-sm text-muted-foreground">shXRP</span>
+                      <div className="flex items-center gap-2">
+                        <AssetIcon asset="shXRP" size={20} />
+                        <span className="text-sm text-muted-foreground">shXRP</span>
+                      </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-shxrp">{parseFloat(comprehensiveBalances.shxrp).toFixed(4)}</div>
                         <div className="text-xs text-muted-foreground" data-testid="text-balance-shxrp-usd">${comprehensiveBalances.shxrpUsd.toFixed(2)}</div>
@@ -527,10 +549,25 @@ export default function Dashboard() {
                   )}
                   {parseFloat(comprehensiveBalances.xrp) > 0 && (
                     <div className="flex items-center justify-between" data-testid="balance-xrp">
-                      <span className="text-sm text-muted-foreground">XRP</span>
+                      <div className="flex items-center gap-2">
+                        <AssetIcon asset="XRP" size={20} />
+                        <span className="text-sm text-muted-foreground">XRP</span>
+                      </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-xrp">{parseFloat(comprehensiveBalances.xrp).toFixed(2)}</div>
                         <div className="text-xs text-muted-foreground" data-testid="text-balance-xrp-usd">${comprehensiveBalances.xrpUsd.toFixed(2)}</div>
+                      </div>
+                    </div>
+                  )}
+                  {parseFloat(comprehensiveBalances.usdt) > 0 && (
+                    <div className="flex items-center justify-between" data-testid="balance-usdt">
+                      <div className="flex items-center gap-2">
+                        <AssetIcon asset="USDT" size={20} />
+                        <span className="text-sm text-muted-foreground">USDT</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold tabular-nums" data-testid="text-balance-usdt">{parseFloat(comprehensiveBalances.usdt).toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground" data-testid="text-balance-usdt-usd">${comprehensiveBalances.usdtUsd.toFixed(2)}</div>
                       </div>
                     </div>
                   )}

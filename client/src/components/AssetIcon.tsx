@@ -1,8 +1,9 @@
 import xrpLogo from "@assets/xrp.148c3b50_1762588566535.png";
 import usdcLogo from "@assets/usdc-icon.5f31fb80_1762588566536.png";
 import rlusdLogo from "@assets/rlusd-icon.d10ce925_1762588566536.png";
+import flrLogo from "@assets/flr.svg";
 
-type AssetType = "XRP" | "RLUSD" | "USDC";
+type AssetType = "XRP" | "RLUSD" | "USDC" | "FLR" | "WFLR" | "USDT" | "SHIELD" | "shXRP";
 
 interface AssetIconProps {
   asset: AssetType;
@@ -14,12 +15,22 @@ const assetLogos: Record<AssetType, string> = {
   XRP: xrpLogo,
   RLUSD: rlusdLogo,
   USDC: usdcLogo,
+  FLR: flrLogo,
+  WFLR: "https://res.cloudinary.com/sparkdex/image/upload/q_100/v1/website-assets/coins/wflr?_a=DATAiZAAZAA0",
+  USDT: "https://res.cloudinary.com/metavault/image/upload/q_100/v1/website-assets/coins/usdt?_a=DATAiZAAZAA0",
+  SHIELD: "https://res.cloudinary.com/sparkdex/image/upload/q_100/v1/website-assets/coins/shield?_a=DATAiZAAZAA0",
+  shXRP: xrpLogo,
 };
 
 const assetNames: Record<AssetType, string> = {
   XRP: "XRP",
   RLUSD: "Ripple USD",
   USDC: "USD Coin",
+  FLR: "Flare",
+  WFLR: "Wrapped Flare",
+  USDT: "Bridged USDT",
+  SHIELD: "Shield",
+  shXRP: "Liquid Staked XRP",
 };
 
 export function AssetIcon({ asset, size = 24, className = "" }: AssetIconProps) {

@@ -7,18 +7,22 @@ import { useFtsoPrice } from "./useFtsoPrice";
 
 /**
  * Comprehensive wallet balance hook
- * Fetches all token balances: FLR, SHIELD, shXRP, and XRP
+ * Fetches all token balances: FLR, WFLR, SHIELD, shXRP, XRP, USDT
  * Includes USD values calculated from FTSO price feeds
  */
 export interface ComprehensiveBalances {
   flr: string;
+  wflr: string;
   shield: string;
   shxrp: string;
   xrp: string;
+  usdt: string;
   flrUsd: number;
+  wflrUsd: number;
   shieldUsd: number;
   shxrpUsd: number;
   xrpUsd: number;
+  usdtUsd: number;
   totalUsd: number;
   isLoading: boolean;
   error: string | null;
@@ -51,13 +55,17 @@ export function useComprehensiveBalance() {
   
   const [balances, setBalances] = useState<ComprehensiveBalances>({
     flr: "0",
+    wflr: "0",
     shield: "0",
     shxrp: "0",
     xrp: "0",
+    usdt: "0",
     flrUsd: 0,
+    wflrUsd: 0,
     shieldUsd: 0,
     shxrpUsd: 0,
     xrpUsd: 0,
+    usdtUsd: 0,
     totalUsd: 0,
     isLoading: true,
     error: null,
@@ -67,13 +75,17 @@ export function useComprehensiveBalance() {
     if (!isConnected) {
       setBalances({
         flr: "0",
+        wflr: "0",
         shield: "0",
         shxrp: "0",
         xrp: "0",
+        usdt: "0",
         flrUsd: 0,
+        wflrUsd: 0,
         shieldUsd: 0,
         shxrpUsd: 0,
         xrpUsd: 0,
+        usdtUsd: 0,
         totalUsd: 0,
         isLoading: false,
         error: null,
@@ -92,9 +104,11 @@ export function useComprehensiveBalance() {
 
         const results = {
           flr: "0",
+          wflr: "0",
           shield: "0",
           shxrp: "0",
           xrp: "0",
+          usdt: "0",
         };
 
         // Helper function to wrap promises with timeout
@@ -210,16 +224,21 @@ export function useComprehensiveBalance() {
         const xrpUsd = parseFloat(results.xrp) * ftsoPrices.xrpUsd;
         // shXRP tracks XRP 1:1 (vault shares backed by FXRP which is backed by XRP)
         const shxrpUsd = parseFloat(results.shxrp) * ftsoPrices.xrpUsd;
-        // SHIELD price would need SparkDEX integration - for now set to 0
+        // WFLR tracks FLR 1:1
+        const wflrUsd = parseFloat(results.wflr) * ftsoPrices.flrUsd;
+        // SHIELD and USDT prices would need SparkDEX/Oracle integration - for now set to 0
         const shieldUsd = 0;
-        const totalUsd = flrUsd + xrpUsd + shxrpUsd + shieldUsd;
+        const usdtUsd = 0;
+        const totalUsd = flrUsd + xrpUsd + shxrpUsd + wflrUsd + shieldUsd + usdtUsd;
 
         setBalances({
           ...results,
           flrUsd,
+          wflrUsd,
           shieldUsd,
           shxrpUsd,
           xrpUsd,
+          usdtUsd,
           totalUsd,
           isLoading: false,
           error: null,
