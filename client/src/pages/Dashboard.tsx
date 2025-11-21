@@ -534,9 +534,11 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
-                  {[parseFloat(comprehensiveBalances.flr), parseFloat(comprehensiveBalances.shield), parseFloat(comprehensiveBalances.shxrp), parseFloat(comprehensiveBalances.xrp)].every(v => v === 0) && (
+                  {!address ? (
+                    <p className="text-sm text-muted-foreground text-center py-2" data-testid="text-no-balances">Connect your wallet to view balance</p>
+                  ) : [parseFloat(comprehensiveBalances.flr), parseFloat(comprehensiveBalances.shield), parseFloat(comprehensiveBalances.shxrp), parseFloat(comprehensiveBalances.xrp)].every(v => v === 0) ? (
                     <p className="text-sm text-muted-foreground text-center py-2" data-testid="text-no-balances">No assets found</p>
-                  )}
+                  ) : null}
                 </div>
               </div>
             )}
