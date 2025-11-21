@@ -13,8 +13,7 @@ import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Wallet, LogOut, Loader2, Beaker } from "lucide-react";
-import { useWalletBalance } from "@/hooks/use-wallet-balance";
+import { Wallet, LogOut, Beaker } from "lucide-react";
 import Dashboard from "@/pages/Dashboard";
 import Vaults from "@/pages/Vaults";
 import Portfolio from "@/pages/Portfolio";
@@ -44,8 +43,7 @@ function Router() {
 }
 
 function Header() {
-  const { address, evmAddress, isConnected, isEvmConnected, disconnect } = useWallet();
-  const { balance, isLoading } = useWalletBalance();
+  const { address, isConnected, disconnect } = useWallet();
   const { isTestnet, network } = useNetwork();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
@@ -62,53 +60,14 @@ function Header() {
       </div>
       <div className="flex items-center gap-3">
         {isConnected && address ? (
-          <div className="flex items-center gap-2">
-            {isLoading ? (
-              <div className="flex items-center gap-2 bg-muted px-3 py-1.5 rounded-md" data-testid="header-loading-balance">
-                <Loader2 className="h-3 w-3 animate-spin" />
-                <span className="text-xs text-muted-foreground">Loading...</span>
-              </div>
-            ) : balance ? (
-              <div className="flex items-center gap-3 bg-muted px-3 py-1.5 rounded-md" data-testid="header-balance-display">
-                <div className="text-sm font-mono font-bold" data-testid="text-header-balance-xrp">
-                  {Number(balance.balanceXRP).toLocaleString()} XRP
-                </div>
-                <div className="h-4 w-px bg-border" />
-                <div className="text-xs text-muted-foreground" data-testid="text-header-balance-usd">
-                  ${Number(balance.balanceUSD).toLocaleString()}
-                </div>
-              </div>
-            ) : null}
-            
-            {/* Address Display - Shows both XRPL and EVM addresses if available */}
-            <div className="flex items-center gap-2">
-              {address && (
-                <div className="flex flex-col gap-0.5 bg-muted px-3 py-1.5 rounded-md" data-testid="text-wallet-address-xrpl">
-                  <span className="text-xs text-muted-foreground">XRPL</span>
-                  <span className="text-sm font-mono">
-                    {address.slice(0, 6)}...{address.slice(-4)}
-                  </span>
-                </div>
-              )}
-              {evmAddress && (
-                <div className="flex flex-col gap-0.5 bg-muted px-3 py-1.5 rounded-md" data-testid="text-wallet-address-evm">
-                  <span className="text-xs text-muted-foreground">Flare</span>
-                  <span className="text-sm font-mono">
-                    {evmAddress.slice(0, 6)}...{evmAddress.slice(-4)}
-                  </span>
-                </div>
-              )}
-            </div>
-            
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={disconnect}
-              data-testid="button-disconnect-wallet"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={disconnect}
+            data-testid="button-disconnect-wallet"
+          >
+            <LogOut className="h-4 w-4" />
+          </Button>
         ) : (
           <Button
             onClick={() => setConnectModalOpen(true)}
