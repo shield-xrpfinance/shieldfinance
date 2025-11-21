@@ -16,11 +16,11 @@ interface PaymentRequestResult {
 interface WalletContextType {
   address: string | null; // XRPL address (r...)
   evmAddress: string | null; // EVM address (0x...) for Flare Network
-  provider: "xaman" | "walletconnect" | "web3auth" | null;
+  provider: "xaman" | "walletconnect" | null;
   isConnected: boolean;
   isEvmConnected: boolean;
   walletConnectProvider: UniversalProvider | null;
-  connect: (xrplAddress: string | null, provider: "xaman" | "walletconnect" | "web3auth", evmAddr?: string | null, wcProvider?: UniversalProvider) => void;
+  connect: (xrplAddress: string | null, provider: "xaman" | "walletconnect", evmAddr?: string | null, wcProvider?: UniversalProvider) => void;
   disconnect: () => void;
   requestPayment: (paymentRequest: PaymentRequest) => Promise<PaymentRequestResult>;
 }
@@ -40,7 +40,7 @@ const WalletContext = createContext<WalletContextType>({
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null); // XRPL address
   const [evmAddress, setEvmAddress] = useState<string | null>(null); // EVM address
-  const [provider, setProvider] = useState<"xaman" | "walletconnect" | "web3auth" | null>(null);
+  const [provider, setProvider] = useState<"xaman" | "walletconnect" | null>(null);
   const [walletConnectProvider, setWalletConnectProvider] = useState<UniversalProvider | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
   const initRef = useRef(false);
@@ -118,9 +118,9 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const savedProvider = localStorage.getItem("walletProvider");
 
       if (savedAddress && savedProvider) {
-        if (savedProvider === "xaman" || savedProvider === "web3auth") {
+        if (savedProvider === "xaman") {
           setAddress(savedAddress);
-          setProvider(savedProvider as "xaman" | "web3auth");
+          setProvider(savedProvider);
           console.log(`Restored wallet connection: ${savedProvider} - ${savedAddress}`);
         } else if (savedProvider === "walletconnect") {
           const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
@@ -218,7 +218,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     restoreConnection();
   }, []);
 
-  const connect = (xrplAddress: string | null, walletProvider: "xaman" | "walletconnect" | "web3auth", evmAddr?: string | null, wcProvider?: UniversalProvider) => {
+  const connect = (xrplAddress: string | null, walletProvider: "xaman" | "walletconnect", evmAddr?: string | null, wcProvider?: UniversalProvider) => {
     setAddress(xrplAddress);
     setEvmAddress(evmAddr || null);
     setProvider(walletProvider);
@@ -343,12 +343,6 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         return {
           success: true,
           txHash: result?.tx_json?.hash || "pending",
-        };
-      } else if (provider === "web3auth") {
-        console.log("⚠️ Web3Auth payment not implemented");
-        return {
-          success: false,
-          error: "Web3Auth payment requests not yet implemented",
         };
       }
 
