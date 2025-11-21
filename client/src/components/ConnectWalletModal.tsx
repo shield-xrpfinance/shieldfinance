@@ -228,15 +228,11 @@ export default function ConnectWalletModal({
       if (xrplAccounts.length > 0) {
         // Format: "xrpl:0:rAddress..." or "xrpl:1:rAddress..."
         xrplAddress = xrplAccounts[0].split(":")[2];
-      } else {
-        console.warn("⚠️ XRPL namespace not approved by wallet - deposits/withdrawals will not be available");
       }
       
       if (evmAccounts.length > 0) {
         // Format: "eip155:14:0x..." or "eip155:114:0x..."
         evmAddress = evmAccounts[0].split(":")[2];
-      } else {
-        console.warn("⚠️ EVM namespace not approved by wallet - airdrop claims will not be available");
       }
       
       // Connect if at least one address is available (partial connection supported)

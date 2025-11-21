@@ -239,7 +239,7 @@ export function useComprehensiveBalance() {
     // Refresh balances every 15 seconds
     const interval = setInterval(fetchBalances, 15000);
     return () => clearInterval(interval);
-  }, [address, evmAddress, isConnected, isEvmConnected, network, ftsoPrices.flrUsd, ftsoPrices.xrpUsd, provider]);
+  }, [address, evmAddress, isConnected, isEvmConnected, network, ftsoPrices.flrUsd, ftsoPrices.xrpUsd, ftsoPrices.lastUpdate, provider]);
 
   return balances;
 }
