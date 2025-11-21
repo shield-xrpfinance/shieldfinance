@@ -178,7 +178,11 @@ export function AppSidebar() {
                 return (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isActive}>
-                      <Link href={item.url} data-testid={`link-${item.title.toLowerCase()}`}>
+                      <Link 
+                        href={item.url} 
+                        data-testid={`link-${item.title.toLowerCase()}`}
+                        className="backdrop-blur-md border border-primary/20 hover:border-primary/40 transition-colors"
+                      >
                         <item.icon />
                         <span>{item.title}</span>
                       </Link>
