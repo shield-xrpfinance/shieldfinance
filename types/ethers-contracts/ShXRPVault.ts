@@ -13,9 +13,9 @@ export declare namespace ShXRPVault {
     }
 
   export interface ShXRPVaultInterface extends Interface {
-    getFunction(nameOrSignature: "activateStrategy" | "addOperator" | "addStrategy" | "allowance" | "approve" | "asset" | "balanceOf" | "bufferTargetBps" | "convertToAssets" | "convertToShares" | "decimals" | "deployToStrategy" | "deposit" | "getActiveStrategies" | "getAllStrategies" | "getBufferBalance" | "getBufferStatus" | "getBufferTarget" | "getCurrentAllocations" | "getStrategyInfo" | "getTotalDeployed" | "maxDeposit" | "maxMint" | "maxRedeem" | "maxWithdraw" | "minDeposit" | "mint" | "name" | "operators" | "owner" | "pauseStrategy" | "previewDeposit" | "previewMint" | "previewRedeem" | "previewWithdraw" | "redeem" | "removeOperator" | "removeStrategy" | "renounceOwnership" | "reportStrategy" | "resumeStrategy" | "setBufferTarget" | "setMinDeposit" | "strategies" | "strategyList" | "symbol" | "totalAssets" | "totalStrategyTargetBps" | "totalSupply" | "transfer" | "transferFrom" | "transferOwnership" | "updateAllocation" | "withdraw" | "withdrawFromStrategy"): FunctionFragment;
+    getFunction(nameOrSignature: "activateStrategy" | "addOperator" | "addStrategy" | "allowance" | "approve" | "asset" | "balanceOf" | "bufferTargetBps" | "convertToAssets" | "convertToShares" | "decimals" | "deployToStrategy" | "deposit" | "depositLimit" | "getActiveStrategies" | "getAllStrategies" | "getBufferBalance" | "getBufferStatus" | "getBufferTarget" | "getCurrentAllocations" | "getStrategyInfo" | "getTotalDeployed" | "maxDeposit" | "maxMint" | "maxRedeem" | "maxWithdraw" | "minDeposit" | "mint" | "name" | "operators" | "owner" | "pause" | "pauseStrategy" | "paused" | "previewDeposit" | "previewMint" | "previewRedeem" | "previewWithdraw" | "redeem" | "removeOperator" | "removeStrategy" | "renounceOwnership" | "reportStrategy" | "resumeStrategy" | "setBufferTarget" | "setDepositLimit" | "setMinDeposit" | "strategies" | "strategyList" | "symbol" | "totalAssets" | "totalStrategyTargetBps" | "totalSupply" | "transfer" | "transferFrom" | "transferOwnership" | "unpause" | "updateAllocation" | "withdraw" | "withdrawFromStrategy"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "Approval" | "BufferTargetUpdated" | "DeployedToStrategy" | "Deposit" | "MinDepositUpdated" | "OperatorAdded" | "OperatorRemoved" | "OwnershipTransferred" | "StrategyAdded" | "StrategyAllocationUpdated" | "StrategyRemoved" | "StrategyReported" | "StrategyStatusUpdated" | "Transfer" | "Withdraw" | "WithdrawnFromStrategy"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "Approval" | "BufferTargetUpdated" | "DeployedToStrategy" | "Deposit" | "DepositLimitUpdated" | "MinDepositUpdated" | "OperatorAdded" | "OperatorRemoved" | "OwnershipTransferred" | "Paused" | "StrategyAdded" | "StrategyAllocationUpdated" | "StrategyRemoved" | "StrategyReported" | "StrategyStatusUpdated" | "Transfer" | "Unpaused" | "Withdraw" | "WithdrawnFromStrategy"): EventFragment;
 
     encodeFunctionData(functionFragment: 'activateStrategy', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'addOperator', values: [AddressLike]): string;
@@ -30,6 +30,7 @@ encodeFunctionData(functionFragment: 'convertToShares', values: [BigNumberish]):
 encodeFunctionData(functionFragment: 'decimals', values?: undefined): string;
 encodeFunctionData(functionFragment: 'deployToStrategy', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'deposit', values: [BigNumberish, AddressLike]): string;
+encodeFunctionData(functionFragment: 'depositLimit', values?: undefined): string;
 encodeFunctionData(functionFragment: 'getActiveStrategies', values?: undefined): string;
 encodeFunctionData(functionFragment: 'getAllStrategies', values?: undefined): string;
 encodeFunctionData(functionFragment: 'getBufferBalance', values?: undefined): string;
@@ -47,7 +48,9 @@ encodeFunctionData(functionFragment: 'mint', values: [BigNumberish, AddressLike]
 encodeFunctionData(functionFragment: 'name', values?: undefined): string;
 encodeFunctionData(functionFragment: 'operators', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
+encodeFunctionData(functionFragment: 'pause', values?: undefined): string;
 encodeFunctionData(functionFragment: 'pauseStrategy', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'paused', values?: undefined): string;
 encodeFunctionData(functionFragment: 'previewDeposit', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'previewMint', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'previewRedeem', values: [BigNumberish]): string;
@@ -59,6 +62,7 @@ encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): s
 encodeFunctionData(functionFragment: 'reportStrategy', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'resumeStrategy', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'setBufferTarget', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'setDepositLimit', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'setMinDeposit', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'strategies', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'strategyList', values: [BigNumberish]): string;
@@ -69,6 +73,7 @@ encodeFunctionData(functionFragment: 'totalSupply', values?: undefined): string;
 encodeFunctionData(functionFragment: 'transfer', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferFrom', values: [AddressLike, AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
+encodeFunctionData(functionFragment: 'unpause', values?: undefined): string;
 encodeFunctionData(functionFragment: 'updateAllocation', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'withdraw', values: [BigNumberish, AddressLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'withdrawFromStrategy', values: [AddressLike, BigNumberish]): string;
@@ -86,6 +91,7 @@ decodeFunctionResult(functionFragment: 'convertToShares', data: BytesLike): Resu
 decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'deployToStrategy', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'deposit', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'depositLimit', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getActiveStrategies', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getAllStrategies', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'getBufferBalance', data: BytesLike): Result;
@@ -103,7 +109,9 @@ decodeFunctionResult(functionFragment: 'mint', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'operators', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'pause', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'pauseStrategy', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'paused', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'previewDeposit', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'previewMint', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'previewRedeem', data: BytesLike): Result;
@@ -115,6 +123,7 @@ decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Re
 decodeFunctionResult(functionFragment: 'reportStrategy', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'resumeStrategy', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setBufferTarget', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'setDepositLimit', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'setMinDeposit', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'strategies', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'strategyList', data: BytesLike): Result;
@@ -125,6 +134,7 @@ decodeFunctionResult(functionFragment: 'totalSupply', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transfer', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferFrom', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
+decodeFunctionResult(functionFragment: 'unpause', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'updateAllocation', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'withdraw', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike): Result;
@@ -179,6 +189,18 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
 
   
 
+    export namespace DepositLimitUpdatedEvent {
+      export type InputTuple = [newDepositLimit: BigNumberish];
+      export type OutputTuple = [newDepositLimit: bigint];
+      export interface OutputObject {newDepositLimit: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
     export namespace MinDepositUpdatedEvent {
       export type InputTuple = [newMinDeposit: BigNumberish];
       export type OutputTuple = [newMinDeposit: bigint];
@@ -219,6 +241,18 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
       export type InputTuple = [previousOwner: AddressLike, newOwner: AddressLike];
       export type OutputTuple = [previousOwner: string, newOwner: string];
       export interface OutputObject {previousOwner: string, newOwner: string };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace PausedEvent {
+      export type InputTuple = [account: AddressLike];
+      export type OutputTuple = [account: string];
+      export interface OutputObject {account: string };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -291,6 +325,18 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
       export type InputTuple = [from: AddressLike, to: AddressLike, value: BigNumberish];
       export type OutputTuple = [from: string, to: string, value: bigint];
       export interface OutputObject {from: string, to: string, value: bigint };
+      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
+      export type Filter = TypedDeferredTopicFilter<Event>
+      export type Log = TypedEventLog<Event>
+      export type LogDescription = TypedLogDescription<Event>
+    }
+
+  
+
+    export namespace UnpausedEvent {
+      export type InputTuple = [account: AddressLike];
+      export type OutputTuple = [account: string];
+      export interface OutputObject {account: string };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -461,6 +507,14 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
     
 
     
+    depositLimit: TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >
+    
+
+    
     getActiveStrategies: TypedContractMethod<
       [],
       [string[]],
@@ -526,7 +580,7 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
 
     
     maxDeposit: TypedContractMethod<
-      [arg0: AddressLike, ],
+      [receiver: AddressLike, ],
       [bigint],
       'view'
     >
@@ -534,7 +588,7 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
 
     
     maxMint: TypedContractMethod<
-      [arg0: AddressLike, ],
+      [receiver: AddressLike, ],
       [bigint],
       'view'
     >
@@ -597,10 +651,26 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
     
 
     
+    pause: TypedContractMethod<
+      [],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     pauseStrategy: TypedContractMethod<
       [strategy: AddressLike, ],
       [void],
       'nonpayable'
+    >
+    
+
+    
+    paused: TypedContractMethod<
+      [],
+      [boolean],
+      'view'
     >
     
 
@@ -693,6 +763,14 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
     
 
     
+    setDepositLimit: TypedContractMethod<
+      [newDepositLimit: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
     setMinDeposit: TypedContractMethod<
       [newMinDeposit: BigNumberish, ],
       [void],
@@ -767,6 +845,14 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategy', data: BytesLike):
     
     transferOwnership: TypedContractMethod<
       [newOwner: AddressLike, ],
+      [void],
+      'nonpayable'
+    >
+    
+
+    
+    unpause: TypedContractMethod<
+      [],
       [void],
       'nonpayable'
     >
@@ -864,6 +950,11 @@ getFunction(nameOrSignature: 'deposit'): TypedContractMethod<
       [bigint],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'depositLimit'): TypedContractMethod<
+      [],
+      [bigint],
+      'view'
+    >;
 getFunction(nameOrSignature: 'getActiveStrategies'): TypedContractMethod<
       [],
       [string[]],
@@ -905,12 +996,12 @@ getFunction(nameOrSignature: 'getTotalDeployed'): TypedContractMethod<
       'view'
     >;
 getFunction(nameOrSignature: 'maxDeposit'): TypedContractMethod<
-      [arg0: AddressLike, ],
+      [receiver: AddressLike, ],
       [bigint],
       'view'
     >;
 getFunction(nameOrSignature: 'maxMint'): TypedContractMethod<
-      [arg0: AddressLike, ],
+      [receiver: AddressLike, ],
       [bigint],
       'view'
     >;
@@ -949,10 +1040,20 @@ getFunction(nameOrSignature: 'owner'): TypedContractMethod<
       [string],
       'view'
     >;
+getFunction(nameOrSignature: 'pause'): TypedContractMethod<
+      [],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'pauseStrategy'): TypedContractMethod<
       [strategy: AddressLike, ],
       [void],
       'nonpayable'
+    >;
+getFunction(nameOrSignature: 'paused'): TypedContractMethod<
+      [],
+      [boolean],
+      'view'
     >;
 getFunction(nameOrSignature: 'previewDeposit'): TypedContractMethod<
       [assets: BigNumberish, ],
@@ -1009,6 +1110,11 @@ getFunction(nameOrSignature: 'setBufferTarget'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'setDepositLimit'): TypedContractMethod<
+      [newDepositLimit: BigNumberish, ],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'setMinDeposit'): TypedContractMethod<
       [newMinDeposit: BigNumberish, ],
       [void],
@@ -1059,6 +1165,11 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
+getFunction(nameOrSignature: 'unpause'): TypedContractMethod<
+      [],
+      [void],
+      'nonpayable'
+    >;
 getFunction(nameOrSignature: 'updateAllocation'): TypedContractMethod<
       [strategy: AddressLike, newTargetBps: BigNumberish, ],
       [void],
@@ -1079,16 +1190,19 @@ getFunction(nameOrSignature: 'withdrawFromStrategy'): TypedContractMethod<
 getEvent(key: 'BufferTargetUpdated'): TypedContractEvent<BufferTargetUpdatedEvent.InputTuple, BufferTargetUpdatedEvent.OutputTuple, BufferTargetUpdatedEvent.OutputObject>;
 getEvent(key: 'DeployedToStrategy'): TypedContractEvent<DeployedToStrategyEvent.InputTuple, DeployedToStrategyEvent.OutputTuple, DeployedToStrategyEvent.OutputObject>;
 getEvent(key: 'Deposit'): TypedContractEvent<DepositEvent.InputTuple, DepositEvent.OutputTuple, DepositEvent.OutputObject>;
+getEvent(key: 'DepositLimitUpdated'): TypedContractEvent<DepositLimitUpdatedEvent.InputTuple, DepositLimitUpdatedEvent.OutputTuple, DepositLimitUpdatedEvent.OutputObject>;
 getEvent(key: 'MinDepositUpdated'): TypedContractEvent<MinDepositUpdatedEvent.InputTuple, MinDepositUpdatedEvent.OutputTuple, MinDepositUpdatedEvent.OutputObject>;
 getEvent(key: 'OperatorAdded'): TypedContractEvent<OperatorAddedEvent.InputTuple, OperatorAddedEvent.OutputTuple, OperatorAddedEvent.OutputObject>;
 getEvent(key: 'OperatorRemoved'): TypedContractEvent<OperatorRemovedEvent.InputTuple, OperatorRemovedEvent.OutputTuple, OperatorRemovedEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
+getEvent(key: 'Paused'): TypedContractEvent<PausedEvent.InputTuple, PausedEvent.OutputTuple, PausedEvent.OutputObject>;
 getEvent(key: 'StrategyAdded'): TypedContractEvent<StrategyAddedEvent.InputTuple, StrategyAddedEvent.OutputTuple, StrategyAddedEvent.OutputObject>;
 getEvent(key: 'StrategyAllocationUpdated'): TypedContractEvent<StrategyAllocationUpdatedEvent.InputTuple, StrategyAllocationUpdatedEvent.OutputTuple, StrategyAllocationUpdatedEvent.OutputObject>;
 getEvent(key: 'StrategyRemoved'): TypedContractEvent<StrategyRemovedEvent.InputTuple, StrategyRemovedEvent.OutputTuple, StrategyRemovedEvent.OutputObject>;
 getEvent(key: 'StrategyReported'): TypedContractEvent<StrategyReportedEvent.InputTuple, StrategyReportedEvent.OutputTuple, StrategyReportedEvent.OutputObject>;
 getEvent(key: 'StrategyStatusUpdated'): TypedContractEvent<StrategyStatusUpdatedEvent.InputTuple, StrategyStatusUpdatedEvent.OutputTuple, StrategyStatusUpdatedEvent.OutputObject>;
 getEvent(key: 'Transfer'): TypedContractEvent<TransferEvent.InputTuple, TransferEvent.OutputTuple, TransferEvent.OutputObject>;
+getEvent(key: 'Unpaused'): TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
 getEvent(key: 'Withdraw'): TypedContractEvent<WithdrawEvent.InputTuple, WithdrawEvent.OutputTuple, WithdrawEvent.OutputObject>;
 getEvent(key: 'WithdrawnFromStrategy'): TypedContractEvent<WithdrawnFromStrategyEvent.InputTuple, WithdrawnFromStrategyEvent.OutputTuple, WithdrawnFromStrategyEvent.OutputObject>;
 
@@ -1110,6 +1224,10 @@ getEvent(key: 'WithdrawnFromStrategy'): TypedContractEvent<WithdrawnFromStrategy
       Deposit: TypedContractEvent<DepositEvent.InputTuple, DepositEvent.OutputTuple, DepositEvent.OutputObject>;
     
 
+      'DepositLimitUpdated(uint256)': TypedContractEvent<DepositLimitUpdatedEvent.InputTuple, DepositLimitUpdatedEvent.OutputTuple, DepositLimitUpdatedEvent.OutputObject>;
+      DepositLimitUpdated: TypedContractEvent<DepositLimitUpdatedEvent.InputTuple, DepositLimitUpdatedEvent.OutputTuple, DepositLimitUpdatedEvent.OutputObject>;
+    
+
       'MinDepositUpdated(uint256)': TypedContractEvent<MinDepositUpdatedEvent.InputTuple, MinDepositUpdatedEvent.OutputTuple, MinDepositUpdatedEvent.OutputObject>;
       MinDepositUpdated: TypedContractEvent<MinDepositUpdatedEvent.InputTuple, MinDepositUpdatedEvent.OutputTuple, MinDepositUpdatedEvent.OutputObject>;
     
@@ -1124,6 +1242,10 @@ getEvent(key: 'WithdrawnFromStrategy'): TypedContractEvent<WithdrawnFromStrategy
 
       'OwnershipTransferred(address,address)': TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
+    
+
+      'Paused(address)': TypedContractEvent<PausedEvent.InputTuple, PausedEvent.OutputTuple, PausedEvent.OutputObject>;
+      Paused: TypedContractEvent<PausedEvent.InputTuple, PausedEvent.OutputTuple, PausedEvent.OutputObject>;
     
 
       'StrategyAdded(address,uint256)': TypedContractEvent<StrategyAddedEvent.InputTuple, StrategyAddedEvent.OutputTuple, StrategyAddedEvent.OutputObject>;
@@ -1148,6 +1270,10 @@ getEvent(key: 'WithdrawnFromStrategy'): TypedContractEvent<WithdrawnFromStrategy
 
       'Transfer(address,address,uint256)': TypedContractEvent<TransferEvent.InputTuple, TransferEvent.OutputTuple, TransferEvent.OutputObject>;
       Transfer: TypedContractEvent<TransferEvent.InputTuple, TransferEvent.OutputTuple, TransferEvent.OutputObject>;
+    
+
+      'Unpaused(address)': TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
+      Unpaused: TypedContractEvent<UnpausedEvent.InputTuple, UnpausedEvent.OutputTuple, UnpausedEvent.OutputObject>;
     
 
       'Withdraw(address,address,address,uint256,uint256)': TypedContractEvent<WithdrawEvent.InputTuple, WithdrawEvent.OutputTuple, WithdrawEvent.OutputObject>;

@@ -23,7 +23,7 @@ encodeFunctionData(functionFragment: 'DEFAULT_ADMIN_ROLE', values?: undefined): 
 encodeFunctionData(functionFragment: 'FIRELIGHT_TARGET_BPS', values?: undefined): string;
 encodeFunctionData(functionFragment: 'KINETIC_TARGET_BPS', values?: undefined): string;
 encodeFunctionData(functionFragment: 'OPERATOR_ROLE', values?: undefined): string;
-encodeFunctionData(functionFragment: '_calculateDeploymentAmountsExternal', values: [BigNumberish, BigNumberish, BigNumberish, BigNumberish]): string;
+encodeFunctionData(functionFragment: '_calculateDeploymentAmountsExternal', values: [AddressLike, BigNumberish, BigNumberish, BigNumberish, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'addCompounder', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'addOperator', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'bridgeRequests', values: [BytesLike]): string;
@@ -36,7 +36,7 @@ encodeFunctionData(functionFragment: 'getBridgeRequest', values: [BytesLike]): s
 encodeFunctionData(functionFragment: 'getCurrentAllocation', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'getRoleAdmin', values: [BytesLike]): string;
 encodeFunctionData(functionFragment: 'getStrategyCount', values?: undefined): string;
-encodeFunctionData(functionFragment: 'getTargetAllocation', values: [BigNumberish]): string;
+encodeFunctionData(functionFragment: 'getTargetAllocation', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'getVaultCount', values?: undefined): string;
 encodeFunctionData(functionFragment: 'grantRole', values: [BytesLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'hasRole', values: [BytesLike, AddressLike]): string;
@@ -368,7 +368,7 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategies', data: BytesLike
 
     
     _calculateDeploymentAmountsExternal: TypedContractMethod<
-      [deployableAmount: BigNumberish, kineticCurrent: BigNumberish, firelightCurrent: BigNumberish, totalAssets: BigNumberish, ],
+      [vault: AddressLike, deployableAmount: BigNumberish, kineticCurrent: BigNumberish, firelightCurrent: BigNumberish, totalAssets: BigNumberish, ],
       [[bigint, bigint] & {kineticAmount: bigint, firelightAmount: bigint }],
       'view'
     >
@@ -472,7 +472,7 @@ decodeFunctionResult(functionFragment: 'withdrawFromStrategies', data: BytesLike
 
     
     getTargetAllocation: TypedContractMethod<
-      [totalAssets: BigNumberish, ],
+      [vault: AddressLike, totalAssets: BigNumberish, ],
       [[bigint, bigint, bigint] & {bufferTarget: bigint, kineticTarget: bigint, firelightTarget: bigint }],
       'view'
     >
@@ -688,7 +688,7 @@ getFunction(nameOrSignature: 'OPERATOR_ROLE'): TypedContractMethod<
       'view'
     >;
 getFunction(nameOrSignature: '_calculateDeploymentAmountsExternal'): TypedContractMethod<
-      [deployableAmount: BigNumberish, kineticCurrent: BigNumberish, firelightCurrent: BigNumberish, totalAssets: BigNumberish, ],
+      [vault: AddressLike, deployableAmount: BigNumberish, kineticCurrent: BigNumberish, firelightCurrent: BigNumberish, totalAssets: BigNumberish, ],
       [[bigint, bigint] & {kineticAmount: bigint, firelightAmount: bigint }],
       'view'
     >;
@@ -753,7 +753,7 @@ getFunction(nameOrSignature: 'getStrategyCount'): TypedContractMethod<
       'view'
     >;
 getFunction(nameOrSignature: 'getTargetAllocation'): TypedContractMethod<
-      [totalAssets: BigNumberish, ],
+      [vault: AddressLike, totalAssets: BigNumberish, ],
       [[bigint, bigint, bigint] & {bufferTarget: bigint, kineticTarget: bigint, firelightTarget: bigint }],
       'view'
     >;

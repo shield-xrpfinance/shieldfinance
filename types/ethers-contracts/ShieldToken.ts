@@ -6,19 +6,17 @@ import type { TypedContractEvent, TypedDeferredTopicFilter, TypedEventLog, Typed
   
 
   export interface ShieldTokenInterface extends Interface {
-    getFunction(nameOrSignature: "TOTAL_SUPPLY" | "TREASURY_ALLOCATION" | "allowance" | "approve" | "balanceOf" | "burn" | "burnFrom" | "decimals" | "mint" | "name" | "owner" | "renounceOwnership" | "symbol" | "totalSupply" | "transfer" | "transferFrom" | "transferOwnership" | "treasury"): FunctionFragment;
+    getFunction(nameOrSignature: "TOTAL_SUPPLY" | "allowance" | "approve" | "balanceOf" | "burn" | "burnFrom" | "decimals" | "name" | "owner" | "renounceOwnership" | "symbol" | "totalSupply" | "transfer" | "transferFrom" | "transferOwnership"): FunctionFragment;
 
-    getEvent(nameOrSignatureOrTopic: "Approval" | "OwnershipTransferred" | "TokensMinted" | "Transfer" | "TreasuryFunded"): EventFragment;
+    getEvent(nameOrSignatureOrTopic: "Approval" | "OwnershipTransferred" | "Transfer"): EventFragment;
 
     encodeFunctionData(functionFragment: 'TOTAL_SUPPLY', values?: undefined): string;
-encodeFunctionData(functionFragment: 'TREASURY_ALLOCATION', values?: undefined): string;
 encodeFunctionData(functionFragment: 'allowance', values: [AddressLike, AddressLike]): string;
 encodeFunctionData(functionFragment: 'approve', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'balanceOf', values: [AddressLike]): string;
 encodeFunctionData(functionFragment: 'burn', values: [BigNumberish]): string;
 encodeFunctionData(functionFragment: 'burnFrom', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'decimals', values?: undefined): string;
-encodeFunctionData(functionFragment: 'mint', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'name', values?: undefined): string;
 encodeFunctionData(functionFragment: 'owner', values?: undefined): string;
 encodeFunctionData(functionFragment: 'renounceOwnership', values?: undefined): string;
@@ -27,17 +25,14 @@ encodeFunctionData(functionFragment: 'totalSupply', values?: undefined): string;
 encodeFunctionData(functionFragment: 'transfer', values: [AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferFrom', values: [AddressLike, AddressLike, BigNumberish]): string;
 encodeFunctionData(functionFragment: 'transferOwnership', values: [AddressLike]): string;
-encodeFunctionData(functionFragment: 'treasury', values?: undefined): string;
 
     decodeFunctionResult(functionFragment: 'TOTAL_SUPPLY', data: BytesLike): Result;
-decodeFunctionResult(functionFragment: 'TREASURY_ALLOCATION', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'allowance', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'approve', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'balanceOf', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'burn', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'burnFrom', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'decimals', data: BytesLike): Result;
-decodeFunctionResult(functionFragment: 'mint', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'name', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'owner', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'renounceOwnership', data: BytesLike): Result;
@@ -46,7 +41,6 @@ decodeFunctionResult(functionFragment: 'totalSupply', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transfer', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferFrom', data: BytesLike): Result;
 decodeFunctionResult(functionFragment: 'transferOwnership', data: BytesLike): Result;
-decodeFunctionResult(functionFragment: 'treasury', data: BytesLike): Result;
   }
 
   
@@ -74,34 +68,10 @@ decodeFunctionResult(functionFragment: 'treasury', data: BytesLike): Result;
 
   
 
-    export namespace TokensMintedEvent {
-      export type InputTuple = [to: AddressLike, amount: BigNumberish];
-      export type OutputTuple = [to: string, amount: bigint];
-      export interface OutputObject {to: string, amount: bigint };
-      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
-      export type Filter = TypedDeferredTopicFilter<Event>
-      export type Log = TypedEventLog<Event>
-      export type LogDescription = TypedLogDescription<Event>
-    }
-
-  
-
     export namespace TransferEvent {
       export type InputTuple = [from: AddressLike, to: AddressLike, value: BigNumberish];
       export type OutputTuple = [from: string, to: string, value: bigint];
       export interface OutputObject {from: string, to: string, value: bigint };
-      export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
-      export type Filter = TypedDeferredTopicFilter<Event>
-      export type Log = TypedEventLog<Event>
-      export type LogDescription = TypedLogDescription<Event>
-    }
-
-  
-
-    export namespace TreasuryFundedEvent {
-      export type InputTuple = [treasury: AddressLike, amount: BigNumberish];
-      export type OutputTuple = [treasury: string, amount: bigint];
-      export interface OutputObject {treasury: string, amount: bigint };
       export type Event = TypedContractEvent<InputTuple, OutputTuple, OutputObject>
       export type Filter = TypedDeferredTopicFilter<Event>
       export type Log = TypedEventLog<Event>
@@ -145,14 +115,6 @@ decodeFunctionResult(functionFragment: 'treasury', data: BytesLike): Result;
     
     
     TOTAL_SUPPLY: TypedContractMethod<
-      [],
-      [bigint],
-      'view'
-    >
-    
-
-    
-    TREASURY_ALLOCATION: TypedContractMethod<
       [],
       [bigint],
       'view'
@@ -204,14 +166,6 @@ decodeFunctionResult(functionFragment: 'treasury', data: BytesLike): Result;
       [],
       [bigint],
       'view'
-    >
-    
-
-    
-    mint: TypedContractMethod<
-      [to: AddressLike, amount: BigNumberish, ],
-      [void],
-      'nonpayable'
     >
     
 
@@ -279,23 +233,10 @@ decodeFunctionResult(functionFragment: 'treasury', data: BytesLike): Result;
     >
     
 
-    
-    treasury: TypedContractMethod<
-      [],
-      [string],
-      'view'
-    >
-    
-
 
     getFunction<T extends ContractMethod = ContractMethod>(key: string | FunctionFragment): T;
 
     getFunction(nameOrSignature: 'TOTAL_SUPPLY'): TypedContractMethod<
-      [],
-      [bigint],
-      'view'
-    >;
-getFunction(nameOrSignature: 'TREASURY_ALLOCATION'): TypedContractMethod<
       [],
       [bigint],
       'view'
@@ -329,11 +270,6 @@ getFunction(nameOrSignature: 'decimals'): TypedContractMethod<
       [],
       [bigint],
       'view'
-    >;
-getFunction(nameOrSignature: 'mint'): TypedContractMethod<
-      [to: AddressLike, amount: BigNumberish, ],
-      [void],
-      'nonpayable'
     >;
 getFunction(nameOrSignature: 'name'): TypedContractMethod<
       [],
@@ -375,17 +311,10 @@ getFunction(nameOrSignature: 'transferOwnership'): TypedContractMethod<
       [void],
       'nonpayable'
     >;
-getFunction(nameOrSignature: 'treasury'): TypedContractMethod<
-      [],
-      [string],
-      'view'
-    >;
 
     getEvent(key: 'Approval'): TypedContractEvent<ApprovalEvent.InputTuple, ApprovalEvent.OutputTuple, ApprovalEvent.OutputObject>;
 getEvent(key: 'OwnershipTransferred'): TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
-getEvent(key: 'TokensMinted'): TypedContractEvent<TokensMintedEvent.InputTuple, TokensMintedEvent.OutputTuple, TokensMintedEvent.OutputObject>;
 getEvent(key: 'Transfer'): TypedContractEvent<TransferEvent.InputTuple, TransferEvent.OutputTuple, TransferEvent.OutputObject>;
-getEvent(key: 'TreasuryFunded'): TypedContractEvent<TreasuryFundedEvent.InputTuple, TreasuryFundedEvent.OutputTuple, TreasuryFundedEvent.OutputObject>;
 
     filters: {
       
@@ -397,16 +326,8 @@ getEvent(key: 'TreasuryFunded'): TypedContractEvent<TreasuryFundedEvent.InputTup
       OwnershipTransferred: TypedContractEvent<OwnershipTransferredEvent.InputTuple, OwnershipTransferredEvent.OutputTuple, OwnershipTransferredEvent.OutputObject>;
     
 
-      'TokensMinted(address,uint256)': TypedContractEvent<TokensMintedEvent.InputTuple, TokensMintedEvent.OutputTuple, TokensMintedEvent.OutputObject>;
-      TokensMinted: TypedContractEvent<TokensMintedEvent.InputTuple, TokensMintedEvent.OutputTuple, TokensMintedEvent.OutputObject>;
-    
-
       'Transfer(address,address,uint256)': TypedContractEvent<TransferEvent.InputTuple, TransferEvent.OutputTuple, TransferEvent.OutputObject>;
       Transfer: TypedContractEvent<TransferEvent.InputTuple, TransferEvent.OutputTuple, TransferEvent.OutputObject>;
-    
-
-      'TreasuryFunded(address,uint256)': TypedContractEvent<TreasuryFundedEvent.InputTuple, TreasuryFundedEvent.OutputTuple, TreasuryFundedEvent.OutputObject>;
-      TreasuryFunded: TypedContractEvent<TreasuryFundedEvent.InputTuple, TreasuryFundedEvent.OutputTuple, TreasuryFundedEvent.OutputObject>;
     
     };
   }
