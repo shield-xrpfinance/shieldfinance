@@ -15,6 +15,7 @@ import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useCurrency, type Currency, getCurrencyName } from "@/lib/currencyContext";
+import { CurrencyIcon } from "@/components/CurrencyIcon";
 import { SiX, SiLinkedin, SiDiscord } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -111,14 +112,54 @@ export function AppSidebar() {
               <label className="text-xs font-medium text-muted-foreground block mb-2">Currency</label>
               <Select value={currency} onValueChange={(value) => setCurrency(value as Currency)}>
                 <SelectTrigger className="h-9" data-testid="select-currency">
-                  <SelectValue />
+                  <div className="flex items-center gap-2">
+                    <CurrencyIcon currency={currency} />
+                    <span>{getCurrencyName(currency)}</span>
+                  </div>
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USD" data-testid="option-currency-usd">USD - US Dollar</SelectItem>
-                  <SelectItem value="EUR" data-testid="option-currency-eur">EUR - Euro</SelectItem>
-                  <SelectItem value="GBP" data-testid="option-currency-gbp">GBP - British Pound</SelectItem>
-                  <SelectItem value="JPY" data-testid="option-currency-jpy">JPY - Japanese Yen</SelectItem>
-                  <SelectItem value="CAD" data-testid="option-currency-cad">CAD - Canadian Dollar</SelectItem>
+                  <SelectItem value="USD" data-testid="option-currency-usd">
+                    <div className="flex items-center gap-2">
+                      <CurrencyIcon currency="USD" />
+                      <span>USD - US Dollar</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="EUR" data-testid="option-currency-eur">
+                    <div className="flex items-center gap-2">
+                      <CurrencyIcon currency="EUR" />
+                      <span>EUR - Euro</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="GBP" data-testid="option-currency-gbp">
+                    <div className="flex items-center gap-2">
+                      <CurrencyIcon currency="GBP" />
+                      <span>GBP - British Pound</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="JPY" data-testid="option-currency-jpy">
+                    <div className="flex items-center gap-2">
+                      <CurrencyIcon currency="JPY" />
+                      <span>JPY - Japanese Yen</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="CAD" data-testid="option-currency-cad">
+                    <div className="flex items-center gap-2">
+                      <CurrencyIcon currency="CAD" />
+                      <span>CAD - Canadian Dollar</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="AUD" data-testid="option-currency-aud">
+                    <div className="flex items-center gap-2">
+                      <CurrencyIcon currency="AUD" />
+                      <span>AUD - Australian Dollar</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="AED" data-testid="option-currency-aed">
+                    <div className="flex items-center gap-2">
+                      <CurrencyIcon currency="AED" />
+                      <span>AED - UAE Dirham</span>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
