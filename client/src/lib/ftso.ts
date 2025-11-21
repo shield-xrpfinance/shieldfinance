@@ -29,12 +29,12 @@ export const FTSO_V2_ABI = [
 
 /**
  * Get FTSO contract address from Contract Registry
- * @param provider - Ethers provider
+ * @param provider - Ethers BrowserProvider
  * @param isTestnet - Whether using testnet (Coston2) or mainnet
  * @returns FTSO contract address
  */
 export async function getFtsoContractAddress(
-  provider: ethers.Provider,
+  provider: ethers.BrowserProvider,
   isTestnet: boolean
 ): Promise<string> {
   const registry = new ethers.Contract(
@@ -52,13 +52,13 @@ export async function getFtsoContractAddress(
 
 /**
  * Fetch price for a single feed
- * @param provider - Ethers provider
+ * @param provider - Ethers BrowserProvider
  * @param feedId - FTSO feed ID (21 bytes)
  * @param isTestnet - Whether using testnet
  * @returns Price as a number (already divided by 10^decimals)
  */
 export async function getFtsoPrice(
-  provider: ethers.Provider,
+  provider: ethers.BrowserProvider,
   feedId: string,
   isTestnet: boolean
 ): Promise<number> {
@@ -80,13 +80,13 @@ export async function getFtsoPrice(
 
 /**
  * Fetch multiple prices at once (more efficient)
- * @param provider - Ethers provider
+ * @param provider - Ethers BrowserProvider
  * @param feedIds - Array of FTSO feed IDs
  * @param isTestnet - Whether using testnet
  * @returns Map of feedId to price
  */
 export async function getFtsoPrices(
-  provider: ethers.Provider,
+  provider: ethers.BrowserProvider,
   feedIds: string[],
   isTestnet: boolean
 ): Promise<Map<string, number>> {
@@ -94,18 +94,26 @@ export async function getFtsoPrices(
     const ftsoAddress = await getFtsoContractAddress(provider, isTestnet);
     const ftso = new ethers.Contract(ftsoAddress, FTSO_V2_ABI, provider);
     
+    console.log('🔍 Fetching FTSO prices...');
+    console.log('   FTSO Address:', ftsoAddress);
+    console.log('   Feed IDs:', feedIds);
+    console.log('   Is Testnet:', isTestnet);
+    
     const [values, decimals] = await ftso.getFeedsById(feedIds);
+    
+    console.log('✅ FTSO prices fetched:');
     
     const priceMap = new Map<string, number>();
     
     for (let i = 0; i < feedIds.length; i++) {
       const price = Number(values[i]) / Math.pow(10, Number(decimals[i]));
       priceMap.set(feedIds[i], price);
+      console.log(`   ${feedIds[i]}: $${price.toFixed(4)} (value: ${values[i]}, decimals: ${decimals[i]})`);
     }
     
     return priceMap;
   } catch (error) {
-    console.error("Failed to fetch FTSO prices:", error);
+    console.error("❌ Failed to fetch FTSO prices:", error);
     return new Map();
   }
 }

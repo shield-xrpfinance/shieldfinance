@@ -43,11 +43,12 @@ export function useFtsoPrice() {
       try {
         setPrices(prev => ({ ...prev, isLoading: true, error: null }));
 
-        const provider = new ethers.BrowserProvider(walletConnectProvider);
+        // Create ethers provider from WalletConnect provider
+        const ethersProvider = new ethers.BrowserProvider(walletConnectProvider);
         
         // Fetch both prices at once (more efficient)
         const priceMap = await getFtsoPrices(
-          provider,
+          ethersProvider,
           [FTSO_FEED_IDS.FLR_USD, FTSO_FEED_IDS.XRP_USD],
           isTestnet
         );
