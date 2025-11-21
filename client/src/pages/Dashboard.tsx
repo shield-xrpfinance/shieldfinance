@@ -9,6 +9,7 @@ import DepositModal from "@/components/DepositModal";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import { ProgressStepsModal, type ProgressStep } from "@/components/ProgressStepsModal";
+import { useFlrBalance } from "@/hooks/useFlrBalance";
 import { Coins, TrendingUp, Vault, Users, Loader2, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -36,6 +37,7 @@ export default function Dashboard() {
   const { address, provider, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
   const [, setLocation] = useLocation();
+  const { balance: flrBalance } = useFlrBalance();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
     queryKey: ["/api/vaults"],
@@ -493,9 +495,8 @@ export default function Dashboard() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <GlassStatsCard
-          label="Total Value Locked"
-          value="$24.5M"
-          change={{ value: 12.5, positive: true }}
+          label="Your FLR Balance"
+          value={parseFloat(flrBalance).toFixed(4)}
           icon={<Coins className="h-6 w-6" />}
         />
         <GlassStatsCard

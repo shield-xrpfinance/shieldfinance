@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
+import { useFlrBalance } from "@/hooks/useFlrBalance";
 import GlassStatsCard from "@/components/GlassStatsCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, TrendingUp, Lock, Unlock, Clock, Info } from "lucide-react";
+import { Shield, TrendingUp, Lock, Unlock, Clock, Info, Coins } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { queryClient } from "@/lib/queryClient";
 
@@ -25,6 +26,7 @@ interface StakingApiResponse {
 export default function Staking() {
   const { evmAddress, isConnected } = useWallet();
   const { toast } = useToast();
+  const { balance: flrBalance } = useFlrBalance();
   const [stakeAmount, setStakeAmount] = useState("");
   const [unstakeAmount, setUnstakeAmount] = useState("");
 
@@ -205,13 +207,19 @@ export default function Staking() {
 
       {/* Stats Grid */}
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <Skeleton className="h-48 rounded-2xl" />
           <Skeleton className="h-48 rounded-2xl" />
           <Skeleton className="h-48 rounded-2xl" />
           <Skeleton className="h-48 rounded-2xl" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <GlassStatsCard
+            label="Your FLR Balance"
+            value={parseFloat(flrBalance).toFixed(4)}
+            icon={<Coins className="h-6 w-6" />}
+          />
           <GlassStatsCard
             label="Your Staked Balance"
             value={`${stakedBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} SHIELD`}

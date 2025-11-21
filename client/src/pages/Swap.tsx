@@ -1,13 +1,14 @@
 import { useState, useEffect } from "react";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
+import { useFlrBalance } from "@/hooks/useFlrBalance";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowDownUp, TrendingUp, Info, Sparkles, Shield, AlertTriangle, ExternalLink, Loader2 } from "lucide-react";
+import { ArrowDownUp, TrendingUp, Info, Sparkles, Shield, AlertTriangle, ExternalLink, Loader2, Coins } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import GlassStatsCard from "@/components/GlassStatsCard";
 import confetti from "canvas-confetti";
@@ -37,6 +38,7 @@ export default function Swap() {
   const { evmAddress, isEvmConnected, walletConnectProvider } = useWallet();
   const { isTestnet } = useNetwork();
   const { toast } = useToast();
+  const { balance: flrBalance } = useFlrBalance();
 
   const [inputAmount, setInputAmount] = useState("");
   const [outputAmount, setOutputAmount] = useState("");
@@ -64,6 +66,22 @@ export default function Swap() {
     const fetchQuote = async () => {
       setIsLoadingQuote(true);
       try {
+        if (!walletConnectProvider) {
+          console.error("🚨 [Swap] walletConnectProvider is null");
+          setOutputAmount("");
+          return;
+        }
+
+        console.log("📊 [Swap] Fetching quote:", {
+          inputAmount,
+          isFLRToSHIELD,
+          contracts: {
+            WFLR: contracts.WFLR,
+            SHIELD: contracts.SHIELD_TOKEN,
+            ROUTER: contracts.SPARKDEX_ROUTER,
+          },
+        });
+
         const provider = new ethers.BrowserProvider(walletConnectProvider);
         const router = new ethers.Contract(contracts.SPARKDEX_ROUTER, ROUTER_ABI, provider);
 
@@ -72,7 +90,14 @@ export default function Swap() {
           ? [contracts.WFLR, contracts.SHIELD_TOKEN]
           : [contracts.SHIELD_TOKEN, contracts.WFLR];
 
+        console.log("📊 [Swap] Calling getAmountsOut with path:", path);
+        
         const outputWei = await getSwapQuote(router, inputAmountWei, path);
+        console.log("📊 [Swap] Quote received:", {
+          inputWei: inputAmountWei.toString(),
+          outputWei: outputWei.toString(),
+        });
+
         const outputFormatted = formatTokenAmount(outputWei, 18, 6);
         
         setOutputAmount(outputFormatted);
@@ -80,12 +105,14 @@ export default function Swap() {
         // Calculate exchange rate
         const rate = parseFloat(outputFormatted) / parseFloat(inputAmount);
         setExchangeRate(rate);
+        
+        console.log("✅ [Swap] Quote formatted:", outputFormatted, "Rate:", rate);
       } catch (error) {
-        console.error("Failed to get quote:", error);
+        console.error("🚨 [Swap] Failed to get quote:", error);
         setOutputAmount("");
         toast({
           title: "Quote Error",
-          description: "Unable to fetch price. Please try again.",
+          description: error instanceof Error ? error.message : "Unable to fetch price. Please try again.",
           variant: "destructive",
         });
       } finally {
@@ -280,7 +307,14 @@ export default function Swap() {
             <CardContent className="space-y-6">
               {/* Input */}
               <div className="space-y-2">
-                <Label>You Pay</Label>
+                <div className="flex items-center justify-between">
+                  <Label>You Pay</Label>
+                  {isFLRToSHIELD && (
+                    <span className="text-sm text-muted-foreground">
+                      Balance: <span className="font-semibold text-foreground">{parseFloat(flrBalance).toFixed(4)} FLR</span>
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <Input
                     type="number"
@@ -378,6 +412,11 @@ export default function Swap() {
 
         {/* Stats Sidebar */}
         <div className="space-y-6">
+          <GlassStatsCard
+            label="Your FLR Balance"
+            value={parseFloat(flrBalance).toFixed(4)}
+            icon={<Coins className="h-6 w-6" />}
+          />
           <GlassStatsCard
             label="Best Price"
             value="SparkDEX V3"
