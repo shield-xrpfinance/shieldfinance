@@ -21,6 +21,7 @@ import Portfolio from "@/pages/Portfolio";
 import Transactions from "@/pages/Transactions";
 import Analytics from "@/pages/Analytics";
 import BridgeTracking from "@/pages/BridgeTracking";
+import Airdrop from "@/pages/Airdrop";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -32,6 +33,7 @@ function Router() {
       <Route path="/transactions" component={Transactions} />
       <Route path="/analytics" component={Analytics} />
       <Route path="/bridge-tracking" component={BridgeTracking} />
+      <Route path="/airdrop" component={Airdrop} />
       <Route component={NotFound} />
     </RouterSwitch>
   );
