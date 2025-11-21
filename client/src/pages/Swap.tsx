@@ -656,7 +656,7 @@ export default function Swap() {
                       {isApproving ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
-                        <Shield className="mr-2 h-4 w-4" />
+                        <img src={shieldLogo} alt="Shield" className="mr-2 h-4 w-4" />
                       )}
                       Approve {inputAmount}
                     </Button>
@@ -699,7 +699,7 @@ export default function Swap() {
                   </>
                 ) : needsApproval ? (
                   <>
-                    <Shield className="mr-2 h-5 w-5" />
+                    <img src={shieldLogo} alt="Shield" className="mr-2 h-5 w-5" />
                     Approve {selectedInputAsset.symbol} First
                   </>
                 ) : (
@@ -737,7 +737,7 @@ export default function Swap() {
           <GlassStatsCard
             label="Slippage Tolerance"
             value={`${slippageTolerance}%`}
-            icon={<Shield className="h-6 w-6" />}
+            icon={<img src={shieldLogo} alt="Shield" className="h-6 w-6" />}
           />
 
           <Card className="backdrop-blur-md bg-card/95 border-2">
@@ -750,7 +750,7 @@ export default function Swap() {
                 <p>Boost shXRP APY by +1% per 100 SHIELD staked</p>
               </div>
               <div className="flex items-start gap-2">
-                <Shield className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+                <img src={shieldLogo} alt="Shield" className="h-4 w-4 mt-0.5 shrink-0" />
                 <p>Deflationary supply through automated burns</p>
               </div>
               <div className="flex items-start gap-2">
@@ -812,7 +812,7 @@ export default function Swap() {
               </Button>
               <Link href="/staking">
                 <Button className="flex-1" data-testid="button-goto-staking">
-                  <Shield className="mr-2 h-4 w-4" />
+                  <img src={shieldLogo} alt="Shield" className="mr-2 h-4 w-4" />
                   Stake for Boost
                 </Button>
               </Link>

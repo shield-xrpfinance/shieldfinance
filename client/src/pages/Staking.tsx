@@ -226,12 +226,12 @@ export default function Staking() {
           <GlassStatsCard
             label="Your SHIELD Balance"
             value={parseFloat(shieldBalance).toFixed(4)}
-            icon={<Shield className="h-6 w-6" />}
+            icon={<img src={shieldLogo} alt="Shield" className="h-6 w-6" />}
           />
           <GlassStatsCard
             label="Your Staked Balance"
             value={`${stakedBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} SHIELD`}
-            icon={<Shield className="h-6 w-6" />}
+            icon={<img src={shieldLogo} alt="Shield" className="h-6 w-6" />}
           />
           <GlassStatsCard
             label="Current APY Boost"
@@ -252,7 +252,7 @@ export default function Staking() {
         <Card className="backdrop-blur-md bg-card/95 border-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-primary" />
+              <img src={shieldLogo} alt="Shield" className="h-5 w-5" />
               Stake SHIELD
             </CardTitle>
             <CardDescription>
