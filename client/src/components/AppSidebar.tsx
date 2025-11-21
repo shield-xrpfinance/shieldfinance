@@ -202,8 +202,8 @@ export function AppSidebar() {
         ✓ Consistent spacing: gap-2/gap-4, space-y-4 throughout
         ✓ Button sizing: Removed explicit height, using size="sm" variant
       */}
-      <SidebarFooter className="p-6">
-        <div className="relative rounded-lg border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-6 overflow-hidden" data-testid="help-card">
+      <SidebarFooter className="p-2 md:p-6">
+        <div className="relative rounded-lg border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-3 md:p-6 overflow-hidden" data-testid="help-card">
           <div className="absolute top-4 left-4 rounded-lg bg-primary/20 p-2 backdrop-blur-sm hidden md:block">
             <div className="relative">
               <div className="absolute inset-0 rounded-lg bg-primary/30 blur-xl" />
@@ -211,8 +211,8 @@ export function AppSidebar() {
             </div>
           </div>
           
-          <div className="mt-0 md:mt-16 space-y-4">
-            <div>
+          <div className="mt-0 md:mt-16 space-y-2 md:space-y-4">
+            <div className="hidden md:block">
               <h3 className="font-semibold text-sm md:text-base" data-testid="text-help-title">Need help?</h3>
               <p className="text-xs text-muted-foreground" data-testid="text-help-subtitle">Please check our docs</p>
             </div>
@@ -220,7 +220,7 @@ export function AppSidebar() {
             <Button 
               variant="secondary" 
               size="sm"
-              className="w-full justify-between group"
+              className="w-full justify-between group hidden md:flex"
               asChild
               data-testid="button-documentation"
             >
@@ -237,46 +237,46 @@ export function AppSidebar() {
               </a>
             </Button>
 
-            <div className="flex items-center justify-center gap-2 md:gap-4 pt-2">
+            <div className="flex items-center justify-center gap-1 md:gap-4 pt-1 md:pt-2">
               <a 
                 href="https://twitter.com/shieldfinance" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-md p-2 hover-elevate active-elevate-2 transition-colors"
+                className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-twitter"
               >
-                <SiX className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <SiX className="h-3 w-3 md:h-4 md:w-4" />
               </a>
               <a 
                 href="https://linkedin.com/company/shieldfinance" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-md p-2 hover-elevate active-elevate-2 transition-colors"
+                className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-linkedin"
               >
-                <SiLinkedin className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <SiLinkedin className="h-3 w-3 md:h-4 md:w-4" />
               </a>
               <a 
                 href="https://discord.gg/shieldfinance" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-md p-2 hover-elevate active-elevate-2 transition-colors"
+                className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-discord"
               >
-                <SiDiscord className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <SiDiscord className="h-3 w-3 md:h-4 md:w-4" />
               </a>
               <a 
                 href="https://shield-finance.gitbook.io/shield-finance-docs/" 
                 target="_blank" 
                 rel="noopener noreferrer"
-                className="rounded-md p-2 hover-elevate active-elevate-2 transition-colors"
+                className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-gitbook"
               >
-                <BookOpen className="h-3.5 w-3.5 md:h-4 md:w-4" />
+                <BookOpen className="h-3 w-3 md:h-4 md:w-4" />
               </a>
             </div>
 
-            <p className="text-center text-[9px] md:text-[10px] text-muted-foreground pt-2" data-testid="text-copyright">
+            <p className="text-center text-[8px] md:text-[10px] text-muted-foreground pt-1 md:pt-2 hidden md:block" data-testid="text-copyright">
               Copyright© 2025 Shield Yield Vaults Ltd. - All Rights Reserved
             </p>
           </div>
