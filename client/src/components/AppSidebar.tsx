@@ -85,15 +85,12 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-6">
         <div className="flex items-center gap-2">
-          <div className="relative rounded-md bg-shieldDark border border-shieldSilver/20 p-2 group hover-elevate">
-            <div className="absolute inset-0 rounded-md bg-shieldCyan/10 blur-lg group-hover:bg-shieldCyan/20 transition-colors" />
-            <img 
-              src={shieldLogo} 
-              alt="Shield Finance" 
-              className="relative h-6 w-6 object-contain"
-              data-testid="logo-sidebar"
-            />
-          </div>
+          <img 
+            src={shieldLogo} 
+            alt="Shield Finance" 
+            className="h-8 w-8 object-contain hover-elevate transition-transform"
+            data-testid="logo-sidebar"
+          />
           <div>
             <h2 className="font-bold text-lg">Shield Finance</h2>
             <p className="text-xs text-muted-foreground">XRP Liquid Staking Protocol</p>
