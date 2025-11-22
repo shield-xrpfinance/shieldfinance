@@ -288,29 +288,56 @@ export function BridgeStatus({
         )}
 
         {xrplTxHash && (
-          <div className="space-y-1 text-xs">
+          <div className="flex items-center justify-between text-xs">
             <p className="text-muted-foreground">XRPL Transaction:</p>
-            <code className="block rounded bg-muted px-2 py-1 font-mono" data-testid="text-xrpl-hash">
-              {xrplTxHash}
-            </code>
+            <a
+              href={`https://testnet.xrpscan.com/tx/${xrplTxHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline flex items-center gap-1"
+              data-testid="link-xrpl-tx"
+            >
+              {xrplTxHash.slice(0, 8)}...{xrplTxHash.slice(-8)}
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
           </div>
         )}
         
         {flareTxHash && (
-          <div className="space-y-1 text-xs">
+          <div className="flex items-center justify-between text-xs">
             <p className="text-muted-foreground">Flare Transaction:</p>
-            <code className="block rounded bg-muted px-2 py-1 font-mono" data-testid="text-flare-hash">
-              {flareTxHash}
-            </code>
+            <a
+              href={`https://coston2-explorer.flare.network/tx/${flareTxHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline flex items-center gap-1"
+              data-testid="link-flare-tx"
+            >
+              {flareTxHash.slice(0, 8)}...{flareTxHash.slice(-8)}
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
           </div>
         )}
 
         {vaultMintTxHash && (
-          <div className="space-y-1 text-xs">
+          <div className="flex items-center justify-between text-xs">
             <p className="text-muted-foreground">Vault Mint Transaction:</p>
-            <code className="block rounded bg-muted px-2 py-1 font-mono" data-testid="text-vault-hash">
-              {vaultMintTxHash}
-            </code>
+            <a
+              href={`https://coston2-explorer.flare.network/tx/${vaultMintTxHash}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-primary hover:underline flex items-center gap-1"
+              data-testid="link-vault-mint-tx"
+            >
+              {vaultMintTxHash.slice(0, 8)}...{vaultMintTxHash.slice(-8)}
+              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+              </svg>
+            </a>
           </div>
         )}
 
