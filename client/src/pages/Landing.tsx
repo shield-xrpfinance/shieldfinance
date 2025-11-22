@@ -187,56 +187,41 @@ export default function Landing() {
         `}
       </style>
 
-      {/* Dark Theme Header with Video Background */}
-      <header className="relative sticky top-0 z-50 transition-all duration-300 overflow-hidden" data-testid="header-video">
-        <video 
-          autoPlay 
-          loop 
-          muted 
-          className="absolute inset-0 w-full h-full object-cover"
-          data-testid="video-header-bg"
-        >
-          <source src={headerVideoUrl} type="video/mp4" />
-        </video>
-        
-        {/* Dark overlay for readability */}
-        <div className="absolute inset-0 bg-black/60" />
-        
-        <div className="relative z-10">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center gap-2" data-testid="logo-header">
-                <Shield className="h-8 w-8 text-primary" />
-                <span className="text-xl font-bold text-white">Shield Finance</span>
-              </div>
-              <nav className="hidden md:flex items-center gap-8" data-testid="nav-header">
-                <a href="#features" className="text-sm text-gray-200 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-features">
-                  Features
-                </a>
-                <a href="#how-it-works" className="text-sm text-gray-200 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-how-it-works">
-                  How It Works
-                </a>
-                <a href="#security" className="text-sm text-gray-200 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-security">
-                  Security
-                </a>
-                <a href="https://blog.shieldfinance.io" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-200 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-blog">
-                  Blog
-                </a>
-              </nav>
-              <Link href="/app">
-                <Button data-testid="button-launch-app" className="transition-all bg-primary hover:bg-primary/90 text-white">
-                  Launch App
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+      {/* Dark Theme Header */}
+      <header className="sticky top-0 z-50 transition-all duration-300 bg-slate-900 border-b border-slate-800" data-testid="header">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-2" data-testid="logo-header">
+              <Shield className="h-8 w-8 text-primary" />
+              <span className="text-xl font-bold text-white">Shield Finance</span>
             </div>
+            <nav className="hidden md:flex items-center gap-8" data-testid="nav-header">
+              <a href="#features" className="text-sm text-gray-300 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-features">
+                Features
+              </a>
+              <a href="#how-it-works" className="text-sm text-gray-300 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-how-it-works">
+                How It Works
+              </a>
+              <a href="#security" className="text-sm text-gray-300 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-security">
+                Security
+              </a>
+              <a href="https://blog.shieldfinance.io" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-300 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-blog">
+                Blog
+              </a>
+            </nav>
+            <Link href="/app">
+              <Button data-testid="button-launch-app" className="transition-all">
+                Launch App
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section with Animated Coins - Dark Theme */}
+      {/* Hero Section with Video - 2 Columns */}
       <section 
-        className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900" 
+        className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 py-24 lg:py-32" 
         data-testid="section-hero"
       >
         {/* Animated Floating Coins */}
@@ -253,52 +238,61 @@ export default function Landing() {
             className="absolute bottom-20 left-[20%] w-20 h-20 rounded-full bg-gradient-to-br from-chart-3/30 to-chart-3/10 animate-float-slow"
             style={{ backdropFilter: 'blur(2px)' }}
           />
-          <div 
-            className="absolute top-60 left-[50%] w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 animate-pulse-glow"
-            style={{ backdropFilter: 'blur(2px)' }}
-          />
         </div>
 
-        <div ref={heroAnimation.ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32 relative z-10">
-          <div className={`text-center max-w-4xl mx-auto ${heroAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-            <h1 className="text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-white" data-testid="heading-hero">
-              Liquid Staking for{" "}
-              <span className="text-primary">XRP Ledger</span>
-            </h1>
-            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto" data-testid="text-hero-subtitle">
-              Stake your XRP and earn rewards while maintaining liquidity. Access DeFi opportunities without locking your assets.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Link href="/app">
-                <Button size="lg" data-testid="button-hero-start" className="transition-all hover:scale-105">
-                  Start Staking
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-              <Button size="lg" variant="outline" data-testid="button-hero-learn" className="glassmorphic-light transition-all hover:scale-105">
-                Learn More
-              </Button>
-            </div>
-            
-            {/* Glassmorphic Stats */}
-            <div className="mt-20" data-testid="stats-container">
-              <p className="text-xs text-gray-400 text-center mb-4" data-testid="text-testnet-disclaimer">
-                {metrics.isLoading ? "Loading metrics..." : "* Testnet demo metrics - Mainnet launch coming soon"}
+        <div ref={heroAnimation.ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${heroAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+            {/* Left Column - Content */}
+            <div>
+              <h1 className="text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-white" data-testid="heading-hero">
+                Liquid Staking for{" "}
+                <span className="text-primary">XRP Ledger</span>
+              </h1>
+              <p className="text-xl text-gray-300 mb-8" data-testid="text-hero-subtitle">
+                Stake your XRP and earn rewards while maintaining liquidity. Access DeFi opportunities without locking your assets.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className={`glassmorphic rounded-2xl p-6 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-tvl">
-                  <div className="text-4xl font-bold text-primary mb-2" data-testid="value-tvl">{metrics.tvl}</div>
-                  <div className="text-sm text-gray-300" data-testid="label-tvl">Total Value Locked</div>
-                </div>
-                <div className={`glassmorphic rounded-2xl p-6 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-apy">
-                  <div className="text-4xl font-bold text-primary mb-2" data-testid="value-apy">{metrics.apy}</div>
-                  <div className="text-sm text-gray-300" data-testid="label-apy">Average APY</div>
-                </div>
-                <div className={`glassmorphic rounded-2xl p-6 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-stakers">
-                  <div className="text-4xl font-bold text-primary mb-2" data-testid="value-stakers">{metrics.stakers}</div>
-                  <div className="text-sm text-gray-300" data-testid="label-stakers">Active Stakers</div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Link href="/app">
+                  <Button size="lg" data-testid="button-hero-start" className="transition-all hover:scale-105">
+                    Start Staking
+                    <ArrowRight className="ml-2 h-5 w-5" />
+                  </Button>
+                </Link>
+              </div>
+              
+              {/* Glassmorphic Stats */}
+              <div className="mt-16" data-testid="stats-container">
+                <p className="text-xs text-gray-400 mb-4" data-testid="text-testnet-disclaimer">
+                  {metrics.isLoading ? "Loading metrics..." : "* Testnet demo metrics - Mainnet launch coming soon"}
+                </p>
+                <div className="grid grid-cols-3 gap-4">
+                  <div className={`glassmorphic rounded-2xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-tvl">
+                    <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-tvl">{metrics.tvl}</div>
+                    <div className="text-xs lg:text-sm text-gray-300" data-testid="label-tvl">TVL</div>
+                  </div>
+                  <div className={`glassmorphic rounded-2xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-apy">
+                    <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-apy">{metrics.apy}</div>
+                    <div className="text-xs lg:text-sm text-gray-300" data-testid="label-apy">APY</div>
+                  </div>
+                  <div className={`glassmorphic rounded-2xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-stakers">
+                    <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-stakers">{metrics.stakers}</div>
+                    <div className="text-xs lg:text-sm text-gray-300" data-testid="label-stakers">Stakers</div>
+                  </div>
                 </div>
               </div>
+            </div>
+
+            {/* Right Column - Video */}
+            <div className="relative h-96 lg:h-[500px] rounded-2xl overflow-hidden glassmorphic" data-testid="hero-video-container">
+              <video 
+                autoPlay 
+                loop 
+                muted 
+                className="absolute inset-0 w-full h-full object-cover"
+                data-testid="video-hero"
+              >
+                <source src={headerVideoUrl} type="video/mp4" />
+              </video>
             </div>
           </div>
         </div>
