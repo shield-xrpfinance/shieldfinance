@@ -15,7 +15,10 @@ import {
   Quote,
   Calendar,
   FileText,
-  Minus
+  Minus,
+  Coins,
+  Flame,
+  Gift
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 
@@ -26,6 +29,7 @@ export default function Landing() {
   const whyUsAnimation = useScrollAnimation();
   const howItWorksAnimation = useScrollAnimation();
   const securityAnimation = useScrollAnimation();
+  const valueAnimation = useScrollAnimation();
   const testimonialsAnimation = useScrollAnimation();
   const blogAnimation = useScrollAnimation();
   const ctaAnimation = useScrollAnimation();
@@ -518,6 +522,97 @@ export default function Landing() {
                 </div>
               </Card>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* How SHIELD Creates Value Section */}
+      <section ref={valueAnimation.ref} className="py-24 bg-muted/30" data-testid="section-value">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className={`text-center mb-16 ${valueAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4" data-testid="heading-value">
+              How SHIELD Creates Value for Users
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto" data-testid="text-value-subtitle">
+              A sustainable revenue model that directly benefits our staking community
+            </p>
+          </div>
+
+          <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${valueAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }}>
+            <div className="space-y-8">
+              <div className="flex gap-4" data-testid="value-step-1">
+                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Coins className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2" data-testid="title-value-step-1">Platform Fees</h3>
+                  <p className="text-muted-foreground text-sm" data-testid="text-value-step-1">
+                    A modest 0.2% protocol fee is generated from all staking transactions
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4" data-testid="value-step-2">
+                <div className="h-12 w-12 rounded-lg bg-chart-2/10 flex items-center justify-center shrink-0">
+                  <TrendingUp className="h-6 w-6 text-chart-2" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2" data-testid="title-value-step-2">50/50 Split Strategy</h3>
+                  <p className="text-muted-foreground text-sm" data-testid="text-value-step-2">
+                    50% of fees fund token buybacks and burns, reducing supply and increasing token value
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4" data-testid="value-step-3">
+                <div className="h-12 w-12 rounded-lg bg-chart-3/10 flex items-center justify-center shrink-0">
+                  <Shield className="h-6 w-6 text-chart-3" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2" data-testid="title-value-step-3">Protocol Reserves</h3>
+                  <p className="text-muted-foreground text-sm" data-testid="text-value-step-3">
+                    The other 50% builds a robust reserve fund for platform stability and emergency coverage
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex gap-4" data-testid="value-step-4">
+                <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                  <Gift className="h-6 w-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold mb-2" data-testid="title-value-step-4">Staking Boost Rewards</h3>
+                  <p className="text-muted-foreground text-sm" data-testid="text-value-step-4">
+                    Users receive additional yield through our staking boost mechanism powered by this flywheel
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <Card className="p-8 glassmorphic" data-testid="card-value-flow">
+              <div className="space-y-6">
+                <div className="text-center pb-6 border-b border-border/50">
+                  <div className="text-4xl font-bold text-primary mb-2" data-testid="value-metric-1">0.2%</div>
+                  <p className="text-sm text-muted-foreground" data-testid="label-value-metric-1">Platform Fee</p>
+                </div>
+                
+                <div className="flex items-center justify-between pb-6 border-b border-border/50">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-chart-2 mb-1" data-testid="label-buyback">50% Buyback & Burn</p>
+                    <p className="text-xs text-muted-foreground" data-testid="text-buyback">Reduces supply, increases value</p>
+                  </div>
+                  <Flame className="h-5 w-5 text-chart-2 shrink-0 ml-4" />
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-primary mb-1" data-testid="label-reserves">50% Protocol Reserves</p>
+                    <p className="text-xs text-muted-foreground" data-testid="text-reserves">Ensures stability & security</p>
+                  </div>
+                  <Shield className="h-5 w-5 text-primary shrink-0 ml-4" />
+                </div>
+              </div>
+            </Card>
           </div>
         </div>
       </section>
