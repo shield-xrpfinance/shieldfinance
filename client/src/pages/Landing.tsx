@@ -28,7 +28,6 @@ import {
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
-import headerVideoUrl from "@assets/a11fc6fb-bf7b-4e28-84ca-0031b314abcd_3_720_N_1763815621392.mp4";
 import shieldLogo from "@assets/shield_logo_1763761188895.png";
 import flareLogo from "@assets/flare-network-logo.svg";
 import xrpLogo from "@assets/XRP-Ledger---Horizontal---Black_1763817099433.png";
@@ -131,6 +130,33 @@ export default function Landing() {
             }
           }
           
+          @keyframes gradient-flow {
+            0% {
+              background-position: 0% 50%;
+            }
+            50% {
+              background-position: 100% 50%;
+            }
+            100% {
+              background-position: 0% 50%;
+            }
+          }
+          
+          @keyframes gradient-shift {
+            0%, 100% {
+              background-position: 0% 0%;
+            }
+            25% {
+              background-position: 100% 0%;
+            }
+            50% {
+              background-position: 100% 100%;
+            }
+            75% {
+              background-position: 0% 100%;
+            }
+          }
+          
           .animate-float {
             animation: float 6s ease-in-out infinite;
           }
@@ -224,24 +250,34 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Hero Section with Video Background */}
+      {/* Hero Section with Animated Gradient Background */}
       <section 
         className="relative overflow-hidden py-24 lg:py-32 min-h-screen flex items-center" 
         data-testid="section-hero"
       >
-        {/* Video Background */}
-        <video 
-          autoPlay 
-          loop 
-          muted 
-          className="absolute inset-0 w-full h-full object-cover"
-          data-testid="video-hero"
-        >
-          <source src={headerVideoUrl} type="video/mp4" />
-        </video>
+        {/* Animated Gradient Background */}
+        <div 
+          className="absolute inset-0 w-full h-full"
+          style={{
+            background: 'linear-gradient(-45deg, #0a0a0f, #0d1528, #0a1929, #050810, #0f1419)',
+            backgroundSize: '400% 400%',
+            animation: 'gradient-flow 20s ease infinite'
+          }}
+          data-testid="animated-hero-background"
+        />
+        
+        {/* Secondary Animated Gradient Layer for Depth */}
+        <div 
+          className="absolute inset-0 w-full h-full opacity-60"
+          style={{
+            background: 'radial-gradient(circle at 20% 50%, rgba(0, 102, 255, 0.15) 0%, transparent 50%), radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.1) 0%, transparent 50%), radial-gradient(circle at 40% 20%, rgba(147, 197, 253, 0.08) 0%, transparent 50%)',
+            backgroundSize: '200% 200%',
+            animation: 'gradient-shift 25s ease infinite'
+          }}
+        />
 
         {/* Dark Gradient Overlay for Text Readability */}
-        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-blue-950/80 to-slate-900/70" data-testid="hero-overlay" />
+        <div className="absolute inset-0 bg-gradient-to-b from-slate-950/40 via-transparent to-slate-950/60" data-testid="hero-overlay" />
 
         {/* Animated Floating Coins */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
