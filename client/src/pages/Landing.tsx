@@ -642,7 +642,14 @@ export default function Landing() {
       </section>
 
       {/* CTA Section with Glassmorphism */}
-      <section ref={ctaAnimation.ref} className="py-24" data-testid="section-cta">
+      <section 
+        ref={ctaAnimation.ref} 
+        className="py-24" 
+        data-testid="section-cta"
+        style={{
+          background: 'linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.15) 100%)'
+        }}
+      >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <Card className={`bg-primary text-primary-foreground p-12 text-center glassmorphic transition-all ${ctaAnimation.isVisible ? 'animate-fade-in-up scale-100' : 'opacity-0 scale-95'}`}>
             <h2 className="text-3xl lg:text-4xl font-bold mb-4" data-testid="heading-cta">
