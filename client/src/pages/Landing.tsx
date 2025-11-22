@@ -33,6 +33,7 @@ import shieldLogo from "@assets/shield_logo_1763761188895.png";
 import flareLogo from "@assets/flare-network-logo.svg";
 import xrpLogo from "@assets/XRP-Ledger---Horizontal---Black_1763817099433.png";
 import xamanLogo from "@assets/xaman-logo.svg";
+import walletConnectLogo from "@assets/walletconnect-logo-wc.svg";
 
 export default function Landing() {
   const heroAnimation = useScrollAnimation();
@@ -339,8 +340,8 @@ export default function Landing() {
               </div>
             </div>
             <div className="relative group" data-testid="partner-etherspot">
-              <div className="glassmorphic-light rounded-xl px-8 py-4 text-lg font-semibold transition-all hover:scale-110">
-                Etherspot
+              <div className="glassmorphic-light rounded-xl px-8 py-4 transition-all hover:scale-110 flex items-center justify-center">
+                <img src={walletConnectLogo} alt="WalletConnect" className="h-6" data-testid="img-walletconnect-logo" />
               </div>
               <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 ERC-4337 Smart Accounts
