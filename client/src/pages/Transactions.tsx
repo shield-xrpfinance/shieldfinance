@@ -161,31 +161,31 @@ export default function Transactions() {
               {transactions.map((tx) => (
                 <div
                   key={tx.id}
-                  className="flex items-center justify-between gap-4 p-4 rounded-md border hover-elevate"
+                  className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 md:gap-4 p-4 rounded-md border hover-elevate"
                   data-testid={`transaction-${tx.id}`}
                 >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="p-2 rounded-md bg-muted">
+                  <div className="flex items-center gap-3 md:gap-4 flex-1">
+                    <div className="p-2 rounded-md bg-muted shrink-0">
                       {getTransactionIcon(tx.type)}
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1 flex-wrap">
                         {getTransactionBadge(tx.type)}
-                        <span className="text-sm text-muted-foreground">
-                          Vault ID: {tx.vaultId.substring(0, 8)}...
+                        <span className="text-xs md:text-sm text-muted-foreground truncate">
+                          Vault: {tx.vaultId.substring(0, 8)}...
                         </span>
                       </div>
-                      <div className="text-sm text-muted-foreground">
+                      <div className="text-xs md:text-sm text-muted-foreground">
                         {formatDistanceToNow(new Date(tx.createdAt), { addSuffix: true })}
                       </div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="text-lg font-mono font-bold tabular-nums" data-testid={`text-amount-${tx.id}`}>
+                  <div className="flex items-center justify-between md:block md:text-right ml-11 md:ml-0">
+                    <div className="text-base md:text-lg font-mono font-bold tabular-nums" data-testid={`text-amount-${tx.id}`}>
                       {(tx.type === "withdraw" || tx.type === "withdrawal") ? "-" : "+"}{parseFloat(tx.type === "claim" ? tx.rewards || "0" : tx.amount).toLocaleString()} XRP
                     </div>
                     {tx.txHash && (
-                      <div className="text-xs text-muted-foreground font-mono">
+                      <div className="text-xs text-muted-foreground font-mono hidden md:block">
                         {tx.txHash.substring(0, 20)}...
                       </div>
                     )}

@@ -16,7 +16,7 @@ export function MobileBottomNav() {
 
   return (
     <div 
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden border-t border-primary/20 bg-background/90 backdrop-blur-md shadow-lg"
+      className="fixed bottom-0 left-0 right-0 z-[51] md:hidden border-t border-primary/20 bg-background/90 backdrop-blur-md shadow-lg"
       style={{ height: 'var(--mobile-nav-height, 68px)' }}
     >
       <div className="flex items-center justify-around px-2 py-2.5 h-full safe-area-bottom">

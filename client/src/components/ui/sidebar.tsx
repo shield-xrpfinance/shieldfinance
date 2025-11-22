@@ -4,6 +4,7 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, VariantProps } from "class-variance-authority"
 import { PanelLeftIcon } from "lucide-react"
+import * as SheetPrimitive from "@radix-ui/react-dialog"
 
 import { useIsMobile } from "@/hooks/use-mobile"
 import { cn } from "@/lib/utils"
@@ -182,18 +183,19 @@ function Sidebar({
 
   if (isMobile) {
     return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} {...props}>
+      <Sheet open={openMobile} onOpenChange={setOpenMobile} modal={false} {...props}>
         <SheetContent
           data-sidebar="sidebar"
           data-slot="sidebar"
           data-mobile="true"
-          className="bg-sidebar text-sidebar-foreground w-[var(--sidebar-width)] p-0 [&>button]:hidden"
+          className="bg-sidebar text-sidebar-foreground w-[var(--sidebar-width)] p-0"
           style={
             {
               "--sidebar-width": SIDEBAR_WIDTH_MOBILE,
             } as React.CSSProperties
           }
           side={side}
+          hideOverlay={true}
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Sidebar</SheetTitle>
