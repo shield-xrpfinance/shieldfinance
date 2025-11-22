@@ -258,13 +258,18 @@ export default function Landing() {
         {/* Content */}
         <div ref={heroAnimation.ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
           <div className={`max-w-3xl ${heroAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-            {/* Content */}
+            {/* XRPFi Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6 backdrop-blur-md" data-testid="badge-xrpfi">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-primary" data-testid="text-xrpfi-badge">Leading XRPFi Innovation</span>
+            </div>
+            
             <h1 className="text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-white" data-testid="heading-hero">
               Liquid Staking for{" "}
               <span className="text-primary">XRP Ledger</span>
             </h1>
             <p className="text-xl text-gray-300 mb-8" data-testid="text-hero-subtitle">
-              Stake your XRP and earn rewards while maintaining liquidity. Access DeFi opportunities without locking your assets.
+              Stake your XRP and earn rewards while maintaining liquidity. Access XRPFi opportunities without locking your assets.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
               <Link href="/app">
