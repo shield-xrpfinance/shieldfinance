@@ -11,9 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { MultiAssetIcon } from "@/components/AssetIcon";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 
 interface WithdrawModalProps {
   open: boolean;
@@ -39,6 +44,7 @@ export default function WithdrawModal({
   loading = false,
 }: WithdrawModalProps) {
   const [amount, setAmount] = useState("");
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
   const { toast} = useToast();
   const gasEstimate = "0.00008";
   const assetSymbol = asset.split(",")[0];
@@ -77,113 +83,130 @@ export default function WithdrawModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg" data-testid="modal-withdraw">
+      <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" data-testid="modal-withdraw">
         <DialogHeader>
           <DialogTitle>Withdraw {assetSymbol}</DialogTitle>
-          <DialogDescription>
-            Your withdrawal will be processed automatically. XRP will be sent to your original XRPL wallet.
+          <DialogDescription className="text-xs sm:text-sm">
+            Processed automatically. XRP sent to your XRPL wallet.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-6 space-y-6">
-          <div className="p-4 rounded-md bg-muted/50">
-            <div className="flex items-center gap-3 mb-3">
-              <MultiAssetIcon assets={asset} size={24} />
-              <p className="text-sm font-medium">{vaultName}</p>
+        <div className="py-4 sm:py-6 space-y-4 sm:space-y-6">
+          {/* Vault Info - Compact on mobile */}
+          <div className="p-3 sm:p-4 rounded-md bg-muted/50">
+            <div className="flex items-center gap-2 sm:gap-3 mb-2 sm:mb-3">
+              <MultiAssetIcon assets={asset} size={20} />
+              <p className="text-xs sm:text-sm font-medium truncate">{vaultName}</p>
             </div>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
+            <div className="space-y-1 sm:space-y-2">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="text-muted-foreground">Deposited</span>
-                <span className="font-mono">{depositedAmount} sh{assetSymbol}</span>
+                <span className="font-mono text-xs sm:text-sm">{depositedAmount} sh{assetSymbol}</span>
               </div>
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="text-muted-foreground">Rewards</span>
-                <span className="font-mono text-chart-2">+{rewards} sh{assetSymbol}</span>
+                <span className="font-mono text-xs sm:text-sm text-chart-2">+{rewards} sh{assetSymbol}</span>
               </div>
-              <div className="pt-2 border-t flex items-center justify-between">
-                <span className="font-medium">Total Available</span>
-                <span className="font-bold font-mono">{totalWithdrawable} sh{assetSymbol}</span>
-              </div>
-            </div>
-          </div>
-
-          <div className="p-4 rounded-md bg-primary/5 border border-primary/20">
-            <div className="flex items-start gap-3">
-              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5 text-primary" />
-              <div className="flex-1 space-y-2 text-sm">
-                <p className="font-medium text-primary">Automated Withdrawal Process</p>
-                <p className="text-muted-foreground">
-                  Your shXRP tokens will be automatically redeemed for XRP through the FAssets bridge. The XRP will be sent directly to your original XRPL wallet address.
-                </p>
-                <p className="text-xs text-muted-foreground">
-                  Typical processing time: 1-5 minutes
-                </p>
+              <div className="pt-1 sm:pt-2 border-t flex items-center justify-between">
+                <span className="text-xs sm:text-sm font-medium">Total</span>
+                <span className="font-bold font-mono text-xs sm:text-sm">{totalWithdrawable} sh{assetSymbol}</span>
               </div>
             </div>
           </div>
 
-          <div className="space-y-4">
-            <div>
-              <Label htmlFor="withdraw-amount">Withdrawal Amount</Label>
-              <div className="relative mt-2">
-                <Input
-                  id="withdraw-amount"
-                  type="text"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="pr-20 text-lg font-mono"
-                  data-testid="input-withdraw-amount"
-                />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
-                  {assetSymbol}
-                </span>
-              </div>
-              <div className="flex items-center justify-between mt-2">
-                <p className="text-xs text-muted-foreground">
-                  Available: {totalWithdrawable} {assetSymbol}
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-auto p-0 text-xs"
-                  onClick={() => setAmount(totalWithdrawable)}
-                  data-testid="button-max-withdraw"
-                >
-                  Max
-                </Button>
-              </div>
+          {/* Withdrawal Amount Input */}
+          <div className="space-y-2">
+            <Label htmlFor="withdraw-amount" className="text-xs sm:text-sm">Withdrawal Amount</Label>
+            <div className="relative">
+              <Input
+                id="withdraw-amount"
+                type="text"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="pr-16 text-sm sm:text-lg font-mono"
+                data-testid="input-withdraw-amount"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs sm:text-sm font-medium text-muted-foreground">
+                {assetSymbol}
+              </span>
             </div>
-
-            <div className="flex items-start gap-3 p-3 rounded-md bg-chart-4/10 text-chart-4">
-              <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />
-              <div className="text-sm">
-                <p className="font-medium">Early Withdrawal Notice</p>
-                <p className="text-xs mt-1 opacity-90">
-                  Withdrawing before the lock period ends may result in reduced rewards.
-                </p>
-              </div>
-            </div>
-
-            <div className="space-y-2 p-4 rounded-md bg-muted/50">
-              <div className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Est. Gas Fee</span>
-                <span className="font-mono">{gasEstimate} {assetSymbol}</span>
-              </div>
-              <div className="pt-2 border-t flex items-center justify-between">
-                <span className="font-medium">You'll Receive</span>
-                <span className="text-lg font-bold font-mono">
-                  {amount ? (parseFloat(amount.replace(/,/g, "")) - parseFloat(gasEstimate)).toFixed(5) : "0.00"} {assetSymbol}
-                </span>
-              </div>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-muted-foreground">
+                Avail: {totalWithdrawable} {assetSymbol}
+              </p>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 text-xs"
+                onClick={() => setAmount(totalWithdrawable)}
+                data-testid="button-max-withdraw"
+              >
+                Max
+              </Button>
             </div>
           </div>
+
+          {/* Fee and Total - Compact */}
+          <div className="space-y-1 p-3 sm:p-4 rounded-md bg-muted/50">
+            <div className="flex items-center justify-between text-xs sm:text-sm">
+              <span className="text-muted-foreground">Gas Fee</span>
+              <span className="font-mono text-xs sm:text-sm">{gasEstimate} {assetSymbol}</span>
+            </div>
+            <div className="pt-1 sm:pt-2 border-t flex items-center justify-between">
+              <span className="text-xs sm:text-sm font-medium">You'll Receive</span>
+              <span className="text-sm sm:text-lg font-bold font-mono">
+                {amount ? (parseFloat(amount.replace(/,/g, "")) - parseFloat(gasEstimate)).toFixed(5) : "0.00"} {assetSymbol}
+              </span>
+            </div>
+          </div>
+
+          {/* Collapsible Details Section */}
+          <Collapsible open={detailsExpanded} onOpenChange={setDetailsExpanded}>
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full justify-between px-0 h-auto py-2 text-xs sm:text-sm"
+                data-testid="button-toggle-details"
+              >
+                <span className="font-medium">Details & Notices</span>
+                <ChevronDown className={`h-4 w-4 transition-transform ${detailsExpanded ? "rotate-180" : ""}`} />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-3 pt-3 border-t">
+              {/* Automated Process Info */}
+              <div className="flex items-start gap-2 p-3 rounded-md bg-primary/5 border border-primary/10">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5 text-primary" />
+                <div className="flex-1 space-y-1 text-xs">
+                  <p className="font-medium text-primary">Automated Process</p>
+                  <p className="text-muted-foreground">
+                    Your shXRP tokens will be redeemed for XRP through the FAssets bridge and sent to your wallet.
+                  </p>
+                  <p className="text-muted-foreground">
+                    Typical time: 1-5 minutes
+                  </p>
+                </div>
+              </div>
+
+              {/* Early Withdrawal Notice */}
+              <div className="flex items-start gap-2 p-3 rounded-md bg-chart-4/10 text-chart-4">
+                <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                <div className="text-xs">
+                  <p className="font-medium">Early Withdrawal</p>
+                  <p className="mt-1 opacity-90">
+                    Withdrawing before lock period ends may reduce rewards.
+                  </p>
+                </div>
+              </div>
+            </CollapsibleContent>
+          </Collapsible>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2 sm:gap-0">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
+            className="flex-1 sm:flex-none"
             data-testid="button-cancel"
           >
             Cancel
@@ -191,9 +214,10 @@ export default function WithdrawModal({
           <Button
             onClick={handleConfirm}
             disabled={!amount || parseFloat(amount.replace(/,/g, "")) <= 0 || loading}
+            className="flex-1 sm:flex-none"
             data-testid="button-confirm-withdraw"
           >
-            {loading ? "Processing..." : "Confirm Withdrawal"}
+            {loading ? "Processing..." : "Confirm"}
           </Button>
         </DialogFooter>
       </DialogContent>
