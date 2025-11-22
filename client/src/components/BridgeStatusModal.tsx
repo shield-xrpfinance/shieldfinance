@@ -32,8 +32,14 @@ import {
   Info,
   RefreshCw,
   Send,
-  Ban
+  Ban,
+  ChevronDown
 } from "lucide-react";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import { QRCodeSVG } from "qrcode.react";
 import { differenceInSeconds } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -99,6 +105,9 @@ export default function BridgeStatusModal({
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState<number | null>(null);
+  const [stageDetailsExpanded, setStageDetailsExpanded] = useState(false);
+  const [paymentDetailsExpanded, setPaymentDetailsExpanded] = useState(false);
+  const [transactionDetailsExpanded, setTransactionDetailsExpanded] = useState(false);
   const { toast } = useToast();
   const { requestPayment, provider, isConnected, address: walletAddress } = useWallet();
 
@@ -437,11 +446,11 @@ export default function BridgeStatusModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-6 py-4">
+        <div className="space-y-2 sm:space-y-6 py-2 sm:py-4">
           {/* Progress Bar - only show for active stages */}
           {!isTimeout && !isFailed && (
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
+              <div className="flex items-center justify-between text-xs sm:text-sm">
                 <span className="text-muted-foreground">Progress</span>
                 <span className="font-medium">Stage {stage} of 4</span>
               </div>
@@ -449,101 +458,156 @@ export default function BridgeStatusModal({
             </div>
           )}
 
-          {/* Simplified 4-Stage Indicator */}
-          {!isTimeout && !isFailed && (
-            <div className="space-y-3">
-              {/* Stage 1: Waiting for XRP Payment */}
-              <div className={`flex items-start gap-3 p-3 rounded-md ${
-                stage >= 1 ? 'bg-primary/10 border border-primary/20' : 'bg-muted/30'
+          {/* Current Stage Indicator - Always Visible */}
+          {!isTimeout && !isFailed && typeof stage === "number" && (
+            <div className={`flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-md ${
+              stage === 4 ? 'bg-green-500/10 border border-green-500/20' : 'bg-primary/10 border border-primary/20'
+            }`}>
+              <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                stage === 4 ? 'bg-green-500' : 'bg-primary'
               }`}>
-                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                  stage > 1 ? 'bg-green-500' : stage === 1 ? 'bg-primary' : 'bg-muted'
-                }`}>
-                  {stage > 1 ? (
-                    <CheckCircle2 className="h-4 w-4 text-white" />
-                  ) : stage === 1 ? (
-                    <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">1</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Waiting for XRP Payment</p>
-                  <p className="text-xs text-muted-foreground">Send XRP to the agent address below</p>
-                </div>
+                {stage === 4 ? (
+                  <CheckCircle2 className="h-4 w-4 text-white" />
+                ) : (
+                  <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
+                )}
               </div>
-
-              {/* Stage 2: Bridging XRP → FXRP */}
-              <div className={`flex items-start gap-3 p-3 rounded-md ${
-                stage >= 2 ? 'bg-primary/10 border border-primary/20' : 'bg-muted/30'
-              }`}>
-                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                  stage > 2 ? 'bg-green-500' : stage === 2 ? 'bg-primary' : 'bg-muted'
-                }`}>
-                  {stage > 2 ? (
-                    <CheckCircle2 className="h-4 w-4 text-white" />
-                  ) : stage === 2 ? (
-                    <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">2</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Bridging XRP → FXRP</p>
-                  <p className="text-xs text-muted-foreground">Generating FDC proof and minting FXRP (5-15 min)</p>
-                </div>
-              </div>
-
-              {/* Stage 3: Minting Vault Shares */}
-              <div className={`flex items-start gap-3 p-3 rounded-md ${
-                stage >= 3 ? 'bg-primary/10 border border-primary/20' : 'bg-muted/30'
-              }`}>
-                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                  stage > 3 ? 'bg-green-500' : stage === 3 ? 'bg-primary' : 'bg-muted'
-                }`}>
-                  {stage > 3 ? (
-                    <CheckCircle2 className="h-4 w-4 text-white" />
-                  ) : stage === 3 ? (
-                    <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">3</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">Minting Vault Shares</p>
-                  <p className="text-xs text-muted-foreground">Depositing FXRP and minting shXRP shares</p>
-                </div>
-              </div>
-
-              {/* Stage 4: shXRP Shares Ready */}
-              <div className={`flex items-start gap-3 p-3 rounded-md ${
-                stage === 4 ? 'bg-green-500/10 border border-green-500/20' : 'bg-muted/30'
-              }`}>
-                <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
-                  stage === 4 ? 'bg-green-500' : 'bg-muted'
-                }`}>
-                  {stage === 4 ? (
-                    <CheckCircle2 className="h-4 w-4 text-white" />
-                  ) : (
-                    <span className="text-xs text-muted-foreground">4</span>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <p className="text-sm font-medium">shXRP Shares Ready</p>
-                  <p className="text-xs text-muted-foreground">Bridge complete! Vault shares in your portfolio</p>
-                </div>
+              <div className="flex-1">
+                <p className="text-xs sm:text-sm font-medium">
+                  {stage === 1 && "Waiting for XRP Payment"}
+                  {stage === 2 && "Bridging XRP → FXRP"}
+                  {stage === 3 && "Minting Vault Shares"}
+                  {stage === 4 && "shXRP Shares Ready"}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {stage === 1 && "Send XRP to the agent address below"}
+                  {stage === 2 && "Generating FDC proof and minting FXRP (5-15 min)"}
+                  {stage === 3 && "Depositing FXRP and minting shXRP shares"}
+                  {stage === 4 && "Bridge complete! Vault shares in your portfolio"}
+                </p>
               </div>
             </div>
+          )}
+
+          {/* Vault and Amount Info - ALWAYS VISIBLE */}
+          <div className="p-2 sm:p-4 rounded-md bg-muted/50 space-y-1.5 sm:space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm text-muted-foreground">Vault</span>
+              <span className="text-xs sm:text-sm font-medium">{vaultName}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm text-muted-foreground">Deposit Amount</span>
+              <span className="text-xs sm:text-sm font-medium font-mono">{amount} XRP</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs sm:text-sm text-muted-foreground">Status</span>
+              <Badge variant={(bridge.status === "completed" || bridge.status === "vault_minted") ? "default" : "secondary"} className="text-xs">
+                {bridge.status}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Accordion 1: Stage Details */}
+          {!isTimeout && !isFailed && (
+            <Collapsible open={stageDetailsExpanded} onOpenChange={setStageDetailsExpanded}>
+              <CollapsibleTrigger className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1" data-testid="button-toggle-stage-details">
+                <ChevronDown className={`h-4 w-4 transition-transform ${stageDetailsExpanded ? 'rotate-180' : ''}`} />
+                View All Stages
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-2 sm:space-y-3 pt-2">
+                {/* Stage 1: Waiting for XRP Payment */}
+                <div className={`flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-md ${
+                  stage >= 1 ? 'bg-primary/10 border border-primary/20' : 'bg-muted/30'
+                }`}>
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                    stage > 1 ? 'bg-green-500' : stage === 1 ? 'bg-primary' : 'bg-muted'
+                  }`}>
+                    {stage > 1 ? (
+                      <CheckCircle2 className="h-4 w-4 text-white" />
+                    ) : stage === 1 ? (
+                      <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">1</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs sm:text-sm font-medium">Waiting for XRP Payment</p>
+                    <p className="text-xs text-muted-foreground">Send XRP to the agent address below</p>
+                  </div>
+                </div>
+
+                {/* Stage 2: Bridging XRP → FXRP */}
+                <div className={`flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-md ${
+                  stage >= 2 ? 'bg-primary/10 border border-primary/20' : 'bg-muted/30'
+                }`}>
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                    stage > 2 ? 'bg-green-500' : stage === 2 ? 'bg-primary' : 'bg-muted'
+                  }`}>
+                    {stage > 2 ? (
+                      <CheckCircle2 className="h-4 w-4 text-white" />
+                    ) : stage === 2 ? (
+                      <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">2</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs sm:text-sm font-medium">Bridging XRP → FXRP</p>
+                    <p className="text-xs text-muted-foreground">Generating FDC proof and minting FXRP (5-15 min)</p>
+                  </div>
+                </div>
+
+                {/* Stage 3: Minting Vault Shares */}
+                <div className={`flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-md ${
+                  stage >= 3 ? 'bg-primary/10 border border-primary/20' : 'bg-muted/30'
+                }`}>
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                    stage > 3 ? 'bg-green-500' : stage === 3 ? 'bg-primary' : 'bg-muted'
+                  }`}>
+                    {stage > 3 ? (
+                      <CheckCircle2 className="h-4 w-4 text-white" />
+                    ) : stage === 3 ? (
+                      <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">3</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs sm:text-sm font-medium">Minting Vault Shares</p>
+                    <p className="text-xs text-muted-foreground">Depositing FXRP and minting shXRP shares</p>
+                  </div>
+                </div>
+
+                {/* Stage 4: shXRP Shares Ready */}
+                <div className={`flex items-start gap-2 sm:gap-3 p-2 sm:p-3 rounded-md ${
+                  stage === 4 ? 'bg-green-500/10 border border-green-500/20' : 'bg-muted/30'
+                }`}>
+                  <div className={`flex-shrink-0 w-6 h-6 rounded-full flex items-center justify-center ${
+                    stage === 4 ? 'bg-green-500' : 'bg-muted'
+                  }`}>
+                    {stage === 4 ? (
+                      <CheckCircle2 className="h-4 w-4 text-white" />
+                    ) : (
+                      <span className="text-xs text-muted-foreground">4</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xs sm:text-sm font-medium">shXRP Shares Ready</p>
+                    <p className="text-xs text-muted-foreground">Bridge complete! Vault shares in your portfolio</p>
+                  </div>
+                </div>
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {/* FDC Timeout State */}
           {isTimeout && (
             <Alert variant="default" className="border-yellow-500/50 bg-yellow-500/10" data-testid="alert-timeout">
               <AlertCircle className="h-4 w-4 text-yellow-600" />
-              <AlertDescription className="space-y-4">
+              <AlertDescription className="space-y-2 sm:space-y-4">
                 <div>
                   <p className="font-medium text-yellow-900 dark:text-yellow-100">FDC Proof Timeout - Testnet Issue</p>
-                  <p className="text-sm text-yellow-800 dark:text-yellow-200 mt-1">
+                  <p className="text-xs sm:text-sm text-yellow-800 dark:text-yellow-200 mt-1">
                     The FDC verifier proof generation timed out after 15 minutes. This is a known issue on Flare testnet.
                     You can retry proof generation below.
                   </p>
@@ -576,7 +640,7 @@ export default function BridgeStatusModal({
               <XCircle className="h-4 w-4" />
               <AlertDescription>
                 <p className="font-medium">Bridge Operation Failed</p>
-                <p className="text-sm mt-1">{bridge.errorMessage || "An error occurred during the bridge process. Please contact support."}</p>
+                <p className="text-xs sm:text-sm mt-1">{bridge.errorMessage || "An error occurred during the bridge process. Please contact support."}</p>
               </AlertDescription>
             </Alert>
           )}
@@ -593,10 +657,10 @@ export default function BridgeStatusModal({
               <Clock className="h-4 w-4" />
               <AlertDescription>
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">
+                  <span className="text-xs sm:text-sm font-medium">
                     {remainingSeconds > 0 ? "Time Remaining" : "Expired"}
                   </span>
-                  <span className="font-mono font-bold text-lg" data-testid="text-countdown">
+                  <span className="font-mono font-bold text-base sm:text-lg" data-testid="text-countdown">
                     {remainingSeconds > 0 
                       ? `${Math.floor(remainingSeconds / 60)}:${(remainingSeconds % 60).toString().padStart(2, '0')}`
                       : "00:00"
@@ -617,167 +681,169 @@ export default function BridgeStatusModal({
             </Alert>
           )}
 
-          {/* Vault and Amount Info */}
-          <div className="p-4 rounded-md bg-muted/50 space-y-2">
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Vault</span>
-              <span className="font-medium">{vaultName}</span>
-            </div>
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Deposit Amount</span>
-              <span className="font-medium font-mono">{amount} XRP</span>
-            </div>
-            {bridge && bridge.reservedFeeUBA && (
-              <>
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Bridge Fee (0.25%)</span>
-                  <span className="font-medium font-mono">+{(Number(bridge.reservedFeeUBA) / 1_000_000).toFixed(6)} XRP</span>
-                </div>
+          {/* Accordion 2: Transaction Details */}
+          <Collapsible open={transactionDetailsExpanded} onOpenChange={setTransactionDetailsExpanded}>
+            <CollapsibleTrigger className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1" data-testid="button-toggle-transaction-details">
+              <ChevronDown className={`h-4 w-4 transition-transform ${transactionDetailsExpanded ? 'rotate-180' : ''}`} />
+              Transaction Details
+            </CollapsibleTrigger>
+            <CollapsibleContent className="space-y-2 sm:space-y-3 pt-2">
+              <div className="p-2 sm:p-4 rounded-md bg-muted/50 space-y-2">
+                {/* Bridge Fee Breakdown */}
+                {bridge && bridge.reservedFeeUBA && (
+                  <>
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs sm:text-sm text-muted-foreground">Bridge Fee (0.25%)</span>
+                      <span className="text-xs sm:text-sm font-medium font-mono">+{(Number(bridge.reservedFeeUBA) / 1_000_000).toFixed(6)} XRP</span>
+                    </div>
+                    <div className="flex items-center justify-between pt-2 border-t border-muted-foreground/20">
+                      <span className="text-xs sm:text-sm font-medium">Total Payment</span>
+                      <span className="text-xs sm:text-sm font-bold font-mono">
+                        {bridge.totalAmountUBA 
+                          ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)
+                          : amount} XRP
+                      </span>
+                    </div>
+                  </>
+                )}
+                {/* Bridge ID */}
                 <div className="flex items-center justify-between pt-2 border-t border-muted-foreground/20">
-                  <span className="text-sm font-medium">Total Payment</span>
-                  <span className="font-bold font-mono">
-                    {bridge.totalAmountUBA 
-                      ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)
-                      : amount} XRP
-                  </span>
+                  <span className="text-xs text-muted-foreground">Bridge ID (for support)</span>
+                  <span className="text-xs font-mono text-muted-foreground">{bridge.id.slice(0, 8)}...{bridge.id.slice(-8)}</span>
                 </div>
-              </>
-            )}
-            <div className="flex items-center justify-between">
-              <span className="text-sm text-muted-foreground">Status</span>
-              <Badge variant={(bridge.status === "completed" || bridge.status === "vault_minted") ? "default" : "secondary"}>
-                {bridge.status}
-              </Badge>
-            </div>
-            <div className="flex items-center justify-between pt-2 border-t border-muted-foreground/20">
-              <span className="text-xs text-muted-foreground">Bridge ID (for support)</span>
-              <span className="text-xs font-mono text-muted-foreground">{bridge.id.slice(0, 8)}...{bridge.id.slice(-8)}</span>
-            </div>
-          </div>
+              </div>
 
-          {/* Agent Address - only show if available and not completed */}
-          {bridge.agentUnderlyingAddress && bridge.status !== "completed" && bridge.status !== "vault_minted" && (
-            <div className="space-y-3">
-              <Alert data-testid="alert-agent-address">
-                <AlertDescription className="space-y-4">
-                  <div className="space-y-3">
-                    <div>
-                      <p className="font-medium mb-2">Destination Address:</p>
-                      <div className="flex items-center gap-2 p-3 rounded-md bg-background border">
-                        <code className="flex-1 text-sm break-all font-mono" data-testid="text-agent-address">
-                          {bridge.agentUnderlyingAddress}
-                        </code>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={handleCopyAddress}
-                          data-testid="button-copy-address"
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
+              {/* Transaction Hash - show when available */}
+              {bridge.flareTxHash && (
+                <div className="space-y-2">
+                  <p className="text-xs sm:text-sm font-medium">Transaction Hash:</p>
+                  <code className="block text-xs bg-muted p-2 sm:p-3 rounded-md break-all" data-testid="text-tx-hash">
+                    {bridge.flareTxHash}
+                  </code>
+                </div>
+              )}
+            </CollapsibleContent>
+          </Collapsible>
 
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium">Payment Reference (Memo):</p>
-                        <Badge variant="outline" className="text-xs">Required</Badge>
-                      </div>
-                      <div className="flex items-center gap-2 p-3 rounded-md bg-background border">
-                        <code className="flex-1 text-sm break-all font-mono" data-testid="text-payment-memo">
-                          {bridge.paymentReference || "Generating..."}
-                        </code>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={handleCopyMemo}
-                          data-testid="button-copy-memo"
-                          disabled={!bridge.paymentReference}
-                        >
-                          <Copy className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        This unique FAssets reference must be included in your XRP payment memo
-                      </p>
-                    </div>
-
-                    <div>
-                      <p className="font-medium mb-2">Destination Tag:</p>
-                      <p className="text-xs text-muted-foreground p-3 rounded-md bg-background border">Leave empty - Use MEMO field above</p>
-                    </div>
-                  </div>
-
-                  {/* Send Payment Button - Wallet Integration */}
-                  {isConnected && bridge.paymentReference && bridge.status === "awaiting_payment" && (
-                    <div className="space-y-2">
-                      <Button 
-                        onClick={handleSendPayment}
-                        disabled={isSendingPayment || !bridge.totalAmountUBA}
-                        className="w-full"
-                        size="lg"
-                        data-testid="button-send-payment"
-                      >
-                        {isSendingPayment ? (
-                          <>
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            Preparing Payment...
-                          </>
-                        ) : !bridge.totalAmountUBA ? (
-                          <>
-                            <Clock className="h-4 w-4 mr-2" />
-                            Waiting for Collateral Reservation...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="h-4 w-4 mr-2" />
-                            Send Payment with {provider === "xaman" ? "Xaman" : provider === "walletconnect" ? "WalletConnect" : "Wallet"}
-                          </>
-                        )}
-                      </Button>
-                      {!bridge.totalAmountUBA && (
-                        <p className="text-xs text-muted-foreground text-center">
-                          <Info className="inline h-3 w-3 mr-1" />
-                          Collateral reservation in progress. Button will enable when ready.
-                        </p>
-                      )}
-                      {bridge.totalAmountUBA && (
-                        <p className="text-xs text-muted-foreground text-center">
-                          Or manually send {(Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)} XRP using the details above
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {/* QR Code - for manual sending */}
-                  <div className="flex justify-center p-4 bg-white rounded-md">
-                    <QRCodeSVG 
-                      value={bridge.agentUnderlyingAddress} 
-                      size={180}
-                      data-testid="qr-agent-address"
-                    />
-                  </div>
-
-                  {!isConnected && (
-                    <p className="text-xs text-muted-foreground text-center font-medium">
-                      Send exactly {bridge.totalAmountUBA 
-                        ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)
-                        : amount} XRP with the MEMO above
-                    </p>
-                  )}
-                </AlertDescription>
-              </Alert>
+          {/* Send Payment Button - Always Visible (if applicable) */}
+          {isConnected && bridge.paymentReference && bridge.status === "awaiting_payment" && bridge.agentUnderlyingAddress && (
+            <div className="space-y-2">
+              <Button 
+                onClick={handleSendPayment}
+                disabled={isSendingPayment || !bridge.totalAmountUBA}
+                className="w-full"
+                size="lg"
+                data-testid="button-send-payment"
+              >
+                {isSendingPayment ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Preparing Payment...
+                  </>
+                ) : !bridge.totalAmountUBA ? (
+                  <>
+                    <Clock className="h-4 w-4 mr-2" />
+                    Waiting for Collateral Reservation...
+                  </>
+                ) : (
+                  <>
+                    <Send className="h-4 w-4 mr-2" />
+                    Send Payment with {provider === "xaman" ? "Xaman" : provider === "walletconnect" ? "WalletConnect" : "Wallet"}
+                  </>
+                )}
+              </Button>
+              {!bridge.totalAmountUBA && (
+                <p className="text-xs text-muted-foreground text-center">
+                  <Info className="inline h-3 w-3 mr-1" />
+                  Collateral reservation in progress. Button will enable when ready.
+                </p>
+              )}
+              {bridge.totalAmountUBA && (
+                <p className="text-xs text-muted-foreground text-center">
+                  Or manually send {(Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)} XRP using the details below
+                </p>
+              )}
             </div>
           )}
 
-          {/* Transaction Hash - show when available */}
-          {bridge.flareTxHash && (
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Transaction Hash:</p>
-              <code className="block text-xs bg-muted p-3 rounded-md break-all" data-testid="text-tx-hash">
-                {bridge.flareTxHash}
-              </code>
-            </div>
+          {/* Accordion 3: Payment Instructions */}
+          {bridge.agentUnderlyingAddress && bridge.status !== "completed" && bridge.status !== "vault_minted" && (
+            <Collapsible open={paymentDetailsExpanded} onOpenChange={setPaymentDetailsExpanded}>
+              <CollapsibleTrigger className="flex items-center gap-2 text-xs sm:text-sm font-medium text-muted-foreground hover:text-foreground transition-colors w-full py-1" data-testid="button-toggle-payment-details">
+                <ChevronDown className={`h-4 w-4 transition-transform ${paymentDetailsExpanded ? 'rotate-180' : ''}`} />
+                Payment Instructions
+              </CollapsibleTrigger>
+              <CollapsibleContent className="space-y-2 sm:space-y-3 pt-2">
+                <Alert data-testid="alert-agent-address">
+                  <AlertDescription className="space-y-2 sm:space-y-4">
+                    <div className="space-y-2 sm:space-y-3">
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium mb-2">Destination Address:</p>
+                        <div className="flex items-center gap-2 p-2 sm:p-3 rounded-md bg-background border">
+                          <code className="flex-1 text-xs sm:text-sm break-all font-mono" data-testid="text-agent-address">
+                            {bridge.agentUnderlyingAddress}
+                          </code>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={handleCopyAddress}
+                            data-testid="button-copy-address"
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center justify-between mb-2">
+                          <p className="text-xs sm:text-sm font-medium">Payment Reference (Memo):</p>
+                          <Badge variant="outline" className="text-xs">Required</Badge>
+                        </div>
+                        <div className="flex items-center gap-2 p-2 sm:p-3 rounded-md bg-background border">
+                          <code className="flex-1 text-xs sm:text-sm break-all font-mono" data-testid="text-payment-memo">
+                            {bridge.paymentReference || "Generating..."}
+                          </code>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={handleCopyMemo}
+                            data-testid="button-copy-memo"
+                            disabled={!bridge.paymentReference}
+                          >
+                            <Copy className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          This unique FAssets reference must be included in your XRP payment memo
+                        </p>
+                      </div>
+
+                      <div>
+                        <p className="text-xs sm:text-sm font-medium mb-2">Destination Tag:</p>
+                        <p className="text-xs text-muted-foreground p-2 sm:p-3 rounded-md bg-background border">Leave empty - Use MEMO field above</p>
+                      </div>
+                    </div>
+
+                    {/* QR Code - Desktop Only, centered when visible */}
+                    <div className="hidden sm:flex justify-center p-2 sm:p-4 bg-white rounded-md">
+                      <QRCodeSVG 
+                        value={bridge.agentUnderlyingAddress} 
+                        size={180}
+                        data-testid="qr-agent-address"
+                      />
+                    </div>
+
+                    {!isConnected && (
+                      <p className="text-xs text-muted-foreground text-center font-medium">
+                        Send exactly {bridge.totalAmountUBA 
+                          ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6)
+                          : amount} XRP with the MEMO above
+                      </p>
+                    )}
+                  </AlertDescription>
+                </Alert>
+              </CollapsibleContent>
+            </Collapsible>
           )}
 
           {/* Error Message */}
@@ -786,29 +852,29 @@ export default function BridgeStatusModal({
               <AlertCircle className="h-4 w-4" />
               <AlertDescription>
                 <div className="space-y-2">
-                  <p className="font-medium">{bridge.errorMessage}</p>
+                  <p className="text-xs sm:text-sm font-medium">{bridge.errorMessage}</p>
                   
                   {/* Amount Mismatch Details */}
                   {(bridge as any).failureCode === 'amount_mismatch' && (bridge as any).receivedAmountDrops && (bridge as any).expectedAmountDrops && (
-                    <div className="mt-3 p-3 bg-destructive/10 rounded-md text-sm">
+                    <div className="mt-2 sm:mt-3 p-2 sm:p-3 bg-destructive/10 rounded-md text-xs sm:text-sm">
                       <p className="font-semibold mb-2">Payment Amount Mismatch:</p>
                       <div className="space-y-1">
-                        <div className="flex justify-between">
+                        <div className="flex justify-between gap-2">
                           <span className="text-muted-foreground">Expected:</span>
                           <span className="font-mono">{(Number((bridge as any).expectedAmountDrops) / 1_000_000).toFixed(6)} XRP</span>
                         </div>
-                        <div className="flex justify-between">
+                        <div className="flex justify-between gap-2">
                           <span className="text-muted-foreground">Received:</span>
                           <span className="font-mono">{(Number((bridge as any).receivedAmountDrops) / 1_000_000).toFixed(6)} XRP</span>
                         </div>
-                        <div className="flex justify-between pt-2 border-t border-destructive/20">
+                        <div className="flex justify-between gap-2 pt-2 border-t border-destructive/20">
                           <span className="text-muted-foreground">Difference:</span>
                           <span className="font-mono font-semibold">
                             {(Number((bridge as any).receivedAmountDrops - (bridge as any).expectedAmountDrops) / 1_000_000).toFixed(6)} XRP
                           </span>
                         </div>
                       </div>
-                      <p className="mt-3 text-xs text-muted-foreground">
+                      <p className="mt-2 sm:mt-3 text-xs text-muted-foreground">
                         You must send the exact amount displayed. You can cancel this deposit and create a new one with the correct amount.
                       </p>
                     </div>
@@ -822,7 +888,7 @@ export default function BridgeStatusModal({
           {bridge.flareTxHash?.startsWith("DEMO-") && (
             <Alert data-testid="alert-demo-mode">
               <Info className="h-4 w-4" />
-              <AlertDescription>
+              <AlertDescription className="text-xs sm:text-sm">
                 This is a demo bridge. In production, this would process a real FAssets bridge.
               </AlertDescription>
             </Alert>
@@ -832,7 +898,7 @@ export default function BridgeStatusModal({
           {(bridge.status === "completed" || bridge.status === "vault_minted") && (
             <Alert className="border-green-500/50 bg-green-500/10" data-testid="alert-success">
               <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <AlertDescription className="text-green-700 dark:text-green-300">
+              <AlertDescription className="text-xs sm:text-sm text-green-700 dark:text-green-300">
                 Your XRP has been successfully bridged to FXRP and deposited into the vault. 
                 You can now view your shXRP tokens in your portfolio.
               </AlertDescription>
