@@ -108,9 +108,9 @@ export function BridgeStatus({
   return (
     <Card data-testid={`card-bridge-${status}`}>
       <CardHeader>
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <CardTitle>Deposit Processing</CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {(status === "completed" || status === "vault_minted") && (
               <Badge variant="default" data-testid="badge-status-completed">
                 <CheckCircle2 className="mr-1 h-3 w-3" />
@@ -158,7 +158,7 @@ export function BridgeStatus({
                 size="sm"
                 onClick={onCancelBridge}
                 data-testid="button-cancel-bridge"
-                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                className="text-destructive"
               >
                 <X className="h-3 w-3" />
               </Button>
@@ -212,7 +212,7 @@ export function BridgeStatus({
             <div className="space-y-3">
               <div className="space-y-1">
                 <p className="text-xs font-medium text-muted-foreground">Destination Address:</p>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <code className="flex-1 rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid="text-agent-address">
                     {agentUnderlyingAddress}
                   </code>
@@ -221,6 +221,7 @@ export function BridgeStatus({
                     variant="ghost"
                     onClick={() => copyToClipboard(agentUnderlyingAddress, "Address")}
                     data-testid="button-copy-address"
+                    className="self-start sm:self-auto"
                   >
                     <Copy className="h-3 w-3" />
                   </Button>
@@ -235,11 +236,11 @@ export function BridgeStatus({
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="flex items-center justify-between">
+                <div className="flex flex-wrap items-center gap-2 justify-between">
                   <p className="text-xs font-medium text-muted-foreground">MEMO (Required):</p>
                   <Badge variant="outline" className="text-xs">Copy this value</Badge>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <code className="flex-1 rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid="text-payment-memo">
                     {bridgeId}
                   </code>
@@ -248,6 +249,7 @@ export function BridgeStatus({
                     variant="ghost"
                     onClick={() => copyToClipboard(bridgeId || "", "MEMO")}
                     data-testid="button-copy-memo"
+                    className="self-start sm:self-auto"
                   >
                     <Copy className="h-3 w-3" />
                   </Button>

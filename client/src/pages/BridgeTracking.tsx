@@ -256,24 +256,26 @@ export default function BridgeTracking() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-4" data-testid="tabs-bridge-tracking">
-          <TabsTrigger value="active" data-testid="tab-active">
-            <Activity className="h-4 w-4 mr-2" />
-            Active ({activeBridges.length})
-          </TabsTrigger>
-          <TabsTrigger value="completed" data-testid="tab-completed">
-            <CheckCircle2 className="h-4 w-4 mr-2" />
-            Completed ({completedBridges.length})
-          </TabsTrigger>
-          <TabsTrigger value="failed" data-testid="tab-failed">
-            <XCircle className="h-4 w-4 mr-2" />
-            Failed ({failedBridges.length})
-          </TabsTrigger>
-          <TabsTrigger value="history" data-testid="tab-history">
-            <History className="h-4 w-4 mr-2" />
-            History ({history?.length || 0})
-          </TabsTrigger>
-        </TabsList>
+        <div className="w-full overflow-x-auto pb-2" aria-label="Bridge tracking tabs">
+          <TabsList className="inline-flex gap-1 w-full min-w-max sm:grid sm:grid-cols-4 sm:gap-0 sm:min-w-0" data-testid="tabs-bridge-tracking">
+            <TabsTrigger value="active" data-testid="tab-active" className="flex-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+              <Activity className="h-4 w-4 mr-2" />
+              Active ({activeBridges.length})
+            </TabsTrigger>
+            <TabsTrigger value="completed" data-testid="tab-completed" className="flex-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+              <CheckCircle2 className="h-4 w-4 mr-2" />
+              Completed ({completedBridges.length})
+            </TabsTrigger>
+            <TabsTrigger value="failed" data-testid="tab-failed" className="flex-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+              <XCircle className="h-4 w-4 mr-2" />
+              Failed ({failedBridges.length})
+            </TabsTrigger>
+            <TabsTrigger value="history" data-testid="tab-history" className="flex-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
+              <History className="h-4 w-4 mr-2" />
+              History ({history?.length || 0})
+            </TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="active" className="mt-6">
           {!address ? (
@@ -373,7 +375,7 @@ export default function BridgeTracking() {
             </Card>
           ) : (
             <div className="space-y-4">
-              <div className="flex justify-between items-center">
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
                 <p className="text-sm text-muted-foreground">
                   {failedBridges.length} failed bridge{failedBridges.length !== 1 ? 's' : ''}
                 </p>
@@ -381,6 +383,7 @@ export default function BridgeTracking() {
                   variant="outline"
                   onClick={() => retryAllMutation.mutate()}
                   disabled={retryAllMutation.isPending}
+                  className="w-full sm:w-auto"
                   data-testid="button-retry-all"
                 >
                   {retryAllMutation.isPending ? (
@@ -438,8 +441,8 @@ export default function BridgeTracking() {
               {history.map((entry) => (
                 <Card key={entry.id} data-testid={`card-history-${entry.id}`}>
                   <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex items-start gap-3 flex-1">
+                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
                         <div className="mt-0.5">
                           {entry.type === "deposit" ? (
                             <ArrowDownToLine className="h-5 w-5 text-green-500" />
@@ -448,7 +451,7 @@ export default function BridgeTracking() {
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex flex-wrap items-center gap-2 mb-1">
                             <Badge 
                               variant={entry.type === "deposit" ? "default" : "secondary"}
                               data-testid={`badge-type-${entry.type}`}
@@ -477,15 +480,16 @@ export default function BridgeTracking() {
                           )}
                         </div>
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold" data-testid={`text-amount-${entry.id}`}>
+                      <div className="flex flex-col gap-2 sm:items-end">
+                        <p className="font-semibold break-all" data-testid={`text-amount-${entry.id}`}>
                           {parseFloat(entry.amount).toFixed(6)} XRP
                         </p>
-                        <div className="flex gap-2 mt-2">
+                        <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
                           {entry.xrplTxHash && (
                             <Button
                               variant="outline"
                               size="sm"
+                              className="flex-1 sm:flex-initial"
                               asChild
                               data-testid={`button-xrpl-explorer-${entry.id}`}
                             >
@@ -503,6 +507,7 @@ export default function BridgeTracking() {
                             <Button
                               variant="outline"
                               size="sm"
+                              className="flex-1 sm:flex-initial"
                               asChild
                               data-testid={`button-flare-explorer-${entry.id}`}
                             >
