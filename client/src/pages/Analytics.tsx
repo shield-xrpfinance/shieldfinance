@@ -115,7 +115,7 @@ export default function Analytics() {
               <div className="space-y-8 text-center">
                 {/* Total Platform Revenue */}
                 <div data-testid="revenue-hero-platform-revenue">
-                  <div className="text-sm font-medium text-foreground uppercase tracking-wide mb-2 flex items-center justify-center gap-2">
+                  <div className="text-base font-semibold text-primary-foreground uppercase tracking-wide mb-2 flex items-center justify-center gap-2">
                     Total Platform Revenue Generated
                     <button
                       type="button"
@@ -134,7 +134,7 @@ export default function Analytics() {
 
                 {/* Total SHIELD Burned */}
                 <div data-testid="revenue-hero-shield-burned">
-                  <div className="text-sm font-medium text-foreground uppercase tracking-wide mb-2">
+                  <div className="text-base font-semibold text-primary-foreground uppercase tracking-wide mb-2">
                     Total $SHIELD Burned Forever
                   </div>
                   <div className="flex items-center justify-center gap-3">
@@ -151,7 +151,7 @@ export default function Analytics() {
 
                 {/* Extra Yield Distributed */}
                 <div data-testid="revenue-hero-extra-yield">
-                  <div className="text-sm font-medium text-foreground uppercase tracking-wide mb-2">
+                  <div className="text-base font-semibold text-primary-foreground uppercase tracking-wide mb-2">
                     Extra Yield Distributed to Stakers
                   </div>
                   <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-primary">
