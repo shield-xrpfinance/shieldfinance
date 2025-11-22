@@ -54,27 +54,12 @@ export default function DepositModal({
   // Store validated amounts from Step 1 for Step 2 confirmation
   const [validatedAmounts, setValidatedAmounts] = useState<{ [key: string]: string }>({});
   
+  // Progressive disclosure state
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [infoExpanded, setInfoExpanded] = useState(false);
+  
   // Helper to sanitize numeric inputs (removes commas and whitespace)
   const sanitizeNumericInput = (value: string) => value.replace(/[\s,]+/g, "");
-  
-  // Initialize info expanded state based on screen size (desktop: expanded, mobile: collapsed)
-  const [infoExpanded, setInfoExpanded] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth >= 640; // sm breakpoint
-    }
-    return false;
-  });
-
-  // Update info expanded state when screen size changes
-  useEffect(() => {
-    const handleResize = () => {
-      const isDesktop = window.innerWidth >= 640;
-      setInfoExpanded(isDesktop);
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
 
   // Reset state when modal opens to prevent stale data
   useEffect(() => {
@@ -265,35 +250,7 @@ export default function DepositModal({
         </DialogHeader>
 
         <div className="py-2 space-y-2 sm:py-6 sm:space-y-5">
-          {depositAssets.includes("XRP") && step === 1 && (
-            <Collapsible open={infoExpanded} onOpenChange={setInfoExpanded}>
-              <Alert data-testid="alert-fassets-info" className="p-2.5 sm:p-4">
-                <div className="flex items-start gap-2">
-                  <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <CollapsibleTrigger asChild>
-                      <button className="flex items-center justify-between w-full text-left group" data-testid="button-toggle-info">
-                        <AlertTitle className="text-sm">How XRP Deposits Work</AlertTitle>
-                        <ChevronDown className={`h-4 w-4 transition-transform flex-shrink-0 ${infoExpanded ? 'rotate-180' : ''}`} />
-                      </button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent>
-                      <AlertDescription className="text-xs space-y-1.5 mt-2">
-                        <p>Your XRP is converted to shXRP through a secure bridging process:</p>
-                        <ol className="list-decimal list-inside space-y-0.5 ml-2 text-xs">
-                          <li>System reserves collateral with a FAssets agent</li>
-                          <li>You send XRP to the agent's address</li>
-                          <li>System generates proof and mints FXRP on Flare</li>
-                          <li>FXRP is deposited to vault for shXRP tokens</li>
-                        </ol>
-                      </AlertDescription>
-                    </CollapsibleContent>
-                  </div>
-                </div>
-              </Alert>
-            </Collapsible>
-          )}
-          
+          {/* Vault Info Card */}
           <div className="flex items-center gap-2 p-2.5 rounded-md bg-primary/10 sm:gap-3 sm:p-4">
             <MultiAssetIcon assets={depositAssets.join(",")} size={20} className="sm:w-7 sm:h-7 flex-shrink-0" />
             <div className="flex-1 min-w-0">
@@ -323,29 +280,29 @@ export default function DepositModal({
             </div>
           )}
 
-          {isConnected && address && (
-            <div className="p-3 rounded-md bg-muted/50 flex items-center justify-between mb-4">
-              <span className="text-sm text-muted-foreground">Connected Wallet</span>
-              <span className="text-sm font-mono">{address.slice(0, 6)}...{address.slice(-4)}</span>
+          {isConnected && address && step === 1 && (
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xs text-muted-foreground">Connected:</span>
+              <Badge variant="secondary" className="text-xs font-mono">{address.slice(0, 6)}...{address.slice(-4)}</Badge>
             </div>
           )}
 
           {isConnected && step === 1 && (
-            <div className="space-y-3">
+            <div className="space-y-2">
               {balancesLoading && (
-                <div className="flex items-center justify-center py-4 text-muted-foreground">
-                  <Loader2 className="h-5 w-5 animate-spin mr-2" />
-                  <span className="text-sm">Loading balances...</span>
+                <div className="flex items-center justify-center py-3 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  <span className="text-xs">Loading balances...</span>
                 </div>
               )}
 
               {balancesError && (
-                <div className="p-4 rounded-md bg-destructive/10 border border-destructive/20">
+                <div className="p-2.5 rounded-md bg-destructive/10 border border-destructive/20">
                   <div className="flex items-start gap-2">
-                    <AlertCircle className="h-5 w-5 text-destructive mt-0.5" />
+                    <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                     <div>
-                      <p className="text-sm font-medium text-destructive">Failed to load wallet balances</p>
-                      <p className="text-xs text-destructive/80 mt-1">Please try again or continue with caution.</p>
+                      <p className="text-xs font-medium text-destructive">Failed to load balances</p>
+                      <p className="text-xs text-destructive/80 mt-0.5">Please try again.</p>
                     </div>
                   </div>
                 </div>
@@ -353,22 +310,22 @@ export default function DepositModal({
 
               {!balancesLoading && depositAssets.map((asset) => (
                 <div key={asset}>
-                  <Label htmlFor={`amount-${asset}`}>{asset} Amount</Label>
-                  <div className="relative mt-2">
+                  <Label htmlFor={`amount-${asset}`} className="text-xs sm:text-sm">{asset} Amount</Label>
+                  <div className="relative mt-1">
                     <Input
                       id={`amount-${asset}`}
                       type="text"
                       placeholder="0.00"
                       value={amounts[asset] || ""}
                       onChange={(e) => setAssetAmount(asset, e.target.value)}
-                      className="pr-20 text-lg font-mono"
+                      className="pr-16 text-sm font-mono"
                       data-testid={`input-deposit-amount-${asset}`}
                     />
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs font-medium text-muted-foreground">
                       {asset}
                     </span>
                   </div>
-                  <div className="flex items-center justify-between mt-2">
+                  <div className="flex items-center justify-between mt-1">
                     <p className="text-xs text-muted-foreground" data-testid={`text-available-${asset}`}>
                       Available: {getBalanceFormatted(asset as "XRP" | "RLUSD" | "USDC")} {asset}
                     </p>
@@ -378,7 +335,6 @@ export default function DepositModal({
                       className="h-auto p-0 text-xs"
                       onClick={() => {
                         const balance = availableBalances[asset] || 0;
-                        // For XRP, pre-round down to largest whole lot
                         if (asset === "XRP" && depositAssets.includes("XRP")) {
                           const lots = Math.floor(balance / LOT_SIZE);
                           const roundedMax = lots * LOT_SIZE;
@@ -395,52 +351,92 @@ export default function DepositModal({
                   </div>
                   
                   {asset === "XRP" && xrpValidationError && (
-                    <p className="text-xs text-destructive mt-2" data-testid="error-xrp-validation">
+                    <p className="text-xs text-destructive mt-1" data-testid="error-xrp-validation">
                       {xrpValidationError}
                     </p>
-                  )}
-                  
-                  {asset === "XRP" && xrpLotRounding && xrpLotRounding.needsRounding && (
-                    <div className="mt-2 p-2 rounded-md bg-muted/50 border border-muted" data-testid="warning-lot-rounding">
-                      <p className="text-xs text-muted-foreground">
-                        <Info className="h-3 w-3 inline mr-1" />
-                        <span className="font-medium">Lot Rounding:</span> {xrpLotRounding.requestedAmount} XRP → {xrpLotRounding.roundedAmount} XRP ({xrpLotRounding.lots} lot{xrpLotRounding.lots !== 1 ? 's' : ''})
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        FAssets requires deposits in {LOT_SIZE} XRP lots. Your deposit will be rounded up by {xrpLotRounding.shortfall.toFixed(6)} XRP.
-                      </p>
-                    </div>
                   )}
                 </div>
               ))}
 
               {!balancesLoading && (
-                <div className="space-y-1.5 p-3 rounded-md bg-muted/50 sm:space-y-2 sm:p-4">
-                  {isXRPDeposit && xrpLotRounding && xrpLotRounding.needsRounding && (
-                    <div className="flex items-center justify-between text-xs sm:text-sm pb-1">
-                      <span className="text-muted-foreground">Requested Amount</span>
-                      <span className="font-mono">{xrpLotRounding.requestedAmount} XRP</span>
+                <>
+                  {/* Total Payment - Always Visible */}
+                  <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium">Total Payment</span>
+                      <span className="text-base sm:text-lg font-bold font-mono">{totalWithFee.toFixed(6)} XRP</span>
                     </div>
-                  )}
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-muted-foreground">Deposit Amount{isXRPDeposit && xrpLotRounding && xrpLotRounding.needsRounding ? ' (Rounded)' : ''}</span>
-                    <span className="font-semibold font-mono">{totalValue.toFixed(2)} XRP</span>
                   </div>
-                  {isXRPDeposit && mintingFee > 0 && (
-                    <div className="flex items-center justify-between text-xs sm:text-sm">
-                      <span className="text-muted-foreground">Bridge Fee ({mintingFeePercentage}%)</span>
-                      <span className="font-mono">+{mintingFee.toFixed(6)} XRP</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between text-xs sm:text-sm pt-1.5 border-t sm:pt-2">
-                    <span className="font-medium">Total Payment</span>
-                    <span className="font-bold font-mono">{totalWithFee.toFixed(6)} XRP</span>
-                  </div>
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-muted-foreground">Projected Annual Earnings</span>
-                    <span className="font-semibold font-mono">+{projectedEarnings} XRP</span>
-                  </div>
-                </div>
+
+                  {/* Show Details Accordion */}
+                  <Collapsible open={detailsExpanded} onOpenChange={setDetailsExpanded}>
+                    <CollapsibleTrigger asChild>
+                      <button className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors w-full" data-testid="button-toggle-details">
+                        <ChevronDown className={`h-4 w-4 transition-transform ${detailsExpanded ? 'rotate-180' : ''}`} />
+                        Show Details
+                      </button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2 pt-2">
+                      {/* How XRP Deposits Work */}
+                      {depositAssets.includes("XRP") && (
+                        <Collapsible open={infoExpanded} onOpenChange={setInfoExpanded}>
+                          <CollapsibleTrigger asChild>
+                            <button className="flex items-center gap-2 text-xs font-medium w-full text-left text-muted-foreground hover:text-foreground transition-colors" data-testid="button-toggle-how-it-works">
+                              <Info className="h-3 w-3 flex-shrink-0" />
+                              <span>How XRP Deposits Work</span>
+                              <ChevronDown className={`h-3 w-3 transition-transform ml-auto ${infoExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent className="text-xs space-y-1 mt-2 ml-5 text-muted-foreground">
+                            <ol className="list-decimal list-inside space-y-0.5">
+                              <li>System reserves collateral</li>
+                              <li>You send XRP to agent</li>
+                              <li>System mints FXRP</li>
+                              <li>Deposit into vault</li>
+                            </ol>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+
+                      {/* Fee Breakdown */}
+                      <div className="space-y-1.5 text-xs">
+                        {isXRPDeposit && xrpLotRounding && xrpLotRounding.needsRounding && (
+                          <>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Requested Amount</span>
+                              <span className="font-mono">{xrpLotRounding.requestedAmount} XRP</span>
+                            </div>
+                            <div className="flex items-center justify-between">
+                              <span className="text-muted-foreground">Rounded Amount</span>
+                              <span className="font-mono">{xrpLotRounding.roundedAmount} XRP</span>
+                            </div>
+                          </>
+                        )}
+                        <div className="flex items-center justify-between">
+                          <span className="text-muted-foreground">Deposit Amount</span>
+                          <span className="font-mono font-medium">{totalValue.toFixed(2)} XRP</span>
+                        </div>
+                        {isXRPDeposit && mintingFee > 0 && (
+                          <div className="flex items-center justify-between">
+                            <span className="text-muted-foreground">Bridge Fee ({mintingFeePercentage}%)</span>
+                            <span className="font-mono">+{mintingFee.toFixed(6)} XRP</span>
+                          </div>
+                        )}
+                        <div className="flex items-center justify-between pt-1 border-t">
+                          <span className="text-muted-foreground">Annual Earnings</span>
+                          <span className="font-mono font-medium">+{projectedEarnings} XRP</span>
+                        </div>
+                      </div>
+
+                      {/* Lot Rounding Warning */}
+                      {isXRPDeposit && xrpLotRounding && xrpLotRounding.needsRounding && (
+                        <div className="p-1.5 rounded-sm bg-muted/50 border border-muted text-xs text-muted-foreground">
+                          <p>FAssets requires deposits in {LOT_SIZE} XRP lots. Your deposit will be rounded up by {xrpLotRounding.shortfall.toFixed(6)} XRP.</p>
+                        </div>
+                      )}
+                    </CollapsibleContent>
+                  </Collapsible>
+                </>
               )}
             </div>
           )}
