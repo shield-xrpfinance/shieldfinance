@@ -204,7 +204,13 @@ export default function Landing() {
       </header>
 
       {/* Hero Section with Animated Coins */}
-      <section className="relative overflow-hidden" data-testid="section-hero">
+      <section 
+        className="relative overflow-hidden" 
+        data-testid="section-hero"
+        style={{
+          background: 'linear-gradient(135deg, hsl(var(--primary) / 0.12) 0%, hsl(var(--primary) / 0.04) 50%, transparent 100%)'
+        }}
+      >
         {/* Animated Floating Coins */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div 
