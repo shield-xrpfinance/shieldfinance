@@ -3170,6 +3170,33 @@ export async function registerRoutes(
     }
   });
 
+  // Get revenue transparency metrics (Convex-style)
+  app.get("/api/analytics/revenue-transparency", async (_req, res) => {
+    try {
+      // TODO: Once contracts are deployed, replace with real data from:
+      // - FeeTransferred events from ShXRPVault
+      // - RevenueDistributed events from RevenueRouter
+      // - Staking boost bonus calculations
+      
+      // Placeholder data structure matching expected contract event data
+      const revenueData = {
+        totalPlatformRevenue: "2847000", // Total fees collected in USD
+        totalShieldBurned: "317000", // Total SHIELD tokens burned forever
+        totalShieldBurnedUsd: "126800", // USD value of burned SHIELD
+        extraYieldDistributed: "425000", // Extra yield from staking boost in USD
+        
+        // Breakdown cards
+        totalFeesCollected: "2847000", // Total platform fees (deposits + withdrawals)
+        burnedAmount: "1423500", // 50% of fees used for buyback-burn
+        extraYieldPaid: "425000", // Extra yield distributed to SHIELD stakers
+      };
+      
+      res.json(revenueData);
+    } catch (error) {
+      res.status(500).json({ error: "Failed to fetch revenue transparency" });
+    }
+  });
+
   // Bridge status tracking
   app.get("/api/bridges/wallet/:walletAddress", async (req, res) => {
     try {
