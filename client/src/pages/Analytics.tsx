@@ -4,7 +4,7 @@ import { TrendingUp, DollarSign, Percent, Users, Vault, Flame, Info } from "luci
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { MultiAssetIcon } from "@/components/AssetIcon";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useState } from "react";
 
 interface ProtocolOverview {
@@ -118,6 +118,7 @@ export default function Analytics() {
                   <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center justify-center gap-2">
                     Total Platform Revenue Generated
                     <button
+                      type="button"
                       onClick={() => setRevenueModalOpen(true)}
                       className="hover-elevate active-elevate-2 rounded-full p-1 transition-all"
                       data-testid="button-revenue-info"
@@ -480,11 +481,14 @@ export default function Analytics() {
 
       {/* Revenue Breakdown Modal */}
       <Dialog open={revenueModalOpen} onOpenChange={setRevenueModalOpen}>
-        <DialogContent className="max-w-2xl bg-[hsl(var(--shield-dark))] border-primary/20 backdrop-blur-md">
+        <DialogContent className="max-w-2xl bg-[hsl(var(--shield-dark))] border-primary/20 backdrop-blur-md" aria-describedby="revenue-breakdown-description">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">
               How SHIELD Creates Value for Users
             </DialogTitle>
+            <DialogDescription id="revenue-breakdown-description" className="sr-only">
+              Detailed breakdown of Shield Finance's revenue distribution model, including platform fees, buyback-burn mechanism, protocol reserves, and staking boost rewards
+            </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6 mt-4" data-testid="revenue-breakdown-modal">
@@ -497,7 +501,7 @@ export default function Analytics() {
               <p className="text-sm text-muted-foreground">
                 Shield Finance charges a minimal 0.2% fee on deposits and withdrawals to the shXRP vault.
               </p>
-              <div className="bg-card/30 rounded-md p-4 border border-primary/10">
+              <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Total Fees Collected</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-primary">
@@ -517,7 +521,7 @@ export default function Analytics() {
                 100% of platform fees are distributed to create ecosystem value:
               </p>
               <div className="grid gap-3 mt-3">
-                <div className="bg-card/30 rounded-md p-4 border border-primary/10">
+                <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Flame className="h-4 w-4 text-primary" />
@@ -531,14 +535,14 @@ export default function Analytics() {
                     Swapped to $SHIELD via SparkDEX V3 and burned forever, creating deflationary pressure
                   </p>
                 </div>
-                <div className="bg-card/30 rounded-md p-4 border border-primary/10">
+                <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Vault className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium">50% Protocol Reserves</span>
                     </div>
                     <span className="text-lg font-bold font-mono tabular-nums text-primary">
-                      ${(parseFloat(revenueData?.burnedAmountUsd || "0") / 1000000).toFixed(2)}m
+                      ${(parseFloat(revenueData?.totalFeesCollected || "0") / 2000000).toFixed(2)}m
                     </span>
                   </div>
                   <p className="text-xs text-muted-foreground">
@@ -557,7 +561,7 @@ export default function Analytics() {
               <p className="text-sm text-muted-foreground">
                 Users who stake 100+ $SHIELD tokens receive bonus APY on their shXRP positions (+1% per 100 SHIELD).
               </p>
-              <div className="bg-card/30 rounded-md p-4 border border-primary/10">
+              <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-muted-foreground">Extra Yield Distributed</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-primary">

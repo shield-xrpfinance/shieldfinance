@@ -48,7 +48,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Wallet-Scoped Transaction Security**: End-to-end wallet authentication for transaction history access with database and API-level validation.
 - **Withdrawal History Consolidation**: Streamlined UI for withdrawal history across Portfolio, Transaction History, and Bridge Tracking pages.
 - **Multi-Asset Swap Integration**: Complete swap feature at `/swap` enabling bidirectional multi-asset trading with SparkDEX V3 router, real-time price quotes, approval flows, and post-swap UX.
-- **Revenue Transparency Analytics**: Convex-style hero section on Analytics page displaying total platform revenue, $SHIELD tokens burned, and extra yield distributed to stakers. Structured to integrate with FeeTransferred (ShXRPVault), RevenueDistributed (RevenueRouter), and StakingBoost contract events post-deployment.
+- **Revenue Transparency Analytics**: Convex-style hero section on Analytics page displaying total platform revenue, $SHIELD tokens burned, and extra yield distributed to stakers. Interactive InfoIcon next to "Total Platform Revenue Generated" opens detailed modal explaining revenue flywheel: platform fees (0.2%), 50/50 buyback-burn split, protocol reserves, and staking boost mechanism. Structured to integrate with FeeTransferred (ShXRPVault), RevenueDistributed (RevenueRouter), and StakingBoost contract events post-deployment.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
