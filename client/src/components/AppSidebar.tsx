@@ -30,47 +30,47 @@ import {
 const menuItems = [
   {
     title: "Dashboard",
-    url: "/",
+    url: "/app",
     icon: LayoutDashboard,
   },
   {
     title: "Vaults",
-    url: "/vaults",
+    url: "/app/vaults",
     icon: Vault,
   },
   {
     title: "Portfolio",
-    url: "/portfolio",
+    url: "/app/portfolio",
     icon: Wallet,
   },
   {
     title: "Staking",
-    url: "/staking",
+    url: "/app/staking",
     icon: Shield,
   },
   {
     title: "Swap",
-    url: "/swap",
+    url: "/app/swap",
     icon: Sparkles,
   },
   {
     title: "Airdrop",
-    url: "/airdrop",
+    url: "/app/airdrop",
     icon: Gift,
   },
   {
     title: "Transactions",
-    url: "/transactions",
+    url: "/app/transactions",
     icon: History,
   },
   {
     title: "Bridge Tracking",
-    url: "/bridge-tracking",
+    url: "/app/bridge-tracking",
     icon: Activity,
   },
   {
     title: "Analytics",
-    url: "/analytics",
+    url: "/app/analytics",
     icon: BarChart3,
   },
 ];

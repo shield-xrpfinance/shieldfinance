@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Switch as RouterSwitch, Route } from "wouter";
+import { Switch as RouterSwitch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -16,6 +16,7 @@ import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Wallet, LogOut, Beaker } from "lucide-react";
+import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
 import Vaults from "@/pages/Vaults";
 import Portfolio from "@/pages/Portfolio";
@@ -27,18 +28,18 @@ import Staking from "@/pages/Staking";
 import Swap from "@/pages/Swap";
 import NotFound from "@/pages/not-found";
 
-function Router() {
+function DashboardRouter() {
   return (
     <RouterSwitch>
-      <Route path="/" component={Dashboard} />
-      <Route path="/vaults" component={Vaults} />
-      <Route path="/portfolio" component={Portfolio} />
-      <Route path="/transactions" component={Transactions} />
-      <Route path="/analytics" component={Analytics} />
-      <Route path="/bridge-tracking" component={BridgeTracking} />
-      <Route path="/airdrop" component={Airdrop} />
-      <Route path="/staking" component={Staking} />
-      <Route path="/swap" component={Swap} />
+      <Route path="/app" component={Dashboard} />
+      <Route path="/app/vaults" component={Vaults} />
+      <Route path="/app/portfolio" component={Portfolio} />
+      <Route path="/app/transactions" component={Transactions} />
+      <Route path="/app/analytics" component={Analytics} />
+      <Route path="/app/bridge-tracking" component={BridgeTracking} />
+      <Route path="/app/airdrop" component={Airdrop} />
+      <Route path="/app/staking" component={Staking} />
+      <Route path="/app/swap" component={Swap} />
       <Route component={NotFound} />
     </RouterSwitch>
   );
@@ -92,7 +93,7 @@ function Header() {
   );
 }
 
-function AppContent() {
+function DashboardLayout() {
   const style = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
@@ -100,30 +101,46 @@ function AppContent() {
   };
 
   return (
+    <NetworkProvider>
+      <WalletProvider>
+        <CurrencyProvider>
+          <SidebarProvider style={style as React.CSSProperties}>
+            <div className="flex h-screen w-full">
+              <AppSidebar />
+              <div className="flex flex-col flex-1">
+                <Header />
+                <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
+                  <div className="max-w-7xl mx-auto">
+                    <TestnetBanner />
+                    <DashboardRouter />
+                  </div>
+                </main>
+              </div>
+            </div>
+            <MobileBottomNav />
+          </SidebarProvider>
+        </CurrencyProvider>
+      </WalletProvider>
+    </NetworkProvider>
+  );
+}
+
+function AppContent() {
+  const [location] = useLocation();
+  const isDashboard = location.startsWith('/app');
+
+  return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <NetworkProvider>
-          <WalletProvider>
-            <CurrencyProvider>
-              <SidebarProvider style={style as React.CSSProperties}>
-              <div className="flex h-screen w-full">
-                <AppSidebar />
-                <div className="flex flex-col flex-1">
-                  <Header />
-                  <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
-                    <div className="max-w-7xl mx-auto">
-                      <TestnetBanner />
-                      <Router />
-                    </div>
-                  </main>
-                </div>
-              </div>
-              <MobileBottomNav />
-            </SidebarProvider>
-              <Toaster />
-            </CurrencyProvider>
-          </WalletProvider>
-        </NetworkProvider>
+        {isDashboard ? (
+          <DashboardLayout />
+        ) : (
+          <RouterSwitch>
+            <Route path="/" component={Landing} />
+            <Route component={NotFound} />
+          </RouterSwitch>
+        )}
+        <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
   );

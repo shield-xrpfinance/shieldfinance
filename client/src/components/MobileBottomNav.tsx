@@ -8,10 +8,10 @@ export function MobileBottomNav() {
   const { toggleSidebar } = useSidebar();
 
   const navItems = [
-    { icon: Home, label: "Dashboard", url: "/" },
-    { icon: Vault, label: "Vaults", url: "/vaults" },
-    { icon: Wallet, label: "Portfolio", url: "/portfolio" },
-    { icon: ArrowLeftRight, label: "Swap", url: "/swap" },
+    { icon: Home, label: "Dashboard", url: "/app" },
+    { icon: Vault, label: "Vaults", url: "/app/vaults" },
+    { icon: Wallet, label: "Portfolio", url: "/app/portfolio" },
+    { icon: ArrowLeftRight, label: "Swap", url: "/app/swap" },
   ];
 
   return (
