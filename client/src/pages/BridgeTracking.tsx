@@ -4,6 +4,7 @@ import { useWallet } from "@/lib/walletContext";
 import { BridgeStatus } from "@/components/BridgeStatus";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2, History, ArrowDownToLine, ArrowUpFromLine, ExternalLink } from "lucide-react";
@@ -13,6 +14,7 @@ import BridgeStatusModal from "@/components/BridgeStatusModal";
 import { format } from "date-fns";
 import type { SelectXrpToFxrpBridge, Vault, BridgeHistoryEntry } from "@shared/schema";
 import { useBridgeTracking } from "@/hooks/useBridgeTracking";
+import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -73,6 +75,296 @@ function getStatusVariant(status: string): "default" | "destructive" | "secondar
   return "secondary";
 }
 
+// Reusable Bridge Section Component for Active, Completed, Failed tabs
+interface BridgeSectionProps {
+  type: 'active' | 'completed' | 'failed';
+  bridges: SelectXrpToFxrpBridge[];
+  isLoading: boolean;
+  address: string | null;
+  onSendPayment: (bridge: SelectXrpToFxrpBridge) => void;
+  onCancelBridge?: (bridge: SelectXrpToFxrpBridge) => void;
+  isVaultsLoading: boolean;
+  retryAllMutation?: any;
+}
+
+const BridgeSection = ({ 
+  type, 
+  bridges, 
+  isLoading, 
+  address, 
+  onSendPayment, 
+  onCancelBridge,
+  isVaultsLoading,
+  retryAllMutation 
+}: BridgeSectionProps) => {
+  const icons = {
+    active: Activity,
+    completed: CheckCircle2,
+    failed: XCircle,
+  };
+  
+  const emptyMessages = {
+    active: {
+      title: "No active bridge operations",
+      description: "Start a new deposit to see your bridge operations here",
+    },
+    completed: {
+      title: "No completed bridge operations",
+      description: "Successfully completed bridges will appear here",
+    },
+    failed: {
+      title: "No failed bridge operations",
+      description: "Failed bridge operations will appear here for troubleshooting",
+    },
+  };
+  
+  const Icon = icons[type];
+  const message = emptyMessages[type];
+  
+  const NotConnectedMessage = () => (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center py-12">
+        <Wallet className="h-12 w-12 text-muted-foreground mb-4" />
+        <p className="text-center text-muted-foreground font-medium" data-testid="text-connect-wallet-prompt">
+          Connect your wallet to view bridge tracking
+        </p>
+        <p className="text-center text-sm text-muted-foreground mt-2">
+          Your bridge operations will appear here after connecting
+        </p>
+      </CardContent>
+    </Card>
+  );
+
+  const LoadingMessage = () => (
+    <Card>
+      <CardContent className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Loading bridge operations...</p>
+      </CardContent>
+    </Card>
+  );
+
+  if (!address) {
+    return <NotConnectedMessage />;
+  }
+  
+  if (isLoading) {
+    return <LoadingMessage />;
+  }
+  
+  if (bridges.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Icon className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-center text-muted-foreground font-medium" data-testid={`text-no-${type}-bridges`}>
+            {message.title}
+          </p>
+          <p className="text-center text-sm text-muted-foreground mt-2">
+            {message.description}
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <div className="space-y-4">
+      {type === 'failed' && retryAllMutation && (
+        <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
+          <p className="text-sm text-muted-foreground">
+            {bridges.length} failed bridge{bridges.length !== 1 ? 's' : ''}
+          </p>
+          <Button
+            variant="outline"
+            onClick={() => retryAllMutation.mutate()}
+            disabled={retryAllMutation.isPending}
+            className="w-full sm:w-auto"
+            data-testid="button-retry-all"
+          >
+            {retryAllMutation.isPending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Retrying...
+              </>
+            ) : (
+              <>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Retry All
+              </>
+            )}
+          </Button>
+        </div>
+      )}
+      {bridges.map((bridge) => (
+        <BridgeStatus
+          key={bridge.id}
+          status={bridge.status}
+          xrpAmount={bridge.xrpAmount}
+          fxrpExpected={bridge.fxrpExpected}
+          xrplTxHash={bridge.xrplTxHash || undefined}
+          flareTxHash={bridge.flareTxHash || undefined}
+          vaultMintTxHash={bridge.vaultMintTxHash || undefined}
+          errorMessage={bridge.errorMessage || undefined}
+          bridgeId={bridge.id}
+          agentUnderlyingAddress={bridge.agentUnderlyingAddress || undefined}
+          onSendPayment={() => onSendPayment(bridge)}
+          onCancelBridge={onCancelBridge ? () => onCancelBridge(bridge) : undefined}
+          isVaultsLoading={isVaultsLoading}
+        />
+      ))}
+    </div>
+  );
+};
+
+// Reusable History Section Component
+interface HistorySectionProps {
+  history: BridgeHistoryEntry[] | undefined;
+  isLoadingHistory: boolean;
+  address: string | null;
+}
+
+const HistorySection = ({ history, isLoadingHistory, address }: HistorySectionProps) => {
+  const NotConnectedMessage = () => (
+    <Card>
+      <CardContent className="flex flex-col items-center justify-center py-12">
+        <Wallet className="h-12 w-12 text-muted-foreground mb-4" />
+        <p className="text-center text-muted-foreground font-medium" data-testid="text-connect-wallet-prompt">
+          Connect your wallet to view bridge tracking
+        </p>
+        <p className="text-center text-sm text-muted-foreground mt-2">
+          Your bridge operations will appear here after connecting
+        </p>
+      </CardContent>
+    </Card>
+  );
+
+  const LoadingMessage = () => (
+    <Card>
+      <CardContent className="flex items-center justify-center py-12">
+        <p className="text-muted-foreground">Loading bridge operations...</p>
+      </CardContent>
+    </Card>
+  );
+
+  if (!address) {
+    return <NotConnectedMessage />;
+  }
+  
+  if (isLoadingHistory) {
+    return <LoadingMessage />;
+  }
+  
+  if (!history || history.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <History className="h-12 w-12 text-muted-foreground mb-4" />
+          <p className="text-center text-muted-foreground font-medium" data-testid="text-no-history">
+            No bridge history
+          </p>
+          <p className="text-center text-sm text-muted-foreground mt-2">
+            Your deposits and withdrawals will appear here
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+  
+  return (
+    <div className="space-y-3">
+      {history.map((entry) => (
+        <Card key={entry.id} data-testid={`card-history-${entry.id}`}>
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="mt-0.5">
+                  {entry.type === "deposit" ? (
+                    <ArrowDownToLine className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <ArrowUpFromLine className="h-5 w-5 text-blue-500" />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <Badge 
+                      variant={entry.type === "deposit" ? "default" : "secondary"}
+                      data-testid={`badge-type-${entry.type}`}
+                    >
+                      {entry.type === "deposit" ? "Deposit" : "Withdrawal"}
+                    </Badge>
+                    <Badge 
+                      variant={getStatusVariant(entry.status)}
+                      data-testid={`badge-status-${entry.status}`}
+                    >
+                      {formatStatus(entry.status)}
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {format(new Date(entry.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                    {entry.completedAt && (
+                      <span className="block mt-1">
+                        Completed: {format(new Date(entry.completedAt), "MMM d, h:mm a")}
+                      </span>
+                    )}
+                  </p>
+                  {entry.errorMessage && (
+                    <p className="text-sm text-destructive mt-1">
+                      {entry.errorMessage}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:items-end">
+                <p className="font-semibold break-all" data-testid={`text-amount-${entry.id}`}>
+                  {parseFloat(entry.amount).toFixed(6)} XRP
+                </p>
+                <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
+                  {entry.xrplTxHash && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 sm:flex-initial"
+                      asChild
+                      data-testid={`button-xrpl-explorer-${entry.id}`}
+                    >
+                      <a
+                        href={`https://testnet.xrpl.org/transactions/${entry.xrplTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        XRPL
+                      </a>
+                    </Button>
+                  )}
+                  {entry.flareTxHash && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="flex-1 sm:flex-initial"
+                      asChild
+                      data-testid={`button-flare-explorer-${entry.id}`}
+                    >
+                      <a
+                        href={`https://coston2-explorer.flare.network/tx/${entry.flareTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Flare
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+};
+
 export default function BridgeTracking() {
   const { address } = useWallet();
   const [activeTab, setActiveTab] = useState("active");
@@ -83,6 +375,7 @@ export default function BridgeTracking() {
   } | null>(null);
   const [bridgeToCancel, setBridgeToCancel] = useState<{ id: string; amount: string } | null>(null);
   const { toast } = useToast();
+  const isMobile = useIsMobile(768);
 
   const { data: bridges, isLoading } = useQuery<SelectXrpToFxrpBridge[]>({
     queryKey: [`/api/bridges/wallet/${address}`],
@@ -222,30 +515,8 @@ export default function BridgeTracking() {
   // Enable real-time polling when there are active bridges
   useBridgeTracking(activeBridges.length > 0, address);
 
-  const NotConnectedMessage = () => (
-    <Card>
-      <CardContent className="flex flex-col items-center justify-center py-12">
-        <Wallet className="h-12 w-12 text-muted-foreground mb-4" />
-        <p className="text-center text-muted-foreground font-medium" data-testid="text-connect-wallet-prompt">
-          Connect your wallet to view bridge tracking
-        </p>
-        <p className="text-center text-sm text-muted-foreground mt-2">
-          Your bridge operations will appear here after connecting
-        </p>
-      </CardContent>
-    </Card>
-  );
-
-  const LoadingMessage = () => (
-    <Card>
-      <CardContent className="flex items-center justify-center py-12">
-        <p className="text-muted-foreground">Loading bridge operations...</p>
-      </CardContent>
-    </Card>
-  );
-
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
       <div>
         <h1 className="text-3xl font-bold" data-testid="text-page-title">
           Bridge Tracking
@@ -255,7 +526,115 @@ export default function BridgeTracking() {
         </p>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      {isMobile ? (
+        <Accordion 
+          type="single" 
+          collapsible 
+          value={activeTab} 
+          onValueChange={setActiveTab}
+          data-testid="accordion-bridge-tracking"
+        >
+        <AccordionItem value="active">
+          <AccordionTrigger 
+            className="hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            data-testid="accordion-trigger-active"
+          >
+            <div className="flex items-center gap-2 flex-1">
+              <Activity className="h-4 w-4" />
+              <span>Active</span>
+              <Badge variant="secondary" className="ml-auto mr-2">
+                {activeBridges.length}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <BridgeSection
+              type="active"
+              bridges={activeBridges}
+              isLoading={isLoading}
+              address={address}
+              onSendPayment={handleSendPayment}
+              onCancelBridge={handleCancelBridge}
+              isVaultsLoading={isLoadingVaults}
+            />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="completed">
+          <AccordionTrigger 
+            className="hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            data-testid="accordion-trigger-completed"
+          >
+            <div className="flex items-center gap-2 flex-1">
+              <CheckCircle2 className="h-4 w-4" />
+              <span>Completed</span>
+              <Badge variant="secondary" className="ml-auto mr-2">
+                {completedBridges.length}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <BridgeSection
+              type="completed"
+              bridges={completedBridges}
+              isLoading={isLoading}
+              address={address}
+              onSendPayment={handleSendPayment}
+              isVaultsLoading={isLoadingVaults}
+            />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="failed">
+          <AccordionTrigger 
+            className="hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            data-testid="accordion-trigger-failed"
+          >
+            <div className="flex items-center gap-2 flex-1">
+              <XCircle className="h-4 w-4" />
+              <span>Failed</span>
+              <Badge variant="secondary" className="ml-auto mr-2">
+                {failedBridges.length}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <BridgeSection
+              type="failed"
+              bridges={failedBridges}
+              isLoading={isLoading}
+              address={address}
+              onSendPayment={handleSendPayment}
+              isVaultsLoading={isLoadingVaults}
+              retryAllMutation={retryAllMutation}
+            />
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem value="history">
+          <AccordionTrigger 
+            className="hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            data-testid="accordion-trigger-history"
+          >
+            <div className="flex items-center gap-2 flex-1">
+              <History className="h-4 w-4" />
+              <span>History</span>
+              <Badge variant="secondary" className="ml-auto mr-2">
+                {history?.length || 0}
+              </Badge>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent>
+            <HistorySection
+              history={history}
+              isLoadingHistory={isLoadingHistory}
+              address={address}
+            />
+          </AccordionContent>
+        </AccordionItem>
+        </Accordion>
+      ) : (
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
         <div className="w-full overflow-x-auto pb-2" aria-label="Bridge tracking tabs">
           <TabsList className="inline-flex gap-1 w-full min-w-max sm:grid sm:grid-cols-4 sm:gap-0 sm:min-w-0" data-testid="tabs-bridge-tracking">
             <TabsTrigger value="active" data-testid="tab-active" className="flex-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
@@ -278,259 +657,49 @@ export default function BridgeTracking() {
         </div>
 
         <TabsContent value="active" className="mt-6">
-          {!address ? (
-            <NotConnectedMessage />
-          ) : isLoading ? (
-            <LoadingMessage />
-          ) : activeBridges.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <Activity className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-center text-muted-foreground font-medium" data-testid="text-no-active-bridges">
-                  No active bridge operations
-                </p>
-                <p className="text-center text-sm text-muted-foreground mt-2">
-                  Start a new deposit to see your bridge operations here
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {activeBridges.map((bridge) => (
-                <BridgeStatus
-                  key={bridge.id}
-                  status={bridge.status}
-                  xrpAmount={bridge.xrpAmount}
-                  fxrpExpected={bridge.fxrpExpected}
-                  xrplTxHash={bridge.xrplTxHash || undefined}
-                  flareTxHash={bridge.flareTxHash || undefined}
-                  vaultMintTxHash={bridge.vaultMintTxHash || undefined}
-                  errorMessage={bridge.errorMessage || undefined}
-                  bridgeId={bridge.id}
-                  agentUnderlyingAddress={bridge.agentUnderlyingAddress || undefined}
-                  onSendPayment={() => handleSendPayment(bridge)}
-                  onCancelBridge={() => handleCancelBridge(bridge)}
-                  isVaultsLoading={isLoadingVaults}
-                />
-              ))}
-            </div>
-          )}
+          <BridgeSection
+            type="active"
+            bridges={activeBridges}
+            isLoading={isLoading}
+            address={address}
+            onSendPayment={handleSendPayment}
+            onCancelBridge={handleCancelBridge}
+            isVaultsLoading={isLoadingVaults}
+          />
         </TabsContent>
 
         <TabsContent value="completed" className="mt-6">
-          {!address ? (
-            <NotConnectedMessage />
-          ) : isLoading ? (
-            <LoadingMessage />
-          ) : completedBridges.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <CheckCircle2 className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-center text-muted-foreground font-medium" data-testid="text-no-completed-bridges">
-                  No completed bridge operations
-                </p>
-                <p className="text-center text-sm text-muted-foreground mt-2">
-                  Successfully completed bridges will appear here
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              {completedBridges.map((bridge) => (
-                <BridgeStatus
-                  key={bridge.id}
-                  status={bridge.status}
-                  xrpAmount={bridge.xrpAmount}
-                  fxrpExpected={bridge.fxrpExpected}
-                  xrplTxHash={bridge.xrplTxHash || undefined}
-                  flareTxHash={bridge.flareTxHash || undefined}
-                  vaultMintTxHash={bridge.vaultMintTxHash || undefined}
-                  errorMessage={bridge.errorMessage || undefined}
-                  bridgeId={bridge.id}
-                  agentUnderlyingAddress={bridge.agentUnderlyingAddress || undefined}
-                  onSendPayment={() => handleSendPayment(bridge)}
-                  isVaultsLoading={isLoadingVaults}
-                />
-              ))}
-            </div>
-          )}
+          <BridgeSection
+            type="completed"
+            bridges={completedBridges}
+            isLoading={isLoading}
+            address={address}
+            onSendPayment={handleSendPayment}
+            isVaultsLoading={isLoadingVaults}
+          />
         </TabsContent>
 
         <TabsContent value="failed" className="mt-6">
-          {!address ? (
-            <NotConnectedMessage />
-          ) : isLoading ? (
-            <LoadingMessage />
-          ) : failedBridges.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <XCircle className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-center text-muted-foreground font-medium" data-testid="text-no-failed-bridges">
-                  No failed bridge operations
-                </p>
-                <p className="text-center text-sm text-muted-foreground mt-2">
-                  Failed bridge operations will appear here for troubleshooting
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-center">
-                <p className="text-sm text-muted-foreground">
-                  {failedBridges.length} failed bridge{failedBridges.length !== 1 ? 's' : ''}
-                </p>
-                <Button
-                  variant="outline"
-                  onClick={() => retryAllMutation.mutate()}
-                  disabled={retryAllMutation.isPending}
-                  className="w-full sm:w-auto"
-                  data-testid="button-retry-all"
-                >
-                  {retryAllMutation.isPending ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Retrying...
-                    </>
-                  ) : (
-                    <>
-                      <RefreshCw className="mr-2 h-4 w-4" />
-                      Retry All
-                    </>
-                  )}
-                </Button>
-              </div>
-              {failedBridges.map((bridge) => (
-                <BridgeStatus
-                  key={bridge.id}
-                  status={bridge.status}
-                  xrpAmount={bridge.xrpAmount}
-                  fxrpExpected={bridge.fxrpExpected}
-                  xrplTxHash={bridge.xrplTxHash || undefined}
-                  flareTxHash={bridge.flareTxHash || undefined}
-                  vaultMintTxHash={bridge.vaultMintTxHash || undefined}
-                  errorMessage={bridge.errorMessage || undefined}
-                  bridgeId={bridge.id}
-                  agentUnderlyingAddress={bridge.agentUnderlyingAddress || undefined}
-                  onSendPayment={() => handleSendPayment(bridge)}
-                  isVaultsLoading={isLoadingVaults}
-                />
-              ))}
-            </div>
-          )}
+          <BridgeSection
+            type="failed"
+            bridges={failedBridges}
+            isLoading={isLoading}
+            address={address}
+            onSendPayment={handleSendPayment}
+            isVaultsLoading={isLoadingVaults}
+            retryAllMutation={retryAllMutation}
+          />
         </TabsContent>
 
         <TabsContent value="history" className="mt-6">
-          {!address ? (
-            <NotConnectedMessage />
-          ) : isLoadingHistory ? (
-            <LoadingMessage />
-          ) : !history || history.length === 0 ? (
-            <Card>
-              <CardContent className="flex flex-col items-center justify-center py-12">
-                <History className="h-12 w-12 text-muted-foreground mb-4" />
-                <p className="text-center text-muted-foreground font-medium" data-testid="text-no-history">
-                  No bridge history
-                </p>
-                <p className="text-center text-sm text-muted-foreground mt-2">
-                  Your deposits and withdrawals will appear here
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="space-y-3">
-              {history.map((entry) => (
-                <Card key={entry.id} data-testid={`card-history-${entry.id}`}>
-                  <CardContent className="p-4">
-                    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <div className="mt-0.5">
-                          {entry.type === "deposit" ? (
-                            <ArrowDownToLine className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <ArrowUpFromLine className="h-5 w-5 text-blue-500" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex flex-wrap items-center gap-2 mb-1">
-                            <Badge 
-                              variant={entry.type === "deposit" ? "default" : "secondary"}
-                              data-testid={`badge-type-${entry.type}`}
-                            >
-                              {entry.type === "deposit" ? "Deposit" : "Withdrawal"}
-                            </Badge>
-                            <Badge 
-                              variant={getStatusVariant(entry.status)}
-                              data-testid={`badge-status-${entry.status}`}
-                            >
-                              {formatStatus(entry.status)}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(entry.createdAt), "MMM d, yyyy 'at' h:mm a")}
-                            {entry.completedAt && (
-                              <span className="block mt-1">
-                                Completed: {format(new Date(entry.completedAt), "MMM d, h:mm a")}
-                              </span>
-                            )}
-                          </p>
-                          {entry.errorMessage && (
-                            <p className="text-sm text-destructive mt-1">
-                              {entry.errorMessage}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex flex-col gap-2 sm:items-end">
-                        <p className="font-semibold break-all" data-testid={`text-amount-${entry.id}`}>
-                          {parseFloat(entry.amount).toFixed(6)} XRP
-                        </p>
-                        <div className="flex flex-wrap gap-2 w-full sm:w-auto sm:justify-end">
-                          {entry.xrplTxHash && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 sm:flex-initial"
-                              asChild
-                              data-testid={`button-xrpl-explorer-${entry.id}`}
-                            >
-                              <a
-                                href={`https://testnet.xrpl.org/transactions/${entry.xrplTxHash}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <ExternalLink className="h-3 w-3 mr-1" />
-                                XRPL
-                              </a>
-                            </Button>
-                          )}
-                          {entry.flareTxHash && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 sm:flex-initial"
-                              asChild
-                              data-testid={`button-flare-explorer-${entry.id}`}
-                            >
-                              <a
-                                href={`https://coston2-explorer.flare.network/tx/${entry.flareTxHash}`}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                <ExternalLink className="h-3 w-3 mr-1" />
-                                Flare
-                              </a>
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
+          <HistorySection
+            history={history}
+            isLoadingHistory={isLoadingHistory}
+            address={address}
+          />
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      )}
 
       {selectedBridge && (
         <BridgeStatusModal
