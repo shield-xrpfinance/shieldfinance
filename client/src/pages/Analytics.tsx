@@ -503,7 +503,7 @@ export default function Analytics() {
               </p>
               <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Total Fees Collected</span>
+                  <span className="text-sm text-muted-foreground-light">Total Fees Collected</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-primary">
                     ${(parseFloat(revenueData?.totalFeesCollected || "0") / 1000000).toFixed(2)}m
                   </span>
@@ -517,7 +517,7 @@ export default function Analytics() {
                 <Flame className="h-5 w-5 text-primary" />
                 Revenue Distribution (50/50 Split)
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground-light">
                 100% of platform fees are distributed to create ecosystem value:
               </p>
               <div className="grid gap-3 mt-3">
@@ -525,13 +525,13 @@ export default function Analytics() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Flame className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">50% Buyback & Burn</span>
+                      <span className="text-sm font-medium text-muted-foreground-light">50% Buyback & Burn</span>
                     </div>
                     <span className="text-lg font-bold font-mono tabular-nums text-primary">
                       ${(parseFloat(revenueData?.burnedAmountUsd || "0") / 1000000).toFixed(2)}m
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground-light">
                     Swapped to $SHIELD via SparkDEX V3 and burned forever, creating deflationary pressure
                   </p>
                 </div>
@@ -539,13 +539,13 @@ export default function Analytics() {
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <Vault className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium">50% Protocol Reserves</span>
+                      <span className="text-sm font-medium text-muted-foreground-light">50% Protocol Reserves</span>
                     </div>
                     <span className="text-lg font-bold font-mono tabular-nums text-primary">
                       ${(parseFloat(revenueData?.totalFeesCollected || "0") / 2000000).toFixed(2)}m
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-muted-foreground-light">
                     Accumulated for protocol development, security audits, and future expansions
                   </p>
                 </div>
@@ -558,17 +558,17 @@ export default function Analytics() {
                 <TrendingUp className="h-5 w-5 text-primary" />
                 Staking Boost Extra Yield
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground-light">
                 Users who stake 100+ $SHIELD tokens receive bonus APY on their shXRP positions (+1% per 100 SHIELD).
               </p>
               <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">Extra Yield Distributed</span>
+                  <span className="text-sm text-muted-foreground-light">Extra Yield Distributed</span>
                   <span className="text-xl font-bold font-mono tabular-nums text-primary">
                     ${(parseFloat(revenueData?.extraYieldDistributed || "0") / 1000000).toFixed(2)}m
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
+                <p className="text-xs text-muted-foreground-light mt-2">
                   This additional yield is paid directly to SHIELD stakers on top of their base shXRP APY
                 </p>
               </div>
@@ -579,8 +579,8 @@ export default function Analytics() {
               <div className="bg-primary/5 rounded-md p-4 border border-primary/20">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground">Total SHIELD Tokens Burned</div>
-                    <p className="text-xs text-muted-foreground mt-1">Permanently removed from supply</p>
+                    <div className="text-sm font-medium text-muted-foreground-light">Total SHIELD Tokens Burned</div>
+                    <p className="text-xs text-muted-foreground-light mt-1">Permanently removed from supply</p>
                   </div>
                   <div className="text-right">
                     <div className="text-2xl font-bold font-mono tabular-nums text-shield-foreground flex items-center gap-2">
