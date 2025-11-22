@@ -39,8 +39,6 @@ export default function Landing() {
   const platformIntelligenceAnimation = useScrollAnimation();
   const securityAnimation = useScrollAnimation();
   const valueAnimation = useScrollAnimation();
-  const testimonialsAnimation = useScrollAnimation();
-  const blogAnimation = useScrollAnimation();
   const ctaAnimation = useScrollAnimation();
   const metrics = useAnalyticsMetrics();
 
@@ -205,6 +203,9 @@ export default function Landing() {
               </a>
               <a href="#security" className="text-sm text-muted-foreground hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-security">
                 Security
+              </a>
+              <a href="https://blog.shieldfinance.io" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-blog">
+                Blog
               </a>
             </nav>
             <Link href="/app">
@@ -850,124 +851,6 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Testimonials Section */}
-      <section ref={testimonialsAnimation.ref} className="py-24" data-testid="section-testimonials">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`text-center mb-16 ${testimonialsAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4" data-testid="heading-testimonials">
-              Trusted by the Community
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto" data-testid="text-testimonials-subtitle">
-              See what our users have to say about Shield Finance
-            </p>
-          </div>
-
-          <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${testimonialsAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }}>
-            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-testimonial-1">
-              <Quote className="h-8 w-8 text-primary mb-4" />
-              <p className="text-sm mb-4" data-testid="text-testimonial-1-quote">
-                "Shield Finance has revolutionized how I manage my XRP holdings. The ability to earn rewards while maintaining liquidity is a game-changer."
-              </p>
-              <div className="border-t border-border/50 pt-4">
-                <p className="font-semibold" data-testid="text-testimonial-1-name">Sarah Chen</p>
-                <p className="text-sm text-muted-foreground" data-testid="text-testimonial-1-role">DeFi Investor</p>
-              </div>
-            </Card>
-
-            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-testimonial-2">
-              <Quote className="h-8 w-8 text-primary mb-4" />
-              <p className="text-sm mb-4" data-testid="text-testimonial-2-quote">
-                "The security measures and transparency of Shield Finance give me complete confidence. Best liquid staking platform I've used."
-              </p>
-              <div className="border-t border-border/50 pt-4">
-                <p className="font-semibold" data-testid="text-testimonial-2-name">Michael Rodriguez</p>
-                <p className="text-sm text-muted-foreground" data-testid="text-testimonial-2-role">Crypto Analyst</p>
-              </div>
-            </Card>
-
-            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-testimonial-3">
-              <Quote className="h-8 w-8 text-primary mb-4" />
-              <p className="text-sm mb-4" data-testid="text-testimonial-3-quote">
-                "Amazing platform with consistent returns. The instant unstaking feature has saved me multiple times during market opportunities."
-              </p>
-              <div className="border-t border-border/50 pt-4">
-                <p className="font-semibold" data-testid="text-testimonial-3-name">Alex Thompson</p>
-                <p className="text-sm text-muted-foreground" data-testid="text-testimonial-3-role">Portfolio Manager</p>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Blog/News Section */}
-      <section ref={blogAnimation.ref} className="py-24 bg-muted/30" data-testid="section-blog">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`text-center mb-16 ${blogAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-            <h2 className="text-3xl lg:text-4xl font-bold mb-4" data-testid="heading-blog">
-              Latest Updates
-            </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto" data-testid="text-blog-subtitle">
-              Stay informed about our latest developments and partnerships
-            </p>
-          </div>
-
-          <div className={`grid grid-cols-1 md:grid-cols-3 gap-6 ${blogAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }}>
-            <Card className="overflow-hidden glassmorphic transition-all hover:scale-105" data-testid="card-blog-1">
-              <div className="p-6">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                  <Calendar className="h-4 w-4" />
-                  <span data-testid="text-blog-1-date">March 15, 2025</span>
-                </div>
-                <h3 className="text-lg font-semibold mb-2" data-testid="title-blog-1">
-                  Q1 2025 Roadmap Update
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4" data-testid="text-blog-1-excerpt">
-                  Discover our exciting plans for the first quarter including new features, partnerships, and protocol upgrades.
-                </p>
-                <Button variant="outline" size="sm" className="w-full" data-testid="button-blog-1">
-                  Read More
-                </Button>
-              </div>
-            </Card>
-
-            <Card className="overflow-hidden glassmorphic transition-all hover:scale-105" data-testid="card-blog-2">
-              <div className="p-6">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                  <Calendar className="h-4 w-4" />
-                  <span data-testid="text-blog-2-date">March 8, 2025</span>
-                </div>
-                <h3 className="text-lg font-semibold mb-2" data-testid="title-blog-2">
-                  Partnership with Flare Network
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4" data-testid="text-blog-2-excerpt">
-                  We're thrilled to announce our strategic partnership with Flare Network to bring enhanced functionality to our users.
-                </p>
-                <Button variant="outline" size="sm" className="w-full" data-testid="button-blog-2">
-                  Read More
-                </Button>
-              </div>
-            </Card>
-
-            <Card className="overflow-hidden glassmorphic transition-all hover:scale-105" data-testid="card-blog-3">
-              <div className="p-6">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-                  <Calendar className="h-4 w-4" />
-                  <span data-testid="text-blog-3-date">February 28, 2025</span>
-                </div>
-                <h3 className="text-lg font-semibold mb-2" data-testid="title-blog-3">
-                  New Yield Strategies Available
-                </h3>
-                <p className="text-sm text-muted-foreground mb-4" data-testid="text-blog-3-excerpt">
-                  Explore our newly launched yield strategies designed to maximize your staking rewards with optimized risk management.
-                </p>
-                <Button variant="outline" size="sm" className="w-full" data-testid="button-blog-3">
-                  Read More
-                </Button>
-              </div>
-            </Card>
-          </div>
-        </div>
-      </section>
 
       {/* CTA Section with Glassmorphism */}
       <section 
