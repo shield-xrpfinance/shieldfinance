@@ -539,30 +539,29 @@ export default function Portfolio() {
       )}
 
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <h2 className="text-2xl font-semibold">Active Positions</h2>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (!isConnected) {
-                  toast({
-                    title: "Wallet Not Connected",
-                    description: "Please connect your wallet to claim rewards",
-                    variant: "destructive",
-                  });
-                  return;
-                }
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (!isConnected) {
                 toast({
-                  title: "Claim All Rewards",
-                  description: `Claiming ${totalRewards.toLocaleString()} XRP from all positions`,
+                  title: "Wallet Not Connected",
+                  description: "Please connect your wallet to claim rewards",
+                  variant: "destructive",
                 });
-              }}
-              data-testid="button-claim-all"
-            >
-              Claim All Rewards
-            </Button>
-          </div>
+                return;
+              }
+              toast({
+                title: "Claim All Rewards",
+                description: `Claiming ${totalRewards.toLocaleString()} XRP from all positions`,
+              });
+            }}
+            className="sm:w-auto w-full"
+            data-testid="button-claim-all"
+          >
+            Claim All Rewards
+          </Button>
         </div>
 
         {positionsLoading ? (

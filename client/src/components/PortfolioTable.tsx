@@ -69,6 +69,10 @@ const getXrplExplorerUrl = (txHash: string, network: string): string => {
   return `${baseUrl}/${txHash}`;
 };
 
+const Card = ({ children, className }: { children: React.ReactNode; className?: string }) => (
+  <div className={`rounded-md border p-4 space-y-3 ${className || ""}`}>{children}</div>
+);
+
 export default function PortfolioTable({
   positions,
   escrows = [],
@@ -135,7 +139,9 @@ export default function PortfolioTable({
   };
 
   return (
-    <div className="rounded-md border">
+    <>
+      {/* Desktop Table View */}
+      <div className="hidden md:block rounded-md border">
       <Table>
         <TableHeader>
           <TableRow>
@@ -320,6 +326,181 @@ export default function PortfolioTable({
           )}
         </TableBody>
       </Table>
-    </div>
+      </div>
+
+      {/* Mobile Card View */}
+      <div className="md:hidden space-y-3">
+        {positions.length === 0 ? (
+          <div className="text-center text-muted-foreground py-8">No active positions</div>
+        ) : (
+          positions.map((position) => {
+            const escrow = getPositionEscrow(position.id);
+            const isXRP = position.asset?.includes("XRP");
+            const gain = parseFloat(position.currentValue.replace(/,/g, "")) - parseFloat(position.depositedAmount.replace(/,/g, ""));
+            const gainPercent = (gain / parseFloat(position.depositedAmount.replace(/,/g, ""))) * 100;
+
+            return (
+              <Card key={position.id} className="bg-card" data-testid={`row-position-${position.id}`}>
+                {/* Header with vault and APY */}
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <MultiAssetIcon assets={position.asset || "XRP"} size={24} />
+                    <div className="min-w-0">
+                      <p className="font-medium truncate">{position.vaultName}</p>
+                      <p className="text-xs text-muted-foreground">{position.depositDate}</p>
+                    </div>
+                  </div>
+                  <Badge variant="secondary" className="shrink-0">{position.apy}%</Badge>
+                </div>
+
+                {/* Amount info */}
+                <div className="space-y-2 border-t pt-3">
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Deposited</span>
+                    <span className="font-mono text-sm font-medium">{position.depositedAmount} {position.asset?.split(",")[0] || "XRP"}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Current Value</span>
+                    <div className="text-right">
+                      <span className="font-mono text-sm font-medium">{position.currentValue} {position.asset?.split(",")[0] || "XRP"}</span>
+                      <span className="text-xs text-chart-2 ml-2 flex items-center gap-0.5 justify-end">
+                        <ArrowUpRight className="h-3 w-3" />
+                        {gainPercent.toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-sm text-muted-foreground">Rewards</span>
+                    <span className="font-mono text-sm font-medium text-chart-2">+{position.rewards} {position.asset?.split(",")[0] || "XRP"}</span>
+                  </div>
+                  
+                  {/* Escrow status */}
+                  {isXRP && escrow ? (
+                    <div className="flex justify-between items-end gap-2">
+                      <span className="text-sm text-muted-foreground">Escrow</span>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="inline-flex flex-col items-end gap-1">
+                            <Badge 
+                              variant={getEscrowStatusVariant(escrow.status)}
+                              className={getEscrowStatusColor(escrow.status)}
+                              data-testid={`badge-escrow-status-${position.id}`}
+                            >
+                              <Lock className="h-3 w-3 mr-1" />
+                              {escrow.status.charAt(0).toUpperCase() + escrow.status.slice(1)}
+                            </Badge>
+                            <span className="text-xs text-muted-foreground" data-testid={`text-escrow-amount-${position.id}`}>
+                              {parseFloat(escrow.amount).toFixed(2)} XRP
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <div className="space-y-2">
+                            <div className="flex items-center gap-2 font-semibold text-sm">
+                              <Lock className="h-4 w-4" />
+                              {getEscrowTooltipTitle(escrow.status)}
+                            </div>
+                            <p className="text-xs text-muted-foreground">
+                              {getEscrowTooltipDescription(escrow)}
+                            </p>
+                            <div className="space-y-1 text-xs">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-muted-foreground">Amount:</span>
+                                <span className="font-mono">{parseFloat(escrow.amount).toFixed(6)} XRP</span>
+                              </div>
+                              {escrow.status === "pending" && (
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-muted-foreground">Release:</span>
+                                  <span>{formatReleaseTime(escrow.finishAfter)}</span>
+                                </div>
+                              )}
+                              {escrow.status === "finished" && escrow.finishedAt && (
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-muted-foreground">Released:</span>
+                                  <span>{formatCompletionTime(escrow.finishedAt)}</span>
+                                </div>
+                              )}
+                              {escrow.status === "cancelled" && escrow.cancelledAt && (
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-muted-foreground">Cancelled:</span>
+                                  <span>{formatCompletionTime(escrow.cancelledAt)}</span>
+                                </div>
+                              )}
+                              {escrow.createTxHash && (
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-muted-foreground">Create Tx:</span>
+                                  <a 
+                                    href={getXrplExplorerUrl(escrow.createTxHash, network)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-primary hover:underline"
+                                  >
+                                    {escrow.createTxHash.substring(0, 8)}...
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                </div>
+                              )}
+                              {escrow.status === "finished" && escrow.finishTxHash && (
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-muted-foreground">Finish Tx:</span>
+                                  <a 
+                                    href={getXrplExplorerUrl(escrow.finishTxHash, network)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-primary hover:underline"
+                                  >
+                                    {escrow.finishTxHash.substring(0, 8)}...
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                </div>
+                              )}
+                              {escrow.status === "cancelled" && escrow.cancelTxHash && (
+                                <div className="flex justify-between gap-4">
+                                  <span className="text-muted-foreground">Cancel Tx:</span>
+                                  <a 
+                                    href={getXrplExplorerUrl(escrow.cancelTxHash, network)}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 text-primary hover:underline"
+                                  >
+                                    {escrow.cancelTxHash.substring(0, 8)}...
+                                    <ExternalLink className="h-3 w-3" />
+                                  </a>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 border-t pt-3">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => onClaim(position.id)}
+                    className="flex-1"
+                    data-testid={`button-claim-${position.id}`}
+                  >
+                    Claim
+                  </Button>
+                  <Button
+                    size="sm"
+                    onClick={() => onWithdraw(position.id)}
+                    className="flex-1"
+                    data-testid={`button-withdraw-${position.id}`}
+                  >
+                    Withdraw
+                  </Button>
+                </div>
+              </Card>
+            );
+          })
+        )}
+      </div>
+    </>
   );
 }
