@@ -3173,22 +3173,31 @@ export async function registerRoutes(
   // Get revenue transparency metrics (Convex-style)
   app.get("/api/analytics/revenue-transparency", async (_req, res) => {
     try {
-      // TODO: Once contracts are deployed, replace with real data from:
-      // - FeeTransferred events from ShXRPVault
-      // - RevenueDistributed events from RevenueRouter
-      // - Staking boost bonus calculations
+      // TODO: Once contracts are deployed on Flare mainnet, replace with real aggregated data from:
+      // 1. FeeTransferred events from ShXRPVault contract:
+      //    - Sum all deposit/withdrawal fees to get totalFeesCollected
+      // 2. RevenueDistributed events from RevenueRouter contract:
+      //    - Sum shieldBurned field from all events to get totalShieldBurned
+      //    - Calculate burnedAmountUsd (50% of fees converted to SHIELD and burned)
+      // 3. Staking boost calculations from ShXRPVault:
+      //    - Track previewRedeemWithBoost bonus amounts to get extraYieldDistributed
+      //
+      // Implementation notes:
+      // - Create burn_events table to track RevenueDistributed events
+      // - Create fee_events table to track FeeTransferred events
+      // - Add storage methods: getBurnEventsSummary(), getFeesSummary(), getStakingBoostSummary()
+      // - Query contract events via ethers.js event listeners or The Graph indexer
       
-      // Placeholder data structure matching expected contract event data
+      // Placeholder data (contracts not yet deployed per replit.md)
       const revenueData = {
-        totalPlatformRevenue: "2847000", // Total fees collected in USD
-        totalShieldBurned: "317000", // Total SHIELD tokens burned forever
-        totalShieldBurnedUsd: "126800", // USD value of burned SHIELD
-        extraYieldDistributed: "425000", // Extra yield from staking boost in USD
+        // Hero metrics
+        totalFeesCollected: "2847000",      // Sum of all FeeTransferred events (USD)
+        totalShieldBurned: "317000",        // Sum of shieldBurned from RevenueDistributed events
+        totalShieldBurnedUsd: "126800",     // USD value of burned SHIELD tokens
+        extraYieldDistributed: "425000",    // Extra yield from staking boost (USD)
         
         // Breakdown cards
-        totalFeesCollected: "2847000", // Total platform fees (deposits + withdrawals)
-        burnedAmount: "1423500", // 50% of fees used for buyback-burn
-        extraYieldPaid: "425000", // Extra yield distributed to SHIELD stakers
+        burnedAmountUsd: "1423500",         // 50% of fees used for buyback-burn (USD)
       };
       
       res.json(revenueData);

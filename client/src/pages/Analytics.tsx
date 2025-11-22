@@ -37,13 +37,11 @@ interface TopVault {
 }
 
 interface RevenueTransparency {
-  totalPlatformRevenue: string;
+  totalFeesCollected: string;
   totalShieldBurned: string;
   totalShieldBurnedUsd: string;
   extraYieldDistributed: string;
-  totalFeesCollected: string;
-  burnedAmount: string;
-  extraYieldPaid: string;
+  burnedAmountUsd: string;
 }
 
 export default function Analytics() {
@@ -117,7 +115,7 @@ export default function Analytics() {
                     Total Platform Revenue Generated
                   </div>
                   <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-primary">
-                    ${(parseFloat(revenueData?.totalPlatformRevenue || "0") / 1000000).toFixed(2)}m
+                    ${(parseFloat(revenueData?.totalFeesCollected || "0") / 1000000).toFixed(2)}m
                   </div>
                 </div>
 
@@ -186,7 +184,7 @@ export default function Analytics() {
                 <div data-testid="revenue-burned-amount">
                   <div className="text-3xl md:text-4xl font-bold font-mono tabular-nums flex items-center gap-2">
                     <Flame className="h-6 w-6 text-primary" />
-                    ${(parseFloat(revenueData?.burnedAmount || "0") / 1000000).toFixed(2)}m
+                    ${(parseFloat(revenueData?.burnedAmountUsd || "0") / 1000000).toFixed(2)}m
                   </div>
                   <div className="text-xs text-muted-foreground mt-2">
                     → $SHIELD Burned Forever
@@ -208,7 +206,7 @@ export default function Analytics() {
                 <Skeleton className="h-10 w-full" />
               ) : (
                 <div className="text-3xl md:text-4xl font-bold font-mono tabular-nums" data-testid="revenue-extra-yield-paid">
-                  ${(parseFloat(revenueData?.extraYieldPaid || "0") / 1000000).toFixed(2)}m
+                  ${(parseFloat(revenueData?.extraYieldDistributed || "0") / 1000000).toFixed(2)}m
                 </div>
               )}
             </CardContent>
