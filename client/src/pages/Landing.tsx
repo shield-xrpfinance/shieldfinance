@@ -220,11 +220,25 @@ export default function Landing() {
         </div>
       </header>
 
-      {/* Hero Section with Video - 2 Columns */}
+      {/* Hero Section with Video Background */}
       <section 
-        className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900 py-24 lg:py-32" 
+        className="relative overflow-hidden py-24 lg:py-32 min-h-screen flex items-center" 
         data-testid="section-hero"
       >
+        {/* Video Background */}
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          className="absolute inset-0 w-full h-full object-cover"
+          data-testid="video-hero"
+        >
+          <source src={headerVideoUrl} type="video/mp4" />
+        </video>
+
+        {/* Dark Gradient Overlay for Text Readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-blue-950/80 to-slate-900/70" data-testid="hero-overlay" />
+
         {/* Animated Floating Coins */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
           <div 
@@ -241,59 +255,45 @@ export default function Landing() {
           />
         </div>
 
-        <div ref={heroAnimation.ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${heroAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-            {/* Left Column - Content */}
-            <div>
-              <h1 className="text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-white" data-testid="heading-hero">
-                Liquid Staking for{" "}
-                <span className="text-primary">XRP Ledger</span>
-              </h1>
-              <p className="text-xl text-gray-300 mb-8" data-testid="text-hero-subtitle">
-                Stake your XRP and earn rewards while maintaining liquidity. Access DeFi opportunities without locking your assets.
+        {/* Content */}
+        <div ref={heroAnimation.ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 w-full">
+          <div className={`max-w-3xl ${heroAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+            {/* Content */}
+            <h1 className="text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-white" data-testid="heading-hero">
+              Liquid Staking for{" "}
+              <span className="text-primary">XRP Ledger</span>
+            </h1>
+            <p className="text-xl text-gray-300 mb-8" data-testid="text-hero-subtitle">
+              Stake your XRP and earn rewards while maintaining liquidity. Access DeFi opportunities without locking your assets.
+            </p>
+            <div className="flex flex-col sm:flex-row gap-4">
+              <Link href="/app">
+                <Button size="lg" data-testid="button-hero-start" className="transition-all hover:scale-105">
+                  Start Staking
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
+              </Link>
+            </div>
+            
+            {/* Glassmorphic Stats */}
+            <div className="mt-16" data-testid="stats-container">
+              <p className="text-xs text-gray-400 mb-4" data-testid="text-testnet-disclaimer">
+                {metrics.isLoading ? "Loading metrics..." : "* Testnet demo metrics - Mainnet launch coming soon"}
               </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <Link href="/app">
-                  <Button size="lg" data-testid="button-hero-start" className="transition-all hover:scale-105">
-                    Start Staking
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </Link>
-              </div>
-              
-              {/* Glassmorphic Stats */}
-              <div className="mt-16" data-testid="stats-container">
-                <p className="text-xs text-gray-400 mb-4" data-testid="text-testnet-disclaimer">
-                  {metrics.isLoading ? "Loading metrics..." : "* Testnet demo metrics - Mainnet launch coming soon"}
-                </p>
-                <div className="grid grid-cols-3 gap-4">
-                  <div className={`glassmorphic rounded-2xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-tvl">
-                    <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-tvl">{metrics.tvl}</div>
-                    <div className="text-xs lg:text-sm text-gray-300" data-testid="label-tvl">TVL</div>
-                  </div>
-                  <div className={`glassmorphic rounded-2xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-apy">
-                    <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-apy">{metrics.apy}</div>
-                    <div className="text-xs lg:text-sm text-gray-300" data-testid="label-apy">APY</div>
-                  </div>
-                  <div className={`glassmorphic rounded-2xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-stakers">
-                    <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-stakers">{metrics.stakers}</div>
-                    <div className="text-xs lg:text-sm text-gray-300" data-testid="label-stakers">Stakers</div>
-                  </div>
+              <div className="grid grid-cols-3 gap-4">
+                <div className={`glassmorphic rounded-2xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-tvl">
+                  <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-tvl">{metrics.tvl}</div>
+                  <div className="text-xs lg:text-sm text-gray-300" data-testid="label-tvl">TVL</div>
+                </div>
+                <div className={`glassmorphic rounded-2xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-apy">
+                  <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-apy">{metrics.apy}</div>
+                  <div className="text-xs lg:text-sm text-gray-300" data-testid="label-apy">APY</div>
+                </div>
+                <div className={`glassmorphic rounded-2xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-stakers">
+                  <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-stakers">{metrics.stakers}</div>
+                  <div className="text-xs lg:text-sm text-gray-300" data-testid="label-stakers">Stakers</div>
                 </div>
               </div>
-            </div>
-
-            {/* Right Column - Video */}
-            <div className="relative h-96 lg:h-[500px] rounded-2xl overflow-hidden glassmorphic" data-testid="hero-video-container">
-              <video 
-                autoPlay 
-                loop 
-                muted 
-                className="absolute inset-0 w-full h-full object-cover"
-                data-testid="video-hero"
-              >
-                <source src={headerVideoUrl} type="video/mp4" />
-              </video>
             </div>
           </div>
         </div>
