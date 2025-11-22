@@ -33,7 +33,8 @@ import {
   RefreshCw,
   Send,
   Ban,
-  ChevronDown
+  ChevronDown,
+  ExternalLink
 } from "lucide-react";
 import {
   Collapsible,
@@ -713,15 +714,54 @@ export default function BridgeStatusModal({
                 </div>
               </div>
 
-              {/* Transaction Hash - show when available */}
-              {bridge.flareTxHash && (
-                <div className="space-y-2">
-                  <p className="text-xs sm:text-sm font-medium">Transaction Hash:</p>
-                  <code className="block text-xs bg-muted p-2 sm:p-3 rounded-md break-all" data-testid="text-tx-hash">
-                    {bridge.flareTxHash}
-                  </code>
-                </div>
-              )}
+              {/* Transaction Links - show when available */}
+              <div className="space-y-2">
+                {bridge.xrplTxHash && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs sm:text-sm text-muted-foreground">XRPL Transaction:</span>
+                    <a
+                      href={`https://testnet.xrpscan.com/tx/${bridge.xrplTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs sm:text-sm text-primary hover:underline flex items-center gap-1"
+                      data-testid="link-xrpl-tx"
+                    >
+                      {bridge.xrplTxHash.slice(0, 8)}...{bridge.xrplTxHash.slice(-8)}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+                {bridge.flareTxHash && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs sm:text-sm text-muted-foreground">Flare Transaction:</span>
+                    <a
+                      href={`https://coston2-explorer.flare.network/tx/${bridge.flareTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs sm:text-sm text-primary hover:underline flex items-center gap-1"
+                      data-testid="link-flare-tx"
+                    >
+                      {bridge.flareTxHash.slice(0, 8)}...{bridge.flareTxHash.slice(-8)}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+                {bridge.vaultMintTxHash && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs sm:text-sm text-muted-foreground">Vault Mint Tx:</span>
+                    <a
+                      href={`https://coston2-explorer.flare.network/tx/${bridge.vaultMintTxHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs sm:text-sm text-primary hover:underline flex items-center gap-1"
+                      data-testid="link-vault-mint-tx"
+                    >
+                      {bridge.vaultMintTxHash.slice(0, 8)}...{bridge.vaultMintTxHash.slice(-8)}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </div>
+                )}
+              </div>
             </CollapsibleContent>
           </Collapsible>
 
