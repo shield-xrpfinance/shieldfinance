@@ -29,6 +29,7 @@ import {
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
 import headerVideoUrl from "@assets/a11fc6fb-bf7b-4e28-84ca-0031b314abcd_3_720_N_1763815621392.mp4";
+import logoUrl from "/logo.png";
 
 export default function Landing() {
   const heroAnimation = useScrollAnimation();
@@ -187,25 +188,25 @@ export default function Landing() {
         `}
       </style>
 
-      {/* Dark Theme Header */}
-      <header className="sticky top-0 z-50 transition-all duration-300 bg-slate-900 border-b border-slate-800" data-testid="header">
+      {/* Light Theme Header - To Highlight Logo */}
+      <header className="sticky top-0 z-50 transition-all duration-300 bg-white border-b border-gray-200" data-testid="header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2" data-testid="logo-header">
-              <Shield className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold text-white">Shield Finance</span>
+            <div className="flex items-center gap-3" data-testid="logo-header">
+              <img src={logoUrl} alt="Shield Finance" className="h-10 w-10" data-testid="img-logo" />
+              <span className="text-xl font-bold text-gray-900">Shield Finance</span>
             </div>
             <nav className="hidden md:flex items-center gap-8" data-testid="nav-header">
-              <a href="#features" className="text-sm text-gray-300 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-features">
+              <a href="#features" className="text-sm text-gray-600 hover:text-gray-900 hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-features">
                 Features
               </a>
-              <a href="#how-it-works" className="text-sm text-gray-300 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-how-it-works">
+              <a href="#how-it-works" className="text-sm text-gray-600 hover:text-gray-900 hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-how-it-works">
                 How It Works
               </a>
-              <a href="#security" className="text-sm text-gray-300 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-security">
+              <a href="#security" className="text-sm text-gray-600 hover:text-gray-900 hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-security">
                 Security
               </a>
-              <a href="https://blog.shieldfinance.io" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-300 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-blog">
+              <a href="https://blog.shieldfinance.io" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 hover:text-gray-900 hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-blog">
                 Blog
               </a>
             </nav>
