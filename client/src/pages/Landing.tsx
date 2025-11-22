@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
+import headerVideoUrl from "@assets/a11fc6fb-bf7b-4e28-84ca-0031b314abcd_3_720_N_1763815621392.mp4";
 
 export default function Landing() {
   const heroAnimation = useScrollAnimation();
@@ -186,45 +187,57 @@ export default function Landing() {
         `}
       </style>
 
-      {/* Glassmorphic Header */}
-      <header className="glassmorphic-light sticky top-0 z-50 transition-all duration-300">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-2" data-testid="logo-header">
-              <Shield className="h-8 w-8 text-primary" />
-              <span className="text-xl font-bold">Shield Finance</span>
+      {/* Dark Theme Header with Video Background */}
+      <header className="relative sticky top-0 z-50 transition-all duration-300 overflow-hidden" data-testid="header-video">
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          className="absolute inset-0 w-full h-full object-cover"
+          data-testid="video-header-bg"
+        >
+          <source src={headerVideoUrl} type="video/mp4" />
+        </video>
+        
+        {/* Dark overlay for readability */}
+        <div className="absolute inset-0 bg-black/60" />
+        
+        <div className="relative z-10">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center justify-between h-16">
+              <div className="flex items-center gap-2" data-testid="logo-header">
+                <Shield className="h-8 w-8 text-primary" />
+                <span className="text-xl font-bold text-white">Shield Finance</span>
+              </div>
+              <nav className="hidden md:flex items-center gap-8" data-testid="nav-header">
+                <a href="#features" className="text-sm text-gray-200 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-features">
+                  Features
+                </a>
+                <a href="#how-it-works" className="text-sm text-gray-200 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-how-it-works">
+                  How It Works
+                </a>
+                <a href="#security" className="text-sm text-gray-200 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-security">
+                  Security
+                </a>
+                <a href="https://blog.shieldfinance.io" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-200 hover:text-white hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-blog">
+                  Blog
+                </a>
+              </nav>
+              <Link href="/app">
+                <Button data-testid="button-launch-app" className="transition-all bg-primary hover:bg-primary/90 text-white">
+                  Launch App
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
             </div>
-            <nav className="hidden md:flex items-center gap-8" data-testid="nav-header">
-              <a href="#features" className="text-sm text-muted-foreground hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-features">
-                Features
-              </a>
-              <a href="#how-it-works" className="text-sm text-muted-foreground hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-how-it-works">
-                How It Works
-              </a>
-              <a href="#security" className="text-sm text-muted-foreground hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-security">
-                Security
-              </a>
-              <a href="https://blog.shieldfinance.io" target="_blank" rel="noopener noreferrer" className="text-sm text-muted-foreground hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-blog">
-                Blog
-              </a>
-            </nav>
-            <Link href="/app">
-              <Button data-testid="button-launch-app" className="transition-all">
-                Launch App
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
           </div>
         </div>
       </header>
 
-      {/* Hero Section with Animated Coins */}
+      {/* Hero Section with Animated Coins - Dark Theme */}
       <section 
-        className="relative overflow-hidden" 
+        className="relative overflow-hidden bg-gradient-to-br from-slate-950 via-blue-950 to-slate-900" 
         data-testid="section-hero"
-        style={{
-          background: 'linear-gradient(135deg, hsl(var(--primary) / 0.12) 0%, hsl(var(--primary) / 0.04) 50%, transparent 100%)'
-        }}
       >
         {/* Animated Floating Coins */}
         <div className="absolute inset-0 pointer-events-none overflow-hidden">
@@ -248,11 +261,11 @@ export default function Landing() {
 
         <div ref={heroAnimation.ref} className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 lg:py-32 relative z-10">
           <div className={`text-center max-w-4xl mx-auto ${heroAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-            <h1 className="text-5xl lg:text-6xl font-bold tracking-tight mb-6" data-testid="heading-hero">
+            <h1 className="text-5xl lg:text-6xl font-bold tracking-tight mb-6 text-white" data-testid="heading-hero">
               Liquid Staking for{" "}
               <span className="text-primary">XRP Ledger</span>
             </h1>
-            <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto" data-testid="text-hero-subtitle">
+            <p className="text-xl text-gray-300 mb-8 max-w-2xl mx-auto" data-testid="text-hero-subtitle">
               Stake your XRP and earn rewards while maintaining liquidity. Access DeFi opportunities without locking your assets.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -269,21 +282,21 @@ export default function Landing() {
             
             {/* Glassmorphic Stats */}
             <div className="mt-20" data-testid="stats-container">
-              <p className="text-xs text-muted-foreground text-center mb-4" data-testid="text-testnet-disclaimer">
+              <p className="text-xs text-gray-400 text-center mb-4" data-testid="text-testnet-disclaimer">
                 {metrics.isLoading ? "Loading metrics..." : "* Testnet demo metrics - Mainnet launch coming soon"}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className={`glassmorphic rounded-2xl p-6 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-tvl">
                   <div className="text-4xl font-bold text-primary mb-2" data-testid="value-tvl">{metrics.tvl}</div>
-                  <div className="text-sm text-muted-foreground" data-testid="label-tvl">Total Value Locked</div>
+                  <div className="text-sm text-gray-300" data-testid="label-tvl">Total Value Locked</div>
                 </div>
                 <div className={`glassmorphic rounded-2xl p-6 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-apy">
                   <div className="text-4xl font-bold text-primary mb-2" data-testid="value-apy">{metrics.apy}</div>
-                  <div className="text-sm text-muted-foreground" data-testid="label-apy">Average APY</div>
+                  <div className="text-sm text-gray-300" data-testid="label-apy">Average APY</div>
                 </div>
                 <div className={`glassmorphic rounded-2xl p-6 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-stakers">
                   <div className="text-4xl font-bold text-primary mb-2" data-testid="value-stakers">{metrics.stakers}</div>
-                  <div className="text-sm text-muted-foreground" data-testid="label-stakers">Active Stakers</div>
+                  <div className="text-sm text-gray-300" data-testid="label-stakers">Active Stakers</div>
                 </div>
               </div>
             </div>
