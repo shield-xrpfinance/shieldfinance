@@ -115,7 +115,7 @@ export default function Analytics() {
               <div className="space-y-8 text-center">
                 {/* Total Platform Revenue */}
                 <div data-testid="revenue-hero-platform-revenue">
-                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center justify-center gap-2">
+                  <div className="text-sm font-medium text-foreground uppercase tracking-wide mb-2 flex items-center justify-center gap-2">
                     Total Platform Revenue Generated
                     <button
                       type="button"
@@ -134,7 +134,7 @@ export default function Analytics() {
 
                 {/* Total SHIELD Burned */}
                 <div data-testid="revenue-hero-shield-burned">
-                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  <div className="text-sm font-medium text-foreground uppercase tracking-wide mb-2">
                     Total $SHIELD Burned Forever
                   </div>
                   <div className="flex items-center justify-center gap-3">
@@ -151,7 +151,7 @@ export default function Analytics() {
 
                 {/* Extra Yield Distributed */}
                 <div data-testid="revenue-hero-extra-yield">
-                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  <div className="text-sm font-medium text-foreground uppercase tracking-wide mb-2">
                     Extra Yield Distributed to Stakers
                   </div>
                   <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-primary">
@@ -168,7 +168,7 @@ export default function Analytics() {
           {/* Total Fees Collected */}
           <Card className="bg-card/50 backdrop-blur-md border-primary/10">
             <CardHeader>
-              <CardTitle className="text-base font-medium text-muted-foreground">
+              <CardTitle className="text-base font-medium text-foreground">
                 Total Fees Collected
               </CardTitle>
             </CardHeader>
@@ -186,7 +186,7 @@ export default function Analytics() {
           {/* Burned Amount */}
           <Card className="bg-card/50 backdrop-blur-md border-primary/10">
             <CardHeader>
-              <CardTitle className="text-base font-medium text-muted-foreground">
+              <CardTitle className="text-base font-medium text-foreground">
                 Burned: 50% of Fees
               </CardTitle>
             </CardHeader>
@@ -210,7 +210,7 @@ export default function Analytics() {
           {/* Extra Yield Paid */}
           <Card className="bg-card/50 backdrop-blur-md border-primary/10">
             <CardHeader>
-              <CardTitle className="text-base font-medium text-muted-foreground">
+              <CardTitle className="text-base font-medium text-foreground">
                 Extra Yield Paid to Stakers
               </CardTitle>
             </CardHeader>
