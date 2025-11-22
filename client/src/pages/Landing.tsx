@@ -28,11 +28,13 @@ import {
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
+import { IPhoneMockup } from "@/components/IPhoneMockup";
 import shieldLogo from "@assets/shield_logo_1763761188895.png";
 import flareLogo from "@assets/flare-network-logo.svg";
 import xrpLogo from "@assets/XRP-Ledger---Horizontal---Black_1763817099433.png";
 import xamanLogo from "@assets/xaman-logo.svg";
 import walletConnectLogo from "@assets/walletconnect-logo-wc.svg";
+import portfolioScreenshot from "@assets/portfolio-mobile-screenshot.jpg";
 
 export default function Landing() {
   const heroAnimation = useScrollAnimation();
@@ -41,6 +43,7 @@ export default function Landing() {
   const whyUsAnimation = useScrollAnimation();
   const technicalAnimation = useScrollAnimation();
   const howItWorksAnimation = useScrollAnimation();
+  const mobileExperienceAnimation = useScrollAnimation();
   const platformIntelligenceAnimation = useScrollAnimation();
   const securityAnimation = useScrollAnimation();
   const valueAnimation = useScrollAnimation();
@@ -666,8 +669,72 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Mobile Experience Section */}
+      <section ref={mobileExperienceAnimation.ref} className="py-24" data-testid="section-mobile-experience">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center transition-opacity duration-500 ${mobileExperienceAnimation.isVisible ? 'animate-fade-in-up opacity-100' : 'opacity-100'}`}>
+            <div className="order-2 lg:order-1 flex flex-col gap-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit" data-testid="badge-mobile">
+                <Sparkles className="h-3 w-3 text-primary" />
+                <span className="text-xs font-semibold text-primary" data-testid="text-mobile-badge">Mobile First Design</span>
+              </div>
+              <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold" data-testid="heading-mobile-experience">
+                Manage Your Portfolio On The Go
+              </h2>
+              <p className="text-base sm:text-lg text-muted-foreground" data-testid="text-mobile-subtitle">
+                Access your liquid staking positions anytime, anywhere with our mobile-optimized dashboard.
+              </p>
+              <div className="flex flex-col gap-3 sm:gap-4">
+                <div className="flex items-start gap-3" data-testid="mobile-feature-realtime">
+                  <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold mb-1 text-sm sm:text-base" data-testid="title-mobile-realtime">Real-Time Portfolio Tracking</h4>
+                    <p className="text-xs sm:text-sm text-muted-foreground" data-testid="text-mobile-realtime">
+                      Monitor your total value, individual positions, and live APY updates instantly
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3" data-testid="mobile-feature-multiasset">
+                  <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold mb-1 text-sm sm:text-base" data-testid="title-mobile-multiasset">Multi-Asset Support</h4>
+                    <p className="text-xs sm:text-sm text-muted-foreground" data-testid="text-mobile-multiasset">
+                      View all your assets including FLR, WFLR, and XRP in one unified interface
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3" data-testid="mobile-feature-performance">
+                  <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0 mt-0.5" />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="font-semibold mb-1 text-sm sm:text-base" data-testid="title-mobile-performance">Performance Metrics</h4>
+                    <p className="text-xs sm:text-sm text-muted-foreground" data-testid="text-mobile-performance">
+                      Track active vaults and total stakers across the platform
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-2">
+                <Link href="/app/portfolio">
+                  <Button size="lg" className="group w-full sm:w-auto" data-testid="button-mobile-cta">
+                    View Your Portfolio
+                    <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            <div className={`order-1 lg:order-2 flex justify-center px-4 sm:px-0 transition-opacity duration-500 ${mobileExperienceAnimation.isVisible ? 'animate-fade-in-up opacity-100' : 'opacity-100'}`} style={{ animationDelay: '0.1s' }} data-testid="container-mobile-mockup">
+              <IPhoneMockup 
+                screenshot={portfolioScreenshot} 
+                alt="Shield Finance mobile portfolio interface"
+                className="transition-transform hover:scale-105"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Platform Intelligence Section */}
-      <section ref={platformIntelligenceAnimation.ref} className="py-24" data-testid="section-platform-intelligence">
+      <section ref={platformIntelligenceAnimation.ref} className="py-24 bg-muted/30" data-testid="section-platform-intelligence">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`text-center mb-16 ${platformIntelligenceAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
             <h2 className="text-3xl lg:text-4xl font-bold mb-4" data-testid="heading-platform-intelligence">
