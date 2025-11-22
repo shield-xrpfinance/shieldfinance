@@ -916,10 +916,10 @@ export default function Landing() {
               <div className="p-6">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                   <Calendar className="h-4 w-4" />
-                  <span data-testid="text-blog-1-date">March 15, 2024</span>
+                  <span data-testid="text-blog-1-date">March 15, 2025</span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2" data-testid="title-blog-1">
-                  Q1 2024 Roadmap Update
+                  Q1 2025 Roadmap Update
                 </h3>
                 <p className="text-sm text-muted-foreground mb-4" data-testid="text-blog-1-excerpt">
                   Discover our exciting plans for the first quarter including new features, partnerships, and protocol upgrades.
@@ -934,7 +934,7 @@ export default function Landing() {
               <div className="p-6">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                   <Calendar className="h-4 w-4" />
-                  <span data-testid="text-blog-2-date">March 8, 2024</span>
+                  <span data-testid="text-blog-2-date">March 8, 2025</span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2" data-testid="title-blog-2">
                   Partnership with Flare Network
@@ -952,7 +952,7 @@ export default function Landing() {
               <div className="p-6">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
                   <Calendar className="h-4 w-4" />
-                  <span data-testid="text-blog-3-date">February 28, 2024</span>
+                  <span data-testid="text-blog-3-date">February 28, 2025</span>
                 </div>
                 <h3 className="text-lg font-semibold mb-2" data-testid="title-blog-3">
                   New Yield Strategies Available
@@ -1035,7 +1035,7 @@ export default function Landing() {
             </div>
           </div>
           <div className="border-t border-border/50 pt-8 text-center text-sm text-muted-foreground">
-            <p data-testid="text-footer-copyright">&copy; 2024 Shield Finance. All rights reserved.</p>
+            <p data-testid="text-footer-copyright">&copy; 2025 Shield Finance. All rights reserved.</p>
           </div>
         </div>
       </footer>
