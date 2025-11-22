@@ -264,10 +264,10 @@ export default function DepositModal({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-3 space-y-3 sm:py-6 sm:space-y-6">
+        <div className="py-2 space-y-2 sm:py-6 sm:space-y-5">
           {depositAssets.includes("XRP") && step === 1 && (
             <Collapsible open={infoExpanded} onOpenChange={setInfoExpanded}>
-              <Alert data-testid="alert-fassets-info" className="p-3 sm:p-4">
+              <Alert data-testid="alert-fassets-info" className="p-2.5 sm:p-4">
                 <div className="flex items-start gap-2">
                   <Info className="h-4 w-4 mt-0.5 flex-shrink-0" />
                   <div className="flex-1 min-w-0">
@@ -294,20 +294,20 @@ export default function DepositModal({
             </Collapsible>
           )}
           
-          <div className="flex items-center gap-2 p-3 rounded-md bg-primary/10 sm:gap-3 sm:p-4">
-            <MultiAssetIcon assets={depositAssets.join(",")} size={24} className="sm:w-7 sm:h-7 flex-shrink-0" />
+          <div className="flex items-center gap-2 p-2.5 rounded-md bg-primary/10 sm:gap-3 sm:p-4">
+            <MultiAssetIcon assets={depositAssets.join(",")} size={20} className="sm:w-7 sm:h-7 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{vaultName}</p>
+              <p className="text-xs sm:text-sm font-medium truncate">{vaultName}</p>
               <p className="text-xs text-muted-foreground hidden sm:block">APY: {vaultApyLabel || `${vaultApy}%`}</p>
             </div>
             <Badge className="text-xs whitespace-nowrap">{vaultApyLabel || `${vaultApy}% APY`}</Badge>
           </div>
 
           {!isConnected && (
-            <div className="space-y-4 text-center py-8">
-              <div className="flex justify-center mb-4">
-                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center">
-                  <WalletIcon className="h-8 w-8 text-muted-foreground" />
+            <div className="space-y-3 text-center py-4 sm:py-6">
+              <div className="flex justify-center mb-2 sm:mb-4">
+                <div className="h-12 w-12 sm:h-16 sm:w-16 rounded-full bg-muted flex items-center justify-center">
+                  <WalletIcon className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
@@ -331,9 +331,9 @@ export default function DepositModal({
           )}
 
           {isConnected && step === 1 && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {balancesLoading && (
-                <div className="flex items-center justify-center py-8 text-muted-foreground">
+                <div className="flex items-center justify-center py-4 text-muted-foreground">
                   <Loader2 className="h-5 w-5 animate-spin mr-2" />
                   <span className="text-sm">Loading balances...</span>
                 </div>
