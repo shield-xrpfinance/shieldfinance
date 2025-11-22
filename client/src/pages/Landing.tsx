@@ -18,7 +18,9 @@ import {
   Minus,
   Coins,
   Flame,
-  Gift
+  Gift,
+  Sparkles,
+  Network
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 
@@ -416,23 +418,32 @@ export default function Landing() {
       {/* How It Works Section with Connecting Lines */}
       <section id="how-it-works" ref={howItWorksAnimation.ref} className="py-24" data-testid="section-how-it-works">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className={`text-center mb-16 ${howItWorksAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+          <div className={`text-center mb-8 ${howItWorksAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
             <h2 className="text-3xl lg:text-4xl font-bold mb-4" data-testid="heading-how-it-works">
               How It Works
             </h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto" data-testid="text-how-it-works-subtitle">
-              Start earning rewards in three simple steps
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-6" data-testid="text-how-it-works-subtitle">
+              Start earning rewards in four simple steps — completely gasless for XRP users
             </p>
+            
+            {/* Gasless Badge */}
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20" data-testid="badge-gasless">
+              <Sparkles className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold text-primary" data-testid="text-gasless-badge">100% Gasless with Flare Smart Accounts</span>
+            </div>
           </div>
 
-          <div className={`grid grid-cols-1 md:grid-cols-3 gap-8 ${howItWorksAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }}>
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 ${howItWorksAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }}>
             <div className="text-center relative line-connector" data-testid="step-1">
               <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold mx-auto mb-6 relative z-10 transition-all hover:scale-110" data-testid="badge-step-1">
                 1
               </div>
               <h3 className="text-xl font-semibold mb-3" data-testid="title-step-1">Deposit XRP</h3>
-              <p className="text-muted-foreground" data-testid="text-step-1">
-                Connect your wallet and deposit XRP into the staking vault
+              <p className="text-muted-foreground text-sm mb-2" data-testid="text-step-1">
+                Connect your Xaman or XRPL wallet and deposit XRP directly from the ledger
+              </p>
+              <p className="text-xs text-primary font-semibold" data-testid="text-step-1-highlight">
+                No FLR tokens needed!
               </p>
             </div>
 
@@ -440,19 +451,38 @@ export default function Landing() {
               <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold mx-auto mb-6 relative z-10 transition-all hover:scale-110" data-testid="badge-step-2">
                 2
               </div>
-              <h3 className="text-xl font-semibold mb-3" data-testid="title-step-2">Receive stXRP</h3>
-              <p className="text-muted-foreground" data-testid="text-step-2">
-                Get liquid staking tokens representing your staked XRP plus rewards
+              <h3 className="text-xl font-semibold mb-3" data-testid="title-step-2">Auto-Bridge to Flare</h3>
+              <p className="text-muted-foreground text-sm mb-2" data-testid="text-step-2">
+                XRP automatically bridges to FXRP on Flare Network via FAssets protocol
+              </p>
+              <p className="text-xs text-primary font-semibold" data-testid="text-step-2-highlight">
+                All gas fees covered
               </p>
             </div>
 
-            <div className="text-center" data-testid="step-3">
-              <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold mx-auto mb-6 transition-all hover:scale-110" data-testid="badge-step-3">
+            <div className="text-center relative line-connector" data-testid="step-3">
+              <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold mx-auto mb-6 relative z-10 transition-all hover:scale-110" data-testid="badge-step-3">
                 3
               </div>
-              <h3 className="text-xl font-semibold mb-3" data-testid="title-step-3">Earn & Use</h3>
-              <p className="text-muted-foreground" data-testid="text-step-3">
+              <h3 className="text-xl font-semibold mb-3" data-testid="title-step-3">Receive stXRP</h3>
+              <p className="text-muted-foreground text-sm mb-2" data-testid="text-step-3">
+                Get liquid staking tokens instantly via ERC-4337 Smart Account
+              </p>
+              <p className="text-xs text-primary font-semibold" data-testid="text-step-3-highlight">
+                Paymaster sponsored
+              </p>
+            </div>
+
+            <div className="text-center" data-testid="step-4">
+              <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold mx-auto mb-6 transition-all hover:scale-110" data-testid="badge-step-4">
+                4
+              </div>
+              <h3 className="text-xl font-semibold mb-3" data-testid="title-step-4">Earn & Use</h3>
+              <p className="text-muted-foreground text-sm mb-2" data-testid="text-step-4">
                 Earn staking rewards while using your stXRP across DeFi protocols
+              </p>
+              <p className="text-xs text-primary font-semibold" data-testid="text-step-4-highlight">
+                Maximize your yield
               </p>
             </div>
           </div>
