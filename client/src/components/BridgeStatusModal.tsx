@@ -462,9 +462,9 @@ export default function BridgeStatusModal({
                   {stage > 1 ? (
                     <CheckCircle2 className="h-4 w-4 text-white" />
                   ) : stage === 1 ? (
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
+                    <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
                   ) : (
-                    <span className="text-xs text-white">1</span>
+                    <span className="text-xs text-muted-foreground">1</span>
                   )}
                 </div>
                 <div className="flex-1">
@@ -483,9 +483,9 @@ export default function BridgeStatusModal({
                   {stage > 2 ? (
                     <CheckCircle2 className="h-4 w-4 text-white" />
                   ) : stage === 2 ? (
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
+                    <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
                   ) : (
-                    <span className="text-xs text-white">2</span>
+                    <span className="text-xs text-muted-foreground">2</span>
                   )}
                 </div>
                 <div className="flex-1">
@@ -504,9 +504,9 @@ export default function BridgeStatusModal({
                   {stage > 3 ? (
                     <CheckCircle2 className="h-4 w-4 text-white" />
                   ) : stage === 3 ? (
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
+                    <Loader2 className="h-4 w-4 text-primary-foreground animate-spin" />
                   ) : (
-                    <span className="text-xs text-white">3</span>
+                    <span className="text-xs text-muted-foreground">3</span>
                   )}
                 </div>
                 <div className="flex-1">
@@ -525,7 +525,7 @@ export default function BridgeStatusModal({
                   {stage === 4 ? (
                     <CheckCircle2 className="h-4 w-4 text-white" />
                   ) : (
-                    <span className="text-xs text-white">4</span>
+                    <span className="text-xs text-muted-foreground">4</span>
                   )}
                 </div>
                 <div className="flex-1">
