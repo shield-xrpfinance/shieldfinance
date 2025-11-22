@@ -29,7 +29,6 @@ import {
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
 import headerVideoUrl from "@assets/a11fc6fb-bf7b-4e28-84ca-0031b314abcd_3_720_N_1763815621392.mp4";
-import logoUrl from "/logo.png";
 
 export default function Landing() {
   const heroAnimation = useScrollAnimation();
@@ -193,7 +192,7 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center gap-3" data-testid="logo-header">
-              <img src={logoUrl} alt="Shield Finance" className="h-10 w-10" data-testid="img-logo" />
+              <img src="/logo.png" alt="Shield Finance" className="h-10 w-10" data-testid="img-logo" />
               <span className="text-xl font-bold text-gray-900">Shield Finance</span>
             </div>
             <nav className="hidden md:flex items-center gap-8" data-testid="nav-header">
