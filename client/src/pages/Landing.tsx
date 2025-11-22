@@ -30,6 +30,7 @@ import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
 import headerVideoUrl from "@assets/a11fc6fb-bf7b-4e28-84ca-0031b314abcd_3_720_N_1763815621392.mp4";
 import shieldLogo from "@assets/shield_logo_1763761188895.png";
+import flareLogo from "@assets/flare-network-logo.svg";
 
 export default function Landing() {
   const heroAnimation = useScrollAnimation();
@@ -312,8 +313,8 @@ export default function Landing() {
           </p>
           <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10">
             <div className="relative group" data-testid="partner-flare">
-              <div className="glassmorphic-light rounded-xl px-8 py-4 text-lg font-semibold transition-all hover:scale-110">
-                Flare Network
+              <div className="glassmorphic-light rounded-xl px-8 py-4 transition-all hover:scale-110 flex items-center justify-center">
+                <img src={flareLogo} alt="Flare Network" className="h-6" data-testid="img-flare-logo" />
               </div>
               <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 FAssets & Smart Contracts
