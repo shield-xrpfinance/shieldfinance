@@ -1,0 +1,44 @@
+You are an expert front-end developer. The current project is Shield Finance[](https://github.com/shield-xrpfinance/shieldfinance).
+
+Your task: Completely replace the existing light and dark mode color schemes across the entire codebase (Tailwind config, CSS files, any hardcoded hex values in React/Next.js components) with the exact palette from https://defichaintemplate.framer.website/.
+
+Use these precise colors extracted from the Framer template:
+
+DARK MODE (default / primary)
+--background:          #0F0F12
+--background-secondary:#1A1A1D
+--card-background:     #131316
+--text-primary:        #FFFFFF
+--text-secondary:      #A0A0A0
+--text-muted:          #6B6B6B
+--border:              #2A2A2D
+--accent-primary:      #0066FF    // Electric blue used on buttons, links, highlights
+--accent-hover:        #3388FF
+--success:             #00D4B4
+--warning:             #FFB020
+--error:               #FF4444
+
+LIGHT MODE (optional but must be included and beautiful)
+--background:          #F8F9FA
+--background-secondary:#FFFFFF
+--card-background:     #FFFFFF
+--text-primary:        #0F0F12
+--text-secondary:      #555555
+--text-muted:          #888888
+--border:              #E4E4E7
+--accent-primary:      #0066FF
+--accent-hover:        #0055CC
+--success:             #00B894
+--warning:             #FF9900
+--error:               #FF3333
+
+Implementation requirements:
+1. Update tailwind.config.js to use these exact values via the extend.colors syntax.
+2. Replace all existing cyan/teal (#00FFFF, #06B6D4, #0EA5E9, etc.) with #0066FF and its variants.
+3. Ensure dark mode remains the default (class-based strategy: "class" in Tailwind config).
+4. Add smooth transitions for background, text, and border changes on theme toggle.
+5. Update any Chart.js / Recharts / TradingView widget themes to respect these new colors.
+6. Replace any gradient backgrounds using old cyan with new subtle blue gradients (e.g., from #0F0F12 to #131316 with #0066FF accents).
+7. Keep the toggle switch functional and visually match the Framer template style (clean, minimal, rounded with accent glow on active).
+
+Run the full replacement across the entire codebase now. Show me the exact file changes (diffs) for tailwind.config.js, global.css (or app.css), and any component using old colors. After applying, confirm the site now looks identical in vibe and colors to https://defichaintemplate.framer.website/.
