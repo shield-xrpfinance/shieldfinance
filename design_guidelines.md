@@ -18,6 +18,56 @@ Use Tailwind units of **2, 4, 6, 8, 12, 16** for consistent rhythm
 - Section spacing: `py-12` between major dashboard sections
 - Inline spacing: `space-x-4` for button groups, `space-y-2` for form fields
 
+## Color Usage Rules
+
+**CRITICAL: Text on Dark Backgrounds vs Light Backgrounds**
+
+The platform uses a premium branded dark hero section (`bg-shield-dark` - 210 25% 10%) that remains dark in BOTH light and dark themes. This requires careful text color selection to ensure legibility across all contexts.
+
+**Rule 1: Always-Dark Surfaces (Hero Sections with bg-shield-dark)**
+Use ONLY light text colors designed for dark backgrounds:
+- Headlines/Large Numbers: `text-shield-foreground` (200 10% 90% - light cyan-white)
+- Labels/Supporting Text: `text-muted-foreground-light` (210 15% 70% - medium-light gray)
+- NEVER use `text-foreground` or `text-primary-foreground` on dark backgrounds
+
+**Rule 2: Theme-Adaptive Surfaces (Cards, Regular Content)**
+Use theme-aware colors that automatically adapt:
+- Card Titles: `text-foreground` (dark in light mode, light in dark mode)
+- Secondary Text: `text-muted-foreground` (medium contrast, adapts to theme)
+- Meta Information: `text-muted-foreground`
+
+**Implementation Examples:**
+
+✅ CORRECT - Hero section on dark background:
+```tsx
+<Card className="bg-shield-dark">
+  <div className="text-muted-foreground-light">Total Revenue</div>
+  <div className="text-shield-foreground">$1.2M</div>
+</Card>
+```
+
+❌ INCORRECT - Would create invisible text in light mode:
+```tsx
+<Card className="bg-shield-dark">
+  <div className="text-primary-foreground">Total Revenue</div> {/* Dark text on dark bg! */}
+</Card>
+```
+
+✅ CORRECT - Breakdown cards with theme-adaptive backgrounds:
+```tsx
+<Card>
+  <CardTitle className="text-foreground">Fees Collected</CardTitle>
+  <div className="text-muted-foreground">Updated 2h ago</div>
+</Card>
+```
+
+**Quick Reference:**
+| Surface Type | Background | Headline Text | Label/Meta Text |
+|--------------|-----------|---------------|-----------------|
+| Hero Section | `bg-shield-dark` | `text-shield-foreground` | `text-muted-foreground-light` |
+| Regular Cards | `bg-card` | `text-foreground` | `text-muted-foreground` |
+| Modal Dark Areas | `bg-shield-dark` | `text-shield-foreground` | `text-muted-foreground-light` |
+
 ## Typography Hierarchy
 
 **Font Families:**
