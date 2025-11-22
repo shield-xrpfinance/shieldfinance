@@ -353,7 +353,7 @@ export default function Landing() {
           <div className="flex flex-wrap justify-center items-center gap-6 md:gap-10">
             <div className="relative group" data-testid="partner-flare">
               <div className="glassmorphic-light rounded-xl px-8 py-4 transition-all hover:scale-110 flex items-center justify-center">
-                <img src={flareLogo} alt="Flare Network" className="h-6 max-w-12" data-testid="img-flare-logo" />
+                <img src={flareLogo} alt="Flare Network" className="h-6 w-auto" data-testid="img-flare-logo" />
               </div>
               <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 FAssets & Smart Contracts
@@ -361,7 +361,7 @@ export default function Landing() {
             </div>
             <div className="relative group" data-testid="partner-xrpl">
               <div className="glassmorphic-light rounded-xl px-8 py-4 transition-all hover:scale-110 flex items-center justify-center">
-                <img src={xrpLogo} alt="XRP Ledger" className="h-6 max-w-12" data-testid="img-xrpl-logo" />
+                <img src={xrpLogo} alt="XRP Ledger" className="h-6 w-auto" data-testid="img-xrpl-logo" />
               </div>
               <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 Native Integration
@@ -369,7 +369,7 @@ export default function Landing() {
             </div>
             <div className="relative group" data-testid="partner-xaman">
               <div className="glassmorphic-light rounded-xl px-8 py-4 transition-all hover:scale-110 flex items-center justify-center">
-                <img src={xamanLogo} alt="Xaman" className="h-6 max-w-12" data-testid="img-xaman-logo" />
+                <img src={xamanLogo} alt="Xaman" className="h-6 w-auto" data-testid="img-xaman-logo" />
               </div>
               <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 Wallet SDK Integration
@@ -377,7 +377,7 @@ export default function Landing() {
             </div>
             <div className="relative group" data-testid="partner-etherspot">
               <div className="glassmorphic-light rounded-xl px-8 py-4 transition-all hover:scale-110 flex items-center justify-center">
-                <img src={walletConnectLogo} alt="WalletConnect" className="h-6 max-w-12" data-testid="img-walletconnect-logo" />
+                <img src={walletConnectLogo} alt="WalletConnect" className="h-6 w-auto" data-testid="img-walletconnect-logo" />
               </div>
               <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
                 ERC-4337 Smart Accounts
