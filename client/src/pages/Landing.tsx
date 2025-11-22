@@ -27,6 +27,7 @@ import {
   BarChart3
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
 
 export default function Landing() {
   const heroAnimation = useScrollAnimation();
@@ -41,6 +42,7 @@ export default function Landing() {
   const testimonialsAnimation = useScrollAnimation();
   const blogAnimation = useScrollAnimation();
   const ctaAnimation = useScrollAnimation();
+  const metrics = useAnalyticsMetrics();
 
   useEffect(() => {
     document.title = "Shield Finance - XRP Liquid Staking Protocol | 100% Gasless with Smart Accounts";
@@ -267,19 +269,19 @@ export default function Landing() {
             {/* Glassmorphic Stats */}
             <div className="mt-20" data-testid="stats-container">
               <p className="text-xs text-muted-foreground text-center mb-4" data-testid="text-testnet-disclaimer">
-                * Testnet demo metrics - Mainnet launch coming soon
+                {metrics.isLoading ? "Loading metrics..." : "* Testnet demo metrics - Mainnet launch coming soon"}
               </p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="glassmorphic rounded-2xl p-6 transition-all hover:scale-105" data-testid="stat-tvl">
-                  <div className="text-4xl font-bold text-primary mb-2" data-testid="value-tvl">$24.5M</div>
+                <div className={`glassmorphic rounded-2xl p-6 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-tvl">
+                  <div className="text-4xl font-bold text-primary mb-2" data-testid="value-tvl">{metrics.tvl}</div>
                   <div className="text-sm text-muted-foreground" data-testid="label-tvl">Total Value Locked</div>
                 </div>
-                <div className="glassmorphic rounded-2xl p-6 transition-all hover:scale-105" data-testid="stat-apy">
-                  <div className="text-4xl font-bold text-primary mb-2" data-testid="value-apy">5.2%</div>
+                <div className={`glassmorphic rounded-2xl p-6 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-apy">
+                  <div className="text-4xl font-bold text-primary mb-2" data-testid="value-apy">{metrics.apy}</div>
                   <div className="text-sm text-muted-foreground" data-testid="label-apy">Average APY</div>
                 </div>
-                <div className="glassmorphic rounded-2xl p-6 transition-all hover:scale-105" data-testid="stat-stakers">
-                  <div className="text-4xl font-bold text-primary mb-2" data-testid="value-stakers">12,400+</div>
+                <div className={`glassmorphic rounded-2xl p-6 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-stakers">
+                  <div className="text-4xl font-bold text-primary mb-2" data-testid="value-stakers">{metrics.stakers}</div>
                   <div className="text-sm text-muted-foreground" data-testid="label-stakers">Active Stakers</div>
                 </div>
               </div>
