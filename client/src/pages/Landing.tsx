@@ -34,7 +34,7 @@ import flareLogo from "@assets/flare-network-logo.svg";
 import xrpLogo from "@assets/XRP-Ledger---Horizontal---Black_1763817099433.png";
 import xamanLogo from "@assets/xaman-logo.svg";
 import walletConnectLogo from "@assets/walletconnect-logo-wc.svg";
-import portfolioScreenshot from "@assets/portfolio-mobile-screenshot.jpg";
+import portfolioScreenshot from "@assets/IMG_2708_1763820959453.jpeg";
 
 export default function Landing() {
   const heroAnimation = useScrollAnimation();
