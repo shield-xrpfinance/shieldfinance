@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, DollarSign, Percent, Users, Vault } from "lucide-react";
+import { TrendingUp, DollarSign, Percent, Users, Vault, Flame } from "lucide-react";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { MultiAssetIcon } from "@/components/AssetIcon";
@@ -36,6 +36,16 @@ interface TopVault {
   asset: string;
 }
 
+interface RevenueTransparency {
+  totalPlatformRevenue: string;
+  totalShieldBurned: string;
+  totalShieldBurnedUsd: string;
+  extraYieldDistributed: string;
+  totalFeesCollected: string;
+  burnedAmount: string;
+  extraYieldPaid: string;
+}
+
 export default function Analytics() {
   const { data: overview, isLoading: overviewLoading } = useQuery<ProtocolOverview>({
     queryKey: ["/api/analytics/overview"],
@@ -55,6 +65,10 @@ export default function Analytics() {
 
   const { data: topVaults = [], isLoading: topVaultsLoading } = useQuery<TopVault[]>({
     queryKey: ["/api/analytics/top-vaults"],
+  });
+
+  const { data: revenueData, isLoading: revenueLoading } = useQuery<RevenueTransparency>({
+    queryKey: ["/api/analytics/revenue-transparency"],
   });
 
   const getRiskTierLabel = (riskLevel: string) => {
@@ -82,6 +96,124 @@ export default function Analytics() {
         <p className="text-muted-foreground mt-2">
           Track protocol performance and vault metrics
         </p>
+      </div>
+
+      {/* Revenue Transparency Hero Section - Convex Style */}
+      <div className="space-y-6">
+        {/* Main Hero Card with Massive Numbers */}
+        <Card className="bg-[hsl(var(--shield-dark))] border-primary/20 backdrop-blur-md overflow-hidden">
+          <CardContent className="p-8 md:p-12">
+            {revenueLoading ? (
+              <div className="space-y-8">
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+                <Skeleton className="h-12 w-full" />
+              </div>
+            ) : (
+              <div className="space-y-8 text-center">
+                {/* Total Platform Revenue */}
+                <div data-testid="revenue-hero-platform-revenue">
+                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    Total Platform Revenue Generated
+                  </div>
+                  <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-primary">
+                    ${(parseFloat(revenueData?.totalPlatformRevenue || "0") / 1000000).toFixed(2)}m
+                  </div>
+                </div>
+
+                {/* Total SHIELD Burned */}
+                <div data-testid="revenue-hero-shield-burned">
+                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    Total $SHIELD Burned Forever
+                  </div>
+                  <div className="flex items-center justify-center gap-3">
+                    <Flame className="h-8 w-8 md:h-10 md:w-10 text-primary" />
+                    <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-white">
+                      {parseFloat(revenueData?.totalShieldBurned || "0").toLocaleString()}
+                    </div>
+                    <span className="text-3xl md:text-4xl font-bold text-primary">$SHIELD</span>
+                  </div>
+                  <div className="text-lg md:text-xl text-primary/80 font-medium mt-2">
+                    (${(parseFloat(revenueData?.totalShieldBurnedUsd || "0") / 1000).toFixed(1)}k)
+                  </div>
+                </div>
+
+                {/* Extra Yield Distributed */}
+                <div data-testid="revenue-hero-extra-yield">
+                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                    Extra Yield Distributed to Stakers
+                  </div>
+                  <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-primary">
+                    ${(parseFloat(revenueData?.extraYieldDistributed || "0") / 1000000).toFixed(2)}m
+                  </div>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Three Breakdown Cards */}
+        <div className="grid gap-6 md:grid-cols-3">
+          {/* Total Fees Collected */}
+          <Card className="bg-card/50 backdrop-blur-md border-primary/10">
+            <CardHeader>
+              <CardTitle className="text-base font-medium text-muted-foreground">
+                Total Fees Collected
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {revenueLoading ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <div className="text-3xl md:text-4xl font-bold font-mono tabular-nums" data-testid="revenue-fees-collected">
+                  ${(parseFloat(revenueData?.totalFeesCollected || "0") / 1000000).toFixed(2)}m
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Burned Amount */}
+          <Card className="bg-card/50 backdrop-blur-md border-primary/10">
+            <CardHeader>
+              <CardTitle className="text-base font-medium text-muted-foreground">
+                Burned: 50% of Fees
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {revenueLoading ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <div data-testid="revenue-burned-amount">
+                  <div className="text-3xl md:text-4xl font-bold font-mono tabular-nums flex items-center gap-2">
+                    <Flame className="h-6 w-6 text-primary" />
+                    ${(parseFloat(revenueData?.burnedAmount || "0") / 1000000).toFixed(2)}m
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-2">
+                    → $SHIELD Burned Forever
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Extra Yield Paid */}
+          <Card className="bg-card/50 backdrop-blur-md border-primary/10">
+            <CardHeader>
+              <CardTitle className="text-base font-medium text-muted-foreground">
+                Extra Yield Paid to Stakers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {revenueLoading ? (
+                <Skeleton className="h-10 w-full" />
+              ) : (
+                <div className="text-3xl md:text-4xl font-bold font-mono tabular-nums" data-testid="revenue-extra-yield-paid">
+                  ${(parseFloat(revenueData?.extraYieldPaid || "0") / 1000000).toFixed(2)}m
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
