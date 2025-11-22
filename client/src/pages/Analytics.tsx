@@ -1,9 +1,11 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, DollarSign, Percent, Users, Vault, Flame } from "lucide-react";
+import { TrendingUp, DollarSign, Percent, Users, Vault, Flame, Info } from "lucide-react";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { MultiAssetIcon } from "@/components/AssetIcon";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useState } from "react";
 
 interface ProtocolOverview {
   tvl: string;
@@ -45,6 +47,8 @@ interface RevenueTransparency {
 }
 
 export default function Analytics() {
+  const [revenueModalOpen, setRevenueModalOpen] = useState(false);
+
   const { data: overview, isLoading: overviewLoading } = useQuery<ProtocolOverview>({
     queryKey: ["/api/analytics/overview"],
   });
@@ -111,8 +115,16 @@ export default function Analytics() {
               <div className="space-y-8 text-center">
                 {/* Total Platform Revenue */}
                 <div data-testid="revenue-hero-platform-revenue">
-                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2">
+                  <div className="text-sm font-medium text-muted-foreground uppercase tracking-wide mb-2 flex items-center justify-center gap-2">
                     Total Platform Revenue Generated
+                    <button
+                      onClick={() => setRevenueModalOpen(true)}
+                      className="hover-elevate active-elevate-2 rounded-full p-1 transition-all"
+                      data-testid="button-revenue-info"
+                      aria-label="View revenue breakdown"
+                    >
+                      <Info className="h-4 w-4 text-primary" />
+                    </button>
                   </div>
                   <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-primary">
                     ${(parseFloat(revenueData?.totalFeesCollected || "0") / 1000000).toFixed(2)}m
@@ -465,6 +477,122 @@ export default function Analytics() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Revenue Breakdown Modal */}
+      <Dialog open={revenueModalOpen} onOpenChange={setRevenueModalOpen}>
+        <DialogContent className="max-w-2xl bg-[hsl(var(--shield-dark))] border-primary/20 backdrop-blur-md">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold text-primary">
+              How SHIELD Creates Value for Users
+            </DialogTitle>
+          </DialogHeader>
+          
+          <div className="space-y-6 mt-4" data-testid="revenue-breakdown-modal">
+            {/* Platform Fees */}
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-primary" />
+                Platform Fees Collected
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Shield Finance charges a minimal 0.2% fee on deposits and withdrawals to the shXRP vault.
+              </p>
+              <div className="bg-card/30 rounded-md p-4 border border-primary/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Total Fees Collected</span>
+                  <span className="text-xl font-bold font-mono tabular-nums text-primary">
+                    ${(parseFloat(revenueData?.totalFeesCollected || "0") / 1000000).toFixed(2)}m
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Revenue Split */}
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <Flame className="h-5 w-5 text-primary" />
+                Revenue Distribution (50/50 Split)
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                100% of platform fees are distributed to create ecosystem value:
+              </p>
+              <div className="grid gap-3 mt-3">
+                <div className="bg-card/30 rounded-md p-4 border border-primary/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Flame className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">50% Buyback & Burn</span>
+                    </div>
+                    <span className="text-lg font-bold font-mono tabular-nums text-primary">
+                      ${(parseFloat(revenueData?.burnedAmountUsd || "0") / 1000000).toFixed(2)}m
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Swapped to $SHIELD via SparkDEX V3 and burned forever, creating deflationary pressure
+                  </p>
+                </div>
+                <div className="bg-card/30 rounded-md p-4 border border-primary/10">
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <Vault className="h-4 w-4 text-primary" />
+                      <span className="text-sm font-medium">50% Protocol Reserves</span>
+                    </div>
+                    <span className="text-lg font-bold font-mono tabular-nums text-primary">
+                      ${(parseFloat(revenueData?.burnedAmountUsd || "0") / 1000000).toFixed(2)}m
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Accumulated for protocol development, security audits, and future expansions
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Staking Boost Extra Yield */}
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                Staking Boost Extra Yield
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                Users who stake 100+ $SHIELD tokens receive bonus APY on their shXRP positions (+1% per 100 SHIELD).
+              </p>
+              <div className="bg-card/30 rounded-md p-4 border border-primary/10">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">Extra Yield Distributed</span>
+                  <span className="text-xl font-bold font-mono tabular-nums text-primary">
+                    ${(parseFloat(revenueData?.extraYieldDistributed || "0") / 1000000).toFixed(2)}m
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  This additional yield is paid directly to SHIELD stakers on top of their base shXRP APY
+                </p>
+              </div>
+            </div>
+
+            {/* Total Ecosystem Value */}
+            <div className="border-t border-primary/20 pt-4">
+              <div className="bg-primary/5 rounded-md p-4 border border-primary/20">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-medium text-muted-foreground">Total SHIELD Tokens Burned</div>
+                    <p className="text-xs text-muted-foreground mt-1">Permanently removed from supply</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-2xl font-bold font-mono tabular-nums text-white flex items-center gap-2">
+                      <Flame className="h-6 w-6 text-primary" />
+                      {parseFloat(revenueData?.totalShieldBurned || "0").toLocaleString()}
+                    </div>
+                    <div className="text-sm text-primary/80">
+                      ${(parseFloat(revenueData?.totalShieldBurnedUsd || "0") / 1000).toFixed(1)}k USD
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
