@@ -498,7 +498,7 @@ export default function Analytics() {
                 <DollarSign className="h-5 w-5 text-primary" />
                 Platform Fees Collected
               </h3>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-muted-foreground-light">
                 Shield Finance charges a minimal 0.2% fee on deposits and withdrawals to the shXRP vault.
               </p>
               <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
