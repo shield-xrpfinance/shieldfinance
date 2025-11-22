@@ -6,9 +6,16 @@ interface IPhoneMockupProps {
 
 export function IPhoneMockup({ screenshot, alt = "Mobile app screenshot", className = "" }: IPhoneMockupProps) {
   return (
-    <div className={`relative mx-auto w-full max-w-[300px] ${className}`}>
-      {/* iPhone Frame with aspect ratio */}
-      <div className="relative w-full" style={{ aspectRatio: '300/612' }}>
+    <div className={`relative mx-auto w-full max-w-[300px] ${className}`} style={{ perspective: '1200px' }}>
+      {/* iPhone Frame with aspect ratio and 3D transform */}
+      <div 
+        className="relative w-full transition-transform duration-300" 
+        style={{ 
+          aspectRatio: '300/612',
+          transform: 'rotateY(-12deg) rotateX(2deg)',
+          transformStyle: 'preserve-3d'
+        }}
+      >
         <div className="relative w-full h-full bg-[#1f1f1f] rounded-[3rem] p-3 shadow-2xl">
           {/* Screen Bezel */}
           <div className="relative w-full h-full bg-black rounded-[2.5rem] overflow-hidden">
