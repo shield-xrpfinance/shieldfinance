@@ -27,11 +27,11 @@
   --popover-foreground: 210 25% 15%;
   --popover-border: 210 20% 88%;
   --primary: 188 100% 45%;
-  --primary-foreground: 210 30% 12%;
-  --secondary: 210 20% 50%;
-  --secondary-foreground: 210 15% 97%;
-  --muted: 210 15% 70%;
-  --muted-foreground: 210 20% 50%;
+  --primary-foreground: 210 30% 10%;
+  --secondary: 210 20% 90%;
+  --secondary-foreground: 210 30% 20%;
+  --muted: 210 15% 92%;
+  --muted-foreground: 210 25% 30%;
   --accent: 188 100% 45%;
   --accent-foreground: 210 30% 12%;
   --destructive: 0 84% 60%;
@@ -45,6 +45,7 @@
   --chart-5: 270 100% 55%;
   --shield-dark: 210 25% 10%;
   --shield-navy: 210 30% 7%;
+  --shield-foreground: 200 10% 90%;
   --font-sans: Inter, sans-serif;
   --font-serif: Georgia, serif;
   --font-mono: JetBrains Mono, monospace;
@@ -131,6 +132,7 @@
   --chart-5: 270 100% 50%;
   --shield-dark: 210 25% 10%;
   --shield-navy: 210 30% 7%;
+  --shield-foreground: 200 10% 90%;
   --transition: all 0.2s ease-in-out;
   --shadow-2xs: 0px 2px 0px 0px hsl(220 8% 50% / 0.00);
   --shadow-xs: 0px 2px 0px 0px hsl(220 8% 50% / 0.00);

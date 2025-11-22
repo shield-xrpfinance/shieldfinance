@@ -103,7 +103,7 @@ export default function Analytics() {
       {/* Revenue Transparency Hero Section - Convex Style */}
       <div className="space-y-6">
         {/* Main Hero Card with Massive Numbers */}
-        <Card className="bg-[hsl(var(--shield-dark))] border-primary/20 backdrop-blur-md overflow-hidden">
+        <Card className="bg-shield-dark border-primary/20 backdrop-blur-md overflow-hidden">
           <CardContent className="p-8 md:p-12">
             {revenueLoading ? (
               <div className="space-y-8">
@@ -139,7 +139,7 @@ export default function Analytics() {
                   </div>
                   <div className="flex items-center justify-center gap-3">
                     <Flame className="h-8 w-8 md:h-10 md:w-10 text-primary" />
-                    <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-white">
+                    <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-shield-foreground">
                       {parseFloat(revenueData?.totalShieldBurned || "0").toLocaleString()}
                     </div>
                     <span className="text-3xl md:text-4xl font-bold text-primary">$SHIELD</span>
@@ -481,7 +481,7 @@ export default function Analytics() {
 
       {/* Revenue Breakdown Modal */}
       <Dialog open={revenueModalOpen} onOpenChange={setRevenueModalOpen}>
-        <DialogContent className="max-w-2xl bg-[hsl(var(--shield-dark))] border-primary/20 backdrop-blur-md" aria-describedby="revenue-breakdown-description">
+        <DialogContent className="max-w-2xl bg-shield-dark border-primary/20 backdrop-blur-md" aria-describedby="revenue-breakdown-description">
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold text-primary">
               How SHIELD Creates Value for Users
@@ -494,7 +494,7 @@ export default function Analytics() {
           <div className="space-y-6 mt-4" data-testid="revenue-breakdown-modal">
             {/* Platform Fees */}
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-shield-foreground flex items-center gap-2">
                 <DollarSign className="h-5 w-5 text-primary" />
                 Platform Fees Collected
               </h3>
@@ -513,7 +513,7 @@ export default function Analytics() {
 
             {/* Revenue Split */}
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-shield-foreground flex items-center gap-2">
                 <Flame className="h-5 w-5 text-primary" />
                 Revenue Distribution (50/50 Split)
               </h3>
@@ -554,7 +554,7 @@ export default function Analytics() {
 
             {/* Staking Boost Extra Yield */}
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+              <h3 className="text-lg font-semibold text-shield-foreground flex items-center gap-2">
                 <TrendingUp className="h-5 w-5 text-primary" />
                 Staking Boost Extra Yield
               </h3>
@@ -583,7 +583,7 @@ export default function Analytics() {
                     <p className="text-xs text-muted-foreground mt-1">Permanently removed from supply</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold font-mono tabular-nums text-white flex items-center gap-2">
+                    <div className="text-2xl font-bold font-mono tabular-nums text-shield-foreground flex items-center gap-2">
                       <Flame className="h-6 w-6 text-primary" />
                       {parseFloat(revenueData?.totalShieldBurned || "0").toLocaleString()}
                     </div>

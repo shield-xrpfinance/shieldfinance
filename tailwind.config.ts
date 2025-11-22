@@ -83,6 +83,11 @@ export default {
           foreground: "hsl(var(--sidebar-accent-foreground) / <alpha-value>)",
           border: "var(--sidebar-accent-border)"
         },
+        shield: {
+          dark: "hsl(var(--shield-dark) / <alpha-value>)",
+          navy: "hsl(var(--shield-navy) / <alpha-value>)",
+          foreground: "hsl(var(--shield-foreground) / <alpha-value>)",
+        },
         status: {
           online: "#00FF9D",
           away: "#FFB800",
