@@ -116,59 +116,64 @@ export function WithdrawProgressModal({
         </DialogHeader>
 
         {currentStep === 'error' ? (
-          <div className="py-6 text-center space-y-4">
-            <div className="flex justify-center mb-4">
-              <div className="rounded-full bg-destructive/10 p-3">
-                <Circle className="h-8 w-8 text-destructive" />
+          <div className="py-3 sm:py-6 text-center space-y-3 sm:space-y-4">
+            <div className="flex justify-center mb-2 sm:mb-4">
+              <div className="rounded-full bg-destructive/10 p-2 sm:p-3">
+                <Circle className="h-6 w-6 sm:h-8 sm:w-8 text-destructive" />
               </div>
             </div>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               {errorMessage || 'An error occurred while processing the withdrawal. Please try again.'}
             </p>
             <Button 
               onClick={handleDismiss}
               variant="outline"
+              size="sm"
+              className="w-full sm:w-auto"
               data-testid="button-dismiss-error"
             >
               Close
             </Button>
           </div>
         ) : currentStep === 'complete' ? (
-          <div className="py-6 text-center space-y-4">
-            <div className="flex justify-center mb-4">
-              <div className="rounded-full bg-green-100 dark:bg-green-900/20 p-3">
-                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+          <div className="py-3 sm:py-6 text-center space-y-3 sm:space-y-4">
+            <div className="flex justify-center mb-2 sm:mb-4">
+              <div className="rounded-full bg-green-100 dark:bg-green-900/20 p-2 sm:p-3">
+                <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 text-green-600 dark:text-green-400" />
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium">
+            <div className="space-y-1 sm:space-y-2">
+              <p className="text-xs sm:text-sm font-medium">
                 {amount} XRP sent to your wallet
               </p>
               <p className="text-xs text-muted-foreground">
-                Your withdrawal has been completed successfully!
+                Completed successfully!
               </p>
             </div>
-            <div className="flex flex-col gap-2 pt-2">
+            <div className="flex flex-col gap-2 pt-1 sm:pt-2">
               {xrplTxHash && (
                 <Button
                   variant="outline"
                   size="sm"
                   asChild
+                  className="w-full text-xs"
                   data-testid="button-view-transaction"
                 >
                   <a 
                     href={getXrplExplorerUrl(xrplTxHash)} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2"
+                    className="inline-flex items-center justify-center gap-2"
                   >
-                    View on XRPL Explorer
+                    View on Explorer
                     <ExternalLink className="h-3 w-3" />
                   </a>
                 </Button>
               )}
               <Button 
                 onClick={handleDismiss}
+                size="sm"
+                className="w-full"
                 data-testid="button-dismiss-complete"
               >
                 Done
@@ -176,20 +181,20 @@ export function WithdrawProgressModal({
             </div>
           </div>
         ) : (
-          <div className="py-6 space-y-4" data-testid="withdraw-progress-steps-container">
+          <div className="py-3 sm:py-6 space-y-2 sm:space-y-4" data-testid="withdraw-progress-steps-container">
             {steps.map((step, index) => {
               const status = getStepStatus(index);
               
               return (
                 <div 
                   key={step.id} 
-                  className="flex items-start gap-4"
+                  className="flex items-start gap-2 sm:gap-4"
                   data-testid={`withdraw-step-${step.id}`}
                 >
-                  <div className="flex flex-col items-center">
+                  <div className="flex flex-col items-center flex-shrink-0">
                     <div
                       className={cn(
-                        "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all",
+                        "flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all",
                         status === 'completed' && "bg-green-100 dark:bg-green-900/20 border-green-600 dark:border-green-400",
                         status === 'active' && "bg-primary/10 border-primary",
                         status === 'pending' && "bg-muted border-muted-foreground/20"
@@ -197,19 +202,19 @@ export function WithdrawProgressModal({
                     >
                       {status === 'completed' && (
                         <CheckCircle2 
-                          className="h-6 w-6 text-green-600 dark:text-green-400" 
+                          className="h-5 w-5 sm:h-6 sm:w-6 text-green-600 dark:text-green-400" 
                           data-testid={`withdraw-step-icon-${step.id}-completed`}
                         />
                       )}
                       {status === 'active' && (
                         <Loader2 
-                          className="h-6 w-6 text-primary animate-spin" 
+                          className="h-5 w-5 sm:h-6 sm:w-6 text-primary animate-spin" 
                           data-testid={`withdraw-step-icon-${step.id}-active`}
                         />
                       )}
                       {status === 'pending' && (
                         <Circle 
-                          className="h-6 w-6 text-muted-foreground/40" 
+                          className="h-5 w-5 sm:h-6 sm:w-6 text-muted-foreground/40" 
                           data-testid={`withdraw-step-icon-${step.id}-pending`}
                         />
                       )}
@@ -218,17 +223,17 @@ export function WithdrawProgressModal({
                     {index < steps.length - 1 && (
                       <div
                         className={cn(
-                          "w-0.5 h-12 mt-2 transition-all",
+                          "w-0.5 h-8 sm:h-12 mt-1 sm:mt-2 transition-all",
                           status === 'completed' ? "bg-green-600 dark:bg-green-400" : "bg-muted-foreground/20"
                         )}
                       />
                     )}
                   </div>
 
-                  <div className="flex-1 pt-1">
+                  <div className="flex-1 pt-0.5 min-w-0">
                     <h4
                       className={cn(
-                        "font-medium transition-colors",
+                        "text-xs sm:text-sm font-medium transition-colors leading-tight",
                         status === 'active' && "text-foreground",
                         status === 'completed' && "text-green-600 dark:text-green-400",
                         status === 'pending' && "text-muted-foreground"
@@ -239,10 +244,10 @@ export function WithdrawProgressModal({
                     </h4>
                     <p
                       className={cn(
-                        "text-sm transition-colors",
-                        status === 'active' && "text-muted-foreground",
-                        status === 'completed' && "text-muted-foreground/80",
-                        status === 'pending' && "text-muted-foreground/60"
+                        "text-xs transition-colors leading-snug",
+                        status === 'active' && "text-muted-foreground mt-0.5",
+                        status === 'completed' && "text-muted-foreground/80 mt-0.5",
+                        status === 'pending' && "text-muted-foreground/60 mt-0.5"
                       )}
                       data-testid={`withdraw-step-description-${step.id}`}
                     >
