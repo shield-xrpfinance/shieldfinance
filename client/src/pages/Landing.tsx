@@ -647,7 +647,7 @@ export default function Landing() {
         className="py-24" 
         data-testid="section-cta"
         style={{
-          background: 'linear-gradient(135deg, rgba(0, 51, 102, 0.5) 0%, rgba(0, 102, 255, 0.2) 100%)'
+          background: 'linear-gradient(135deg, rgba(0, 51, 102, 0.85) 0%, rgba(0, 102, 255, 0.55) 100%)'
         }}
       >
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
