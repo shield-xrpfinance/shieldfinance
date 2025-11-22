@@ -290,8 +290,8 @@ export default function Landing() {
             <div className="glassmorphic-light rounded-xl px-8 py-4 text-lg font-semibold transition-all hover:scale-110" data-testid="partner-firelight">
               Firelight
             </div>
-            <div className="glassmorphic-light rounded-xl px-8 py-4 text-lg font-semibold transition-all hover:scale-110" data-testid="partner-web3auth">
-              Web3Auth
+            <div className="glassmorphic-light rounded-xl px-8 py-4 text-lg font-semibold transition-all hover:scale-110" data-testid="partner-wallet-connect">
+              Wallet Connect
             </div>
           </div>
         </div>
