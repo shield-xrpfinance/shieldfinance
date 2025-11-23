@@ -80,6 +80,9 @@ export default function DepositModal({
   const { toast } = useToast();
   const gasEstimate = "0.00012";
 
+  // Determine primary deposit asset
+  const depositAsset = depositAssets && depositAssets.length > 0 ? depositAssets[0] : "XRP";
+
   // For EVM wallets, use comprehensive balance (which includes network-aware FXRP)
   // For XRPL wallets, use XRPL balances (XRP, RLUSD, USDC)
   const availableBalances: { [key: string]: number } = walletType === "evm" && evmAddress
@@ -374,7 +377,7 @@ export default function DepositModal({
                   <div className="p-3 rounded-md bg-primary/5 border border-primary/10">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium">Total Payment</span>
-                      <span className="text-base sm:text-lg font-bold font-mono">{totalWithFee.toFixed(6)} XRP</span>
+                      <span className="text-base sm:text-lg font-bold font-mono">{totalWithFee.toFixed(6)} {depositAsset}</span>
                     </div>
                   </div>
 
@@ -414,27 +417,27 @@ export default function DepositModal({
                           <>
                             <div className="flex items-center justify-between">
                               <span className="text-muted-foreground">Requested Amount</span>
-                              <span className="font-mono">{xrpLotRounding.requestedAmount} XRP</span>
+                              <span className="font-mono">{xrpLotRounding.requestedAmount} {depositAsset}</span>
                             </div>
                             <div className="flex items-center justify-between">
                               <span className="text-muted-foreground">Rounded Amount</span>
-                              <span className="font-mono">{xrpLotRounding.roundedAmount} XRP</span>
+                              <span className="font-mono">{xrpLotRounding.roundedAmount} {depositAsset}</span>
                             </div>
                           </>
                         )}
                         <div className="flex items-center justify-between">
                           <span className="text-muted-foreground">Deposit Amount</span>
-                          <span className="font-mono font-medium">{totalValue.toFixed(2)} XRP</span>
+                          <span className="font-mono font-medium">{totalValue.toFixed(2)} {depositAsset}</span>
                         </div>
                         {isXRPDeposit && mintingFee > 0 && (
                           <div className="flex items-center justify-between">
                             <span className="text-muted-foreground">Bridge Fee ({mintingFeePercentage}%)</span>
-                            <span className="font-mono">+{mintingFee.toFixed(6)} XRP</span>
+                            <span className="font-mono">+{mintingFee.toFixed(6)} {depositAsset}</span>
                           </div>
                         )}
                         <div className="flex items-center justify-between pt-1 border-t">
                           <span className="text-muted-foreground">Annual Earnings</span>
-                          <span className="font-mono font-medium">+{projectedEarnings} XRP</span>
+                          <span className="font-mono font-medium">+{projectedEarnings} {depositAsset}</span>
                         </div>
                       </div>
 
@@ -486,16 +489,16 @@ export default function DepositModal({
                     <span className="text-xs sm:text-sm text-muted-foreground">
                       Bridge Fee ({mintingFeePercentage}%)
                     </span>
-                    <span className="font-mono text-xs sm:text-sm">+{mintingFee.toFixed(6)} XRP</span>
+                    <span className="font-mono text-xs sm:text-sm">+{mintingFee.toFixed(6)} {depositAsset}</span>
                   </div>
                 )}
                 <div className="flex items-center justify-between pt-1.5 border-t sm:pt-2">
                   <span className="font-medium text-xs sm:text-sm">Total Payment Required</span>
-                  <span className="text-base sm:text-lg font-bold font-mono">{totalWithFee.toFixed(6)} XRP</span>
+                  <span className="text-base sm:text-lg font-bold font-mono">{totalWithFee.toFixed(6)} {depositAsset}</span>
                 </div>
                 <div className="flex items-center justify-between pt-1.5 border-t sm:pt-2">
                   <span className="text-xs sm:text-sm text-muted-foreground">Annual Earnings</span>
-                  <span className="font-medium font-mono text-chart-2 text-sm sm:text-base">+{projectedEarnings} XRP</span>
+                  <span className="font-medium font-mono text-chart-2 text-sm sm:text-base">+{projectedEarnings} {depositAsset}</span>
                 </div>
               </div>
               
@@ -503,7 +506,7 @@ export default function DepositModal({
                 <Alert className="p-3 sm:p-4">
                   <Info className="h-4 w-4" />
                   <AlertDescription className="text-xs">
-                    You'll be prompted to send {totalWithFee.toFixed(6)} XRP ({totalValue.toFixed(2)} XRP + {mintingFee.toFixed(6)} XRP bridge fee) to complete your deposit.
+                    You'll be prompted to send {totalWithFee.toFixed(6)} {depositAsset} ({totalValue.toFixed(2)} {depositAsset} + {mintingFee.toFixed(6)} {depositAsset} bridge fee) to complete your deposit.
                   </AlertDescription>
                 </Alert>
               )}
