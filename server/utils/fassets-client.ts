@@ -785,7 +785,19 @@ export class FAssetsClient {
     console.log('\n🔍 Parsing CollateralReserved event from receipt:');
     console.log(`   Transaction hash: ${receipt.hash || receipt.transactionHash}`);
     console.log(`   Block number: ${receipt.blockNumber}`);
+    console.log(`   Transaction status: ${receipt.status === null ? 'unknown' : receipt.status === 1 ? 'success' : 'failed'}`);
+    console.log(`   Gas used: ${receipt.gasUsed?.toString() || 'unknown'}`);
     console.log(`   Number of logs: ${receipt.logs?.length || 0}`);
+    
+    // Check if transaction failed
+    if (receipt.status === 0) {
+      console.error('   ❌ Transaction reverted on-chain');
+      throw new Error(
+        "Transaction reverted: reserveCollateral call failed. " +
+        "This may indicate the FAssets agent is out of capacity, insufficient collateral, or contract issues. " +
+        "Please try again in a moment or check the agent status."
+      );
+    }
     
     // Log all log addresses for debugging ERC-4337 issues
     if (receipt.logs && receipt.logs.length > 0) {
@@ -816,8 +828,13 @@ export class FAssetsClient {
     console.error('   ❌ CollateralReserved event not found');
     console.error(`   Events found: ${eventNames.length > 0 ? eventNames.join(', ') : 'none'}`);
     console.error(`   Raw logs count: ${receipt.logs?.length || 0}`);
+    console.error('   This suggests the transaction succeeded but the contract call failed internally.');
+    console.error('   Possible causes: agent out of capacity, insufficient liquidity, or contract revert.');
     
-    throw new Error("CollateralReserved event not found in transaction");
+    throw new Error(
+      "CollateralReserved event not found in transaction. " +
+      "The FAssets agent may be temporarily unavailable or out of capacity. Please try again."
+    );
   }
 
   private parseRedemptionRequestedEvent(receipt: any): any {
