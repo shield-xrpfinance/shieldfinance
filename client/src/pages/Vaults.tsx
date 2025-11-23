@@ -130,19 +130,17 @@ export default function Vaults() {
   }, [escrows]);
 
   const allVaults = apiVaults?.map(vault => {
-    // PRIMARY: Check vault name FIRST - this is the most reliable indicator
-    // If name contains "fxrp", it's an FXRP vault, override any backend data
-    let vaultAsset = "XRP"; // default
+    // Use backend asset field as primary source of truth
+    let vaultAsset = vault.asset || "XRP";
     
-    if (vault.name.toLowerCase().includes("fxrp")) {
+    // Fallback: if no backend asset, check vault name
+    if (!vault.asset && vault.name.toLowerCase().includes("fxrp")) {
       vaultAsset = "FXRP";
-    } else if (vault.asset) {
-      vaultAsset = vault.asset;
     }
     
     const vaultDepositAssets = vaultAsset.split(",").map(a => a.trim());
     if (vaultAsset === "FXRP") {
-      console.log(`✅ FXRP Vault: ${vault.name} → depositAssets: ${JSON.stringify(vaultDepositAssets)}`);
+      console.log(`✅ FXRP Vault detected: ${vault.name} → asset: ${vaultAsset}`);
     }
     
     return {
