@@ -257,42 +257,42 @@ export class AlertingService {
     
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
 
-    // Query redemptions stuck in non-terminal states for >30 minutes
-    const stuckRedemptions = await db
-      .select({
-        id: fxrpToXrpRedemptions.id,
-        status: fxrpToXrpRedemptions.status,
-        requestedAt: fxrpToXrpRedemptions.requestedAt,
-        amount: fxrpToXrpRedemptions.amount,
-        walletAddress: fxrpToXrpRedemptions.walletAddress,
-      })
-      .from(fxrpToXrpRedemptions)
-      .where(
-        and(
-          sql`${fxrpToXrpRedemptions.status} NOT IN ('completed', 'failed', 'xrpl_received')`,
-          sql`${fxrpToXrpRedemptions.requestedAt} < ${thirtyMinutesAgo}`
+    try {
+      // Query redemptions stuck in non-terminal states for >30 minutes
+      const stuckRedemptions = await db
+        .select({
+          id: fxrpToXrpRedemptions.id,
+          status: fxrpToXrpRedemptions.status,
+          createdAt: fxrpToXrpRedemptions.createdAt,
+          walletAddress: fxrpToXrpRedemptions.walletAddress,
+        })
+        .from(fxrpToXrpRedemptions)
+        .where(
+          and(
+            sql`${fxrpToXrpRedemptions.status} NOT IN ('completed', 'failed', 'xrpl_received')`,
+            sql`${fxrpToXrpRedemptions.createdAt} < ${thirtyMinutesAgo}`
+          )
         )
-      )
-      .limit(20);
+        .limit(20);
 
-    if (stuckRedemptions.length > 0) {
-      const redemptionIds = stuckRedemptions.map(r => r.id).slice(0, 5);
-      const totalAmount = stuckRedemptions.reduce((sum, r) => 
-        sum.plus(new Decimal(r.amount || '0')), new Decimal(0)
-      );
+      if (stuckRedemptions.length > 0) {
+        const redemptionIds = stuckRedemptions.map(r => r.id).slice(0, 5);
+        const statuses = Array.from(new Set(stuckRedemptions.map(r => r.status)));
 
-      conditions.push({
-        type: 'redemption_delay',
-        severity: stuckRedemptions.length > 10 ? 'critical' : 'warning',
-        message: `${stuckRedemptions.length} redemption(s) stuck for >30 minutes`,
-        metadata: {
-          count: stuckRedemptions.length,
-          redemptionIds,
-          totalAmount: totalAmount.toString(),
-          oldestRequestAt: stuckRedemptions[0].requestedAt,
-          statuses: [...new Set(stuckRedemptions.map(r => r.status))]
-        }
-      });
+        conditions.push({
+          type: 'redemption_delay',
+          severity: stuckRedemptions.length > 10 ? 'critical' : 'warning',
+          message: `${stuckRedemptions.length} redemption(s) stuck for >30 minutes`,
+          metadata: {
+            count: stuckRedemptions.length,
+            redemptionIds,
+            oldestCreatedAt: stuckRedemptions[0]?.createdAt,
+            statuses
+          }
+        });
+      }
+    } catch (error) {
+      console.error('❌ Redemption delay check error:', error);
     }
 
     return conditions;
@@ -546,40 +546,40 @@ export class AlertingService {
     const conditions: AlertCondition[] = [];
 
     try {
-      const health = await this.config.metricsService.getHealthStatus();
+      // Use bridge metrics directly to assess system health
+      const bridgeMetrics = await this.config.metricsService.getBridgeMetrics();
 
-      // Alert on degraded or critical overall health
-      if (health.overall === 'degraded' || health.overall === 'critical') {
-        const severity = health.overall === 'critical' ? 'critical' : 'warning';
-        
-        // Collect failing checks
-        const failingChecks = [];
-        if (health.checks.bridgeOperations.status !== 'healthy') {
-          failingChecks.push(`Bridge: ${health.checks.bridgeOperations.status}`);
-        }
-        if (health.checks.vaultLiquidity.status !== 'healthy') {
-          failingChecks.push(`Liquidity: ${health.checks.vaultLiquidity.status}`);
-        }
-        if (health.checks.transactionSuccess.status !== 'healthy') {
-          failingChecks.push(`Transactions: ${health.checks.transactionSuccess.status}`);
-        }
-
+      // Alert if bridge failure rate is high
+      if (bridgeMetrics.failureRate > 20) {
         conditions.push({
-          type: 'health_change',
-          severity,
-          message: `System health is ${health.overall}`,
+          type: 'bridge_failure',
+          severity: 'critical',
+          message: `System health is critical: Bridge failure rate ${bridgeMetrics.failureRate.toFixed(1)}%`,
           metadata: {
-            overallHealth: health.overall,
-            failingChecks,
-            bridgeOperations: health.checks.bridgeOperations,
-            vaultLiquidity: health.checks.vaultLiquidity,
-            transactionSuccess: health.checks.transactionSuccess
+            failureRate: bridgeMetrics.failureRate,
+            stuckTransactions: bridgeMetrics.stuckTransactions,
+            pendingOperations: bridgeMetrics.pendingOperations
+          }
+        });
+      }
+
+      // Alert if too many stuck transactions
+      if (bridgeMetrics.stuckTransactions > 10) {
+        conditions.push({
+          type: 'bridge_failure',
+          severity: 'critical',
+          message: `System health is degraded: ${bridgeMetrics.stuckTransactions} transactions stuck`,
+          metadata: {
+            stuckTransactions: bridgeMetrics.stuckTransactions,
+            failureRate: bridgeMetrics.failureRate,
+            pendingOperations: bridgeMetrics.pendingOperations
           }
         });
       }
 
       // Check for possible RPC issues based on transaction success rate
-      if (health.checks.transactionSuccess.successRate < 50) {
+      const txMetrics = await this.config.metricsService.getTransactionMetrics();
+      if (txMetrics.etherspotSuccessRate < 50) {
         conditions.push({
           type: 'rpc_issue',
           severity: 'critical',
