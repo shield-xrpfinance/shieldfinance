@@ -333,7 +333,7 @@ export class AlertingService {
 
     if (consecutiveFailures > 5) {
       // Analyze failure patterns
-      const uniqueErrors = [...new Set(failureMessages)];
+      const uniqueErrors = Array.from(new Set(failureMessages));
       
       conditions.push({
         type: 'tx_failure',
@@ -583,9 +583,9 @@ export class AlertingService {
         conditions.push({
           type: 'rpc_issue',
           severity: 'critical',
-          message: `Transaction success rate critically low: ${health.checks.transactionSuccess.successRate.toFixed(1)}%`,
+          message: `Transaction success rate critically low: ${txMetrics.etherspotSuccessRate.toFixed(1)}%`,
           metadata: {
-            successRate: health.checks.transactionSuccess.successRate,
+            successRate: txMetrics.etherspotSuccessRate,
             possibleCause: 'RPC connectivity issues or gas sponsorship problems'
           }
         });
