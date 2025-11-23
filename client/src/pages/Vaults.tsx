@@ -219,8 +219,8 @@ export default function Vaults() {
   });
 
   const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
-    if (!selectedVault || !address) {
-      console.error("❌ Missing selectedVault or address:", { selectedVault: !!selectedVault, address });
+    if (!selectedVault || !evmAddress) {
+      console.error("❌ Missing selectedVault or evmAddress:", { selectedVault: !!selectedVault, evmAddress });
       return;
     }
 
@@ -230,20 +230,74 @@ export default function Vaults() {
 
     const paymentAsset = selectedVault.depositAssets[0];
 
-    // Check if this is an XRP deposit
-    const isXRPDeposit = selectedVault.depositAssets.includes("XRP");
+    // Check if this is an FXRP deposit (EVM wallet)
+    const isFXRPDeposit = selectedVault.depositAssets.includes("FXRP");
 
-    if (isXRPDeposit) {
-      // Use bridge flow for XRP deposits
+    if (isFXRPDeposit) {
+      // Use direct FXRP deposit flow - user deposits FXRP, gets shXRP immediately
       try {
-        // Close deposit modal and show progress modal immediately
         setDepositModalOpen(false);
         setProgressStep('creating');
         setProgressModalOpen(true);
         
-        // Store bridge info for the progress modal
         setBridgeInfo({
-          bridgeId: '', // Will be set when response comes back
+          bridgeId: '',
+          vaultName: selectedVault.name,
+          amount: totalAmount.toString(),
+        });
+        
+        const response = await fetch("/api/deposits/fxrp", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            walletAddress: evmAddress,
+            vaultId: selectedVault.id,
+            amount: totalAmount.toString(),
+            network: network,
+          }),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to create FXRP deposit");
+        }
+
+        // Update with position info
+        setBridgeInfo({
+          bridgeId: data.position.id,
+          vaultName: selectedVault.name,
+          amount: totalAmount.toString(),
+        });
+
+        // Show success and navigate to portfolio
+        setTimeout(() => {
+          setProgressModalOpen(false);
+          toast({
+            title: "Deposit Successful",
+            description: `${totalAmount} FXRP deposited! You received ${data.shXRPShares} shXRP shares.`,
+          });
+          setLocation('/portfolio');
+        }, 2000);
+
+      } catch (error) {
+        console.error("FXRP deposit error:", error);
+        setProgressModalOpen(false);
+        toast({
+          title: "Deposit Failed",
+          description: error instanceof Error ? error.message : "Failed to create FXRP deposit",
+          variant: "destructive",
+        });
+      }
+    } else {
+      // Use bridge flow for XRP deposits
+      try {
+        setDepositModalOpen(false);
+        setProgressStep('creating');
+        setProgressModalOpen(true);
+        
+        setBridgeInfo({
+          bridgeId: '',
           vaultName: selectedVault.name,
           amount: totalAmount.toString(),
         });
@@ -265,14 +319,11 @@ export default function Vaults() {
           throw new Error(data.error || "Failed to create deposit");
         }
 
-        // Update bridge info with the actual bridgeId
         setBridgeInfo({
           bridgeId: data.bridgeId,
           vaultName: selectedVault.name,
           amount: totalAmount.toString(),
         });
-
-        // ProgressStepsModal will now handle polling and triggering Xaman payment
 
       } catch (error) {
         console.error("Bridge creation error:", error);
@@ -282,32 +333,6 @@ export default function Vaults() {
           description: error instanceof Error ? error.message : "Failed to create bridge",
           variant: "destructive",
         });
-      }
-    } else {
-      // Use existing flow for non-XRP deposits
-      const paymentAmount = amounts[paymentAsset] || totalAmount.toString();
-
-      setPendingDeposit({
-        amounts,
-        vaultId: selectedVault.id,
-        vaultName: selectedVault.name,
-      });
-      setDepositModalOpen(false);
-
-      if (!provider) {
-        toast({
-          title: "Connection Lost",
-          description: "Your wallet connection has expired. Please reconnect your wallet.",
-          variant: "destructive",
-        });
-        setPendingDeposit(null);
-        return;
-      }
-
-      if (provider === "walletconnect") {
-        await handleWalletConnectDeposit(paymentAmount, paymentAsset);
-      } else {
-        await handleXamanDeposit(paymentAmount, paymentAsset);
       }
     }
   };
