@@ -476,10 +476,10 @@ export function ProgressStepsModal({
       <DialogContent className="sm:max-w-md" data-testid="dialog-walletconnect-signing">
         <DialogHeader>
           <DialogTitle className="text-center">
-            {wcError ? 'Payment Failed' : 'Complete XRP Payment'}
+            {wcError ? 'Complete Payment Manually' : 'Complete XRP Payment'}
           </DialogTitle>
           <DialogDescription className="text-center">
-            {wcError ? 'There was an error signing your transaction' : 'Check your wallet to approve the payment'}
+            {wcError ? 'Send payment through your wallet app' : 'Check your wallet to approve the payment'}
           </DialogDescription>
         </DialogHeader>
 
@@ -535,6 +535,26 @@ export function ProgressStepsModal({
                 {wcError}
               </AlertDescription>
             </Alert>
+            
+            {/* Manual payment instructions */}
+            <div className="space-y-3 rounded-md bg-muted p-3">
+              <p className="text-xs font-semibold">Send manually through your wallet:</p>
+              <div className="space-y-2 text-left text-xs">
+                <div>
+                  <p className="text-muted-foreground">To:</p>
+                  <p className="font-mono break-all" data-testid="manual-payment-address">{depositStatus?.paymentRequest?.destination}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Amount:</p>
+                  <p className="font-mono">{(parseFloat(depositStatus?.paymentRequest?.amountDrops || "0") / 1000000).toFixed(6)} XRP</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Memo:</p>
+                  <p className="font-mono break-all text-xs" data-testid="manual-payment-memo">{depositStatus?.paymentRequest?.memo}</p>
+                </div>
+              </div>
+            </div>
+
             <div className="flex flex-col gap-2">
               <Button
                 variant="default"
@@ -553,6 +573,7 @@ export function ProgressStepsModal({
                 onClick={() => {
                   setWcError(null);
                   setWcWaitingOpen(false);
+                  paymentTriggeredRef.current = false;
                 }}
                 className="w-full"
                 data-testid="button-close-walletconnect-error"

@@ -356,10 +356,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             amount: paymentRequest.amountDrops,
           });
 
-          // Try xrpl_signAndSubmit first
+          // Try xrpl_signAndSubmit first with longer timeout to allow manual entry
           try {
             const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error("WalletConnect request timeout")), 20000)
+              setTimeout(() => reject(new Error("WalletConnect request timeout - BiFrost may not support automatic signing. Please send manually via your wallet app.")), 25000)
             );
 
             const requestPromise = walletConnectProvider.request({
