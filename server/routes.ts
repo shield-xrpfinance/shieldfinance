@@ -7,6 +7,7 @@ import { Client } from "xrpl";
 import type { BridgeService } from "./services/BridgeService";
 import type { FlareClient } from "./utils/flare-client";
 import type { MetricsService } from "./services/MetricsService";
+import type { AlertingService } from "./services/AlertingService";
 import { db } from "./db";
 import { fxrpToXrpRedemptions } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -166,7 +167,8 @@ export async function registerRoutes(
   app: Express,
   bridgeService: BridgeService,
   flareClient?: FlareClient,
-  metricsService?: MetricsService
+  metricsService?: MetricsService,
+  alertingService?: AlertingService
 ): Promise<Server> {
   // Health check endpoints (must be first for fast startup verification)
   
@@ -3952,6 +3954,86 @@ export async function registerRoutes(
       console.error("Cache clear error:", error);
       res.status(500).json({
         error: "Failed to clear cache",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * ALERTING ENDPOINTS
+   * Test endpoints for webhook alert notifications
+   */
+
+  /**
+   * Trigger a test alert
+   * POST /api/alerts/test
+   * 
+   * Body (optional):
+   * - type: Alert type to test (redemption_delay, tx_failure, apy_drift, bridge_failure, rpc_issue, health_change)
+   * 
+   * Example: POST /api/alerts/test { "type": "redemption_delay" }
+   */
+  app.post("/api/alerts/test", async (req: Request, res: Response) => {
+    try {
+      if (!alertingService) {
+        return res.status(503).json({ 
+          error: "AlertingService not available",
+          message: "Alerting service has not been initialized. Check server logs." 
+        });
+      }
+
+      const { type } = req.body;
+      
+      // Validate alert type if provided
+      const validTypes = ['redemption_delay', 'tx_failure', 'apy_drift', 'bridge_failure', 'rpc_issue', 'health_change'];
+      if (type && !validTypes.includes(type)) {
+        return res.status(400).json({ 
+          error: "Invalid alert type",
+          validTypes 
+        });
+      }
+
+      console.log(`🧪 Test alert triggered via API${type ? ` (type: ${type})` : ''}`);
+      await alertingService.sendTestAlert(type);
+
+      res.json({ 
+        success: true,
+        message: `Test alert sent successfully${type ? ` for type: ${type}` : ''}`,
+        note: "Check your configured Slack/Discord channels for the test notification"
+      });
+    } catch (error) {
+      console.error("Test alert error:", error);
+      res.status(500).json({
+        error: "Failed to send test alert",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Manually trigger alert checks
+   * POST /api/alerts/check
+   * 
+   * Admin endpoint to manually trigger alert condition checking
+   */
+  app.post("/api/alerts/check", requireAdminAuth, async (req: Request, res: Response) => {
+    try {
+      if (!alertingService) {
+        return res.status(503).json({ error: "AlertingService not available" });
+      }
+
+      console.log(`🔍 Manual alert check triggered via API`);
+      await alertingService.checkAndAlert();
+
+      res.json({ 
+        success: true,
+        message: "Alert check completed successfully",
+        note: "Any triggered alerts have been sent to configured webhooks"
+      });
+    } catch (error) {
+      console.error("Manual alert check error:", error);
+      res.status(500).json({
+        error: "Failed to check alerts",
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }

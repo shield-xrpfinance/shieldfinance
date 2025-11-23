@@ -12,6 +12,7 @@ import { DepositService } from "./services/DepositService";
 import { DepositWatchdogService } from "./services/DepositWatchdogService";
 import { WithdrawalRetryService } from "./services/WithdrawalRetryService";
 import { MetricsService } from "./services/MetricsService";
+import { AlertingService } from "./services/AlertingService";
 import { readinessRegistry } from "./services/ReadinessRegistry";
 
 const app = express();
@@ -20,6 +21,7 @@ const app = express();
 let realBridgeService: BridgeService | null = null;
 let realFlareClient: FlareClient | null = null;
 let realMetricsService: MetricsService | null = null;
+let realAlertingService: AlertingService | null = null;
 
 declare module 'http' {
   interface IncomingMessage {
@@ -561,6 +563,42 @@ async function initializeServices() {
     console.error(`❌ MetricsService initialization failed:`, errorMsg);
   }
 
+  // Step 9: Initialize AlertingService (requires MetricsService)
+  // This service monitors critical metrics and sends webhook notifications to Slack/Discord
+  if (metricsService) {
+    try {
+      console.log(`🔔 Initializing AlertingService...`);
+      
+      const alertingService = new AlertingService({
+        storage,
+        metricsService,
+        slackWebhookUrl: process.env.SLACK_WEBHOOK_URL,
+        discordWebhookUrl: process.env.DISCORD_WEBHOOK_URL,
+        minIntervalMinutes: process.env.ALERT_MIN_INTERVAL_MINUTES 
+          ? parseInt(process.env.ALERT_MIN_INTERVAL_MINUTES, 10) 
+          : 15,
+        enabled: process.env.ALERT_ENABLED !== 'false', // Enabled by default
+        dryRun: process.env.ALERT_DRY_RUN === 'true', // Dry run mode for testing
+        frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5000',
+      });
+      
+      // Export to module-level for routes
+      realAlertingService = alertingService;
+      
+      // Start automatic monitoring (checks every 5 minutes)
+      alertingService.startMonitoring();
+      
+      readinessRegistry.setReady('alertingService');
+      console.log(`✅ AlertingService initialized and monitoring started`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      readinessRegistry.setError('alertingService', errorMsg);
+      console.error(`❌ AlertingService initialization failed:`, errorMsg);
+    }
+  } else {
+    readinessRegistry.setError('alertingService', 'MetricsService not available');
+  }
+
   console.log("✅ All services initialized");
 }
 
@@ -658,7 +696,21 @@ async function initializeFlareClientWithRetry(config: {
     }
   });
   
-  const server = await registerRoutes(app, bridgeServiceProxy, flareClientProxy, metricsServiceProxy);
+  const alertingServiceProxy = new Proxy({} as AlertingService, {
+    get(target, prop) {
+      if (!realAlertingService) {
+        // Return undefined for optional usage (routes handle gracefully)
+        return undefined;
+      }
+      const value = (realAlertingService as any)[prop];
+      if (typeof value === 'function') {
+        return value.bind(realAlertingService);
+      }
+      return value;
+    }
+  });
+  
+  const server = await registerRoutes(app, bridgeServiceProxy, flareClientProxy, metricsServiceProxy, alertingServiceProxy);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
