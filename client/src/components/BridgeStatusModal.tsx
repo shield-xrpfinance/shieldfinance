@@ -34,7 +34,8 @@ import {
   Send,
   Ban,
   ChevronDown,
-  ExternalLink
+  ExternalLink,
+  Smartphone
 } from "lucide-react";
 import {
   Collapsible,
@@ -109,6 +110,8 @@ export default function BridgeStatusModal({
   const [stageDetailsExpanded, setStageDetailsExpanded] = useState(false);
   const [paymentDetailsExpanded, setPaymentDetailsExpanded] = useState(false);
   const [transactionDetailsExpanded, setTransactionDetailsExpanded] = useState(false);
+  const [wcWaitingOpen, setWcWaitingOpen] = useState(false);
+  const [wcError, setWcError] = useState<string | null>(null);
   const { toast } = useToast();
   const { requestPayment, provider, isConnected, address: walletAddress } = useWallet();
 
@@ -276,11 +279,9 @@ export default function BridgeStatusModal({
           setXamanDeepLink(result.deepLink || null);
           setShowXamanModal(true);
         } else if (provider === "walletconnect") {
-          // WalletConnect auto-triggers signing, just show success
-          toast({
-            title: "Payment Sent!",
-            description: "Transaction submitted. Waiting for confirmation...",
-          });
+          // Show WalletConnect waiting modal
+          setWcError(null);
+          setWcWaitingOpen(true);
         }
       } else {
         toast({
@@ -288,6 +289,10 @@ export default function BridgeStatusModal({
           description: result.error || "Failed to create payment request",
           variant: "destructive",
         });
+        if (provider === "walletconnect") {
+          setWcError(result.error || "Failed to create payment request");
+          setWcWaitingOpen(true);
+        }
       }
     } catch (error) {
       console.error("Error sending payment:", error);
@@ -1032,6 +1037,99 @@ export default function BridgeStatusModal({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* WalletConnect Payment Modal */}
+      <Dialog open={wcWaitingOpen} onOpenChange={setWcWaitingOpen}>
+        <DialogContent className="sm:max-w-md" data-testid="dialog-walletconnect-payment">
+          <DialogHeader>
+            <DialogTitle className="text-center">
+              {wcError ? 'Payment Failed' : 'Complete XRP Payment'}
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              {wcError ? 'There was an error' : 'Check your wallet to approve the payment'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {!wcError ? (
+            <div className="py-6 space-y-4 text-center">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-primary/10 p-4">
+                  <Smartphone className="h-8 w-8 text-primary animate-pulse" />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Check your wallet app</p>
+                <p className="text-xs text-muted-foreground">
+                  A transaction signature request is waiting for you. Open your wallet app and approve the XRP payment.
+                </p>
+              </div>
+              <Alert className="p-3">
+                <Info className="h-4 w-4 flex-shrink-0" />
+                <AlertDescription className="text-xs">
+                  Send exactly {bridge?.totalAmountUBA ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6) : "0"} XRP to {bridge?.agentUnderlyingAddress}
+                </AlertDescription>
+              </Alert>
+              <div className="flex flex-col gap-2">
+                <Button
+                  variant="default"
+                  onClick={() => setWcWaitingOpen(false)}
+                  className="w-full"
+                  data-testid="button-ready-payment"
+                >
+                  I've approved the payment
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => setWcWaitingOpen(false)}
+                  className="w-full"
+                  data-testid="button-close-payment"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="py-6 space-y-4">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-destructive/10 p-4">
+                  <AlertCircle className="h-8 w-8 text-destructive" />
+                </div>
+              </div>
+              <Alert variant="destructive" className="p-3">
+                <AlertDescription className="text-xs">
+                  {wcError}
+                </AlertDescription>
+              </Alert>
+              <div className="flex flex-col gap-2">
+                <Button
+                  variant="default"
+                  onClick={() => {
+                    setWcError(null);
+                    setWcWaitingOpen(false);
+                    setIsSendingPayment(false);
+                  }}
+                  className="w-full"
+                  data-testid="button-retry-payment"
+                >
+                  Try Again
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setWcError(null);
+                    setWcWaitingOpen(false);
+                    setIsSendingPayment(false);
+                  }}
+                  className="w-full"
+                  data-testid="button-close-payment-error"
+                >
+                  Close
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 }
