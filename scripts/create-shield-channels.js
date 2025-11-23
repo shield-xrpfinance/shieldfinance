@@ -242,21 +242,17 @@ client.on('interactionCreate', async (i) => {
     const challenge = `Shield Finance verification ${Date.now()}-${i.user.id}`;
     pending.set(i.user.id, { type: 'xaman', address, challenge });
 
-    await i.reply({
-      content: `**Sign this message in Xaman:**\n\`\`\`\n${challenge}\n\`\`\`\n\nAfter signing, paste the signature in the next step.`,
-      ephemeral: true,
-    });
-
     const modal2 = new ModalBuilder()
       .setCustomId('xaman_sig')
-      .setTitle('Paste Signature');
+      .setTitle('Sign & Verify');
     modal2.addComponents(
       new ActionRowBuilder().addComponents(
         new TextInputBuilder()
           .setCustomId('sig')
-          .setLabel('Signature (from Xaman)')
+          .setLabel(`Sign this: ${challenge.substring(0, 50)}...`)
           .setStyle(TextInputStyle.Paragraph)
           .setRequired(true)
+          .setValue(`Sign in Xaman:\n${challenge}`)
       )
     );
     await i.showModal(modal2);
