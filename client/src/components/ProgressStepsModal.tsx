@@ -142,13 +142,13 @@ export function ProgressStepsModal({
 
   // Minimize modal when entering finalizing step
   useEffect(() => {
-    if (displayStep === 'finalizing' && !isMinimized) {
+    if (internalStep === 'finalizing' && !isMinimized) {
       const timer = setTimeout(() => {
         setIsMinimized(true);
       }, 800); // Wait 800ms before sliding away
       return () => clearTimeout(timer);
     }
-  }, [displayStep, isMinimized]);
+  }, [internalStep, isMinimized]);
 
   // Trigger Xaman/WalletConnect payment when bridge reaches awaiting_payment
   useEffect(() => {
@@ -241,12 +241,10 @@ export function ProgressStepsModal({
 
   return (
     <>
+    {/* Main Progress Modal */}
     <Dialog open={open && !isMinimized} onOpenChange={onOpenChange}>
       <DialogContent 
-        className={cn(
-          "sm:max-w-md transition-all duration-500",
-          isMinimized && "animate-slide-down"
-        )}
+        className="sm:max-w-md" 
         data-testid="dialog-progress-steps"
         onPointerDownOutside={(e) => {
           if (!canDismiss) {
@@ -468,6 +466,16 @@ export function ProgressStepsModal({
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Floating Status Badge when minimized */}
+    {open && isMinimized && (
+      <div className="fixed bottom-4 right-4 animate-slide-up" data-testid="minimized-status-badge">
+        <div className="bg-primary text-primary-foreground rounded-full px-4 py-3 shadow-lg flex items-center gap-2">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          <span className="text-xs font-medium">Finalizing on Flare...</span>
+        </div>
+      </div>
+    )}
     
     {/* Xaman Payment Modal for QR code scanning */}
     <XamanSigningModal
