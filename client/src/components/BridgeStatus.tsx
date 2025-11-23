@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, AlertCircle, Loader2, Copy, RefreshCw, Send, X } from "lucide-react";
+import { CheckCircle2, Clock, AlertCircle, Loader2, Copy, RefreshCw, Send, X, ExternalLink } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -23,6 +23,8 @@ interface BridgeStatusProps {
   onSendPayment?: () => void;
   onCancelBridge?: () => void;
   isVaultsLoading?: boolean;
+  onNavigateToBridgeTracking?: () => void;
+  onNavigateToPortfolio?: () => void;
 }
 
 export function BridgeStatus({
@@ -38,6 +40,8 @@ export function BridgeStatus({
   onSendPayment,
   onCancelBridge,
   isVaultsLoading = false,
+  onNavigateToBridgeTracking,
+  onNavigateToPortfolio,
 }: BridgeStatusProps) {
   const { toast } = useToast();
   
@@ -170,6 +174,53 @@ export function BridgeStatus({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {bridgeId && (
+          <div className="rounded-lg bg-muted p-3 space-y-3" data-testid="bridge-id-section">
+            <div className="space-y-1">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Bridge ID</p>
+              <div className="flex items-center gap-2">
+                <code className="flex-1 rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid="text-bridge-id-display">
+                  {bridgeId}
+                </code>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => copyToClipboard(bridgeId, "Bridge ID")}
+                  data-testid="button-copy-bridge-id"
+                  className="self-start"
+                >
+                  <Copy className="h-3 w-3" />
+                </Button>
+              </div>
+            </div>
+            
+            {(status === "completed" || status === "vault_minted") && onNavigateToPortfolio && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={onNavigateToPortfolio}
+                data-testid="button-view-portfolio-bridge"
+                className="w-full"
+              >
+                View in Portfolio
+              </Button>
+            )}
+            
+            {!["completed", "vault_minted", "failed", "vault_mint_failed"].includes(status) && onNavigateToBridgeTracking && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onNavigateToBridgeTracking}
+                data-testid="button-view-bridge-tracking-status"
+                className="w-full"
+              >
+                <ExternalLink className="h-3 w-3 mr-2" />
+                Track Bridge
+              </Button>
+            )}
+          </div>
+        )}
+
         <div>
           <div className="mb-2 flex justify-between text-sm">
             <span className="text-muted-foreground">Progress</span>
