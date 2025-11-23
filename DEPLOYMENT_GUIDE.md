@@ -234,6 +234,54 @@ MerkleDistributor: 0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31
 ShieldToken: 0x07F943F173a6bE5EC63a8475597d28aAA6B24992
 ```
 
+### Contract Versioning & Deprecated Deployments
+
+During testnet development, multiple SHIELD token contracts were deployed as the protocol evolved. **Only the ACTIVE contract should be used.**
+
+| Address | Status | Deployment Date | Notes |
+|---------|--------|-----------------|-------|
+| `0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308` | ❌ DEPRECATED | Nov 9, 2025 | Ownership to be renounced using `scripts/renounce-old-shield-tokens.ts` |
+| `0x59fF3b7Ae628beEFFAe980F30240ec4e84448209` | ❌ DEPRECATED | Earlier testnet | Ownership to be renounced using `scripts/renounce-old-shield-tokens.ts` |
+| `0x07F943F173a6bE5EC63a8475597d28aAA6B24992` | ✅ ACTIVE | Nov 23, 2025 | **Current production contract** with RevenueRouter, StakingBoost, and MerkleDistributor integration |
+
+#### Why Multiple Deployments?
+
+The protocol underwent architectural improvements during testnet development:
+
+1. **First Deployment** (`0x59fF3b...`): Initial testnet deployment for basic testing
+2. **Second Deployment** (`0xD6D476...`): Enhanced deployment documented in `docs/archive/TESTNET_DEPLOYMENT_SUMMARY.md`
+3. **Current Deployment** (`0x07F943...`): Production-ready deployment with:
+   - **RevenueRouter**: Automated buyback-and-burn mechanism (50% of fees)
+   - **StakingBoost**: APY enhancement for SHIELD stakers (1% boost per 100 SHIELD)
+   - **MerkleDistributor**: Fair airdrop distribution system
+
+#### What Happened to Old Deployments?
+
+Deprecated contracts **will have ownership renounced** to permanently freeze them. Use `scripts/renounce-old-shield-tokens.ts` to execute:
+
+- ❌ No new tokens can be minted (after renouncement)
+- ❌ No contract parameters can be changed (after renouncement)
+- ❌ Contracts are permanently frozen in their current state
+
+This ensures that old deployments cannot be confused with the active contract.
+
+#### How to Identify the Active Contract
+
+**✅ Always use: `0x07F943F173a6bE5EC63a8475597d28aAA6B24992`**
+
+You can verify this is the active contract by:
+1. Check [Coston2 Explorer](https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992)
+2. Verify contract owner is NOT `0x0000000000000000000000000000000000000000` (active)
+3. Verify integration with RevenueRouter, StakingBoost, and MerkleDistributor
+
+**⚠️ Important:** Only use the ACTIVE contract address. Deprecated contracts will have ownership renounced to permanently freeze them. Using old addresses will result in failed transactions or incorrect token balances.
+
+**For historical deployment records, see:**
+- `deployments/coston2-deployment.json` - Deprecated Nov 9 deployment (marked DEPRECATED)
+- `docs/archive/TESTNET_DEPLOYMENT_SUMMARY.md` - Historical documentation (marked DEPRECATED)
+- `scripts/audit-shield-tokens.ts` - Audit script showing all deployments
+- `scripts/renounce-old-shield-tokens.ts` - Renouncement transaction records
+
 ### ERC-4626 Vault Functions
 
 The ShXRPVault implements standard ERC-4626 functions:

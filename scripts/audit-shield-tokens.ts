@@ -37,7 +37,7 @@ const SHIELD_CONTRACTS = [
   {
     label: "Current (ACTIVE Deployment)",
     address: "0x07F943F173a6bE5EC63a8475597d28aAA6B24992",
-    expectedSupply: "10000000", // 10M
+    expectedSupply: "100000000", // 100M (actual deployed supply)
   },
 ];
 

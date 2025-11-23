@@ -13,12 +13,31 @@
 
 ### 1. Smart Contracts Deployment (Flare Coston2 Testnet)
 
-#### ShieldToken ($SHIELD)
-- **Contract Address**: `0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308`
+---
+
+## ⚠️ DEPRECATION NOTICE - DO NOT USE
+
+**The contract addresses listed in this document are DEPRECATED and should NOT be used.**
+
+**ShieldToken Address Below is DEPRECATED:**
+- ❌ **Old Address**: `0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308`
+- **Status**: Ownership to be renounced - Script available at `scripts/renounce-old-shield-tokens.ts`
+- ✅ **Current Active Contract**: `0x07F943F173a6bE5EC63a8475597d28aAA6B24992`
+
+**For current deployment information, see:** [DEPLOYMENT_GUIDE.md](../../DEPLOYMENT_GUIDE.md)
+
+This document is maintained as a historical record only.
+
+---
+
+#### ShieldToken ($SHIELD) - ⚠️ DEPRECATED
+- **Contract Address**: `0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308` ❌ **DEPRECATED - DO NOT USE**
 - **Explorer**: [View on Coston2 Explorer](https://coston2-explorer.flare.network/address/0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308)
-- **Total Supply**: 100,000,000 SHIELD
-- **Treasury Allocation**: 10,000,000 SHIELD (10%)
-- **Features**: ERC-20, burnable, mintable by owner
+- **Status**: ❌ DEPRECATED - Ownership to be renounced
+- **Current Active Contract**: ✅ `0x07F943F173a6bE5EC63a8475597d28aAA6B24992`
+- **Total Supply**: 100,000,000 SHIELD (historical)
+- **Treasury Allocation**: 10,000,000 SHIELD (10%) (historical)
+- **Features**: ERC-20, burnable, mintable by owner (historical)
 
 #### Shield XRP Vault (shXRP)
 - **Contract Address**: `0x7571b6E696621D757E2d019CC54e14C65B9896d4`
