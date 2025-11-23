@@ -220,8 +220,8 @@ export default function Vaults() {
   });
 
   const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
-    if (!selectedVault || !evmAddress) {
-      console.error("❌ Missing selectedVault or evmAddress:", { selectedVault: !!selectedVault, evmAddress });
+    if (!selectedVault) {
+      console.error("❌ Missing selectedVault");
       return;
     }
 
@@ -236,6 +236,15 @@ export default function Vaults() {
 
     if (isFXRPDeposit) {
       // Use direct FXRP deposit flow - user deposits FXRP via EVM wallet, gets shXRP immediately
+      if (!evmAddress) {
+        toast({
+          title: "Connection Error",
+          description: "Please connect an EVM wallet (like BiFrost) to deposit FXRP.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       try {
         setDepositModalOpen(false);
         setProgressStep('creating');
@@ -340,6 +349,15 @@ export default function Vaults() {
       }
     } else {
       // Use bridge flow for XRP deposits
+      if (!address) {
+        toast({
+          title: "Connection Error",
+          description: "Please connect an XRPL wallet (like Xaman) to deposit XRP.",
+          variant: "destructive",
+        });
+        return;
+      }
+
       try {
         setDepositModalOpen(false);
         setProgressStep('creating');
