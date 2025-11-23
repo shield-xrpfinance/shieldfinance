@@ -144,44 +144,64 @@ export function ProgressStepsModal({
     ) {
       paymentTriggeredRef.current = true;
       
-      // Call requestPayment from wallet context with error handling
-      requestPayment({
-        bridgeId: bridgeId || '',
-        destination: depositStatus.paymentRequest.destination,
-        amountDrops: depositStatus.paymentRequest.amountDrops,
-        memo: depositStatus.paymentRequest.memo,
-        network: (depositStatus.paymentRequest.network || 'testnet') as 'mainnet' | 'testnet',
-      }).then((result) => {
-        if (!result.success) {
-          console.error("Payment request failed:", result.error);
-          paymentTriggeredRef.current = false; // Reset on error to allow retry
-          if (provider === 'walletconnect') {
+      // For WalletConnect, open the modal FIRST to show the waiting state
+      // Then send the payment request inside
+      if (provider === 'walletconnect') {
+        console.log("🔗 Opening WalletConnect payment modal...");
+        setWcWaitingOpen(true);
+        setWcError(null); // Clear any previous errors
+        
+        // Send payment request in the background
+        requestPayment({
+          bridgeId: bridgeId || '',
+          destination: depositStatus.paymentRequest.destination,
+          amountDrops: depositStatus.paymentRequest.amountDrops,
+          memo: depositStatus.paymentRequest.memo,
+          network: (depositStatus.paymentRequest.network || 'testnet') as 'mainnet' | 'testnet',
+        }).then((result) => {
+          if (!result.success) {
+            console.error("❌ WalletConnect payment request failed:", result.error);
+            // Show error in the modal
             setWcError(result.error || 'Failed to send payment to wallet');
+            paymentTriggeredRef.current = false; // Allow retry
+          } else {
+            console.log("✅ WalletConnect payment sent. Transaction hash:", result.txHash);
+            // Modal stays open while waiting for user to approve in wallet
           }
-          return;
-        }
-
-        if (provider === 'xaman') {
-          // For Xaman, open the QR code modal
-          setXamanPayload({
-            uuid: result.payloadUuid || '',
-            qrUrl: result.qrUrl || '',
-            deepLink: result.deepLink || '',
-          });
-          setXamanPaymentModalOpen(true);
-        } else if (provider === 'walletconnect') {
-          // For WalletConnect, the transaction has been sent to the wallet
-          // Show waiting modal while wallet processes the signature
-          setWcWaitingOpen(true);
-          console.log("🔗 WalletConnect payment sent. Transaction hash:", result.txHash);
-        }
-      }).catch((error) => {
-        console.error("Failed to trigger payment modal:", error);
-        paymentTriggeredRef.current = false; // Reset on error to allow retry
-        if (provider === 'walletconnect') {
+        }).catch((error) => {
+          console.error("❌ WalletConnect error:", error);
           setWcError(error instanceof Error ? error.message : 'An error occurred');
-        }
-      });
+          paymentTriggeredRef.current = false; // Allow retry
+        });
+      } else {
+        // For Xaman, use the existing flow
+        requestPayment({
+          bridgeId: bridgeId || '',
+          destination: depositStatus.paymentRequest.destination,
+          amountDrops: depositStatus.paymentRequest.amountDrops,
+          memo: depositStatus.paymentRequest.memo,
+          network: (depositStatus.paymentRequest.network || 'testnet') as 'mainnet' | 'testnet',
+        }).then((result) => {
+          if (!result.success) {
+            console.error("Payment request failed:", result.error);
+            paymentTriggeredRef.current = false; // Reset on error to allow retry
+            return;
+          }
+
+          if (provider === 'xaman') {
+            // For Xaman, open the QR code modal
+            setXamanPayload({
+              uuid: result.payloadUuid || '',
+              qrUrl: result.qrUrl || '',
+              deepLink: result.deepLink || '',
+            });
+            setXamanPaymentModalOpen(true);
+          }
+        }).catch((error) => {
+          console.error("Failed to trigger payment modal:", error);
+          paymentTriggeredRef.current = false; // Reset on error to allow retry
+        });
+      }
     }
   }, [depositStatus, bridgeId, requestPayment, provider]);
 
