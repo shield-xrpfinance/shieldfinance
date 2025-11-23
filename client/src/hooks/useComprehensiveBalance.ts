@@ -11,9 +11,15 @@ const USDT_ADDRESSES = {
   testnet: "0x3E8B8d9B9ee8C1E0D6d10Ea03e1F6eB8e3d1e8a0", // Coston2 testnet USDT
 };
 
+// FXRP (FAssets XRP) addresses on Flare Network
+const FXRP_ADDRESSES = {
+  mainnet: "0x0000000000000000000000000000000000000000", // TODO: Update with mainnet FXRP
+  testnet: "0xaD67cB3e0B037E0eb8cc7Fe65328578f61e6b0b6", // FXRP on Coston2
+};
+
 /**
  * Comprehensive wallet balance hook
- * Fetches all token balances: FLR, WFLR, SHIELD, shXRP, XRP, USDT
+ * Fetches all token balances: FLR, WFLR, SHIELD, shXRP, XRP, FXRP, USDT
  * Includes USD values calculated from FTSO price feeds
  */
 export interface ComprehensiveBalances {
@@ -22,12 +28,14 @@ export interface ComprehensiveBalances {
   shield: string;
   shxrp: string;
   xrp: string;
+  fxrp: string;
   usdt: string;
   flrUsd: number;
   wflrUsd: number;
   shieldUsd: number;
   shxrpUsd: number;
   xrpUsd: number;
+  fxrpUsd: number;
   usdtUsd: number;
   totalUsd: number;
   isLoading: boolean;
@@ -65,12 +73,14 @@ export function useComprehensiveBalance() {
     shield: "0",
     shxrp: "0",
     xrp: "0",
+    fxrp: "0",
     usdt: "0",
     flrUsd: 0,
     wflrUsd: 0,
     shieldUsd: 0,
     shxrpUsd: 0,
     xrpUsd: 0,
+    fxrpUsd: 0,
     usdtUsd: 0,
     totalUsd: 0,
     isLoading: true,
@@ -85,12 +95,14 @@ export function useComprehensiveBalance() {
         shield: "0",
         shxrp: "0",
         xrp: "0",
+        fxrp: "0",
         usdt: "0",
         flrUsd: 0,
         wflrUsd: 0,
         shieldUsd: 0,
         shxrpUsd: 0,
         xrpUsd: 0,
+        fxrpUsd: 0,
         usdtUsd: 0,
         totalUsd: 0,
         isLoading: false,
@@ -114,6 +126,7 @@ export function useComprehensiveBalance() {
           shield: "0",
           shxrp: "0",
           xrp: "0",
+          fxrp: "0",
           usdt: "0",
         };
 
@@ -246,6 +259,30 @@ export function useComprehensiveBalance() {
               })
             );
           }
+
+          // 3d. Fetch FXRP balance (ERC20) - FAssets XRP
+          const fxrpAddress = network === 'testnet' ? FXRP_ADDRESSES.testnet : FXRP_ADDRESSES.mainnet;
+          if (fxrpAddress && fxrpAddress !== "0x0000000000000000000000000000000000000000") {
+            promises.push(
+              withTimeout(
+                (async () => {
+                  try {
+                    const fxrpContract = new ethers.Contract(fxrpAddress, ERC20_ABI, provider);
+                    const balanceWei = await fxrpContract.balanceOf(evmAddress);
+                    results.fxrp = ethers.formatUnits(balanceWei, 18); // FXRP uses 18 decimals (standard ERC-20)
+                  } catch (err: any) {
+                    results.fxrp = "0";
+                  }
+                })(),
+                5000
+              ).then((result) => {
+                if (result === null) {
+                  results.fxrp = "0";
+                }
+                return result;
+              })
+            );
+          }
         }
 
         // 4. Fetch XRP balance (from XRPL via API)
@@ -280,10 +317,12 @@ export function useComprehensiveBalance() {
         const shxrpUsd = parseFloat(results.shxrp) * ftsoPrices.xrpUsd;
         // WFLR tracks FLR 1:1
         const wflrUsd = parseFloat(results.wflr) * ftsoPrices.flrUsd;
+        // FXRP tracks XRP 1:1 (FAssets wraps XRP on Flare)
+        const fxrpUsd = parseFloat(results.fxrp) * ftsoPrices.xrpUsd;
         // SHIELD and USDT prices would need SparkDEX/Oracle integration - for now set to 0
         const shieldUsd = 0;
         const usdtUsd = 0;
-        const totalUsd = flrUsd + xrpUsd + shxrpUsd + wflrUsd + shieldUsd + usdtUsd;
+        const totalUsd = flrUsd + xrpUsd + shxrpUsd + wflrUsd + fxrpUsd + shieldUsd + usdtUsd;
 
         setBalances({
           ...results,
@@ -292,6 +331,7 @@ export function useComprehensiveBalance() {
           shieldUsd,
           shxrpUsd,
           xrpUsd,
+          fxrpUsd,
           usdtUsd,
           totalUsd,
           isLoading: false,

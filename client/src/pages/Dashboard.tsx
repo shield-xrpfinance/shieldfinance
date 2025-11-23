@@ -38,7 +38,7 @@ export default function Dashboard() {
   const [progressStep, setProgressStep] = useState<ProgressStep>('creating');
   const [progressErrorMessage, setProgressErrorMessage] = useState<string | undefined>(undefined);
   const { toast } = useToast();
-  const { address, provider, walletType, isConnected, walletConnectProvider, requestPayment } = useWallet();
+  const { address, evmAddress, provider, walletType, isConnected, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
   const [, setLocation] = useLocation();
   const comprehensiveBalances = useComprehensiveBalance();
@@ -584,6 +584,18 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
+                  {parseFloat(comprehensiveBalances.fxrp) > 0 && (
+                    <div className="flex items-center justify-between" data-testid="balance-fxrp">
+                      <div className="flex items-center gap-2">
+                        <AssetIcon asset="FXRP" size={20} />
+                        <span className="text-sm text-muted-foreground">FXRP</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-lg font-bold tabular-nums" data-testid="text-balance-fxrp">{parseFloat(comprehensiveBalances.fxrp).toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground" data-testid="text-balance-fxrp-usd">{getCurrencySymbol(currency)}{convertToSelectedCurrency(comprehensiveBalances.fxrpUsd, currency).toFixed(2)}</div>
+                      </div>
+                    </div>
+                  )}
                   {parseFloat(comprehensiveBalances.usdt) > 0 && (
                     <div className="flex items-center justify-between" data-testid="balance-usdt">
                       <div className="flex items-center gap-2">
@@ -596,9 +608,9 @@ export default function Dashboard() {
                       </div>
                     </div>
                   )}
-                  {!address ? (
+                  {!isConnected ? (
                     <p className="text-sm text-muted-foreground text-center py-2" data-testid="text-no-balances">Connect your wallet to view balance</p>
-                  ) : [parseFloat(comprehensiveBalances.flr), parseFloat(comprehensiveBalances.wflr), parseFloat(comprehensiveBalances.shield), parseFloat(comprehensiveBalances.shxrp), parseFloat(comprehensiveBalances.xrp), parseFloat(comprehensiveBalances.usdt)].every(v => v === 0) ? (
+                  ) : [parseFloat(comprehensiveBalances.flr), parseFloat(comprehensiveBalances.wflr), parseFloat(comprehensiveBalances.shield), parseFloat(comprehensiveBalances.shxrp), parseFloat(comprehensiveBalances.xrp), parseFloat(comprehensiveBalances.fxrp), parseFloat(comprehensiveBalances.usdt)].every(v => v === 0) ? (
                     <p className="text-sm text-muted-foreground text-center py-2" data-testid="text-no-balances">No assets found</p>
                   ) : null}
                 </div>
