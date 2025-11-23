@@ -251,14 +251,12 @@ export default function Vaults() {
 
     const paymentAsset = selectedVault.depositAssets[0];
 
-    // Check if this is an FXRP deposit (EVM wallet)
-    // Fallback: check vault name if depositAssets doesn't explicitly include FXRP
-    let isFXRPDeposit = selectedVault.depositAssets.includes("FXRP");
-    if (!isFXRPDeposit && selectedVault.name.toLowerCase().includes("fxrp")) {
-      isFXRPDeposit = true;
-      console.log(`🔧 FXRP deposit detected via vault name fallback: ${selectedVault.name}`);
-    }
-    console.log(`🔄 handleConfirmDeposit: vault=${selectedVault.name}, depositAssets=${JSON.stringify(selectedVault.depositAssets)}, isFXRPDeposit=${isFXRPDeposit}`);
+    // PRIMARY CHECK: Detect FXRP deposit via vault name (most reliable)
+    // This handles cases where backend asset field is missing or wrong
+    const isFXRPDeposit = selectedVault.name.toLowerCase().includes("fxrp") || 
+                          selectedVault.depositAssets.includes("FXRP");
+    
+    console.log(`🔄 Deposit for "${selectedVault.name}": isFXRPDeposit=${isFXRPDeposit}, depositAssets=${JSON.stringify(selectedVault.depositAssets)}`);
 
     if (isFXRPDeposit) {
       // Use direct FXRP deposit flow - user deposits FXRP via EVM wallet, gets shXRP immediately
