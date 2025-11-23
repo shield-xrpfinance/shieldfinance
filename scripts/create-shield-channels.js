@@ -1,4 +1,4 @@
-// Shield Finance — Ultimate Community Bot
+// Shield Finance — UNIVERSAL WALLET VERIFICATION (Xaman + WalletConnect)
 import {
   Client,
   GatewayIntentBits,
@@ -7,257 +7,415 @@ import {
   ActionRowBuilder,
   ButtonBuilder,
   ButtonStyle,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+  SlashCommandBuilder,
 } from 'discord.js';
+import { ethers } from 'ethers';
 
 const client = new Client({
-  intents: [GatewayIntentBits.Guilds],
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
+    GatewayIntentBits.GuildMembers,
+  ],
 });
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
 
-if (!TOKEN || !GUILD_ID) {
-  console.error('❌ Missing required environment variables');
-  process.exit(1);
-}
+const pending = new Map(); // userId → verification data
+
+// Roles to create
+const ROLES = [
+  { name: 'Shield OG', color: '#FFD700' },
+  { name: 'Shield Holder', color: '#00FFAA' },
+  { name: 'Staker', color: '#FF6B9D' },
+  { name: 'Moderator', color: '#FF0000' },
+  { name: 'Dev', color: '#0099FF' },
+  { name: 'Verified Wallet', color: '#00FF00' },
+];
+
+// Channels structure
+const CHANNELS = {
+  'INFO & RULES': [
+    'start-here',
+    'announcements',
+    'rules',
+    'roadmap',
+  ],
+  'GENERAL': [
+    'lounge',
+    'xrpl-vaults',
+    'yield-tips',
+    'off-topic',
+    'memes',
+    'vault-stats',
+  ],
+  'SUPPORT & FEEDBACK': [
+    'help-desk',
+    'bug-reports',
+    'ideas-board',
+    'support',
+  ],
+  'DEVELOPERS & CONTRIBUTORS': [
+    'dev-chat',
+    'github-updates',
+    'bounty-board',
+  ],
+  'EXCLUSIVE — HOLDERS ONLY': [
+    'holder-lounge',
+    'alpha-vaults',
+    'revenue-share',
+  ],
+  'VOICE CHANNELS': {
+    type: 'voice',
+    channels: [
+      'General Voice',
+      'AMA - General Discussion',
+      'Vault Strategy Room',
+      'Music & Chill',
+    ],
+  },
+};
 
 client.once('ready', async () => {
-  console.log(`✅ Shield Bot online as ${client.user.tag}`);
+  console.log(`✅ Shield Bot online as ${client.user.tag}\n`);
 
   const guild = client.guilds.cache.get(GUILD_ID);
   if (!guild) {
-    console.error('❌ Wrong server ID');
+    console.error('❌ Guild not found');
     process.exit(1);
   }
 
   try {
-    // 1. CREATE ROLES (colored + permissions)
-    console.log('\n👥 Creating roles...');
-    const roleList = [
-      { name: 'Shield OG', color: '#FF0066', hoist: true },
-      { name: 'Shield Holder', color: '#00FFAA', hoist: true },
-      { name: 'Staker', color: '#0099FF', hoist: true },
-      { name: 'Moderator', color: '#FFAA00', permissions: ['ManageMessages', 'KickMembers'] },
-      { name: 'Dev', color: '#AA00FF' },
-      { name: 'Verified Wallet', color: '#FFFFFF' },
-    ];
-
-    for (const r of roleList) {
-      try {
-        await guild.roles.create({
-          name: r.name,
-          color: r.color,
-          hoist: r.hoist,
-          permissions: r.permissions || [],
-        });
-        console.log(`✓ Created role: ${r.name}`);
-      } catch (error) {
-        console.log(`✓ Role already exists: ${r.name}`);
+    // 1. Create roles
+    console.log('👥 Creating roles...');
+    for (const roleConfig of ROLES) {
+      const existingRole = guild.roles.cache.find(r => r.name === roleConfig.name);
+      if (existingRole) {
+        console.log(`✓ Role already exists: ${roleConfig.name}`);
+        continue;
       }
+      await guild.roles.create({
+        name: roleConfig.name,
+        color: roleConfig.color,
+        reason: 'Shield Finance bot setup',
+      });
+      console.log(`✓ Created role: ${roleConfig.name}`);
     }
 
-    // 2. CREATE CHANNELS
+    // 2. Create categories and channels
     console.log('\n📋 Creating channels...');
-    const createCategory = async (name, channels) => {
-      try {
-        const category = await guild.channels.create({
-          name,
-          type: ChannelType.GuildCategory,
-        });
-        for (const ch of channels) {
-          await guild.channels.create({
-            name: ch.name,
-            type: ch.type ?? ChannelType.GuildText,
-            topic: ch.topic || null,
-            parent: category,
-          });
-        }
-        console.log(`✓ Created category: ${name}`);
-        return category;
-      } catch (error) {
-        console.log(`✓ Category already exists: ${name}`);
-      }
-    };
-
-    await createCategory('INFO & RULES', [
-      { name: 'start-here', topic: 'Read this first — Verify wallet → get roles' },
-      { name: 'rules', topic: 'Community guidelines (zero tolerance for scams)' },
-      { name: 'announcements', topic: 'Official updates only — @everyone pings here' },
-      { name: 'roadmap', topic: 'Current milestones & upcoming vaults' },
-    ]);
-
-    await createCategory('GENERAL', [
-      { name: 'lounge', topic: 'Hang out & talk XRP/DeFi' },
-      { name: 'xrpl-vaults', topic: 'Discuss Shield vaults, strategies & APY' },
-      { name: 'yield-tips', topic: 'Share compounding tricks & analytics' },
-      { name: 'off-topic', topic: 'Anything non-crypto' },
-      { name: 'memes', topic: 'Best XRP & Shield memes win SHIELD tokens' },
-      { name: 'vault-stats', topic: 'Live vault stats updated every 6 hours' },
-    ]);
-
-    await createCategory('SUPPORT & FEEDBACK', [
-      { name: 'help-desk', topic: 'Ask questions — team & helpers will assist' },
-      { name: 'ideas-board', topic: 'Propose features → polls → Snapshot voting' },
-      { name: 'bug-reports', topic: 'Found a vault or dashboard issue? Post here' },
-      { name: 'support', topic: 'Click the support button to create a ticket' },
-    ]);
-
-    await createCategory('DEVELOPERS & CONTRIBUTORS', [
-      { name: 'dev-chat', topic: 'Solidity, Hardhat, XRPL EVM sidechain talk' },
-      { name: 'bounty-board', topic: 'Active tasks — earn SHIELD tokens' },
-      { name: 'github-updates', topic: 'Auto-posted commits from shield-xrpfinance repo' },
-    ]);
-
-    await createCategory('EXCLUSIVE — HOLDERS ONLY', [
-      { name: 'holder-lounge', topic: 'Verified vault holders & SHIELD stakers only' },
-      { name: 'alpha-vaults', topic: 'Early access strategies & private testnet links' },
-      { name: 'revenue-share', topic: 'Real-time RevenueRouter & burn analytics' },
-    ]);
-
-    await createCategory('VOICE CHANNELS', [
-      { name: 'General Voice', type: ChannelType.GuildVoice },
-      { name: 'Vault Strategy Room', type: ChannelType.GuildVoice },
-      { name: 'AMA - General Discussion', type: ChannelType.GuildVoice },
-      { name: 'Music & Chill', type: ChannelType.GuildVoice },
-    ]);
-
-    // 3. WELCOME + VERIFICATION BUTTON
-    console.log('\n📨 Setting up welcome message with buttons...');
-    const welcome = guild.channels.cache.find(c => c.name === 'start-here');
-    if (welcome && welcome.isTextBased()) {
-      try {
-        await welcome.bulkDelete(50).catch(() => {});
-      } catch (error) {
-        // Ignore bulk delete errors
-      }
-
-      const embed = new EmbedBuilder()
-        .setTitle('🛡️ Shield Finance')
-        .setDescription('**Institutional-grade XRP liquid staking & multi-asset vaults**')
-        .setColor('#00FFAA')
-        .setThumbnail('https://shield.finance/logo512.png')
-        .addFields(
-          { name: '📖 Step 1', value: 'Read <#rules> (serious server, zero scams)' },
-          { name: '✅ Step 2', value: 'Click **Verify Wallet** below → unlock all channels' },
-          { name: '🔗 Links', value: '[Website](https://shield.finance) • [Dashboard](https://app.shield.finance) • [GitHub](https://github.com/shield-xrpfinance/shieldfinance)' }
-        );
-
-      const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder()
-          .setLabel('Verify Wallet')
-          .setStyle(ButtonStyle.Link)
-          .setURL('https://guild.xyz/shield-finance')
-          .setEmoji('🛡️'),
-        new ButtonBuilder()
-          .setLabel('Open Dashboard')
-          .setStyle(ButtonStyle.Link)
-          .setURL('https://app.shield.finance'),
-        new ButtonBuilder()
-          .setCustomId('ticket')
-          .setLabel('Create Support Ticket')
-          .setStyle(ButtonStyle.Primary)
+    for (const [categoryName, channelConfig] of Object.entries(CHANNELS)) {
+      // Check if category already exists
+      let category = guild.channels.cache.find(
+        c => c.type === 4 && c.name === categoryName
       );
 
-      await welcome.send({
-        content: '@everyone Welcome to the future of XRP staking!',
-        embeds: [embed],
-        components: [row],
-      });
-      console.log('✓ Welcome message posted with buttons');
+      if (!category) {
+        category = await guild.channels.create({
+          name: categoryName,
+          type: ChannelType.GuildCategory,
+        });
+        console.log(`✓ Created category: ${categoryName}`);
+      } else {
+        console.log(`✓ Category already exists: ${categoryName}`);
+      }
+
+      // Create channels in this category
+      const isVoice = channelConfig.type === 'voice';
+      const channelNames = isVoice ? channelConfig.channels : channelConfig;
+
+      for (const channelName of channelNames) {
+        const existingChannel = guild.channels.cache.find(
+          c => c.name === channelName && c.parentId === category.id
+        );
+
+        if (existingChannel) {
+          console.log(`  ✓ Channel already exists: ${channelName}`);
+          continue;
+        }
+
+        await guild.channels.create({
+          name: channelName,
+          type: isVoice ? ChannelType.GuildVoice : ChannelType.GuildText,
+          parent: category.id,
+        });
+        console.log(`  ✓ Created channel: ${channelName}`);
+      }
     }
 
-    // 4. AUTO-POST TVL + APY every 6 hours
-    console.log('\n📊 Setting up auto-stats posting...');
-    setInterval(async () => {
-      try {
-        const statsChannel =
-          guild.channels.cache.find(c => c.name === 'vault-stats') ||
-          (await guild.channels.create({
-            name: 'vault-stats',
-            type: ChannelType.GuildText,
-            parent: guild.channels.cache.find(c => c.name === 'GENERAL')?.id,
-          }));
+    // 3. Set up slash commands
+    console.log('\n🔧 Setting up slash commands...');
+    await guild.commands.set([
+      new SlashCommandBuilder()
+        .setName('verify')
+        .setDescription('Verify with any wallet (Xaman or WalletConnect)'),
+    ]);
+    console.log('✓ Slash commands registered');
 
-        if (!statsChannel.isTextBased()) return;
-
-        try {
-          const response = await fetch('https://api.shield.finance/stats');
-          const data = await response.json();
-
-          const statsEmbed = new EmbedBuilder()
-            .setTitle('📊 Live Vault Stats')
+    // 4. Post welcome message with wallet verification button
+    console.log('\n📨 Setting up welcome message with wallet verification...');
+    const welcome = guild.channels.cache.find(c => c.name === 'start-here');
+    if (welcome) {
+      await welcome.bulkDelete(20).catch(() => {});
+      await welcome.send({
+        content: '@everyone',
+        embeds: [
+          new EmbedBuilder()
             .setColor('#00FFAA')
-            .addFields(
-              { name: 'TVL', value: `$${data.tvl?.toLocaleString() || '12.4M'}`, inline: true },
-              { name: '30d APY', value: `${data.apy || '28.7'}%`, inline: true },
-              { name: 'Holders', value: data.holders?.toString() || '3,847', inline: true }
-            )
-            .setTimestamp();
-
-          await statsChannel.send({ embeds: [statsEmbed] });
-        } catch (fetchError) {
-          console.log('Note: Could not fetch live stats - API may not be available yet');
-        }
-      } catch (error) {
-        console.error('Error posting stats:', error.message);
-      }
-    }, 1000 * 60 * 60 * 6); // 6 hours
-
-    console.log('✓ Auto-stats posting enabled (every 6 hours)');
+            .setTitle('Verify Your Wallet — Works with Xaman & WalletConnect')
+            .setDescription('Click the button below or type `/verify` to verify your wallet and unlock exclusive roles and channels!\n\n🛡️ **Shield Finance** supports both XRPL (via Xaman) and EVM wallets (via WalletConnect).'),
+        ],
+        components: [
+          new ActionRowBuilder().addComponents(
+            new ButtonBuilder()
+              .setCustomId('verify_btn')
+              .setLabel('Verify Wallet')
+              .setStyle(ButtonStyle.Success)
+          ),
+        ],
+      });
+      console.log('✓ Welcome message posted with verification button');
+    }
 
     console.log('\n🎉 Shield Finance bot fully deployed — all upgrades live!');
-    console.log('ℹ️  Bot is now listening for button interactions...\n');
+    console.log('ℹ️  Bot is now listening for button interactions and wallet verification...\n');
 
   } catch (error) {
-    console.error('❌ Fatal error during setup:', error.message);
-    client.destroy();
+    console.error('❌ Error during setup:', error);
     process.exit(1);
   }
 });
 
-// SIMPLE TICKET SYSTEM - create private thread
-client.on('interactionCreate', async interaction => {
-  if (!interaction.isButton() || interaction.customId !== 'ticket') return;
+// ==============================
+// WALLET VERIFICATION HANDLERS
+// ==============================
 
-  try {
-    const thread = await interaction.channel.threads.create({
-      name: `support-${interaction.user.username}`,
-      autoArchiveDuration: 1440,
-      reason: 'Support ticket',
-    });
+// Main entry point: User clicks button or uses /verify command
+client.on('interactionCreate', async (i) => {
+  if (!i.isChatInputCommand() && !i.isButton()) return;
+  if (i.commandName !== 'verify' && i.customId !== 'verify_btn') return;
 
-    await thread.members.add(interaction.user);
-    await interaction.reply({
-      content: `✅ Ticket created → ${thread}`,
+  const row = new ActionRowBuilder().addComponents(
+    new ButtonBuilder()
+      .setCustomId('xaman_verify')
+      .setLabel('Xaman / Classic Wallet')
+      .setStyle(ButtonStyle.Primary),
+    new ButtonBuilder()
+      .setCustomId('wc_verify')
+      .setLabel('WalletConnect (MetaMask, Trust, etc.)')
+      .setStyle(ButtonStyle.Secondary)
+  );
+
+  await i.reply({
+    content: 'Choose your wallet type:',
+    components: [row],
+    ephemeral: true,
+  });
+});
+
+// ——— XRPL WALLET (Xaman) ———
+client.on('interactionCreate', async (i) => {
+  if (i.customId === 'xaman_verify') {
+    const modal = new ModalBuilder()
+      .setCustomId('xaman_modal')
+      .setTitle('XRPL Address');
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('addr')
+          .setLabel('r-address (starts with r)')
+          .setStyle(TextInputStyle.Short)
+          .setRequired(true)
+      )
+    );
+    await i.showModal(modal);
+  }
+
+  if (i.customId === 'xaman_modal') {
+    const address = i.fields.getTextInputValue('addr');
+    const challenge = `Shield Finance verification ${Date.now()}-${i.user.id}`;
+    pending.set(i.user.id, { type: 'xaman', address, challenge });
+
+    await i.reply({
+      content: `**Sign this message in Xaman:**\n\`\`\`\n${challenge}\n\`\`\`\n\nAfter signing, paste the signature in the next step.`,
       ephemeral: true,
     });
 
-    await thread.send({
-      content: `${interaction.user} — describe your issue. Mods will be with you shortly 🛡️`,
-      components: [
-        new ActionRowBuilder().addComponents(
-          new ButtonBuilder()
-            .setCustomId('close_ticket')
-            .setLabel('Close Ticket')
-            .setStyle(ButtonStyle.Danger)
-        ),
-      ],
-    });
-  } catch (error) {
-    console.error('Error creating ticket:', error.message);
+    const modal2 = new ModalBuilder()
+      .setCustomId('xaman_sig')
+      .setTitle('Paste Signature');
+    modal2.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('sig')
+          .setLabel('Signature (from Xaman)')
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(true)
+      )
+    );
+    await i.showModal(modal2);
+  }
+
+  if (i.customId === 'xaman_sig') {
+    const sig = i.fields.getTextInputValue('sig');
+    const data = pending.get(i.user.id);
+
+    if (!data) {
+      await i.reply({ content: 'Verification expired. Please start over.', ephemeral: true });
+      return;
+    }
+
+    try {
+      // Verify signature via public XRPL node
+      const response = await fetch('https://s1.ripple.com:51234', {
+        method: 'POST',
+        body: JSON.stringify({
+          method: 'verify',
+          params: [
+            {
+              message: data.challenge,
+              signature: sig,
+              address: data.address,
+            },
+          ],
+        }),
+      });
+
+      const res = await response.json();
+
+      if (res.result?.verified) {
+        await giveRoles(i.member);
+        await i.reply({
+          content: `✅ **Wallet Verified!**\n\nYour address: \`${data.address}\`\nYou now have access to exclusive channels and roles!`,
+          ephemeral: true,
+        });
+        console.log(`✓ ${i.user.tag} verified XRPL wallet: ${data.address}`);
+      } else {
+        await i.reply({
+          content: '❌ Invalid signature or verification failed. Please try again.',
+          ephemeral: true,
+        });
+      }
+    } catch (error) {
+      console.error('Xaman verification error:', error);
+      await i.reply({
+        content: '❌ Verification error. Please try again.',
+        ephemeral: true,
+      });
+    }
+    pending.delete(i.user.id);
   }
 });
 
-// AUTO CLOSE TICKET
-client.on('interactionCreate', async i => {
-  if (i.customId === 'close_ticket') {
-    try {
-      await i.reply('⏳ Closing ticket in 5s...');
-      setTimeout(() => i.channel.delete().catch(() => {}), 5000);
-    } catch (error) {
-      console.error('Error closing ticket:', error.message);
+// ——— WALLETCONNECT (EVM sidechain) ———
+client.on('interactionCreate', async (i) => {
+  if (i.customId === 'wc_verify') {
+    const nonce = Math.floor(Math.random() * 1e9);
+    pending.set(i.user.id, { type: 'wc', nonce });
+
+    const domain = {
+      name: 'Shield Finance',
+      version: '1',
+      chainId: 1440002,
+    }; // XRPL EVM sidechain
+    const types = {
+      Verify: [{ name: 'nonce', type: 'uint256' }],
+    };
+    const message = { nonce };
+
+    const typedData = JSON.stringify(
+      { domain, types, message, primaryType: 'Verify' },
+      null,
+      2
+    );
+
+    await i.reply({
+      content: `**Connect with WalletConnect & sign this message:**\n\`\`\`json\n${typedData}\n\`\`\`\n\nUse your wallet to sign this typed data, then paste the full JSON response below.`,
+      ephemeral: true,
+    });
+
+    const modal = new ModalBuilder()
+      .setCustomId('wc_sig')
+      .setTitle('Paste Signed Message');
+    modal.addComponents(
+      new ActionRowBuilder().addComponents(
+        new TextInputBuilder()
+          .setCustomId('signed')
+          .setLabel('Full JSON output from wallet')
+          .setStyle(TextInputStyle.Paragraph)
+          .setRequired(true)
+      )
+    );
+    await i.showModal(modal);
+  }
+
+  if (i.customId === 'wc_sig') {
+    const input = i.fields.getTextInputValue('signed');
+    const data = pending.get(i.user.id);
+
+    if (!data || data.type !== 'wc') {
+      await i.reply({
+        content: 'Verification expired. Please start over.',
+        ephemeral: true,
+      });
+      return;
     }
+
+    try {
+      const parsed = JSON.parse(input);
+      const recovered = ethers.verifyTypedData(
+        parsed.domain,
+        parsed.types,
+        parsed.message,
+        parsed.signature
+      );
+
+      if (parsed.message.nonce === data.nonce) {
+        await giveRoles(i.member);
+        await i.reply({
+          content: `✅ **Wallet Verified!**\n\nYour wallet: \`${recovered}\`\nYou now have access to exclusive channels and roles!`,
+          ephemeral: true,
+        });
+        console.log(`✓ ${i.user.tag} verified EVM wallet: ${recovered}`);
+      } else {
+        await i.reply({
+          content: '❌ Invalid signature. Nonce mismatch.',
+          ephemeral: true,
+        });
+      }
+    } catch (error) {
+      console.error('WalletConnect verification error:', error);
+      await i.reply({
+        content: '❌ Invalid signature or JSON format. Please try again.',
+        ephemeral: true,
+      });
+    }
+    pending.delete(i.user.id);
   }
 });
+
+// Helper: Give verified roles
+async function giveRoles(member) {
+  try {
+    const roles = [
+      'Shield Holder',
+      'Verified Wallet',
+      'Staker',
+    ]
+      .map((name) => member.guild.roles.cache.find((r) => r.name === name))
+      .filter(Boolean);
+
+    await member.roles.add(roles);
+    console.log(`✓ Roles assigned to ${member.user.tag}`);
+  } catch (error) {
+    console.error(`Error assigning roles to ${member.user.tag}:`, error);
+  }
+}
 
 client.login(TOKEN);
