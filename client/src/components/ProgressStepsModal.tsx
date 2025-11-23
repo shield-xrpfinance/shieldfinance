@@ -137,7 +137,18 @@ export function ProgressStepsModal({
   // Reset payment trigger flag when bridgeId changes or modal opens
   useEffect(() => {
     paymentTriggeredRef.current = false;
+    setIsMinimized(false); // Reset minimized state when new deposit starts
   }, [bridgeId, open]);
+
+  // Minimize modal when entering finalizing step
+  useEffect(() => {
+    if (displayStep === 'finalizing' && !isMinimized) {
+      const timer = setTimeout(() => {
+        setIsMinimized(true);
+      }, 800); // Wait 800ms before sliding away
+      return () => clearTimeout(timer);
+    }
+  }, [displayStep, isMinimized]);
 
   // Trigger Xaman/WalletConnect payment when bridge reaches awaiting_payment
   useEffect(() => {
@@ -230,9 +241,12 @@ export function ProgressStepsModal({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open && !isMinimized} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="sm:max-w-md" 
+        className={cn(
+          "sm:max-w-md transition-all duration-500",
+          isMinimized && "animate-slide-down"
+        )}
         data-testid="dialog-progress-steps"
         onPointerDownOutside={(e) => {
           if (!canDismiss) {
