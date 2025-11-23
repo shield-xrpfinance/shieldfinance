@@ -16,6 +16,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Coins, Wallet as WalletIcon, Loader2, AlertCircle, Info, ChevronDown } from "lucide-react";
 import { useWallet } from "@/lib/walletContext";
 import { useWalletBalances } from "@/hooks/use-wallet-balance";
+import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
+import { useNetwork } from "@/lib/networkContext";
 import { useToast } from "@/hooks/use-toast";
 import ConnectWalletModal from "./ConnectWalletModal";
 import XamanSigningModal from "./XamanSigningModal";
@@ -71,16 +73,24 @@ export default function DepositModal({
     }
   }, [open]);
 
-  const { address, isConnected, provider, requestPayment } = useWallet();
+  const { address, isConnected, provider, requestPayment, evmAddress, walletType } = useWallet();
   const { balances, isLoading: balancesLoading, error: balancesError, getBalance, getBalanceFormatted } = useWalletBalances();
+  const comprehensiveBalances = useComprehensiveBalance();
+  const { network } = useNetwork();
   const { toast } = useToast();
   const gasEstimate = "0.00012";
 
-  const availableBalances: { [key: string]: number } = {
-    XRP: balances?.balances.XRP || 0,
-    RLUSD: balances?.balances.RLUSD || 0,
-    USDC: balances?.balances.USDC || 0,
-  };
+  // For EVM wallets, use comprehensive balance (which includes network-aware FXRP)
+  // For XRPL wallets, use XRPL balances (XRP, RLUSD, USDC)
+  const availableBalances: { [key: string]: number } = walletType === "evm" && evmAddress
+    ? {
+        FXRP: parseFloat(comprehensiveBalances.fxrp) || 0,
+      }
+    : {
+        XRP: balances?.balances.XRP || 0,
+        RLUSD: balances?.balances.RLUSD || 0,
+        USDC: balances?.balances.USDC || 0,
+      };
 
   const totalValue = Object.entries(amounts).reduce((sum, [asset, amount]) => {
     if (!amount) return sum;
@@ -289,14 +299,14 @@ export default function DepositModal({
 
           {isConnected && step === 1 && (
             <div className="space-y-2">
-              {balancesLoading && (
+              {(balancesLoading || comprehensiveBalances.isLoading) && (
                 <div className="flex items-center justify-center py-3 text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   <span className="text-xs">Loading balances...</span>
                 </div>
               )}
 
-              {balancesError && (
+              {(balancesError || comprehensiveBalances.error) && (
                 <div className="p-2.5 rounded-md bg-destructive/10 border border-destructive/20">
                   <div className="flex items-start gap-2">
                     <AlertCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
@@ -308,7 +318,7 @@ export default function DepositModal({
                 </div>
               )}
 
-              {!balancesLoading && depositAssets.map((asset) => (
+              {!balancesLoading && !comprehensiveBalances.isLoading && depositAssets.map((asset) => (
                 <div key={asset}>
                   <Label htmlFor={`amount-${asset}`} className="text-xs sm:text-sm">{asset} Amount</Label>
                   <div className="relative mt-1">
