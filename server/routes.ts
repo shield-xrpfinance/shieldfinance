@@ -217,21 +217,31 @@ export async function registerRoutes(
               if (index === 0) {
                 return {
                   ...vault,
+                  contractAddress: vaultAddress,
                   depositLimit: ethers.formatUnits(depositLimitRaw, 6).toString(),
                   depositLimitRaw: depositLimitRaw.toString(),
                   paused
                 };
               }
-              return vault;
+              return { ...vault, contractAddress: vaultAddress };
             });
             res.json(enrichedVaults);
           } else {
             // P0 methods not available on this contract deployment
-            res.json(vaults);
+            const enrichedVaults = vaults.map((vault) => ({
+              ...vault,
+              contractAddress: vaultAddress
+            }));
+            res.json(enrichedVaults);
           }
         } catch (contractError) {
-          // Silently fall back to vaults without P0 data
-          res.json(vaults);
+          // Silently fall back to vaults without P0 data but still include contract address
+          const vaultAddress = getVaultAddress();
+          const enrichedVaults = vaults.map((vault) => ({
+            ...vault,
+            contractAddress: vaultAddress
+          }));
+          res.json(enrichedVaults);
         }
       } else {
         res.json(vaults);
