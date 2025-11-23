@@ -21,7 +21,7 @@
 
 **ShieldToken Address Below is DEPRECATED:**
 - ❌ **Old Address**: `0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308`
-- **Status**: Ownership to be renounced - Script available at `scripts/renounce-old-shield-tokens.ts`
+- **Status**: ✅ Ownership renounced Nov 23, 2025 ([TX](https://coston2-explorer.flare.network/tx/0x54a7360cd386508aa7a47d32db90e7289435a2ac086873e7c4b85cd9f9a52493))
 - ✅ **Current Active Contract**: `0x07F943F173a6bE5EC63a8475597d28aAA6B24992`
 
 **For current deployment information, see:** [DEPLOYMENT_GUIDE.md](../../DEPLOYMENT_GUIDE.md)
@@ -33,7 +33,8 @@ This document is maintained as a historical record only.
 #### ShieldToken ($SHIELD) - ⚠️ DEPRECATED
 - **Contract Address**: `0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308` ❌ **DEPRECATED - DO NOT USE**
 - **Explorer**: [View on Coston2 Explorer](https://coston2-explorer.flare.network/address/0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308)
-- **Status**: ❌ DEPRECATED - Ownership to be renounced
+- **Status**: ✅ Ownership renounced Nov 23, 2025 - Contract permanently frozen
+- **Renounce TX**: [0x54a7360c...](https://coston2-explorer.flare.network/tx/0x54a7360cd386508aa7a47d32db90e7289435a2ac086873e7c4b85cd9f9a52493)
 - **Current Active Contract**: ✅ `0x07F943F173a6bE5EC63a8475597d28aAA6B24992`
 - **Total Supply**: 100,000,000 SHIELD (historical)
 - **Treasury Allocation**: 10,000,000 SHIELD (10%) (historical)

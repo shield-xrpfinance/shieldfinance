@@ -15,7 +15,8 @@
       "status": "DEPRECATED",
       "totalSupply": "100000000.0",
       "treasuryAllocation": "10000000.0",
-      "deprecationReason": "Ownership to be renounced. Upgraded to new deployment with RevenueRouter, StakingBoost, and MerkleDistributor integration.",
+      "deprecationReason": "Ownership renounced Nov 23, 2025. Upgraded to new deployment with RevenueRouter, StakingBoost, and MerkleDistributor integration.",
+      "renounceTransaction": "0x54a7360cd386508aa7a47d32db90e7289435a2ac086873e7c4b85cd9f9a52493",
       "currentActiveContract": "0x07F943F173a6bE5EC63a8475597d28aAA6B24992"
     },
     "ShXRPVault": {

@@ -240,8 +240,8 @@ During testnet development, multiple SHIELD token contracts were deployed as the
 
 | Address | Status | Deployment Date | Notes |
 |---------|--------|-----------------|-------|
-| `0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308` | ❌ DEPRECATED | Nov 9, 2025 | Ownership to be renounced using `scripts/renounce-old-shield-tokens.ts` |
-| `0x59fF3b7Ae628beEFFAe980F30240ec4e84448209` | ❌ DEPRECATED | Earlier testnet | Ownership to be renounced using `scripts/renounce-old-shield-tokens.ts` |
+| `0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308` | ❌ DEPRECATED | Nov 9, 2025 | Ownership renounced Nov 23, 2025 ([TX](https://coston2-explorer.flare.network/tx/0x54a7360cd386508aa7a47d32db90e7289435a2ac086873e7c4b85cd9f9a52493)) - Contract frozen |
+| `0x59fF3b7Ae628beEFFAe980F30240ec4e84448209` | ❌ DEPRECATED | Earlier testnet | Ownership renounced Nov 23, 2025 ([TX](https://coston2-explorer.flare.network/tx/0x49ea271b40f1a1234ceb6c9e5cdcf0254f949059d06cc719b70bbb7170adf83c)) - Contract frozen |
 | `0x07F943F173a6bE5EC63a8475597d28aAA6B24992` | ✅ ACTIVE | Nov 23, 2025 | **Current production contract** with RevenueRouter, StakingBoost, and MerkleDistributor integration |
 
 #### Why Multiple Deployments?
@@ -257,10 +257,21 @@ The protocol underwent architectural improvements during testnet development:
 
 #### What Happened to Old Deployments?
 
-Deprecated contracts **will have ownership renounced** to permanently freeze them. Use `scripts/renounce-old-shield-tokens.ts` to execute:
+Deprecated contracts **had ownership renounced** on **November 23, 2025** to permanently freeze them:
 
-- ❌ No new tokens can be minted (after renouncement)
-- ❌ No contract parameters can be changed (after renouncement)
+**Contract #1** (`0xD6D476...8308`):
+- Transaction: [`0x54a7360cd386508aa7a47d32db90e7289435a2ac086873e7c4b85cd9f9a52493`](https://coston2-explorer.flare.network/tx/0x54a7360cd386508aa7a47d32db90e7289435a2ac086873e7c4b85cd9f9a52493)
+- Block: 24297250
+- Status: ✅ Permanently frozen
+
+**Contract #2** (`0x59fF3b...8209`):
+- Transaction: [`0x49ea271b40f1a1234ceb6c9e5cdcf0254f949059d06cc719b70bbb7170adf83c`](https://coston2-explorer.flare.network/tx/0x49ea271b40f1a1234ceb6c9e5cdcf0254f949059d06cc719b70bbb7170adf83c)
+- Block: 24297253
+- Status: ✅ Permanently frozen
+
+After renouncement:
+- ❌ No new tokens can be minted
+- ❌ No contract parameters can be changed
 - ❌ Contracts are permanently frozen in their current state
 
 This ensures that old deployments cannot be confused with the active contract.
