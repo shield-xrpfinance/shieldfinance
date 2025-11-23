@@ -253,17 +253,16 @@ export default function Vaults() {
 
     const paymentAsset = selectedVault.depositAssets[0];
 
-    // BULLETPROOF: If EVM wallet is connected + vault name contains "fxrp" → EVM deposit
-    // This is the most reliable indicator
-    const isFXRPDeposit = !!(evmAddress && selectedVault.name.toLowerCase().includes("fxrp"));
+    // PRIMARY CHECK: If vault name contains "fxrp", it's an FXRP vault
+    const isFXRPDeposit = selectedVault.name.toLowerCase().includes("fxrp");
     
-    console.log(`🔄 Deposit: vault="${selectedVault.name}", evmAddress="${evmAddress}", isFXRPDeposit=${isFXRPDeposit}`);
+    console.log(`🔄 Deposit: vault="${selectedVault.name}", walletType="${walletType}", isFXRPDeposit=${isFXRPDeposit}`);
 
     if (isFXRPDeposit) {
-      // Use direct FXRP deposit flow - user deposits FXRP via EVM wallet, gets shXRP immediately
-      if (!evmAddress) {
+      // FXRP deposit requires EVM wallet type
+      if (walletType !== "evm") {
         toast({
-          title: "Connection Error",
+          title: "Wrong Wallet Type",
           description: "Please connect an EVM wallet (like BiFrost) to deposit FXRP.",
           variant: "destructive",
         });
