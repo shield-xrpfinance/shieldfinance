@@ -148,7 +148,13 @@ export function ProgressStepsModal({
         memo: depositStatus.paymentRequest.memo,
         network: (depositStatus.paymentRequest.network || 'testnet') as 'mainnet' | 'testnet',
       }).then((result) => {
-        if (result.success && provider === 'xaman') {
+        if (!result.success) {
+          console.error("Payment request failed:", result.error);
+          paymentTriggeredRef.current = false; // Reset on error to allow retry
+          return;
+        }
+
+        if (provider === 'xaman') {
           // For Xaman, open the QR code modal
           setXamanPayload({
             uuid: result.payloadUuid || '',
@@ -156,8 +162,12 @@ export function ProgressStepsModal({
             deepLink: result.deepLink || '',
           });
           setXamanPaymentModalOpen(true);
+        } else if (provider === 'walletconnect') {
+          // For WalletConnect, the transaction has been sent to the wallet
+          // The user will see a signature prompt in their wallet
+          // Monitor the bridge status for confirmation
+          console.log("WalletConnect payment sent. Waiting for wallet confirmation...");
         }
-        // For WalletConnect, the wallet handles the payment directly (no modal needed)
       }).catch((error) => {
         console.error("Failed to trigger payment modal:", error);
         paymentTriggeredRef.current = false; // Reset on error to allow retry
