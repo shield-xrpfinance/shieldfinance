@@ -1,6 +1,6 @@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Loader2, Circle, ExternalLink, Info, PartyPopper } from "lucide-react";
+import { CheckCircle2, Loader2, Circle, ExternalLink, Info, PartyPopper, AlertCircle, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useQuery } from "@tanstack/react-query";
@@ -449,6 +449,88 @@ export function ProgressStepsModal({
       title="Complete XRP Payment"
       description="Scan the QR code with Xaman to send your XRP to the FAssets bridge agent"
     />
+
+    {/* WalletConnect Payment Modal */}
+    <Dialog open={wcWaitingOpen} onOpenChange={setWcWaitingOpen}>
+      <DialogContent className="sm:max-w-md" data-testid="dialog-walletconnect-signing">
+        <DialogHeader>
+          <DialogTitle className="text-center">
+            {wcError ? 'Payment Failed' : 'Complete XRP Payment'}
+          </DialogTitle>
+          <DialogDescription className="text-center">
+            {wcError ? 'There was an error signing your transaction' : 'Check your wallet to approve the payment'}
+          </DialogDescription>
+        </DialogHeader>
+
+        {!wcError ? (
+          <div className="py-6 space-y-4 text-center">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-primary/10 p-4">
+                <Smartphone className="h-8 w-8 text-primary animate-pulse" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium">Check your wallet app</p>
+              <p className="text-xs text-muted-foreground">
+                A transaction signature request is waiting for you. Open your wallet and approve the payment to continue.
+              </p>
+            </div>
+            <Alert className="p-3">
+              <Info className="h-4 w-4 flex-shrink-0" />
+              <AlertDescription className="text-xs">
+                Your bridge will automatically complete once the payment is confirmed on the XRP Ledger.
+              </AlertDescription>
+            </Alert>
+            <Button
+              variant="outline"
+              onClick={() => setWcWaitingOpen(false)}
+              className="w-full"
+              data-testid="button-close-walletconnect"
+            >
+              Got it, checking my wallet
+            </Button>
+          </div>
+        ) : (
+          <div className="py-6 space-y-4">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-destructive/10 p-4">
+                <AlertCircle className="h-8 w-8 text-destructive" />
+              </div>
+            </div>
+            <Alert variant="destructive" className="p-3">
+              <AlertDescription className="text-xs">
+                {wcError}
+              </AlertDescription>
+            </Alert>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="default"
+                onClick={() => {
+                  setWcError(null);
+                  setWcWaitingOpen(false);
+                  paymentTriggeredRef.current = false; // Allow retry
+                }}
+                className="w-full"
+                data-testid="button-retry-walletconnect"
+              >
+                Try Again
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setWcError(null);
+                  setWcWaitingOpen(false);
+                }}
+                className="w-full"
+                data-testid="button-close-walletconnect-error"
+              >
+                Close
+              </Button>
+            </div>
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
     </>
   );
 }
