@@ -472,23 +472,35 @@ export function ProgressStepsModal({
             <div className="space-y-2">
               <p className="text-sm font-medium">Check your wallet app</p>
               <p className="text-xs text-muted-foreground">
-                A transaction signature request is waiting for you. Open your wallet and approve the payment to continue.
+                A transaction signature request is waiting for you. Open your wallet app and approve the XRP payment.
               </p>
             </div>
             <Alert className="p-3">
               <Info className="h-4 w-4 flex-shrink-0" />
               <AlertDescription className="text-xs">
-                Your bridge will automatically complete once the payment is confirmed on the XRP Ledger.
+                Send exactly {(parseFloat(depositStatus?.paymentRequest?.amountDrops || "0") / 1000000).toFixed(6)} XRP to {depositStatus?.paymentRequest?.destination}
               </AlertDescription>
             </Alert>
-            <Button
-              variant="outline"
-              onClick={() => setWcWaitingOpen(false)}
-              className="w-full"
-              data-testid="button-close-walletconnect"
-            >
-              Got it, checking my wallet
-            </Button>
+            <div className="flex flex-col gap-2">
+              <Button
+                variant="default"
+                onClick={() => {
+                  setWcWaitingOpen(false);
+                }}
+                className="w-full"
+                data-testid="button-ready-walletconnect"
+              >
+                I've approved the payment
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => setWcWaitingOpen(false)}
+                className="w-full"
+                data-testid="button-close-walletconnect"
+              >
+                Close
+              </Button>
+            </div>
           </div>
         ) : (
           <div className="py-6 space-y-4">

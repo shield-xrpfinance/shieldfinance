@@ -310,37 +310,64 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             amount: paymentRequest.amountDrops,
           });
 
-          // Use a timeout to ensure the request completes or fails
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("WalletConnect request timeout after 30 seconds")), 30000)
-          );
+          // Try xrpl_signAndSubmit first
+          try {
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("WalletConnect request timeout")), 15000)
+            );
 
-          const requestPromise = walletConnectProvider.request({
-            method: "xrpl_signAndSubmit",
-            params: {
-              tx_json: tx,
-            },
-          });
+            const requestPromise = walletConnectProvider.request({
+              method: "xrpl_signAndSubmit",
+              params: {
+                tx_json: tx,
+              },
+            });
 
-          const result = (await Promise.race([requestPromise, timeoutPromise])) as any;
+            const result = (await Promise.race([requestPromise, timeoutPromise])) as any;
 
-          console.log("✅ WalletConnect: Transaction signed successfully", {
-            hash: result?.tx_json?.hash || result?.hash || "pending",
-          });
+            console.log("✅ WalletConnect: Transaction signed successfully", {
+              hash: result?.tx_json?.hash || result?.hash || "pending",
+            });
 
-          return {
-            success: true,
-            txHash: result?.tx_json?.hash || result?.hash || "pending",
-          };
+            return {
+              success: true,
+              txHash: result?.tx_json?.hash || result?.hash || "pending",
+            };
+          } catch (firstAttemptError) {
+            // If that fails, try xrpl_sign method
+            console.log("⚠️  xrpl_signAndSubmit failed, trying xrpl_sign...");
+            
+            const timeoutPromise = new Promise((_, reject) =>
+              setTimeout(() => reject(new Error("WalletConnect request timeout")), 15000)
+            );
+
+            const requestPromise = walletConnectProvider.request({
+              method: "xrpl_sign",
+              params: {
+                tx_json: tx,
+                autofill: true,
+              },
+            });
+
+            const result = (await Promise.race([requestPromise, timeoutPromise])) as any;
+
+            console.log("✅ WalletConnect: Transaction signed with xrpl_sign", {
+              signedTx: result?.tx_json ? "yes" : "no",
+            });
+
+            return {
+              success: true,
+              txHash: result?.tx_json?.hash || "pending",
+            };
+          }
         } catch (wcError) {
           const errorMessage = wcError instanceof Error ? wcError.message : "Unknown WalletConnect error";
           console.error("❌ WalletConnect: Transaction signing failed:", errorMessage);
 
-          // Provide detailed error message for user
           return {
             success: false,
             error: errorMessage.includes("timeout")
-              ? "Wallet did not respond. Please check your wallet app and try again."
+              ? "Wallet did not respond in time. Please open your WalletConnect wallet and try again."
               : errorMessage.includes("rejected")
               ? "You rejected the transaction in your wallet."
               : errorMessage,
