@@ -8,6 +8,7 @@ import DepositModal from "@/components/DepositModal";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import { ProgressStepsModal, type ProgressStep } from "@/components/ProgressStepsModal";
+import ConnectWalletEmptyState from "@/components/ConnectWalletEmptyState";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -40,7 +41,7 @@ export default function Vaults() {
   const [progressStep, setProgressStep] = useState<ProgressStep>('creating');
   const [progressErrorMessage, setProgressErrorMessage] = useState<string | undefined>(undefined);
   const { toast } = useToast();
-  const { address, provider, walletConnectProvider, requestPayment } = useWallet();
+  const { address, provider, walletType, isConnected, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
   const [, setLocation] = useLocation();
 
@@ -150,8 +151,24 @@ export default function Vaults() {
     comingSoon: (vault as any).comingSoon || false,
   })) || [];
 
+  // Filter vaults based on wallet type
+  const walletFilteredVaults = useMemo(() => {
+    if (!isConnected || !walletType) {
+      return []; // No wallet connected, return empty array
+    }
+    
+    if (walletType === "xrpl") {
+      // Xaman users see XRP vaults only
+      return allVaults.filter(vault => vault.asset === "XRP");
+    } else if (walletType === "evm") {
+      // WalletConnect/BiFrost users see FXRP vaults only
+      return allVaults.filter(vault => vault.asset === "FXRP");
+    }
+    
+    return allVaults;
+  }, [allVaults, isConnected, walletType]);
 
-  const filteredVaults = allVaults
+  const filteredVaults = walletFilteredVaults
     .filter((vault) =>
       vault.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
@@ -515,6 +532,28 @@ export default function Vaults() {
     setPendingDeposit(null);
     setXamanPayload(null);
   };
+
+  // Show empty state if wallet not connected
+  if (!isConnected) {
+    return <ConnectWalletEmptyState />;
+  }
+
+  // Show loading skeleton only when connected and loading
+  if (isLoading && isConnected) {
+    return (
+      <div className="space-y-8">
+        <div>
+          <Skeleton className="h-9 w-48 mb-2" />
+          <Skeleton className="h-5 w-96" />
+        </div>
+        <div className="space-y-6">
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+          <Skeleton className="h-32 w-full" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8">
