@@ -4,6 +4,9 @@ import type UniversalProvider from "@walletconnect/universal-provider";
 import type { PaymentRequest } from "@shared/schema";
 import { Buffer } from "buffer";
 
+// Global singleton to prevent double initialization of WalletConnect Core
+let wcInitPromise: Promise<any> | null = null;
+
 interface PaymentRequestResult {
   success: boolean;
   payloadUuid?: string;
@@ -120,7 +123,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             localStorage.removeItem("walletAddress");
             localStorage.removeItem("walletProvider");
           } else {
-            // Lazy load WalletConnect SDK only when needed
+            // Lazy load WalletConnect SDK only when needed (with singleton pattern)
             let timeoutId: NodeJS.Timeout | undefined;
             try {
               // Dynamic import with timeout to prevent blocking
@@ -129,8 +132,20 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               });
               
               const loadWC = async () => {
+                // Prevent double initialization using a singleton pattern
+                if (wcInitPromise) {
+                  return wcInitPromise;
+                }
+                
                 const { default: UniversalProvider } = await import("@walletconnect/universal-provider");
-                return await UniversalProvider.init({
+                
+                // Check if already initialized to prevent "already initialized" errors
+                if (UniversalProvider.instance) {
+                  wcInitPromise = Promise.resolve(UniversalProvider.instance);
+                  return wcInitPromise;
+                }
+                
+                wcInitPromise = UniversalProvider.init({
                   projectId,
                   metadata: {
                     name: "XRP Liquid Staking Protocol",
@@ -139,6 +154,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                     icons: [window.location.origin + "/favicon.ico"],
                   },
                 });
+                
+                return wcInitPromise;
               };
               
               // Race between loading and timeout
@@ -146,6 +163,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               
               // Check if session exists (auto-persisted in IndexedDB)
               if (wcProvider?.session) {
+                console.log("✅ WalletConnect: Restoring session from storage");
                 // Try to restore XRPL address
                 const xrplAccounts = wcProvider.session.namespaces?.xrpl?.accounts || [];
                 const evmAccounts = wcProvider.session.namespaces?.eip155?.accounts || [];
@@ -328,7 +346,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           // Try xrpl_signAndSubmit first
           try {
             const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error("WalletConnect request timeout")), 15000)
+              setTimeout(() => reject(new Error("WalletConnect request timeout")), 20000)
             );
 
             const requestPromise = walletConnectProvider.request({
@@ -349,11 +367,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               txHash: result?.tx_json?.hash || result?.hash || "pending",
             };
           } catch (firstAttemptError) {
-            // If that fails, try xrpl_sign method
-            console.log("⚠️  xrpl_signAndSubmit failed, trying xrpl_sign...");
+            // If that fails, try xrpl_sign method  
+            const firstError = firstAttemptError instanceof Error ? firstAttemptError.message : String(firstAttemptError);
+            console.log("⚠️  xrpl_signAndSubmit failed:", firstError, "trying xrpl_sign...");
             
             const timeoutPromise = new Promise((_, reject) =>
-              setTimeout(() => reject(new Error("WalletConnect request timeout")), 15000)
+              setTimeout(() => reject(new Error("WalletConnect request timeout")), 20000)
             );
 
             const requestPromise = walletConnectProvider.request({
@@ -382,9 +401,11 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           return {
             success: false,
             error: errorMessage.includes("timeout")
-              ? "Wallet connection lost or didn't respond. Make sure your wallet app is open and the WalletConnect session is active."
+              ? "Wallet didn't respond. Make sure your Bifrost wallet app is open and the WalletConnect session is active. Check your phone now."
               : errorMessage.includes("rejected")
               ? "You rejected the transaction in your wallet."
+              : errorMessage.includes("Please call connect()")
+              ? "WalletConnect session lost. Please disconnect and reconnect your wallet, then try again."
               : `Wallet error: ${errorMessage}`,
           };
         }
