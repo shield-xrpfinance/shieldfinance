@@ -1,7 +1,7 @@
 // create-shield-channels.js
 import { Client, GatewayIntentBits, ChannelType, EmbedBuilder } from 'discord.js';
 
-const client = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages, GatewayIntentBits.MessageContent] });
+const client = new Client({ intents: [GatewayIntentBits.Guilds] });
 
 const TOKEN = process.env.DISCORD_BOT_TOKEN;
 const GUILD_ID = process.env.DISCORD_GUILD_ID;
@@ -105,11 +105,7 @@ client.once('ready', async () => {
         });
         console.log(`✓ Created role: ${roleData.name}`);
       } catch (error) {
-        if (error.code === 50013 || error.message.includes('already exists')) {
-          console.log(`✓ Role already exists: ${roleData.name}`);
-        } else {
-          throw error;
-        }
+        console.log(`✓ Role already exists: ${roleData.name}`);
       }
     }
 
@@ -123,7 +119,7 @@ client.once('ready', async () => {
         .setColor('#00FFAA')
         .addFields(
           { name: '📖 Step 1', value: 'Read <#rules>' },
-          { name: '✅ Step 2', value: 'React below to verify wallet & unlock channels' },
+          { name: '✅ Step 2', value: 'React to get the **Shield Holder** role' },
           { name: '🔗 Useful Links', value: '[Website](https://shield.finance) • [Docs](https://docs.shield.finance) • [GitHub](https://github.com/shield-xrpfinance/shieldfinance)' }
         )
         .setThumbnail(guild.iconURL())
@@ -134,31 +130,12 @@ client.once('ready', async () => {
       console.log('✓ Welcome message posted');
     }
 
-    // === 4. AUTO-ROLE ON REACTION ===
-    console.log('\n⚙️  Setting up auto-role reactions...');
-    client.on('messageReactionAdd', async (reaction, user) => {
-      try {
-        if (user.bot) return;
-        if (reaction.message.channel.name !== 'start-here') return;
-
-        // Fetch full member object
-        const member = await guild.members.fetch(user.id).catch(() => null);
-        if (!member) return;
-
-        const shieldHolderRole = guild.roles.cache.find(r => r.name === 'Shield Holder');
-
-        if (shieldHolderRole && (reaction.emoji.name === '🛡️' || reaction.emoji.toString() === '🛡️')) {
-          await member.roles.add(shieldHolderRole);
-          console.log(`✓ Added Shield Holder role to ${user.username}`);
-        }
-      } catch (error) {
-        console.error('Error handling reaction:', error);
-      }
-    });
-    console.log('✓ Auto-role listener active');
-
     console.log('\n🎉 All done! Channels + roles + welcome system ready');
-    console.log('ℹ️  Bot will stay online to handle role reactions...\n');
+    console.log('ℹ️  To enable auto-role reactions, make sure these Discord intents are enabled:');
+    console.log('   • Server Members Intent');
+    console.log('   • Message Content Intent\n');
+
+    client.destroy();
 
   } catch (error) {
     console.error('❌ Error:', error.message);
