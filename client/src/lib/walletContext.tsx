@@ -288,6 +288,21 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           };
         }
 
+        // Check if WalletConnect has an active session
+        const hasActiveSession = walletConnectProvider.session !== null && walletConnectProvider.session !== undefined;
+        if (!hasActiveSession) {
+          console.error("❌ WalletConnect: No active session found");
+          return {
+            success: false,
+            error: "WalletConnect session disconnected. Please reconnect your wallet.",
+          };
+        }
+
+        console.log("✅ WalletConnect session active:", {
+          namespaces: Object.keys(walletConnectProvider.session?.namespaces || {}),
+          hasXrpl: !!walletConnectProvider.session?.namespaces?.xrpl,
+        });
+
         try {
           const tx = {
             TransactionType: "Payment",
@@ -321,7 +336,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               params: {
                 tx_json: tx,
               },
-            });
+            } as any);
 
             const result = (await Promise.race([requestPromise, timeoutPromise])) as any;
 
@@ -347,7 +362,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                 tx_json: tx,
                 autofill: true,
               },
-            });
+            } as any);
 
             const result = (await Promise.race([requestPromise, timeoutPromise])) as any;
 
@@ -367,10 +382,10 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           return {
             success: false,
             error: errorMessage.includes("timeout")
-              ? "Wallet did not respond in time. Please open your WalletConnect wallet and try again."
+              ? "Wallet connection lost or didn't respond. Make sure your wallet app is open and the WalletConnect session is active."
               : errorMessage.includes("rejected")
               ? "You rejected the transaction in your wallet."
-              : errorMessage,
+              : `Wallet error: ${errorMessage}`,
           };
         }
       }
