@@ -56,6 +56,7 @@ export interface IStorage {
   getStuckRedemptionsForMetrics(minutesThreshold?: number): Promise<SelectFxrpToXrpRedemption[]>;
   getRedemptionByMatch(userAddress: string, agentAddress: string, amountDrops: string): Promise<SelectFxrpToXrpRedemption | null>;
   getRedemptionsNeedingRetry(): Promise<SelectFxrpToXrpRedemption[]>;
+  getRedemptionsWithPendingPayouts(): Promise<SelectFxrpToXrpRedemption[]>;
   
   createFirelightPosition(position: InsertFirelightPosition): Promise<SelectFirelightPosition>;
   getFirelightPositionByVault(vaultId: string): Promise<SelectFirelightPosition | undefined>;
@@ -645,6 +646,20 @@ export class DatabaseStorage implements IStorage {
       where: and(
         inArray(fxrpToXrpRedemptions.backendStatus, ["manual_review", "retry_pending"]),
         eq(fxrpToXrpRedemptions.userStatus, "completed")
+      ),
+      orderBy: desc(fxrpToXrpRedemptions.createdAt),
+    });
+  }
+
+  async getRedemptionsWithPendingPayouts(): Promise<SelectFxrpToXrpRedemption[]> {
+    // Query redemptions with:
+    // - xrplPayoutTxHash IS NOT NULL (payout was initiated)
+    // - userStatus != 'completed' (user-facing status not yet complete)
+    // These are withdrawals where XRP may have arrived but userStatus wasn't updated
+    return db.query.fxrpToXrpRedemptions.findMany({
+      where: and(
+        sql`${fxrpToXrpRedemptions.xrplPayoutTxHash} IS NOT NULL`,
+        sql`${fxrpToXrpRedemptions.userStatus} != 'completed'`
       ),
       orderBy: desc(fxrpToXrpRedemptions.createdAt),
     });

@@ -1,6 +1,7 @@
 import type { IStorage } from "../storage";
 import type { FlareClient } from "../utils/flare-client";
 import type { BridgeService } from "./BridgeService";
+import { Client } from "xrpl";
 
 export interface WithdrawalRetryConfig {
   storage: IStorage;
@@ -108,6 +109,9 @@ export class WithdrawalRetryService {
     try {
       console.log("\n🔍 [RETRY] Checking for failed withdrawal confirmations...");
 
+      // First: Check for withdrawals with XRPL payouts that need userStatus update
+      await this.confirmPendingPayouts();
+
       // Query for redemptions needing retry
       // Use a custom storage method that gets redemptions with:
       // - backendStatus IN ('manual_review', 'retry_pending')
@@ -177,6 +181,74 @@ export class WithdrawalRetryService {
       console.error("❌ [RETRY] Error during processing:", error);
     } finally {
       this.isProcessing = false;
+    }
+  }
+
+  /**
+   * Check for XRPL payouts and update userStatus if transaction is confirmed
+   * This resolves the issue where userStatus stays "processing" even after XRP arrives
+   */
+  private async confirmPendingPayouts(): Promise<void> {
+    try {
+      console.log("   📬 Checking for confirmed XRPL payouts...");
+
+      // Get redemptions with XRPL payout transactions but userStatus not complete
+      const pendingPayouts = await this.config.storage.getRedemptionsWithPendingPayouts();
+
+      if (pendingPayouts.length === 0) {
+        console.log("   ✅ No pending payouts to check");
+        return;
+      }
+
+      console.log(`   📋 Found ${pendingPayouts.length} redemption(s) with pending payouts`);
+
+      // Connect to XRPL to verify transactions
+      const client = new Client("wss://s.altnet.rippletest.net:51233");
+      await client.connect();
+
+      try {
+        for (const redemption of pendingPayouts) {
+          if (!redemption.xrplPayoutTxHash) continue;
+
+          try {
+            // Check if transaction exists and is validated
+            const txResponse = await client.request({
+              command: "tx",
+              transaction: redemption.xrplPayoutTxHash,
+            });
+
+            // If we got here, transaction exists
+            if (txResponse.result && typeof txResponse.result === 'object') {
+              const validated = (txResponse.result as any).validated;
+              const resultCode = (txResponse.result as any).meta?.TransactionResult;
+
+              if (validated && resultCode === "tesSUCCESS") {
+                console.log(`   ✅ XRPL payout confirmed for ${redemption.id}`);
+                console.log(`      TX: ${redemption.xrplPayoutTxHash}`);
+
+                // Update userStatus to completed
+                await this.config.storage.updateRedemption(redemption.id, {
+                  userStatus: "completed",
+                  completedAt: new Date(),
+                });
+
+                console.log(`      ✅ Updated userStatus to 'completed'`);
+              }
+            }
+          } catch (error: any) {
+            // Transaction might not exist yet or error occurred
+            // This is expected for recent transactions, so don't log as error
+            if (error.message && error.message.includes("txnNotFound")) {
+              console.log(`   ⏳ XRPL payout ${redemption.xrplPayoutTxHash.slice(0, 10)}... not yet validated`);
+            }
+          }
+        }
+      } finally {
+        await client.disconnect();
+      }
+    } catch (error) {
+      console.error("❌ Error checking pending payouts:", error);
+      // Don't throw - let the retry service continue
     }
   }
 
