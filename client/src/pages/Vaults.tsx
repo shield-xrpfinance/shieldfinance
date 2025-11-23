@@ -253,10 +253,10 @@ export default function Vaults() {
 
     const paymentAsset = selectedVault.depositAssets[0];
 
-    // PRIMARY CHECK: If vault name contains "fxrp", it's an FXRP vault
-    const isFXRPDeposit = selectedVault.name.toLowerCase().includes("fxrp");
+    // MOST RELIABLE CHECK: Use vault.asset field from backend (works across network toggles)
+    const isFXRPDeposit = paymentAsset === "FXRP";
     
-    console.log(`🔄 Deposit: vault="${selectedVault.name}", walletType="${walletType}", isFXRPDeposit=${isFXRPDeposit}`);
+    console.log(`🔄 Deposit: vault="${selectedVault.name}", asset="${paymentAsset}", walletType="${walletType}", isFXRPDeposit=${isFXRPDeposit}`);
 
     if (isFXRPDeposit) {
       // FXRP deposit requires EVM wallet type
