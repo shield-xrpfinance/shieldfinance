@@ -130,11 +130,17 @@ export default function Vaults() {
   }, [escrows]);
 
   const allVaults = apiVaults?.map(vault => {
-    const vaultAsset = vault.asset || "XRP";
-    const vaultDepositAssets = vaultAsset.split(",").map(a => a.trim());
-    if (vaultAsset === "FXRP" || vaultDepositAssets.includes("FXRP")) {
-      console.log(`✅ FXRP Vault detected: ${vault.name}, asset=${vaultAsset}, depositAssets=${JSON.stringify(vaultDepositAssets)}`);
+    // Determine asset: prioritize vault.asset, fallback to name-based detection
+    let vaultAsset = vault.asset || "XRP";
+    
+    // Name-based fallback for FXRP vault if asset field is missing
+    if (vault.name.toLowerCase().includes("fxrp") && !vault.asset) {
+      vaultAsset = "FXRP";
+      console.log(`⚠️  FXRP Vault detected via name fallback: ${vault.name}`);
     }
+    
+    const vaultDepositAssets = vaultAsset.split(",").map(a => a.trim());
+    console.log(`📋 Vault: ${vault.name}, asset=${vaultAsset}, depositAssets=${JSON.stringify(vaultDepositAssets)}`);
     return {
       id: vault.id,
       name: vault.name,
@@ -246,7 +252,13 @@ export default function Vaults() {
     const paymentAsset = selectedVault.depositAssets[0];
 
     // Check if this is an FXRP deposit (EVM wallet)
-    const isFXRPDeposit = selectedVault.depositAssets.includes("FXRP");
+    // Fallback: check vault name if depositAssets doesn't explicitly include FXRP
+    let isFXRPDeposit = selectedVault.depositAssets.includes("FXRP");
+    if (!isFXRPDeposit && selectedVault.name.toLowerCase().includes("fxrp")) {
+      isFXRPDeposit = true;
+      console.log(`🔧 FXRP deposit detected via vault name fallback: ${selectedVault.name}`);
+    }
+    console.log(`🔄 handleConfirmDeposit: vault=${selectedVault.name}, depositAssets=${JSON.stringify(selectedVault.depositAssets)}, isFXRPDeposit=${isFXRPDeposit}`);
 
     if (isFXRPDeposit) {
       // Use direct FXRP deposit flow - user deposits FXRP via EVM wallet, gets shXRP immediately
