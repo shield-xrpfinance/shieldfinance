@@ -105,6 +105,9 @@ export function ProgressStepsModal({
   const [wcWaitingOpen, setWcWaitingOpen] = useState(false);
   const [wcError, setWcError] = useState<string | null>(null);
 
+  // State for minimized modal during finalizing
+  const [isMinimized, setIsMinimized] = useState(false);
+
   // Start polling as soon as we have a bridgeId to detect all status transitions
   const shouldPoll = !!bridgeId && open;
   
