@@ -41,7 +41,7 @@ export default function Vaults() {
   const [progressStep, setProgressStep] = useState<ProgressStep>('creating');
   const [progressErrorMessage, setProgressErrorMessage] = useState<string | undefined>(undefined);
   const { toast } = useToast();
-  const { address, provider, walletType, isConnected, walletConnectProvider, requestPayment } = useWallet();
+  const { address, evmAddress, provider, walletType, isConnected, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
   const [, setLocation] = useLocation();
 
@@ -50,14 +50,15 @@ export default function Vaults() {
   });
 
   const { data: escrows = [] } = useQuery<Escrow[]>({
-    queryKey: ["/api/escrows", address],
+    queryKey: ["/api/escrows", address, evmAddress],
     queryFn: async () => {
-      if (!address) return [];
-      const response = await fetch(`/api/escrows?walletAddress=${encodeURIComponent(address)}`);
+      const walletAddr = address || evmAddress;
+      if (!walletAddr) return [];
+      const response = await fetch(`/api/escrows?walletAddress=${encodeURIComponent(walletAddr)}`);
       if (!response.ok) throw new Error('Failed to fetch escrows');
       return response.json();
     },
-    enabled: !!address,
+    enabled: !!address || !!evmAddress,
   });
 
   // NOTE: Legacy polling removed - ProgressStepsModal now handles all polling internally

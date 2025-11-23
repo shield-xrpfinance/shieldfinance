@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Vault as VaultType } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -9,6 +9,7 @@ import DepositModal from "@/components/DepositModal";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import { ProgressStepsModal, type ProgressStep } from "@/components/ProgressStepsModal";
+import ConnectWalletEmptyState from "@/components/ConnectWalletEmptyState";
 import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
 import { Coins, TrendingUp, Vault, Users, Loader2, CheckCircle2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -37,7 +38,7 @@ export default function Dashboard() {
   const [progressStep, setProgressStep] = useState<ProgressStep>('creating');
   const [progressErrorMessage, setProgressErrorMessage] = useState<string | undefined>(undefined);
   const { toast } = useToast();
-  const { address, provider, walletConnectProvider, requestPayment } = useWallet();
+  const { address, provider, walletType, isConnected, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet } = useNetwork();
   const [, setLocation] = useLocation();
   const comprehensiveBalances = useComprehensiveBalance();
@@ -46,6 +47,23 @@ export default function Dashboard() {
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
     queryKey: ["/api/vaults"],
   });
+
+  // Filter vaults based on wallet type
+  const walletFilteredVaults = useMemo(() => {
+    if (!isConnected || !walletType) {
+      return [];
+    }
+    
+    const allVaults = apiVaults || [];
+    
+    if (walletType === "xrpl") {
+      return allVaults.filter(vault => vault.asset === "XRP");
+    } else if (walletType === "evm") {
+      return allVaults.filter(vault => vault.asset === "FXRP");
+    }
+    
+    return allVaults;
+  }, [apiVaults, isConnected, walletType]);
 
   // NOTE: Legacy polling removed - ProgressStepsModal now handles all polling internally
 
@@ -77,8 +95,8 @@ export default function Dashboard() {
   };
 
   // Filter out coming soon vaults and take first 3 active vaults
-  const vaults = apiVaults
-    ?.filter(vault => !(vault as any).comingSoon)
+  const vaults = walletFilteredVaults
+    .filter(vault => !(vault as any).comingSoon)
     .slice(0, 3)
     .map(vault => ({
       id: vault.id,
@@ -94,7 +112,7 @@ export default function Dashboard() {
       status: vault.status.charAt(0).toUpperCase() + vault.status.slice(1),
       depositAssets: (vault.asset || "XRP").split(",").map(a => a.trim()),
       comingSoon: (vault as any).comingSoon || false,
-    })) || [];
+    }));
 
   const chartData = [
     { date: "Oct 1", "Stable Yield": 7.2, "High Yield": 12.5, "Maximum Returns": 18.2 },
@@ -465,6 +483,11 @@ export default function Dashboard() {
     setPendingDeposit(null);
     setXamanPayload(null);
   };
+
+  // Show empty state if wallet not connected
+  if (!isConnected) {
+    return <ConnectWalletEmptyState />;
+  }
 
   return (
     <div className="space-y-12">

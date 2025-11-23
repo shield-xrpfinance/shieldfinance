@@ -459,7 +459,8 @@ const HistorySection = ({ history, isLoadingHistory, address }: HistorySectionPr
 };
 
 export default function BridgeTracking() {
-  const { address } = useWallet();
+  const { address, evmAddress } = useWallet();
+  const walletAddr = address || evmAddress;
   const [activeTab, setActiveTab] = useState("active");
   const [selectedBridge, setSelectedBridge] = useState<{
     bridgeId: string;
@@ -471,8 +472,8 @@ export default function BridgeTracking() {
   const isMobile = useIsMobile(768);
 
   const { data: bridges, isLoading } = useQuery<SelectXrpToFxrpBridge[]>({
-    queryKey: [`/api/bridges/wallet/${address}`],
-    enabled: !!address,
+    queryKey: [`/api/bridges/wallet/${walletAddr}`],
+    enabled: !!walletAddr,
   });
 
   const { data: vaults, isLoading: isLoadingVaults } = useQuery<Vault[]>({
@@ -480,13 +481,13 @@ export default function BridgeTracking() {
   });
 
   const { data: history, isLoading: isLoadingHistory } = useQuery<BridgeHistoryEntry[]>({
-    queryKey: [`/api/bridge-history/${address}`],
-    enabled: !!address,
+    queryKey: [`/api/bridge-history/${walletAddr}`],
+    enabled: !!walletAddr,
   });
 
   const { data: redemptions = [] } = useQuery<SelectFxrpToXrpRedemption[]>({
-    queryKey: [`/api/withdrawals/wallet/${address}`],
-    enabled: !!address,
+    queryKey: [`/api/withdrawals/wallet/${walletAddr}`],
+    enabled: !!walletAddr,
   });
 
   // Memoize vault lookup map for performance
@@ -554,7 +555,7 @@ export default function BridgeTracking() {
   const cancelBridgeMutation = useMutation({
     mutationFn: async (bridgeId: string) => {
       const response = await apiRequest("POST", `/api/bridges/${bridgeId}/user-cancel`, {
-        walletAddress: address,
+        walletAddress: walletAddr,
       });
       return response.json();
     },
@@ -563,7 +564,7 @@ export default function BridgeTracking() {
         title: "Bridge Cancelled",
         description: "Your deposit request has been cancelled successfully",
       });
-      queryClient.invalidateQueries({ queryKey: [`/api/bridges/wallet/${address}`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/bridges/wallet/${walletAddr}`] });
       setBridgeToCancel(null);
     },
     onError: (error: Error) => {

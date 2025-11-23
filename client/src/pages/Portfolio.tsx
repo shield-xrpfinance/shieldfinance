@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Position, Vault } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -11,6 +11,7 @@ import WithdrawModal from "@/components/WithdrawModal";
 import { WithdrawProgressModal, type WithdrawProgressStep } from "@/components/WithdrawProgressModal";
 import XamanSigningModal from "@/components/XamanSigningModal";
 import EmptyState from "@/components/EmptyState";
+import ConnectWalletEmptyState from "@/components/ConnectWalletEmptyState";
 import { PortfolioStatsSkeleton, PortfolioTableSkeleton } from "@/components/skeletons/PortfolioSkeleton";
 import { TrendingUp, Coins, Gift, Package, AlertCircle, ExternalLink } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -43,31 +44,33 @@ export default function Portfolio() {
   const withdrawPollingAbortControllerRef = useRef<AbortController | null>(null);
   
   const { toast } = useToast();
-  const { isConnected, address } = useWallet();
+  const { isConnected, address, evmAddress, walletType } = useWallet();
   const { network } = useNetwork();
   const [, navigate] = useLocation();
 
   const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
-    queryKey: ["/api/positions", address],
+    queryKey: ["/api/positions", address, evmAddress],
     queryFn: async () => {
-      if (!address) return [];
-      const response = await fetch(`/api/positions?walletAddress=${encodeURIComponent(address)}`);
+      const walletAddr = address || evmAddress;
+      if (!walletAddr) return [];
+      const response = await fetch(`/api/positions?walletAddress=${encodeURIComponent(walletAddr)}`);
       if (!response.ok) throw new Error('Failed to fetch positions');
       return response.json();
     },
-    enabled: !!address,
+    enabled: !!address || !!evmAddress,
   });
 
   // Query for active withdrawals to enable polling (not displayed in UI)
   const { data: redemptions = [] } = useQuery<any[]>({
-    queryKey: ["/api/withdrawals/wallet", address],
+    queryKey: ["/api/withdrawals/wallet", address, evmAddress],
     queryFn: async () => {
-      if (!address) return [];
-      const response = await fetch(`/api/withdrawals/wallet/${encodeURIComponent(address)}`);
+      const walletAddr = address || evmAddress;
+      if (!walletAddr) return [];
+      const response = await fetch(`/api/withdrawals/wallet/${encodeURIComponent(walletAddr)}`);
       if (!response.ok) throw new Error('Failed to fetch redemptions');
       return response.json();
     },
-    enabled: !!address,
+    enabled: !!address || !!evmAddress,
     refetchInterval: (query) => {
       // Check for active redemptions using displayStatus fallback
       const hasActiveRedemptions = query.state.data?.some((r: any) => {
@@ -89,11 +92,36 @@ export default function Portfolio() {
   }) || false;
 
   // Enable polling when there are active withdrawals
-  usePortfolioPolling(hasActiveWithdrawals, address);
+  const walletAddr = address || evmAddress;
+  usePortfolioPolling(hasActiveWithdrawals, walletAddr);
 
   const getVaultById = (vaultId: string) => vaults.find((v) => v.id === vaultId);
 
-  const formattedPositions = positions.map((pos) => {
+  // Filter positions based on wallet type
+  const filteredPositions = useMemo(() => {
+    // Don't filter if no wallet type
+    if (!walletType) return positions;
+    
+    // Don't filter if vaults data is still loading or empty
+    // (wait for vault metadata to be available before filtering)
+    if (!vaults || vaults.length === 0) return positions;
+    
+    return positions.filter(position => {
+      const vault = vaults.find(v => v.id === position.vaultId);
+      if (!vault) return false; // Still hide if vault not found after loading
+      
+      const vaultAsset = vault.asset || "XRP";
+      
+      if (walletType === "xrpl") {
+        return vaultAsset === "XRP";
+      } else if (walletType === "evm") {
+        return vaultAsset === "FXRP";
+      }
+      return false;
+    });
+  }, [positions, walletType, vaults]);
+
+  const formattedPositions = filteredPositions.map((pos) => {
     const vault = getVaultById(pos.vaultId);
     const amount = parseFloat(pos.amount);
     const rewards = parseFloat(pos.rewards);
@@ -415,28 +443,9 @@ export default function Portfolio() {
     }
   };
 
+  // Show empty state if wallet not connected
   if (!isConnected) {
-    return (
-      <div className="space-y-8">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight mb-2">Portfolio</h1>
-          <p className="text-muted-foreground">
-            Track your staking positions and rewards
-          </p>
-        </div>
-        <Card className="p-12">
-          <div className="text-center space-y-4">
-            <Coins className="h-16 w-16 text-muted-foreground mx-auto" />
-            <div>
-              <h3 className="text-xl font-semibold mb-2">Connect Your Wallet</h3>
-              <p className="text-muted-foreground">
-                Please connect your wallet to view your portfolio and staking positions
-              </p>
-            </div>
-          </div>
-        </Card>
-      </div>
-    );
+    return <ConnectWalletEmptyState />;
   }
 
   return (

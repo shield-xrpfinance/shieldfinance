@@ -439,7 +439,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const isConnected = address !== null;
+  const isConnected = address !== null || evmAddress !== null;
   const isEvmConnected = evmAddress !== null;
   
   // Derive walletType from provider

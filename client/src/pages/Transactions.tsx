@@ -49,28 +49,30 @@ function getTransactionBadge(type: string) {
 
 export default function Transactions() {
   const [, navigate] = useLocation();
-  const { address } = useWallet();
+  const { address, evmAddress } = useWallet();
   
   const { data: transactions = [], isLoading: transactionsLoading } = useQuery<Transaction[]>({
-    queryKey: ["/api/transactions", address],
+    queryKey: ["/api/transactions", address, evmAddress],
     queryFn: async () => {
-      if (!address) return [];
-      const response = await fetch(`/api/transactions?walletAddress=${encodeURIComponent(address)}`);
+      const walletAddr = address || evmAddress;
+      if (!walletAddr) return [];
+      const response = await fetch(`/api/transactions?walletAddress=${encodeURIComponent(walletAddr)}`);
       if (!response.ok) throw new Error('Failed to fetch transactions');
       return response.json();
     },
-    enabled: !!address,
+    enabled: !!address || !!evmAddress,
   });
 
   const { data: summary, isLoading: summaryLoading } = useQuery<TransactionSummary>({
-    queryKey: ["/api/transactions/summary", address],
+    queryKey: ["/api/transactions/summary", address, evmAddress],
     queryFn: async () => {
-      if (!address) return { totalDeposits: "0", totalWithdrawals: "0", totalRewards: "0", depositCount: 0, withdrawalCount: 0, claimCount: 0 };
-      const response = await fetch(`/api/transactions/summary?walletAddress=${encodeURIComponent(address)}`);
+      const walletAddr = address || evmAddress;
+      if (!walletAddr) return { totalDeposits: "0", totalWithdrawals: "0", totalRewards: "0", depositCount: 0, withdrawalCount: 0, claimCount: 0 };
+      const response = await fetch(`/api/transactions/summary?walletAddress=${encodeURIComponent(walletAddr)}`);
       if (!response.ok) throw new Error('Failed to fetch transaction summary');
       return response.json();
     },
-    enabled: !!address,
+    enabled: !!address || !!evmAddress,
   });
 
   return (
