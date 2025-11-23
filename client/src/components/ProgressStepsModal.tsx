@@ -74,6 +74,7 @@ function mapBackendStatusToStep(backendStatus: string): ProgressStep | null {
     'vault_minting': 'finalizing',
     'completed': 'completed',
     'vault_minted': 'completed',
+    'failed': 'error',
   };
   
   return statusMap[backendStatus] || null;
