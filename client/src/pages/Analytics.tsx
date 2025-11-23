@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { MultiAssetIcon } from "@/components/AssetIcon";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useState } from "react";
+import MonitoringDashboard from "@/components/MonitoringDashboard";
 
 interface ProtocolOverview {
   tvl: string;
@@ -226,6 +227,9 @@ export default function Analytics() {
           </Card>
         </div>
       </div>
+
+      {/* System Monitoring Dashboard */}
+      <MonitoringDashboard />
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
