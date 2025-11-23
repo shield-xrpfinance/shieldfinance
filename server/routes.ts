@@ -184,6 +184,112 @@ export async function registerRoutes(
     res.status(httpStatus).json(status);
   });
 
+  // Prometheus metrics endpoint - Exports metrics for external monitoring tools (Prometheus, Grafana)
+  app.get("/metrics", async (_req, res) => {
+    try {
+      if (!metricsService || !metricsService.isReady()) {
+        return res.status(503).text("# Metrics service not ready\n");
+      }
+
+      const [vaultMetrics, bridgeMetrics, txMetrics] = await Promise.all([
+        metricsService.getVaultMetrics(),
+        metricsService.getBridgeMetrics(),
+        metricsService.getTransactionMetrics(),
+      ]);
+
+      // Format as Prometheus text format
+      let output = "# HELP xrp_liquid_staking_tvl_usd Total value locked in USD\n";
+      output += "# TYPE xrp_liquid_staking_tvl_usd gauge\n";
+      output += `xrp_liquid_staking_tvl_usd ${parseFloat(vaultMetrics.tvl) || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_apy_percent Average APY percentage\n";
+      output += "# TYPE xrp_liquid_staking_apy_percent gauge\n";
+      output += `xrp_liquid_staking_apy_percent ${vaultMetrics.apy || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_active_users Number of active users\n";
+      output += "# TYPE xrp_liquid_staking_active_users gauge\n";
+      output += `xrp_liquid_staking_active_users ${vaultMetrics.activeUsers || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_total_stakers Total users staking SHIELD\n";
+      output += "# TYPE xrp_liquid_staking_total_stakers gauge\n";
+      output += `xrp_liquid_staking_total_stakers ${vaultMetrics.stakingAdoption.totalStakers || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_avg_boost_percentage Average SHIELD staking boost percentage\n";
+      output += "# TYPE xrp_liquid_staking_avg_boost_percentage gauge\n";
+      output += `xrp_liquid_staking_avg_boost_percentage ${vaultMetrics.stakingAdoption.avgBoostPercentage || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_total_shield_staked Total SHIELD tokens staked\n";
+      output += "# TYPE xrp_liquid_staking_total_shield_staked gauge\n";
+      output += `xrp_liquid_staking_total_shield_staked ${parseFloat(vaultMetrics.stakingAdoption.totalShieldStaked) || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_bridge_pending_operations Number of pending bridge operations\n";
+      output += "# TYPE xrp_liquid_staking_bridge_pending_operations gauge\n";
+      output += `xrp_liquid_staking_bridge_pending_operations ${bridgeMetrics.pendingOperations || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_bridge_avg_redemption_time_seconds Average redemption time in seconds\n";
+      output += "# TYPE xrp_liquid_staking_bridge_avg_redemption_time_seconds gauge\n";
+      output += `xrp_liquid_staking_bridge_avg_redemption_time_seconds ${bridgeMetrics.avgRedemptionTime || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_bridge_stuck_transactions Number of stuck bridge transactions\n";
+      output += "# TYPE xrp_liquid_staking_bridge_stuck_transactions gauge\n";
+      output += `xrp_liquid_staking_bridge_stuck_transactions ${bridgeMetrics.stuckTransactions || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_bridge_failure_rate_percent Bridge failure rate percentage\n";
+      output += "# TYPE xrp_liquid_staking_bridge_failure_rate_percent gauge\n";
+      output += `xrp_liquid_staking_bridge_failure_rate_percent ${bridgeMetrics.failureRate || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_bridge_success_rate_percent Bridge success rate percentage\n";
+      output += "# TYPE xrp_liquid_staking_bridge_success_rate_percent gauge\n";
+      output += `xrp_liquid_staking_bridge_success_rate_percent ${100 - (bridgeMetrics.failureRate || 0)}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_bridge_successful_24h Successful bridges in last 24 hours\n";
+      output += "# TYPE xrp_liquid_staking_bridge_successful_24h gauge\n";
+      output += `xrp_liquid_staking_bridge_successful_24h ${bridgeMetrics.successfulBridges24h || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_bridge_failures_fdc_proof Bridge failures due to FDC proof issues\n";
+      output += "# TYPE xrp_liquid_staking_bridge_failures_fdc_proof gauge\n";
+      output += `xrp_liquid_staking_bridge_failures_fdc_proof ${bridgeMetrics.failuresByType.fdcProof || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_bridge_failures_xrpl_payment Bridge failures due to XRPL payment issues\n";
+      output += "# TYPE xrp_liquid_staking_bridge_failures_xrpl_payment gauge\n";
+      output += `xrp_liquid_staking_bridge_failures_xrpl_payment ${bridgeMetrics.failuresByType.xrplPayment || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_bridge_failures_confirmation Bridge failures due to confirmation delays\n";
+      output += "# TYPE xrp_liquid_staking_bridge_failures_confirmation gauge\n";
+      output += `xrp_liquid_staking_bridge_failures_confirmation ${bridgeMetrics.failuresByType.confirmation || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_bridge_failures_other Bridge failures due to other reasons\n";
+      output += "# TYPE xrp_liquid_staking_bridge_failures_other gauge\n";
+      output += `xrp_liquid_staking_bridge_failures_other ${bridgeMetrics.failuresByType.other || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_etherspot_success_rate_percent Etherspot transaction success rate percentage\n";
+      output += "# TYPE xrp_liquid_staking_etherspot_success_rate_percent gauge\n";
+      output += `xrp_liquid_staking_etherspot_success_rate_percent ${txMetrics.etherspotSuccessRate || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_gas_sponsored_count Number of gas-sponsored transactions\n";
+      output += "# TYPE xrp_liquid_staking_gas_sponsored_count gauge\n";
+      output += `xrp_liquid_staking_gas_sponsored_count ${txMetrics.gasSponsoredCount || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_direct_payment_count Number of direct payment transactions\n";
+      output += "# TYPE xrp_liquid_staking_direct_payment_count gauge\n";
+      output += `xrp_liquid_staking_direct_payment_count ${txMetrics.directPaymentCount || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_failed_userops_count Number of failed UserOps\n";
+      output += "# TYPE xrp_liquid_staking_failed_userops_count gauge\n";
+      output += `xrp_liquid_staking_failed_userops_count ${txMetrics.failedUserOpsCount || 0}\n\n`;
+
+      output += "# HELP xrp_liquid_staking_total_transactions_count Total transactions all-time\n";
+      output += "# TYPE xrp_liquid_staking_total_transactions_count gauge\n";
+      output += `xrp_liquid_staking_total_transactions_count ${txMetrics.totalTransactions || 0}\n\n`;
+
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.send(output);
+    } catch (error) {
+      console.error("Error generating metrics:", error);
+      res.status(500).text("# Error generating metrics\n");
+    }
+  });
+
   // Readiness guard middleware - Return 503 for /api/* routes if services not ready
   app.use("/api", (req, res, next) => {
     if (!readinessRegistry.allCriticalServicesReady()) {
