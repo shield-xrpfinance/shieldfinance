@@ -25,6 +25,16 @@ export async function startDiscordBot() {
   client.once('ready', async () => {
     console.log(`✅ Discord Bot online as ${client.user?.tag}`);
     console.log(`🔐 Monitoring guild: ${GUILD_ID}`);
+
+    try {
+      const guild = await client.guilds.fetch(GUILD_ID);
+      
+      // Remove all slash commands (clears /verify command)
+      await guild.commands.set([]);
+      console.log('✅ Cleared all slash commands');
+    } catch (error) {
+      console.error('❌ Error clearing commands:', error);
+    }
   });
 
   // Welcome new members
