@@ -234,7 +234,7 @@ export default function Vaults() {
     const isFXRPDeposit = selectedVault.depositAssets.includes("FXRP");
 
     if (isFXRPDeposit) {
-      // Use direct FXRP deposit flow - user deposits FXRP, gets shXRP immediately
+      // Use direct FXRP deposit flow - user deposits FXRP via EVM wallet, gets shXRP immediately
       try {
         setDepositModalOpen(false);
         setProgressStep('creating');
@@ -245,7 +245,47 @@ export default function Vaults() {
           vaultName: selectedVault.name,
           amount: totalAmount.toString(),
         });
+
+        // Step 1: Request FXRP transfer from EVM wallet (Flare Network)
+        if (!walletConnectProvider) {
+          throw new Error("EVM wallet not connected. Please connect with WalletConnect.");
+        }
+
+        const { ethers } = await import("ethers");
         
+        // Get signer from WalletConnect provider
+        const provider = new ethers.BrowserProvider(walletConnectProvider as any);
+        const signer = await provider.getSigner();
+        
+        // FXRP token address on Flare Network (testnet Coston2)
+        const FXRP_ADDRESS = "0xaD67cB3e0B037E0eb8cc7Fe65328578f61e6b0b6"; // FXRP on Coston2
+        const VAULT_ADDRESS = "0x0000000000000000000000000000000000000001"; // TODO: Update with actual vault address
+        
+        // ERC-20 ABI for approval and transfer
+        const ERC20_ABI = [
+          "function approve(address spender, uint256 amount) public returns (bool)",
+          "function transfer(address to, uint256 amount) public returns (bool)",
+          "function allowance(address owner, address spender) public view returns (uint256)"
+        ];
+        
+        const fxrpContract = new ethers.Contract(FXRP_ADDRESS, ERC20_ABI, signer);
+        const amountInWei = ethers.parseUnits(totalAmount, 6); // FXRP uses 6 decimals
+
+        // Step 2: Request approval from user's wallet
+        console.log(`🔄 Requesting FXRP approval from ${evmAddress}...`);
+        const approveTx = await fxrpContract.approve(VAULT_ADDRESS, amountInWei);
+        console.log(`⏳ Approval tx: ${approveTx.hash}`);
+        await approveTx.wait();
+        console.log(`✅ Approval confirmed`);
+
+        // Step 3: Request transfer
+        console.log(`🔄 Requesting FXRP transfer...`);
+        const transferTx = await fxrpContract.transfer(VAULT_ADDRESS, amountInWei);
+        console.log(`⏳ Transfer tx: ${transferTx.hash}`);
+        await transferTx.wait();
+        console.log(`✅ Transfer confirmed`);
+
+        // Step 4: Notify backend and create position
         const response = await fetch("/api/deposits/fxrp", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -254,6 +294,7 @@ export default function Vaults() {
             vaultId: selectedVault.id,
             amount: totalAmount.toString(),
             network: network,
+            txHash: transferTx.hash,
           }),
         });
 
@@ -285,7 +326,7 @@ export default function Vaults() {
         setProgressModalOpen(false);
         toast({
           title: "Deposit Failed",
-          description: error instanceof Error ? error.message : "Failed to create FXRP deposit",
+          description: error instanceof Error ? error.message : "Failed to deposit FXRP. Make sure you have enough FXRP and are on Flare Coston2 testnet.",
           variant: "destructive",
         });
       }
