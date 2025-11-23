@@ -4,8 +4,15 @@ import type UniversalProvider from "@walletconnect/universal-provider";
 import type { PaymentRequest } from "@shared/schema";
 import { Buffer } from "buffer";
 
-// Global singleton to prevent double initialization of WalletConnect Core
-let wcInitPromise: Promise<any> | null = null;
+// Store WalletConnect init promise globally to survive HMR reloads
+declare global {
+  interface Window {
+    _wcInitPromise?: Promise<any> | null;
+  }
+}
+
+const getWCInitPromise = () => (window._wcInitPromise as Promise<any> | null | undefined) || null;
+const setWCInitPromise = (p: Promise<any> | null) => { window._wcInitPromise = p; };
 
 interface PaymentRequestResult {
   success: boolean;
@@ -132,20 +139,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
               });
               
               const loadWC = async () => {
-                // Prevent double initialization using a singleton pattern
-                if (wcInitPromise) {
-                  return wcInitPromise;
+                // Prevent double initialization using global singleton (survives HMR)
+                const existingPromise = getWCInitPromise();
+                if (existingPromise) {
+                  console.log("✅ WalletConnect: Reusing existing init promise");
+                  return existingPromise;
                 }
                 
                 const { default: UniversalProvider } = await import("@walletconnect/universal-provider");
                 
                 // Check if already initialized to prevent "already initialized" errors
-                if (UniversalProvider.instance) {
-                  wcInitPromise = Promise.resolve(UniversalProvider.instance);
-                  return wcInitPromise;
+                if ((UniversalProvider as any).instance) {
+                  console.log("✅ WalletConnect: Reusing existing instance");
+                  const promise = Promise.resolve((UniversalProvider as any).instance);
+                  setWCInitPromise(promise);
+                  return promise;
                 }
                 
-                wcInitPromise = UniversalProvider.init({
+                console.log("🔄 WalletConnect: Initializing new instance...");
+                const initPromise = UniversalProvider.init({
                   projectId,
                   metadata: {
                     name: "XRP Liquid Staking Protocol",
@@ -155,7 +167,8 @@ export function WalletProvider({ children }: { children: ReactNode }) {
                   },
                 });
                 
-                return wcInitPromise;
+                setWCInitPromise(initPromise);
+                return initPromise;
               };
               
               // Race between loading and timeout
