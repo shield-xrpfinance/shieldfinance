@@ -2,8 +2,9 @@ import xrpLogo from "@assets/xrp.148c3b50_1762588566535.png";
 import usdcLogo from "@assets/usdc-icon.5f31fb80_1762588566536.png";
 import rlusdLogo from "@assets/rlusd-icon.d10ce925_1762588566536.png";
 import flrLogo from "@assets/flr.svg";
+import fxrpLogo from "@assets/fxrp-logo.png";
 
-type AssetType = "XRP" | "RLUSD" | "USDC" | "FLR" | "WFLR" | "USDT" | "SHIELD" | "shXRP";
+type AssetType = "XRP" | "RLUSD" | "USDC" | "FLR" | "WFLR" | "USDT" | "SHIELD" | "shXRP" | "FXRP";
 
 interface AssetIconProps {
   asset: AssetType;
@@ -20,6 +21,7 @@ const assetLogos: Record<AssetType, string> = {
   USDT: "https://res.cloudinary.com/metavault/image/upload/q_100/v1/website-assets/coins/usdt?_a=DATAiZAAZAA0",
   SHIELD: "/shield-logo.png",
   shXRP: xrpLogo,
+  FXRP: fxrpLogo,
 };
 
 const assetNames: Record<AssetType, string> = {
@@ -31,6 +33,7 @@ const assetNames: Record<AssetType, string> = {
   USDT: "Bridged USDT",
   SHIELD: "Shield",
   shXRP: "Liquid Staked XRP",
+  FXRP: "Flare XRP",
 };
 
 export function AssetIcon({ asset, size = 24, className = "" }: AssetIconProps) {
