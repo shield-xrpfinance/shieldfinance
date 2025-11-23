@@ -204,6 +204,8 @@ export default function Vaults() {
     const vault = allVaults.find((v) => v.id === vaultId);
     if (!vault) return;
     
+    console.log(`📊 VAULT OBJECT:`, vault);
+    
     // Block deposit flow if vault is coming soon
     if (vault.comingSoon) {
       return;
@@ -217,7 +219,7 @@ export default function Vaults() {
     // Compute depositAssets from vault.asset (backend returns asset field, not depositAssets)
     const depositAssets = vault.asset === "FXRP" ? ["FXRP"] : ["XRP"];
     
-    console.log(`🔄 Opening deposit modal for ${vault.name}: depositAssets=${JSON.stringify(depositAssets)}`);
+    console.log(`🔄 Opening deposit modal for ${vault.name}: vault.asset="${vault.asset}", depositAssets=${JSON.stringify(depositAssets)}`);
     
     setSelectedVault({ 
       id: vault.id, 
@@ -240,6 +242,9 @@ export default function Vaults() {
   });
 
   const handleConfirmDeposit = async (amounts: { [asset: string]: string }) => {
+    console.log(`💰 AMOUNTS OBJECT:`, amounts);
+    console.log(`💰 AMOUNTS KEYS:`, Object.keys(amounts));
+    
     if (!selectedVault) {
       console.error("❌ Missing selectedVault");
       return;
@@ -254,7 +259,7 @@ export default function Vaults() {
     const depositAsset = Object.keys(amounts)[0];
     const isFXRPDeposit = depositAsset === "FXRP";
     
-    console.log(`🔄 Deposit: vault="${selectedVault.name}", depositAsset="${depositAsset}", walletType="${walletType}", isFXRPDeposit=${isFXRPDeposit}`);
+    console.log(`🔄 Deposit: vault="${selectedVault.name}", depositAsset="${depositAsset}", selectedVault.depositAssets=${JSON.stringify(selectedVault.depositAssets)}, walletType="${walletType}", isFXRPDeposit=${isFXRPDeposit}`);
 
     if (isFXRPDeposit) {
       // FXRP deposit requires EVM wallet type
