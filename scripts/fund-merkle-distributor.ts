@@ -7,8 +7,8 @@ import { ethers } from "ethers";
  * to the MerkleDistributor contract for airdrop claims.
  */
 
-const SHIELD_TOKEN = "0x07F943F173a6bE5EC63a8475597d28aAA6B24992";
-const MERKLE_DISTRIBUTOR = "0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31";
+const SHIELD_TOKEN = "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616";
+const MERKLE_DISTRIBUTOR = "0x8b3eC671c14E44B9EC8274eA3B6884A4259Ef490";
 const AMOUNT_TO_FUND = ethers.parseEther("2000000"); // 2M SHIELD
 
 const ERC20_ABI = [
@@ -127,7 +127,7 @@ async function main() {
   const newDistributorBalance = await shieldToken.balanceOf(MERKLE_DISTRIBUTOR);
 
   console.log("\n" + "=".repeat(60));
-  console.log("✅ TRANSFER COMPLETE");
+  console.log("✅ MerkleDistributor Funded Successfully");
   console.log("=".repeat(60));
 
   console.log("\n📊 Final Balances:");
@@ -143,6 +143,11 @@ async function main() {
   } else {
     console.log(`\n✅ Verified: ${ethers.formatEther(AMOUNT_TO_FUND)} ${symbol} transferred successfully`);
   }
+
+  console.log(`\nMerkleDistributor: ${MERKLE_DISTRIBUTOR}`);
+  console.log(`Funded Amount: 2,000,000 SHIELD`);
+  console.log(`TX: ${tx.hash}`);
+  console.log(`Explorer: ${networkConfig.explorer}/tx/${tx.hash}`);
 
   console.log("\n" + "=".repeat(60));
   console.log("📝 NEXT STEPS:");

@@ -5,15 +5,16 @@ import ShieldTokenArtifact from "../artifacts/contracts/ShieldToken.sol/ShieldTo
  * SHIELD Token Ownership Renouncement Script
  * 
  * Renounces ownership on deprecated SHIELD token deployments on Coston2 testnet:
- * - Old #1: 0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308
- * - Old #2: 0x59fF3b7Ae628beEFFAe980F30240ec4e84448209
+ * - Old #3 (Third 100M Deployment): 0x07F943F173a6bE5EC63a8475597d28aAA6B24992
  * 
  * SAFETY: Will NOT renounce ownership on current/active contract:
- * - Current: 0x07F943F173a6bE5EC63a8475597d28aAA6B24992
+ * - Current (10M Token): 0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616
+ * 
+ * Note: Old #1 and Old #2 were already renounced in previous operations
  * 
  * Requirements:
- * - OPERATOR_PRIVATE_KEY environment variable must be set
- * - Signer must be the current owner of the contracts
+ * - DEPLOYER_PRIVATE_KEY environment variable must be set
+ * - Signer must be the current owner of the contract
  * 
  * Usage:
  * npx tsx scripts/renounce-old-shield-tokens.ts
@@ -30,17 +31,13 @@ const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 // DEPRECATED contracts to renounce (DO NOT INCLUDE CURRENT/ACTIVE CONTRACT)
 const DEPRECATED_CONTRACTS = [
   {
-    label: "Old #1 (DEPRECATED - First Deployment)",
-    address: "0xD6D476149D169fdA8e05f4EF5Da8a8f8c27a8308",
-  },
-  {
-    label: "Old #2 (DEPRECATED - Second Deployment)",
-    address: "0x59fF3b7Ae628beEFFAe980F30240ec4e84448209",
+    label: "Old #3 (DEPRECATED - Third 100M Deployment)",
+    address: "0x07F943F173a6bE5EC63a8475597d28aAA6B24992",
   },
 ];
 
 // SAFETY: Current/active contract that must NOT be renounced
-const ACTIVE_CONTRACT = "0x07F943F173a6bE5EC63a8475597d28aAA6B24992";
+const ACTIVE_CONTRACT = "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616";
 
 /**
  * Truncate address for display
@@ -155,14 +152,14 @@ async function main() {
   console.log(`Timestamp: ${new Date().toISOString()}`);
   console.log("=".repeat(80));
 
-  // Check for OPERATOR_PRIVATE_KEY
-  const privateKey = process.env.OPERATOR_PRIVATE_KEY;
+  // Check for DEPLOYER_PRIVATE_KEY
+  const privateKey = process.env.DEPLOYER_PRIVATE_KEY;
   if (!privateKey) {
     console.error("\n❌ FATAL ERROR:");
-    console.error("   OPERATOR_PRIVATE_KEY environment variable is not set!");
+    console.error("   DEPLOYER_PRIVATE_KEY environment variable is not set!");
     console.error("   Please set the environment variable and try again.");
     console.error("\n   Example:");
-    console.error("   export OPERATOR_PRIVATE_KEY=0x...");
+    console.error("   export DEPLOYER_PRIVATE_KEY=0x...");
     process.exit(1);
   }
 
