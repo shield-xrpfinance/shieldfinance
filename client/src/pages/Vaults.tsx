@@ -199,17 +199,17 @@ export default function Vaults() {
       return;
     }
     
-    // Infer depositAssets from asset field if not explicitly set
-    let depositAssets = vault.depositAssets;
-    if (!depositAssets) {
-      // If vault has asset field, use it to determine depositAssets
-      if ((vault as any).asset === "FXRP") {
-        depositAssets = ["FXRP"];
-      } else if ((vault as any).asset === "XRP") {
-        depositAssets = ["XRP"];
-      } else {
-        depositAssets = ["XRP"]; // Default fallback
-      }
+    // Prioritize asset field to determine depositAssets (backend may have mismatched data)
+    let depositAssets: string[] = ["XRP"]; // Default fallback
+    const vaultAsset = (vault as any).asset;
+    
+    if (vaultAsset === "FXRP") {
+      depositAssets = ["FXRP"];
+    } else if (vaultAsset === "XRP") {
+      depositAssets = ["XRP"];
+    } else if (vault.depositAssets && Array.isArray(vault.depositAssets) && vault.depositAssets.length > 0) {
+      // Use backend depositAssets only if asset field is not set
+      depositAssets = vault.depositAssets;
     }
     
     setSelectedVault({ 
