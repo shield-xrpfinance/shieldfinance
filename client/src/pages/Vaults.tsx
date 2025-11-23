@@ -214,10 +214,8 @@ export default function Vaults() {
       return;
     }
     
-    // Use vault.depositAssets which is already computed from vault.asset
-    const depositAssets = vault.depositAssets && vault.depositAssets.length > 0 
-      ? vault.depositAssets 
-      : ["XRP"];
+    // Compute depositAssets from vault.asset (backend returns asset field, not depositAssets)
+    const depositAssets = vault.asset === "FXRP" ? ["FXRP"] : ["XRP"];
     
     console.log(`🔄 Opening deposit modal for ${vault.name}: depositAssets=${JSON.stringify(depositAssets)}`);
     
