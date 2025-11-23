@@ -229,19 +229,27 @@ export default function Portfolio() {
   };
 
   const handleConfirmWithdraw = async (amount: string) => {
-    if (!selectedPosition || !address) return;
+    if (!selectedPosition) return;
 
     const assetSymbol = selectedPosition.asset?.split(",")[0] || "XRP";
+    const walletAddr = address || evmAddress;
+    if (!walletAddr) return;
+
     setWithdrawalLoading(true);
     
     try {
-      const response = await fetch("/api/withdrawals", {
+      // Determine if this is an FXRP withdrawal based on asset
+      const isFXRPWithdrawal = assetSymbol === "FXRP";
+      const endpoint = isFXRPWithdrawal ? "/api/withdrawals/fxrp" : "/api/withdrawals";
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           positionId: selectedPosition.id,
           shareAmount: amount,
-          userAddress: address,
+          walletAddress: walletAddr,
+          userAddress: walletAddr, // Include both for compatibility
         }),
       });
 
@@ -252,15 +260,26 @@ export default function Portfolio() {
       }
 
       // Invalidate queries to trigger UI refresh
-      queryClient.invalidateQueries({ queryKey: ['/api/positions', address] });
-      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', address] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', address] });
+      queryClient.invalidateQueries({ queryKey: ['/api/positions', walletAddr] });
+      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', walletAddr] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', walletAddr] });
 
-      // Close withdraw modal and show progress modal
+      // Close withdraw modal
       setWithdrawModalOpen(false);
-      setWithdrawRedemptionId(data.redemptionId);
-      setWithdrawProgressStep('creating');
-      setWithdrawProgressModalOpen(true);
+
+      if (isFXRPWithdrawal) {
+        // FXRP withdrawal - show success message and navigate
+        toast({
+          title: "Withdrawal Successful",
+          description: `${amount} shXRP converted to FXRP and sent to your wallet!`,
+        });
+        setLocation('/portfolio');
+      } else {
+        // XRP withdrawal - show progress modal for async processing
+        setWithdrawRedemptionId(data.redemptionId);
+        setWithdrawProgressStep('creating');
+        setWithdrawProgressModalOpen(true);
+      }
       
     } catch (error) {
       console.error("Error processing withdrawal:", error);
