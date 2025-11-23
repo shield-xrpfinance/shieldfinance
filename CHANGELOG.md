@@ -2,6 +2,58 @@
 
 All notable changes to the XRP Liquid Staking Protocol Dashboard will be documented in this file.
 
+## [2.0.0] - 2025-11-23
+
+### ✅ Testnet Launch Complete - 10M SHIELD Deployment Corrected & All Contracts Live
+
+#### Critical Fix
+- **SHIELD Token Supply Correction**: Previous deployments used incorrect 100M supply
+  - ❌ Deprecated: 3 contracts with 100M supply each (ownership renounced)
+  - ✅ Active: New SHIELD token with correct 10M supply
+  - **New Address**: `0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616`
+
+#### Successful Deployments (All 5/5 Complete)
+1. **SHIELD Token** (10M supply): `0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616` ✅
+2. **ShXRPVault** (ERC-4626): `0x3219232a45880b79736Ee899Cb3b2f95D527C631` ✅
+3. **RevenueRouter**: `0x262582942Dcf97F59Cb0fe61e5852DDa10fD6fFB` ✅
+4. **StakingBoost**: `0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4` ✅
+5. **MerkleDistributor**: `0x8b3eC671c14E44B9EC8274eA3B6884A4259Ef490` ✅
+
+#### Airdrop Configuration
+- **Total Allocation**: 2,000,000 SHIELD (20% of 10M supply)
+- **Eligible Addresses**: 20 wallets
+- **Amount Per Address**: 100,000 SHIELD
+- **Status**: ✅ MerkleDistributor funded and ready for claims
+- **Merkle Root**: `0xee1f232297e8aeb301dbf175781d8e8d2356cdf0d5d9276989463417cd0510d4`
+
+#### Deprecated Contracts (Renounced)
+- `0xD6D4768Ffac6cA26d5a34b36555bDB3ad85B8308` - First 100M deployment (renounced)
+- `0x59fF3b46f0Fa0cF1aa3ca48E5FC0a6f93e2B8209` - Second 100M deployment (renounced)
+- `0x07F943F173a6bE5EC63a8475597d28aAA6B24992` - Third 100M deployment (renounced)
+
+#### Documentation Updates
+- **DEPLOYMENT_GUIDE.md**: Updated with new 10M addresses and deprecation warnings
+- **.env.example**: All contract addresses corrected
+- **README.md**: Environment variables section updated with new addresses
+- **deployments/**: Complete deployment records with explorer links
+- **ENV_UPDATES_10M.md**: Migration guide for all environment variables
+
+#### Next Steps
+- Update Replit Secrets with new contract addresses
+- Users can claim airdrop from MerkleDistributor
+- Monitor contract events for deposits/withdrawals
+- All infrastructure ready for testnet operations
+
+#### Transaction Records
+- **SHIELD Token**: Deployed November 23, 2025
+- **ShXRPVault**: Deployed November 23, 2025
+- **RevenueRouter**: Deployed November 23, 2025
+- **StakingBoost**: Deployed November 23, 2025
+- **MerkleDistributor Funding**: `0x74905c13c3359294545ee2ac111b3b2214b4f0a9bee787f36d105bcb7b446e1f`
+- **Old SHIELD Renouncement**: `0x271b89ff5ba9cf3a9a2a43e3a65ab71bd3b419558edeecaaf7c3cd2b9c2da66a`
+
+---
+
 ## [1.4.0] - 2025-11-21
 
 ### 🔄 Multi-Asset Swap Feature - Complete SparkDEX V3 Integration

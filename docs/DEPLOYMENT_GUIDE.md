@@ -1,6 +1,10 @@
 # Deployment Guide - Flare Smart Account Integration
 
-This guide covers deploying the ShXRPVault and VaultController contracts to Flare Network (Coston2 testnet or mainnet).
+⚠️ **DEPRECATED**: This is an old vault-specific deployment guide. For the current production-ready smart contract deployment with SHIELD token, see the main [DEPLOYMENT_GUIDE.md](../../DEPLOYMENT_GUIDE.md) in the root directory.
+
+---
+
+This legacy guide covers deploying the ShXRPVault and VaultController contracts to Flare Network (Coston2 testnet or mainnet). For the current deployment, refer to the main DEPLOYMENT_GUIDE.md.
 
 ## Prerequisites
 
