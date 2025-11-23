@@ -87,7 +87,7 @@ client.once('ready', async () => {
     await createCategory('VOICE CHANNELS', [
       { name: 'General Voice', type: 2 },
       { name: 'Vault Strategy Room', type: 2 },
-      { name: 'AMA Stage', type: 13 }, // Stage channel
+      { name: 'AMA - General Discussion', type: 2 },
       { name: 'Music & Chill', type: 2 },
     ]);
 
