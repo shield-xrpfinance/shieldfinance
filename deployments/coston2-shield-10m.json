@@ -1,0 +1,22 @@
+{
+  "network": "coston2",
+  "chainId": 114,
+  "timestamp": "2025-11-23T04:33:17.000Z",
+  "deployer": "0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D",
+  "contracts": {
+    "ShieldToken": {
+      "address": "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616",
+      "name": "ShieldToken",
+      "symbol": "SHIELD",
+      "decimals": 18,
+      "totalSupply": "10000000.0",
+      "totalSupplyRaw": "10000000000000000000000000",
+      "deployerBalance": "10000000.0",
+      "deployerBalanceRaw": "10000000000000000000000000",
+      "transactionHash": "0x728a4b56e89a4808fafef0c54e009dba31f9e4b86548eed067eea042fde8a88c",
+      "blockNumber": 24297444,
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616",
+      "transactionUrl": "https://coston2-explorer.flare.network/tx/0x728a4b56e89a4808fafef0c54e009dba31f9e4b86548eed067eea042fde8a88c"
+    }
+  }
+}
