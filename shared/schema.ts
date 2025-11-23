@@ -79,6 +79,7 @@ export const positions = pgTable("positions", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 }, (table) => ({
   uniqueWalletVault: unique().on(table.walletAddress, table.vaultId),
+  statusIdx: sql`CREATE INDEX IF NOT EXISTS idx_positions_status ON ${table} (status)`,
 }));
 
 export const transactions = pgTable("transactions", {
@@ -93,7 +94,9 @@ export const transactions = pgTable("transactions", {
   txHash: text("tx_hash"),
   network: text("network").notNull().default("mainnet"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => ({
+  statusIdx: sql`CREATE INDEX IF NOT EXISTS idx_transactions_status ON ${table} (status)`,
+}));
 
 export const vaultMetricsDaily = pgTable("vault_metrics_daily", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -103,7 +106,10 @@ export const vaultMetricsDaily = pgTable("vault_metrics_daily", {
   apy: decimal("apy", { precision: 5, scale: 2 }).notNull(),
   stakers: integer("stakers").notNull(),
   rewardsAccrued: decimal("rewards_accrued", { precision: 18, scale: 2 }).notNull(),
-});
+}, (table) => ({
+  uniqueVaultDate: unique().on(table.vaultId, table.date),
+  dateIdx: sql`CREATE INDEX IF NOT EXISTS idx_vault_metrics_daily_date ON ${table} (date DESC)`,
+}));
 
 export const withdrawalRequests = pgTable("withdrawal_requests", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -199,7 +205,11 @@ export const xrpToFxrpBridges = pgTable("xrp_to_fxrp_bridges", {
   errorMessage: text("error_message"),
   lastError: text("last_error").default(sql`NULL`), // Latest error encountered (for watchdog/retry debugging)
   retryCount: integer("retry_count").notNull().default(0),
-});
+}, (table) => ({
+  statusIdx: sql`CREATE INDEX IF NOT EXISTS idx_bridges_status ON ${table} (status)`,
+  createdAtIdx: sql`CREATE INDEX IF NOT EXISTS idx_bridges_created_at ON ${table} (created_at DESC)`,
+  walletIdx: sql`CREATE INDEX IF NOT EXISTS idx_bridges_wallet ON ${table} (wallet_address)`,
+}));
 
 // FXRP → XRP Redemptions (Withdrawal flow)
 export const fxrpToXrpRedemptions = pgTable("fxrp_to_xrp_redemptions", {
@@ -254,7 +264,12 @@ export const fxrpToXrpRedemptions = pgTable("fxrp_to_xrp_redemptions", {
   // Auto-prefund tracking (for low balance remediation)
   lastFundingTxHash: varchar("last_funding_tx_hash").default(sql`NULL`), // Operator EOA → Smart Account prefund tx
   fundingAttempts: integer("funding_attempts").notNull().default(0), // Number of times we've auto-prefunded this redemption
-});
+}, (table) => ({
+  statusIdx: sql`CREATE INDEX IF NOT EXISTS idx_redemptions_status ON ${table} (status)`,
+  createdAtIdx: sql`CREATE INDEX IF NOT EXISTS idx_redemptions_created_at ON ${table} (created_at DESC)`,
+  walletIdx: sql`CREATE INDEX IF NOT EXISTS idx_redemptions_wallet ON ${table} (wallet_address)`,
+  userStatusIdx: sql`CREATE INDEX IF NOT EXISTS idx_redemptions_user_status ON ${table} (user_status)`,
+}));
 
 export const firelightPositions = pgTable("firelight_positions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

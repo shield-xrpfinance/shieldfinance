@@ -11,6 +11,7 @@ import { VaultService } from "./services/VaultService";
 import { DepositService } from "./services/DepositService";
 import { DepositWatchdogService } from "./services/DepositWatchdogService";
 import { WithdrawalRetryService } from "./services/WithdrawalRetryService";
+import { MetricsService } from "./services/MetricsService";
 import { readinessRegistry } from "./services/ReadinessRegistry";
 
 const app = express();
@@ -18,6 +19,7 @@ const app = express();
 // Module-level references to services (assigned when initialized)
 let realBridgeService: BridgeService | null = null;
 let realFlareClient: FlareClient | null = null;
+let realMetricsService: MetricsService | null = null;
 
 declare module 'http' {
   interface IncomingMessage {
@@ -238,7 +240,7 @@ async function initializeServices() {
             });
           }
           
-          if (bridge.agentUnderlyingAddress) {
+          if (bridge.agentUnderlyingAddress && xrplListener) {
             await xrplListener.removeAgentAddress(bridge.agentUnderlyingAddress);
           }
           
@@ -513,6 +515,52 @@ async function initializeServices() {
     readinessRegistry.setError('withdrawalRetry', demoMode ? 'Disabled in demo mode' : 'Required services unavailable');
   }
 
+  // Step 8: Initialize MetricsService (always available)
+  // This service provides monitoring and analytics for testnet operations
+  let metricsService: MetricsService | undefined;
+  try {
+    console.log(`📊 Initializing MetricsService...`);
+    
+    metricsService = new MetricsService({
+      storage,
+      flareClient, // Optional - only used for SHIELD burn tracking
+    });
+    
+    // Export to module-level for routes
+    realMetricsService = metricsService;
+    
+    readinessRegistry.setReady('metricsService');
+    console.log(`✅ MetricsService initialized`);
+    
+    // Schedule daily metrics aggregation (runs at midnight UTC)
+    const now = new Date();
+    const msUntilMidnight = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate() + 1,
+      0, 0, 0, 0
+    ).getTime() - now.getTime();
+    
+    setTimeout(() => {
+      metricsService!.aggregateDailyMetrics().catch(error => {
+        console.error("❌ Daily metrics aggregation failed:", error);
+      });
+      
+      // Then run daily
+      setInterval(() => {
+        metricsService!.aggregateDailyMetrics().catch(error => {
+          console.error("❌ Daily metrics aggregation failed:", error);
+        });
+      }, 24 * 60 * 60 * 1000);
+    }, msUntilMidnight);
+    
+    console.log(`⏰ Daily metrics aggregation scheduled for midnight UTC`);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    readinessRegistry.setError('metricsService', errorMsg);
+    console.error(`❌ MetricsService initialization failed:`, errorMsg);
+  }
+
   console.log("✅ All services initialized");
 }
 
@@ -593,7 +641,24 @@ async function initializeFlareClientWithRetry(config: {
     }
   });
   
-  const server = await registerRoutes(app, bridgeServiceProxy, flareClientProxy);
+  const metricsServiceProxy = new Proxy({} as MetricsService, {
+    get(target, prop) {
+      if (!realMetricsService) {
+        // For method calls, throw clear error
+        if (typeof prop === 'string' && prop !== 'constructor') {
+          throw new Error(`MetricsService.${prop} called before service initialization - please wait for /readyz to return 200`);
+        }
+        return undefined;
+      }
+      const value = (realMetricsService as any)[prop];
+      if (typeof value === 'function') {
+        return value.bind(realMetricsService);
+      }
+      return value;
+    }
+  });
+  
+  const server = await registerRoutes(app, bridgeServiceProxy, flareClientProxy, metricsServiceProxy);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

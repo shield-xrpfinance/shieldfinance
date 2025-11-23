@@ -42,6 +42,7 @@ export interface IStorage {
   getBridgesByStatus(statuses: string[]): Promise<SelectXrpToFxrpBridge[]>;
   getPendingBridges(): Promise<SelectXrpToFxrpBridge[]>;
   getStuckBridges(): Promise<SelectXrpToFxrpBridge[]>;
+  getStuckBridgesForMetrics(minutesThreshold?: number): Promise<SelectXrpToFxrpBridge[]>;
   getRecoverableBridges(): Promise<SelectXrpToFxrpBridge[]>;
   updateBridge(id: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
   updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void>;
@@ -52,6 +53,7 @@ export interface IStorage {
   updateRedemption(id: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void>;
   updateRedemptionStatus(id: string, status: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void>;
   getAllPendingRedemptions(): Promise<SelectFxrpToXrpRedemption[]>;
+  getStuckRedemptionsForMetrics(minutesThreshold?: number): Promise<SelectFxrpToXrpRedemption[]>;
   getRedemptionByMatch(userAddress: string, agentAddress: string, amountDrops: string): Promise<SelectFxrpToXrpRedemption | null>;
   getRedemptionsNeedingRetry(): Promise<SelectFxrpToXrpRedemption[]>;
   
@@ -509,6 +511,22 @@ export class DatabaseStorage implements IStorage {
     });
   }
 
+  async getStuckBridgesForMetrics(minutesThreshold: number = 30): Promise<SelectXrpToFxrpBridge[]> {
+    const thresholdDate = new Date(Date.now() - minutesThreshold * 60 * 1000);
+    
+    // Terminal statuses that should NOT be considered stuck
+    const terminalStatuses = ['completed', 'cancelled', 'failed', 'vault_mint_failed'];
+    
+    // Get all bridges older than threshold with non-terminal status
+    const allBridges = await db.query.xrpToFxrpBridges.findMany({
+      where: sql`${xrpToFxrpBridges.createdAt} < ${thresholdDate}`,
+      orderBy: desc(xrpToFxrpBridges.createdAt),
+    });
+    
+    // Filter out terminal statuses
+    return allBridges.filter(bridge => !terminalStatuses.includes(bridge.status));
+  }
+
   async getRecoverableBridges(): Promise<SelectXrpToFxrpBridge[]> {
     const allBridges = await db.query.xrpToFxrpBridges.findMany({
       orderBy: desc(xrpToFxrpBridges.createdAt),
@@ -598,6 +616,22 @@ export class DatabaseStorage implements IStorage {
       where: eq(fxrpToXrpRedemptions.status, "awaiting_proof"),
       orderBy: desc(fxrpToXrpRedemptions.createdAt),
     });
+  }
+
+  async getStuckRedemptionsForMetrics(minutesThreshold: number = 30): Promise<SelectFxrpToXrpRedemption[]> {
+    const thresholdDate = new Date(Date.now() - minutesThreshold * 60 * 1000);
+    
+    // Terminal statuses that should NOT be considered stuck
+    const terminalStatuses = ['completed', 'failed'];
+    
+    // Get all redemptions older than threshold with non-terminal status
+    const allRedemptions = await db.query.fxrpToXrpRedemptions.findMany({
+      where: sql`${fxrpToXrpRedemptions.createdAt} < ${thresholdDate}`,
+      orderBy: desc(fxrpToXrpRedemptions.createdAt),
+    });
+    
+    // Filter out terminal statuses
+    return allRedemptions.filter(redemption => !terminalStatuses.includes(redemption.status));
   }
 
   async getRedemptionsNeedingRetry(): Promise<SelectFxrpToXrpRedemption[]> {
@@ -796,11 +830,11 @@ export class DatabaseStorage implements IStorage {
     const unstakeAmount = BigInt(amount);
     const newAmount = currentAmount - unstakeAmount;
 
-    if (newAmount < 0n) {
+    if (newAmount < BigInt(0)) {
       throw new Error("Unstake amount exceeds staked balance");
     }
 
-    if (newAmount === 0n) {
+    if (newAmount === BigInt(0)) {
       // Delete the position if fully unstaked
       await db.delete(stakingPositions)
         .where(eq(stakingPositions.walletAddress, walletAddress));

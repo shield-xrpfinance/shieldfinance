@@ -6,6 +6,7 @@ import { XummSdk } from "xumm-sdk";
 import { Client } from "xrpl";
 import type { BridgeService } from "./services/BridgeService";
 import type { FlareClient } from "./utils/flare-client";
+import type { MetricsService } from "./services/MetricsService";
 import { db } from "./db";
 import { fxrpToXrpRedemptions } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -164,7 +165,8 @@ async function verifyWalletAutoSubmittedTransaction(txHash: string, network: str
 export async function registerRoutes(
   app: Express,
   bridgeService: BridgeService,
-  flareClient?: FlareClient
+  flareClient?: FlareClient,
+  metricsService?: MetricsService
 ): Promise<Server> {
   // Health check endpoints (must be first for fast startup verification)
   
@@ -3770,6 +3772,190 @@ export async function registerRoutes(
   // ============================================================
   // SHIELD AIRDROP ENDPOINTS
   // ============================================================
+
+  /**
+   * METRICS ENDPOINTS
+   * Test endpoints for monitoring and analytics
+   */
+
+  /**
+   * Get vault metrics
+   * GET /api/metrics/vault
+   */
+  app.get("/api/metrics/vault", async (req: Request, res: Response) => {
+    try {
+      if (!metricsService) {
+        return res.status(503).json({ error: "MetricsService not available" });
+      }
+
+      const metrics = await metricsService.getVaultMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error("Vault metrics error:", error);
+      res.status(500).json({
+        error: "Failed to get vault metrics",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Get bridge operation metrics
+   * GET /api/metrics/bridge
+   */
+  app.get("/api/metrics/bridge", async (req: Request, res: Response) => {
+    try {
+      if (!metricsService) {
+        return res.status(503).json({ error: "MetricsService not available" });
+      }
+
+      const metrics = await metricsService.getBridgeMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error("Bridge metrics error:", error);
+      res.status(500).json({
+        error: "Failed to get bridge metrics",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Get transaction success metrics
+   * GET /api/metrics/transaction
+   */
+  app.get("/api/metrics/transaction", async (req: Request, res: Response) => {
+    try {
+      if (!metricsService) {
+        return res.status(503).json({ error: "MetricsService not available" });
+      }
+
+      const metrics = await metricsService.getTransactionMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error("Transaction metrics error:", error);
+      res.status(500).json({
+        error: "Failed to get transaction metrics",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Get system health status
+   * GET /api/metrics/health
+   */
+  app.get("/api/metrics/health", async (req: Request, res: Response) => {
+    try {
+      if (!metricsService) {
+        return res.status(503).json({ error: "MetricsService not available" });
+      }
+
+      const health = await metricsService.checkSystemHealth();
+      
+      // Return appropriate HTTP status based on health
+      const statusCode = health.overall === "healthy" ? 200 
+        : health.overall === "degraded" ? 200 
+        : 503;
+      
+      res.status(statusCode).json(health);
+    } catch (error) {
+      console.error("Health check error:", error);
+      res.status(500).json({
+        error: "Failed to check system health",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Get historical vault metrics
+   * GET /api/metrics/historical/:days
+   * 
+   * Query params:
+   * - days: Number of days to fetch (default: 30)
+   */
+  app.get("/api/metrics/historical/:days?", async (req: Request, res: Response) => {
+    try {
+      if (!metricsService) {
+        return res.status(503).json({ error: "MetricsService not available" });
+      }
+
+      const days = parseInt(req.params.days || "30", 10);
+      
+      if (isNaN(days) || days < 1 || days > 365) {
+        return res.status(400).json({ 
+          error: "Invalid days parameter. Must be between 1 and 365" 
+        });
+      }
+
+      const metrics = await metricsService.getHistoricalVaultMetrics(days);
+      res.json({
+        days,
+        data: metrics
+      });
+    } catch (error) {
+      console.error("Historical metrics error:", error);
+      res.status(500).json({
+        error: "Failed to get historical metrics",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Aggregate daily metrics
+   * POST /api/metrics/aggregate
+   * 
+   * Admin endpoint to manually trigger daily metrics aggregation
+   */
+  app.post("/api/metrics/aggregate", requireAdminAuth, async (req: Request, res: Response) => {
+    try {
+      if (!metricsService) {
+        return res.status(503).json({ error: "MetricsService not available" });
+      }
+
+      await metricsService.aggregateDailyMetrics();
+      
+      res.json({ 
+        success: true,
+        message: "Daily metrics aggregated successfully" 
+      });
+    } catch (error) {
+      console.error("Metrics aggregation error:", error);
+      res.status(500).json({
+        error: "Failed to aggregate daily metrics",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Clear metrics cache
+   * POST /api/metrics/cache/clear
+   * 
+   * Admin endpoint to clear metrics cache
+   */
+  app.post("/api/metrics/cache/clear", requireAdminAuth, async (req: Request, res: Response) => {
+    try {
+      if (!metricsService) {
+        return res.status(503).json({ error: "MetricsService not available" });
+      }
+
+      metricsService.clearCache();
+      
+      res.json({ 
+        success: true,
+        message: "Metrics cache cleared successfully" 
+      });
+    } catch (error) {
+      console.error("Cache clear error:", error);
+      res.status(500).json({
+        error: "Failed to clear cache",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
 
   /**
    * Check if an address is eligible for SHIELD airdrop
