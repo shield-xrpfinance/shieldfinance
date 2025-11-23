@@ -1,0 +1,66 @@
+{
+  "network": "coston2",
+  "chainId": 114,
+  "timestamp": "2025-11-23T04:00:00.000Z",
+  "deployer": "0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D",
+  "shieldToken": "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616",
+  "merkleRoot": "0xee1f232297e8aeb301dbf175781d8e8d2356cdf0d5d9276989463417cd0510d4",
+  "status": "partial",
+  "note": "ShXRPVault deployment failed due to insufficient gas. Need ~0.15 FLR more to complete.",
+  "contracts": {
+    "ShieldToken": {
+      "address": "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616",
+      "status": "deployed",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616"
+    },
+    "FXRP": {
+      "address": "0x0b6A3645c240605887a5532109323A3E12273dc7",
+      "status": "existing",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x0b6A3645c240605887a5532109323A3E12273dc7"
+    },
+    "RevenueRouter": {
+      "address": "0x262582942Dcf97F59Cb0fe61e5852DDa10fD6fFB",
+      "status": "deployed",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x262582942Dcf97F59Cb0fe61e5852DDa10fD6fFB",
+      "constructorArgs": {
+        "shieldToken": "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616",
+        "wflr": "0xC67DCE33D7A8efA5FfEB961899C73fe01bCe9273",
+        "router": "0x8a1E35F5c98C4E85B36B7B253222eE17773b2781"
+      }
+    },
+    "StakingBoost": {
+      "address": "0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4",
+      "status": "deployed",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4",
+      "constructorArgs": {
+        "shieldToken": "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616"
+      }
+    },
+    "MerkleDistributor": {
+      "address": "0x8b3eC671c14E44B9EC8274eA3B6884A4259Ef490",
+      "status": "deployed",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x8b3eC671c14E44B9EC8274eA3B6884A4259Ef490",
+      "constructorArgs": {
+        "token": "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616",
+        "merkleRoot": "0xee1f232297e8aeb301dbf175781d8e8d2356cdf0d5d9276989463417cd0510d4"
+      }
+    },
+    "ShXRPVault": {
+      "address": null,
+      "status": "pending",
+      "note": "Deployment failed due to insufficient gas (need ~0.15 FLR)",
+      "requiredConstructorArgs": {
+        "fxrpToken": "0x0b6A3645c240605887a5532109323A3E12273dc7",
+        "name": "Shield XRP",
+        "symbol": "shXRP",
+        "revenueRouter": "0x262582942Dcf97F59Cb0fe61e5852DDa10fD6fFB",
+        "stakingBoost": "0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4"
+      }
+    }
+  },
+  "nextSteps": [
+    "1. Get FLR from faucet: https://faucet.flare.network/coston2",
+    "2. Send at least 0.2 FLR to deployer: 0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D",
+    "3. Run: npx tsx scripts/deploy-shxrp-only.ts"
+  ]
+}
