@@ -188,7 +188,8 @@ export async function registerRoutes(
   app.get("/metrics", async (_req, res) => {
     try {
       if (!metricsService || !metricsService.isReady()) {
-        return res.status(503).text("# Metrics service not ready\n");
+        res.setHeader("Content-Type", "text/plain; charset=utf-8");
+        return res.status(503).send("# Metrics service not ready\n");
       }
 
       const [vaultMetrics, bridgeMetrics, txMetrics] = await Promise.all([
@@ -286,7 +287,8 @@ export async function registerRoutes(
       res.send(output);
     } catch (error) {
       console.error("Error generating metrics:", error);
-      res.status(500).text("# Error generating metrics\n");
+      res.setHeader("Content-Type", "text/plain; charset=utf-8");
+      res.status(500).send("# Error generating metrics\n");
     }
   });
 
