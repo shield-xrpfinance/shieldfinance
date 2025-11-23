@@ -14,6 +14,7 @@ import { WithdrawalRetryService } from "./services/WithdrawalRetryService";
 import { MetricsService } from "./services/MetricsService";
 import { AlertingService } from "./services/AlertingService";
 import { readinessRegistry } from "./services/ReadinessRegistry";
+import { startDiscordBot } from "./discord-bot";
 
 const app = express();
 
@@ -735,6 +736,11 @@ async function initializeFlareClientWithRetry(config: {
   }, () => {
     log(`✅ HTTP server listening on port ${port}`);
   });
+  
+  // Start Discord bot in the same process as the Express server
+  // The bot handles wallet verification for Discord community members
+  // It will only start if DISCORD_BOT_TOKEN and DISCORD_GUILD_ID are configured
+  startDiscordBot().catch(console.error);
   
   // Step 3: Initialize services asynchronously in background
   // This doesn't block the HTTP server from responding to health checks
