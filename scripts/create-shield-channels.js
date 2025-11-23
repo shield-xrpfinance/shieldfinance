@@ -1,5 +1,5 @@
 // create-shield-channels.js
-const { Client, GatewayIntentBits, PermissionsBitField } = require('discord.js');
+import { Client, GatewayIntentBits } from 'discord.js';
 
 const client = new Client({
   intents: [GatewayIntentBits.Guilds]
