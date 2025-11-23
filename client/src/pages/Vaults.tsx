@@ -251,12 +251,12 @@ export default function Vaults() {
       .filter((amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
       .reduce((sum, amt) => sum + parseFloat(amt.replace(/,/g, "")), 0);
 
-    const paymentAsset = selectedVault.depositAssets[0];
-
-    // MOST RELIABLE CHECK: Use vault.asset field from backend (works across network toggles)
-    const isFXRPDeposit = paymentAsset === "FXRP";
+    // MOST RELIABLE CHECK: Use what the user actually entered (the key in amounts object)
+    // This survives network toggles and any state issues
+    const depositAsset = Object.keys(amounts)[0];
+    const isFXRPDeposit = depositAsset === "FXRP";
     
-    console.log(`🔄 Deposit: vault="${selectedVault.name}", asset="${paymentAsset}", walletType="${walletType}", isFXRPDeposit=${isFXRPDeposit}`);
+    console.log(`🔄 Deposit: vault="${selectedVault.name}", depositAsset="${depositAsset}", walletType="${walletType}", isFXRPDeposit=${isFXRPDeposit}`);
 
     if (isFXRPDeposit) {
       // FXRP deposit requires EVM wallet type
