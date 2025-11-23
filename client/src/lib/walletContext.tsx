@@ -288,31 +288,64 @@ export function WalletProvider({ children }: { children: ReactNode }) {
           };
         }
 
-        const tx = {
-          TransactionType: "Payment",
-          Account: address,
-          Destination: paymentRequest.destination,
-          Amount: paymentRequest.amountDrops,
-          Memos: [
-            {
-              Memo: {
-                MemoData: Buffer.from(paymentRequest.memo).toString("hex").toUpperCase(),
+        try {
+          const tx = {
+            TransactionType: "Payment",
+            Account: address,
+            Destination: paymentRequest.destination,
+            Amount: paymentRequest.amountDrops,
+            Memos: [
+              {
+                Memo: {
+                  MemoData: Buffer.from(paymentRequest.memo).toString("hex").toUpperCase(),
+                },
               },
+            ],
+          };
+
+          console.log("🔗 WalletConnect: Sending transaction request to wallet...", {
+            method: "xrpl_signAndSubmit",
+            account: address,
+            destination: paymentRequest.destination,
+            amount: paymentRequest.amountDrops,
+          });
+
+          // Use a timeout to ensure the request completes or fails
+          const timeoutPromise = new Promise((_, reject) =>
+            setTimeout(() => reject(new Error("WalletConnect request timeout after 30 seconds")), 30000)
+          );
+
+          const requestPromise = walletConnectProvider.request({
+            method: "xrpl_signAndSubmit",
+            params: {
+              tx_json: tx,
             },
-          ],
-        };
+          });
 
-        const result = await walletConnectProvider.request({
-          method: "xrpl_signAndSubmit",
-          params: {
-            tx_json: tx,
-          },
-        }) as any;
+          const result = (await Promise.race([requestPromise, timeoutPromise])) as any;
 
-        return {
-          success: true,
-          txHash: result?.tx_json?.hash || "pending",
-        };
+          console.log("✅ WalletConnect: Transaction signed successfully", {
+            hash: result?.tx_json?.hash || result?.hash || "pending",
+          });
+
+          return {
+            success: true,
+            txHash: result?.tx_json?.hash || result?.hash || "pending",
+          };
+        } catch (wcError) {
+          const errorMessage = wcError instanceof Error ? wcError.message : "Unknown WalletConnect error";
+          console.error("❌ WalletConnect: Transaction signing failed:", errorMessage);
+
+          // Provide detailed error message for user
+          return {
+            success: false,
+            error: errorMessage.includes("timeout")
+              ? "Wallet did not respond. Please check your wallet app and try again."
+              : errorMessage.includes("rejected")
+              ? "You rejected the transaction in your wallet."
+              : errorMessage,
+          };
+        }
       }
 
       return {

@@ -100,6 +100,10 @@ export function ProgressStepsModal({
   const [xamanPaymentModalOpen, setXamanPaymentModalOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
 
+  // State for WalletConnect waiting modal
+  const [wcWaitingOpen, setWcWaitingOpen] = useState(false);
+  const [wcError, setWcError] = useState<string | null>(null);
+
   // Start polling as soon as we have a bridgeId to detect all status transitions
   const shouldPoll = !!bridgeId && open;
   
@@ -151,6 +155,9 @@ export function ProgressStepsModal({
         if (!result.success) {
           console.error("Payment request failed:", result.error);
           paymentTriggeredRef.current = false; // Reset on error to allow retry
+          if (provider === 'walletconnect') {
+            setWcError(result.error || 'Failed to send payment to wallet');
+          }
           return;
         }
 
@@ -164,13 +171,16 @@ export function ProgressStepsModal({
           setXamanPaymentModalOpen(true);
         } else if (provider === 'walletconnect') {
           // For WalletConnect, the transaction has been sent to the wallet
-          // The user will see a signature prompt in their wallet
-          // Monitor the bridge status for confirmation
-          console.log("WalletConnect payment sent. Waiting for wallet confirmation...");
+          // Show waiting modal while wallet processes the signature
+          setWcWaitingOpen(true);
+          console.log("🔗 WalletConnect payment sent. Transaction hash:", result.txHash);
         }
       }).catch((error) => {
         console.error("Failed to trigger payment modal:", error);
         paymentTriggeredRef.current = false; // Reset on error to allow retry
+        if (provider === 'walletconnect') {
+          setWcError(error instanceof Error ? error.message : 'An error occurred');
+        }
       });
     }
   }, [depositStatus, bridgeId, requestPayment, provider]);
