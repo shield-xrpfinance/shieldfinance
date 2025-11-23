@@ -112,6 +112,7 @@ export default function BridgeStatusModal({
   const [transactionDetailsExpanded, setTransactionDetailsExpanded] = useState(false);
   const [wcWaitingOpen, setWcWaitingOpen] = useState(false);
   const [wcError, setWcError] = useState<string | null>(null);
+  const [wcRequestTimeout, setWcRequestTimeout] = useState(false);
   const { toast } = useToast();
   const { requestPayment, provider, isConnected, address: walletAddress } = useWallet();
 
@@ -262,6 +263,7 @@ export default function BridgeStatusModal({
     // Show modal immediately for WalletConnect
     if (provider === "walletconnect") {
       setWcError(null);
+      setWcRequestTimeout(false);
       setWcWaitingOpen(true);
     }
 
@@ -270,6 +272,14 @@ export default function BridgeStatusModal({
       // This is critical - using xrpAmount would cause payment amount mismatch errors
       const amountInDrops = bridge.totalAmountUBA;
 
+      // Set a timeout warning if wallet doesn't respond in 20 seconds
+      let timeoutWarning: NodeJS.Timeout | null = null;
+      if (provider === "walletconnect") {
+        timeoutWarning = setTimeout(() => {
+          setWcRequestTimeout(true);
+        }, 20000); // 20 seconds
+      }
+
       const result = await requestPayment({
         bridgeId: bridge.id,
         destination: bridge.agentUnderlyingAddress!,
@@ -277,6 +287,8 @@ export default function BridgeStatusModal({
         memo: bridge.paymentReference!,
         network: "testnet", // Coston2 testnet
       });
+
+      if (timeoutWarning) clearTimeout(timeoutWarning);
 
       if (result.success) {
         if (provider === "xaman" && result.payloadUuid) {
@@ -289,6 +301,7 @@ export default function BridgeStatusModal({
           // WalletConnect: payment was processed in requestPayment
           // Modal already showing, just keep it visible
           console.log("✅ WalletConnect payment processed:", result.txHash);
+          setWcRequestTimeout(false);
         }
       } else {
         // Set error state for modal to show
@@ -1057,52 +1070,87 @@ export default function BridgeStatusModal({
         <DialogContent className="sm:max-w-md" data-testid="dialog-walletconnect-payment">
           <DialogHeader>
             <DialogTitle className="text-center">
-              {wcError ? 'Payment Failed' : 'Complete XRP Payment'}
+              {wcError ? 'Payment Request' : wcRequestTimeout ? 'Manual Payment' : 'Complete XRP Payment'}
             </DialogTitle>
             <DialogDescription className="text-center">
-              {wcError ? 'There was an error' : 'Check your wallet to approve the payment'}
+              {wcError ? 'Wallet request failed' : wcRequestTimeout ? 'Send payment manually' : isSendingPayment ? 'Waiting for wallet...' : 'Check your wallet'}
             </DialogDescription>
           </DialogHeader>
 
-          {!wcError ? (
+          {isSendingPayment && !wcError && !wcRequestTimeout ? (
+            // Loading state - waiting for wallet response
             <div className="py-6 space-y-4 text-center">
               <div className="flex justify-center">
                 <div className="rounded-full bg-primary/10 p-4">
-                  <Smartphone className="h-8 w-8 text-primary animate-pulse" />
+                  <Loader2 className="h-8 w-8 text-primary animate-spin" />
                 </div>
               </div>
               <div className="space-y-2">
-                <p className="text-sm font-medium">Check your wallet app</p>
+                <p className="text-sm font-medium">Requesting wallet signature...</p>
                 <p className="text-xs text-muted-foreground">
-                  A transaction signature request is waiting for you. Open your wallet app and approve the XRP payment.
+                  Check your wallet app for a signature request, or check back in a moment.
                 </p>
               </div>
               <Alert className="p-3">
                 <Info className="h-4 w-4 flex-shrink-0" />
                 <AlertDescription className="text-xs">
-                  Send exactly {bridge?.totalAmountUBA ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6) : "0"} XRP to {bridge?.agentUnderlyingAddress}
+                  Amount: {bridge?.totalAmountUBA ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6) : "0"} XRP<br/>
+                  To: {bridge?.agentUnderlyingAddress}
                 </AlertDescription>
               </Alert>
+            </div>
+          ) : wcRequestTimeout && !wcError ? (
+            // Timeout - show manual payment instructions
+            <div className="py-6 space-y-4">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-yellow-500/10 p-4">
+                  <Clock className="h-8 w-8 text-yellow-600 dark:text-yellow-500" />
+                </div>
+              </div>
+              <Alert className="p-3 bg-yellow-50 dark:bg-yellow-950 border-yellow-200 dark:border-yellow-800">
+                <AlertDescription className="text-xs text-yellow-800 dark:text-yellow-200">
+                  Wallet request is taking longer than expected. You can either:
+                  <br/><br/>
+                  <strong>1. Check your wallet app</strong> - Look for a pending signature request and approve it<br/>
+                  <strong>2. Send payment manually</strong> - Use the payment details below
+                </AlertDescription>
+              </Alert>
+              <div className="space-y-2 p-3 rounded-md bg-background border">
+                <p className="text-xs font-medium">Send this payment:</p>
+                <div className="text-xs font-mono space-y-1">
+                  <div><span className="text-muted-foreground">Amount:</span> {bridge?.totalAmountUBA ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6) : "0"} XRP</div>
+                  <div><span className="text-muted-foreground">To:</span> {bridge?.agentUnderlyingAddress}</div>
+                  <div><span className="text-muted-foreground">Memo:</span> {bridge?.paymentReference}</div>
+                </div>
+              </div>
               <div className="flex flex-col gap-2">
                 <Button
                   variant="default"
-                  onClick={() => setWcWaitingOpen(false)}
+                  onClick={() => {
+                    setWcRequestTimeout(false);
+                    setIsSendingPayment(false);
+                  }}
                   className="w-full"
-                  data-testid="button-ready-payment"
+                  data-testid="button-retry-payment"
                 >
-                  I've approved the payment
+                  Retry Wallet Request
                 </Button>
                 <Button
                   variant="outline"
-                  onClick={() => setWcWaitingOpen(false)}
+                  onClick={() => {
+                    setWcRequestTimeout(false);
+                    setWcWaitingOpen(false);
+                    setIsSendingPayment(false);
+                  }}
                   className="w-full"
                   data-testid="button-close-payment"
                 >
-                  Close
+                  I'll send it manually
                 </Button>
               </div>
             </div>
-          ) : (
+          ) : wcError ? (
+            // Error state
             <div className="py-6 space-y-4">
               <div className="flex justify-center">
                 <div className="rounded-full bg-destructive/10 p-4">
@@ -1114,13 +1162,23 @@ export default function BridgeStatusModal({
                   {wcError}
                 </AlertDescription>
               </Alert>
+              <div className="space-y-2 p-3 rounded-md bg-background border">
+                <p className="text-xs font-medium">Send this payment manually:</p>
+                <div className="text-xs font-mono space-y-1">
+                  <div><span className="text-muted-foreground">Amount:</span> {bridge?.totalAmountUBA ? (Number(bridge.totalAmountUBA) / 1_000_000).toFixed(6) : "0"} XRP</div>
+                  <div><span className="text-muted-foreground">To:</span> {bridge?.agentUnderlyingAddress}</div>
+                  <div><span className="text-muted-foreground">Memo:</span> {bridge?.paymentReference}</div>
+                </div>
+              </div>
               <div className="flex flex-col gap-2">
                 <Button
                   variant="default"
                   onClick={() => {
                     setWcError(null);
-                    setWcWaitingOpen(false);
+                    setWcRequestTimeout(false);
                     setIsSendingPayment(false);
+                    // Retry the request
+                    handleSendPayment();
                   }}
                   className="w-full"
                   data-testid="button-retry-payment"
@@ -1141,7 +1199,7 @@ export default function BridgeStatusModal({
                 </Button>
               </div>
             </div>
-          )}
+          ) : null}
         </DialogContent>
       </Dialog>
     </Dialog>
