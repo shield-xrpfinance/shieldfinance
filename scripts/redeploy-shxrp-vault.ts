@@ -152,6 +152,43 @@ async function main() {
 
   console.log("\n💾 Deployment saved to:", deploymentFile);
 
+  // =========================================================================
+  // UPDATE coston2-latest.json with all current addresses
+  // =========================================================================
+  const latestFile = path.join(deploymentsDir, "coston2-latest.json");
+  
+  // Load existing coston2-latest.json or create new
+  let latestDeployment: any = {};
+  if (fs.existsSync(latestFile)) {
+    const latestContent = fs.readFileSync(latestFile, "utf-8");
+    latestDeployment = JSON.parse(latestContent);
+  }
+
+  // Update with ShXRPVault and preserve other contracts
+  latestDeployment = {
+    network,
+    chainId: networkConfig.chainId,
+    timestamp: new Date().toISOString(),
+    deployer: wallet.address,
+    contracts: {
+      // Preserve existing contracts
+      ...(latestDeployment.contracts || {}),
+      // Update ShXRPVault
+      ShXRPVault: {
+        address: shxrpVaultAddress,
+        explorerUrl: `${networkConfig.explorer}/address/${shxrpVaultAddress}`,
+      },
+      // Update FXRP address
+      FXRP: {
+        address: fxrpAddress,
+        explorerUrl: `${networkConfig.explorer}/address/${fxrpAddress}`,
+      },
+    },
+  };
+
+  fs.writeFileSync(latestFile, JSON.stringify(latestDeployment, null, 2));
+  console.log("✅ Updated:", latestFile);
+
   console.log("\n" + "=".repeat(60));
   console.log("✅ DEPLOYMENT COMPLETE");
   console.log("=".repeat(60));

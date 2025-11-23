@@ -73,7 +73,10 @@ async function main() {
   console.log("\n📍 Network Addresses:");
   console.log("   wFLR:", WFLR_COSTON2);
   console.log("   SparkDEX Router:", SPARKDEX_SWAP_ROUTER);
+  
+  console.log("\n📍 Airdrop Configuration:");
   console.log("   Merkle Root:", merkleRoot);
+  console.log("   ⚠️  This merkle root will be IMMUTABLE once MerkleDistributor is deployed!");
 
   console.log("\n" + "=".repeat(60));
   console.log("DEPLOYING MISSING CONTRACTS");
@@ -241,13 +244,67 @@ async function main() {
   const deploymentFile = path.join(deploymentsDir, `coston2-missing-${timestamp}.json`);
   fs.writeFileSync(deploymentFile, JSON.stringify(deploymentInfo, null, 2));
 
+  console.log("\n💾 Deployment saved to:", deploymentFile);
+
+  // =========================================================================
+  // UPDATE coston2-latest.json with all current addresses
+  // =========================================================================
+  const latestFile = path.join(deploymentsDir, "coston2-latest.json");
+  
+  // Load existing coston2-latest.json or create new
+  let latestDeployment: any = {};
+  if (fs.existsSync(latestFile)) {
+    const latestContent = fs.readFileSync(latestFile, "utf-8");
+    latestDeployment = JSON.parse(latestContent);
+  }
+
+  // Update with all known contract addresses
+  latestDeployment = {
+    network,
+    chainId: networkConfig.chainId,
+    timestamp: new Date().toISOString(),
+    deployer: wallet.address,
+    merkleRoot: merkleRoot,
+    contracts: {
+      ShieldToken: {
+        address: EXISTING_SHIELD_TOKEN,
+        explorerUrl: `${networkConfig.explorer}/address/${EXISTING_SHIELD_TOKEN}`,
+      },
+      RevenueRouter: {
+        address: revenueRouterAddress,
+        explorerUrl: `${networkConfig.explorer}/address/${revenueRouterAddress}`,
+      },
+      StakingBoost: {
+        address: stakingBoostAddress,
+        explorerUrl: `${networkConfig.explorer}/address/${stakingBoostAddress}`,
+      },
+      MerkleDistributor: {
+        address: merkleDistributorAddress,
+        explorerUrl: `${networkConfig.explorer}/address/${merkleDistributorAddress}`,
+        merkleRoot: merkleRoot,
+      },
+      // Preserve other contracts if they exist in the latest file
+      ...(latestDeployment.contracts?.ShXRPVault && {
+        ShXRPVault: latestDeployment.contracts.ShXRPVault,
+      }),
+      ...(latestDeployment.contracts?.SmartAccount && {
+        SmartAccount: latestDeployment.contracts.SmartAccount,
+      }),
+      ...(latestDeployment.contracts?.FXRP && {
+        FXRP: latestDeployment.contracts.FXRP,
+      }),
+    },
+  };
+
+  fs.writeFileSync(latestFile, JSON.stringify(latestDeployment, null, 2));
+  console.log("✅ Updated:", latestFile);
+
   console.log("\n📄 Contract Addresses:");
   console.log("   ShieldToken (existing):", EXISTING_SHIELD_TOKEN);
   console.log("   RevenueRouter:", revenueRouterAddress);
   console.log("   StakingBoost:", stakingBoostAddress);
   console.log("   MerkleDistributor:", merkleDistributorAddress);
-
-  console.log("\n💾 Deployment saved to:", deploymentFile);
+  console.log("   Merkle Root (saved):", merkleRoot);
 
   console.log("\n" + "=".repeat(60));
   console.log("📝 NEXT STEPS:");

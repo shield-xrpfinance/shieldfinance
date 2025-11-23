@@ -2,25 +2,53 @@
 
 ## ✅ Deployment Status
 
-**Smart contracts successfully deployed to Flare Coston2 Testnet on November 12, 2025**
+**Smart contracts successfully deployed to Flare Coston2 Testnet - Updated November 23, 2025**
 
 ### Deployed Contracts
 
 - **ShieldToken ($SHIELD)**: `0x07F943F173a6bE5EC63a8475597d28aAA6B24992`
   - [View on Explorer](https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992)
   - Total Supply: 100,000,000 SHIELD
-  - Treasury Allocation: 10,000,000 SHIELD
+  - Deployer holds: 98,000,000 SHIELD
+  - MerkleDistributor funded: 2,000,000 SHIELD (for airdrop)
 
-- **ShXRP Vault (ERC-4626)**: `0x8fe09217445e90DA692D29F30859dafA4eb281d1`
-  - [View on Explorer](https://coston2-explorer.flare.network/address/0x8fe09217445e90DA692D29F30859dafA4eb281d1)
-  - ERC-4626 compliant tokenized vault
+- **ShXRP Vault (ERC-4626)** (Updated): `0x82d74B5fb005F7469e479C224E446bB89031e17F`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0x82d74B5fb005F7469e479C224E446bB89031e17F)
+  - ERC-4626 compliant tokenized vault with revenue distribution and staking boost
+  - Integrated with RevenueRouter for fee management
+  - Integrated with StakingBoost for APY enhancement
   - Minimum deposit: 0.01 FXRP (10000 units with 6 decimals)
   - Decimal precision: 6 (matches FXRP)
+
+- **RevenueRouter**: `0x8e5C9933c08451a6a31635a3Ea1221c010DF158e`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0x8e5C9933c08451a6a31635a3Ea1221c010DF158e)
+  - Revenue distribution: 50% swapped to SHIELD and burned, 50% kept as reserves
+  - Implementation: See `RevenueRouter.sol` `distribute()` function (line: `uint256 buybackAmount = balance / 2;`)
+  - Uses Uniswap V3-compatible router: `0x8a1E35F5c98C4E85B36B7B253222eE17773b2781`
+
+- **StakingBoost**: `0xD8DF192872e94F189602ae3634850C989A1802C6`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0xD8DF192872e94F189602ae3634850C989A1802C6)
+  - Lock period: 30 days (2,592,000 seconds)
+  - Boost formula: 1% APY boost per 100 SHIELD staked
+  - Maximum boost: Uncapped
+
+- **MerkleDistributor**: `0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31)
+  - Airdrop distribution: 2,000,000 SHIELD tokens
+  - Merkle Root: `0xee1f232297e8aeb301dbf175781d8e8d2356cdf0d5d9276989463417cd0510d4`
+  - Eligible addresses: 20 (test airdrop)
+  - Status: ✅ Funded and ready for claims
 
 - **Smart Account (Etherspot)**: `0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd`
   - [View on Explorer](https://coston2-explorer.flare.network/address/0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd)
   - ERC-4337 smart account for gasless transactions
   - Manages vault deposits and withdrawals
+
+### Legacy Contracts (Old Deployment)
+
+- **Old ShXRP Vault**: `0x8fe09217445e90DA692D29F30859dafA4eb281d1`
+  - ⚠️ **Deprecated** - Deployed without RevenueRouter and StakingBoost integration
+  - Migrate user positions to new vault if any exist
 
 ## Commands Summary
 
@@ -43,11 +71,39 @@ tsx scripts/deploy-direct.ts
 
 ### 4. Verify Contracts on Block Explorer
 ```bash
-# ShieldToken (Coston2 Testnet)
-npx hardhat verify --network coston2 0x07F943F173a6bE5EC63a8475597d28aAA6B24992 "0x105a22e3ff06ee17020a510fa5113b5c6d9feb2d"
+# Note: ShieldToken is already verified on Coston2 - no need to verify again
+# Contract: 0x07F943F173a6bE5EC63a8475597d28aAA6B24992
 
-# ShXRP Vault (Coston2 Testnet)
-npx hardhat verify --network coston2 0x8fe09217445e90DA692D29F30859dafA4eb281d1
+# RevenueRouter (November 23, 2025)
+# Constructor: (address shieldToken, address wflr, address router)
+npx hardhat verify --network coston2 \
+  0x8e5C9933c08451a6a31635a3Ea1221c010DF158e \
+  "0x07F943F173a6bE5EC63a8475597d28aAA6B24992" \
+  "0xC67DCE33D7A8efA5FfEB961899C73fe01bCe9273" \
+  "0x8a1E35F5c98C4E85B36B7B253222eE17773b2781"
+
+# StakingBoost (November 23, 2025)
+# Constructor: (address shieldToken)
+npx hardhat verify --network coston2 \
+  0xD8DF192872e94F189602ae3634850C989A1802C6 \
+  "0x07F943F173a6bE5EC63a8475597d28aAA6B24992"
+
+# MerkleDistributor (November 23, 2025)
+# Constructor: (address token, bytes32 merkleRoot)
+npx hardhat verify --network coston2 \
+  0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31 \
+  "0x07F943F173a6bE5EC63a8475597d28aAA6B24992" \
+  "0xee1f232297e8aeb301dbf175781d8e8d2356cdf0d5d9276989463417cd0510d4"
+
+# ShXRP Vault (November 23, 2025)
+# Constructor: (address asset, string name, string symbol, address revenueRouter, address stakingBoost)
+npx hardhat verify --network coston2 \
+  0x82d74B5fb005F7469e479C224E446bB89031e17F \
+  "0x0b6A3645c240605887a5532109323A3E12273dc7" \
+  "Shield XRP" \
+  "shXRP" \
+  "0x8e5C9933c08451a6a31635a3Ea1221c010DF158e" \
+  "0xD8DF192872e94F189602ae3634850C989A1802C6"
 ```
 
 ### 5. Combined Testnet Deployment
@@ -58,16 +114,19 @@ tsx scripts/deploy-direct.ts
 
 ## Environment Variables Required
 
-Create a `.env` file with:
+Create a `.env` file with (or use Replit Secrets):
 
 ```bash
 # Flare Deployment
 DEPLOYER_PRIVATE_KEY=your-private-key-here
 TREASURY_ADDRESS=your-treasury-address-here
 
-# Frontend (deployed addresses for Coston2 testnet)
+# Frontend (deployed addresses for Coston2 testnet - Updated November 23, 2025)
 VITE_SHIELD_TOKEN_ADDRESS=0x07F943F173a6bE5EC63a8475597d28aAA6B24992
-VITE_SHXRP_VAULT_ADDRESS=0x8fe09217445e90DA692D29F30859dafA4eb281d1
+VITE_SHXRP_VAULT_ADDRESS=0x82d74B5fb005F7469e479C224E446bB89031e17F
+VITE_REVENUE_ROUTER_ADDRESS=0x8e5C9933c08451a6a31635a3Ea1221c010DF158e
+VITE_STAKING_BOOST_ADDRESS=0xD8DF192872e94F189602ae3634850C989A1802C6
+VITE_MERKLE_DISTRIBUTOR_ADDRESS=0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31
 ```
 
 ## Testnet Faucets
@@ -84,14 +143,19 @@ VITE_SHXRP_VAULT_ADDRESS=0x8fe09217445e90DA692D29F30859dafA4eb281d1
 
 ## Contract Addresses
 
-### Coston2 Testnet (Deployed November 12, 2025)
+### Coston2 Testnet (Updated November 23, 2025)
 
 ```
 ShieldToken (Coston2): 0x07F943F173a6bE5EC63a8475597d28aAA6B24992
-ShXRP Vault (Coston2): 0x8fe09217445e90DA692D29F30859dafA4eb281d1
+ShXRP Vault (Coston2): 0x82d74B5fb005F7469e479C224E446bB89031e17F
+RevenueRouter: 0x8e5C9933c08451a6a31635a3Ea1221c010DF158e
+StakingBoost: 0xD8DF192872e94F189602ae3634850C989A1802C6
+MerkleDistributor: 0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31
 Smart Account (Etherspot): 0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd
 FXRP Token: 0x0b6A3645c240605887a5532109323A3E12273dc7
 Deployer Address: 0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D
+
+Merkle Root (Airdrop): 0xee1f232297e8aeb301dbf175781d8e8d2356cdf0d5d9276989463417cd0510d4
 ```
 
 ### Mainnet (Not Yet Deployed)
@@ -152,16 +216,22 @@ FXRP Deposited to Firelight.finance
 Yield Auto-Compounds → Exchange Rate Increases
 ```
 
-### Key Components (Coston2 Testnet)
+### Key Components (Coston2 Testnet - Updated November 23, 2025)
 
 ```bash
 # XRPL Side
 XRP Deposit Address: r4bydXhaVMFzgDmqDmxkXJBKUgXTCwsWjY
 
 # Flare Side
-ShXRP Vault (ERC-4626): 0x8fe09217445e90DA692D29F30859dafA4eb281d1
+ShXRP Vault (ERC-4626): 0x82d74B5fb005F7469e479C224E446bB89031e17F
 FXRP Token: 0x0b6A3645c240605887a5532109323A3E12273dc7
 Smart Account (ERC-4337): 0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd
+
+# Revenue & Governance
+RevenueRouter: 0x8e5C9933c08451a6a31635a3Ea1221c010DF158e
+StakingBoost: 0xD8DF192872e94F189602ae3634850C989A1802C6
+MerkleDistributor: 0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31
+ShieldToken: 0x07F943F173a6bE5EC63a8475597d28aAA6B24992
 ```
 
 ### ERC-4626 Vault Functions
@@ -232,7 +302,12 @@ FXRP deposits automatically earn yield through **Firelight.finance** integration
 # Required secrets
 OPERATOR_PRIVATE_KEY=your-operator-key
 ETHERSPOT_BUNDLER_API_KEY=your-bundler-key
-VITE_SHXRP_VAULT_ADDRESS=0x8fe09217445e90DA692D29F30859dafA4eb281d1
+
+# Contract addresses (Updated November 23, 2025)
+VITE_SHXRP_VAULT_ADDRESS=0x82d74B5fb005F7469e479C224E446bB89031e17F
+VITE_REVENUE_ROUTER_ADDRESS=0x8e5C9933c08451a6a31635a3Ea1221c010DF158e
+VITE_STAKING_BOOST_ADDRESS=0xD8DF192872e94F189602ae3634850C989A1802C6
+VITE_MERKLE_DISTRIBUTOR_ADDRESS=0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31
 ```
 
 4. **Start Application:**

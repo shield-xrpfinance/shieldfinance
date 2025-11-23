@@ -68,9 +68,47 @@ async function main() {
   const distributorBalance = await shieldToken.balanceOf(MERKLE_DISTRIBUTOR);
   console.log(`\n📦 MerkleDistributor Current Balance:`, ethers.formatEther(distributorBalance), symbol);
 
+  // =========================================================================
+  // IDEMPOTENCY CHECK: Skip transfer if already funded
+  // =========================================================================
+  if (distributorBalance >= AMOUNT_TO_FUND) {
+    console.log("\n" + "=".repeat(60));
+    console.log("✅ ALREADY FUNDED - SKIPPING TRANSFER");
+    console.log("=".repeat(60));
+    console.log(`\n✅ MerkleDistributor already has ${ethers.formatEther(distributorBalance)} ${symbol}`);
+    console.log(`   Required: ${ethers.formatEther(AMOUNT_TO_FUND)} ${symbol}`);
+    console.log(`   Status: ✅ Sufficient balance - no transfer needed`);
+    
+    console.log("\n" + "=".repeat(60));
+    console.log("📝 NEXT STEPS:");
+    console.log("=".repeat(60));
+
+    console.log("\n1️⃣  Users can now claim their airdrop:");
+    console.log("   - Go to /airdrop page");
+    console.log("   - Connect wallet");
+    console.log("   - If eligible, click 'Claim Airdrop'");
+
+    console.log("\n2️⃣  Test airdrop claim flow:");
+    console.log("   - Use one of the 20 eligible addresses from merkle-tree.json");
+    console.log("   - Get proof from backend /api/merkle-proof/:address");
+    console.log("   - Call MerkleDistributor.claim()");
+
+    console.log("\n3️⃣  Monitor distribution:");
+    console.log(`   - Watch MerkleDistributor balance decrease as users claim`);
+    console.log(`   - Track Claimed events on block explorer`);
+
+    console.log("\n" + "=".repeat(60) + "\n");
+    return;
+  }
+
   console.log("\n" + "=".repeat(60));
   console.log("TRANSFERRING TOKENS");
   console.log("=".repeat(60));
+
+  console.log(`\n💡 MerkleDistributor needs funding`);
+  console.log(`   Current: ${ethers.formatEther(distributorBalance)} ${symbol}`);
+  console.log(`   Required: ${ethers.formatEther(AMOUNT_TO_FUND)} ${symbol}`);
+  console.log(`   To transfer: ${ethers.formatEther(AMOUNT_TO_FUND - distributorBalance)} ${symbol}`);
 
   console.log(`\n📤 Transferring ${ethers.formatEther(AMOUNT_TO_FUND)} ${symbol} to MerkleDistributor...`);
   console.log(`   From: ${wallet.address}`);

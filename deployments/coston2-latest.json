@@ -1,20 +1,39 @@
 {
   "network": "coston2",
   "chainId": 114,
-  "timestamp": "2025-11-11T17:35:00.000Z",
+  "timestamp": "2025-11-23T03:50:00.000Z",
   "deployer": "0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D",
+  "merkleRoot": "0xee1f232297e8aeb301dbf175781d8e8d2356cdf0d5d9276989463417cd0510d4",
   "contracts": {
-    "VaultController": {
-      "address": "0x96985bf09eDcD4C2Bf21137d8f97947B96c4eb2c",
-      "explorerUrl": "https://coston2-explorer.flare.network/address/0x96985bf09eDcD4C2Bf21137d8f97947B96c4eb2c"
+    "ShieldToken": {
+      "address": "0x07F943F173a6bE5EC63a8475597d28aAA6B24992",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992"
     },
     "ShXRPVault": {
-      "address": "0xeBb4a977492241B06A2423710c03BB63B2c5990e",
-      "explorerUrl": "https://coston2-explorer.flare.network/address/0xeBb4a977492241B06A2423710c03BB63B2c5990e"
+      "address": "0x82d74B5fb005F7469e479C224E446bB89031e17F",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x82d74B5fb005F7469e479C224E446bB89031e17F"
+    },
+    "RevenueRouter": {
+      "address": "0x8e5C9933c08451a6a31635a3Ea1221c010DF158e",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x8e5C9933c08451a6a31635a3Ea1221c010DF158e"
+    },
+    "StakingBoost": {
+      "address": "0xD8DF192872e94F189602ae3634850C989A1802C6",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0xD8DF192872e94F189602ae3634850C989A1802C6"
+    },
+    "MerkleDistributor": {
+      "address": "0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31",
+      "merkleRoot": "0xee1f232297e8aeb301dbf175781d8e8d2356cdf0d5d9276989463417cd0510d4",
+      "fundedAmount": "2000000000000000000000000"
+    },
+    "SmartAccount": {
+      "address": "0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd"
     },
     "FXRP": {
-      "address": "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3",
-      "explorerUrl": "https://coston2-explorer.flare.network/address/0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3"
+      "address": "0x0b6A3645c240605887a5532109323A3E12273dc7",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x0b6A3645c240605887a5532109323A3E12273dc7"
     }
   }
 }
