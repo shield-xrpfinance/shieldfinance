@@ -109,6 +109,18 @@ export class DatabaseStorage implements IStorage {
         riskLevel: "low",
       },
       {
+        name: "FXRP Vault",
+        asset: "FXRP",
+        apy: "5.5",
+        apyLabel: "5.5% (Firelight Yield)",
+        tvl: "500000",
+        liquidity: "150000",
+        lockPeriod: 0,
+        riskLevel: "low",
+        status: "active",
+        comingSoon: false,
+      },
+      {
         name: "RLUSD + USDC Pool",
         asset: "RLUSD,USDC",
         apy: "12.8",
