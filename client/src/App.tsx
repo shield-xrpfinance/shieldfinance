@@ -46,9 +46,12 @@ function DashboardRouter() {
 }
 
 function Header() {
-  const { address, isConnected, disconnect } = useWallet();
-  const { isTestnet, network } = useNetwork();
+  const { address, isConnected, disconnect, walletType } = useWallet();
+  const { isTestnet } = useNetwork();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
+
+  // Show wallet-aware testnet network name
+  const testnetName = walletType === "xrpl" ? "XRPL Testnet" : walletType === "evm" ? "Coston2" : "Testnet";
 
   return (
     <header className="flex items-center justify-between gap-4 p-4 border-b">
@@ -57,7 +60,7 @@ function Header() {
         {isTestnet && (
           <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4 gap-1" data-testid="badge-testnet-status">
             <Beaker className="h-3 w-3" />
-            {network === "testnet" ? "XRPL Testnet" : "Coston2"}
+            {testnetName}
           </Badge>
         )}
       </div>
