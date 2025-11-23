@@ -129,29 +129,36 @@ export default function Vaults() {
     return stats;
   }, [escrows]);
 
-  const allVaults = apiVaults?.map(vault => ({
-    id: vault.id,
-    name: vault.name,
-    asset: vault.asset || "XRP",
-    apy: vault.apy,
-    apyLabel: vault.apyLabel,
-    tvl: formatCurrency(vault.tvl),
-    liquidity: formatCurrency(vault.liquidity),
-    lockPeriod: vault.lockPeriod,
-    riskLevel: vault.riskLevel as "low" | "medium" | "high",
-    depositors: 0,
-    status: vault.status.charAt(0).toUpperCase() + vault.status.slice(1),
-    depositAssets: (vault.asset || "XRP").split(",").map(a => a.trim()),
-    pendingEscrowCount: vaultEscrowStats[vault.id]?.pendingCount || 0,
-    finishedEscrowCount: vaultEscrowStats[vault.id]?.finishedCount || 0,
-    cancelledEscrowCount: vaultEscrowStats[vault.id]?.cancelledCount || 0,
-    failedEscrowCount: vaultEscrowStats[vault.id]?.failedCount || 0,
-    totalEscrowAmount: vaultEscrowStats[vault.id]?.totalAmount.toString() || "0",
-    depositLimit: (vault as any).depositLimit || null,
-    depositLimitRaw: (vault as any).depositLimitRaw || null,
-    paused: typeof (vault as any).paused === 'boolean' ? (vault as any).paused : null,
-    comingSoon: (vault as any).comingSoon || false,
-  })) || [];
+  const allVaults = apiVaults?.map(vault => {
+    const vaultAsset = vault.asset || "XRP";
+    const vaultDepositAssets = vaultAsset.split(",").map(a => a.trim());
+    if (vaultAsset === "FXRP" || vaultDepositAssets.includes("FXRP")) {
+      console.log(`✅ FXRP Vault detected: ${vault.name}, asset=${vaultAsset}, depositAssets=${JSON.stringify(vaultDepositAssets)}`);
+    }
+    return {
+      id: vault.id,
+      name: vault.name,
+      asset: vaultAsset,
+      apy: vault.apy,
+      apyLabel: vault.apyLabel,
+      tvl: formatCurrency(vault.tvl),
+      liquidity: formatCurrency(vault.liquidity),
+      lockPeriod: vault.lockPeriod,
+      riskLevel: vault.riskLevel as "low" | "medium" | "high",
+      depositors: 0,
+      status: vault.status.charAt(0).toUpperCase() + vault.status.slice(1),
+      depositAssets: vaultDepositAssets,
+      pendingEscrowCount: vaultEscrowStats[vault.id]?.pendingCount || 0,
+      finishedEscrowCount: vaultEscrowStats[vault.id]?.finishedCount || 0,
+      cancelledEscrowCount: vaultEscrowStats[vault.id]?.cancelledCount || 0,
+      failedEscrowCount: vaultEscrowStats[vault.id]?.failedCount || 0,
+      totalEscrowAmount: vaultEscrowStats[vault.id]?.totalAmount.toString() || "0",
+      depositLimit: (vault as any).depositLimit || null,
+      depositLimitRaw: (vault as any).depositLimitRaw || null,
+      paused: typeof (vault as any).paused === 'boolean' ? (vault as any).paused : null,
+      comingSoon: (vault as any).comingSoon || false,
+    };
+  }) || [];
 
   // Filter vaults based on wallet type
   const walletFilteredVaults = useMemo(() => {
@@ -199,18 +206,12 @@ export default function Vaults() {
       return;
     }
     
-    // Prioritize asset field to determine depositAssets (backend may have mismatched data)
-    let depositAssets: string[] = ["XRP"]; // Default fallback
-    const vaultAsset = (vault as any).asset;
+    // Use vault.depositAssets which is already computed from vault.asset
+    const depositAssets = vault.depositAssets && vault.depositAssets.length > 0 
+      ? vault.depositAssets 
+      : ["XRP"];
     
-    if (vaultAsset === "FXRP") {
-      depositAssets = ["FXRP"];
-    } else if (vaultAsset === "XRP") {
-      depositAssets = ["XRP"];
-    } else if (vault.depositAssets && Array.isArray(vault.depositAssets) && vault.depositAssets.length > 0) {
-      // Use backend depositAssets only if asset field is not set
-      depositAssets = vault.depositAssets;
-    }
+    console.log(`🔄 Opening deposit modal for ${vault.name}: depositAssets=${JSON.stringify(depositAssets)}`);
     
     setSelectedVault({ 
       id: vault.id, 
