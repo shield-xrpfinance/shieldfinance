@@ -16,7 +16,7 @@ Shield Finance underwent several iterations during testnet development to reach 
 |------|-------|---------------|--------|
 | **Nov 23, 2025** | First 100M deployment | 100,000,000 | ❌ **DEPRECATED** (Renounced) |
 | **Nov 23, 2025** | Second 100M deployment | 100,000,000 | ❌ **DEPRECATED** (Renounced) |
-| **Nov 23, 2025** | Third 100M deployment | 100,000,000 | ❌ **DEPRECATED** (To be renounced) |
+| **Nov 23, 2025** | Third 100M deployment | 100,000,000 | ❌ **DEPRECATED** (Renounced) |
 | **Nov 23, 2025** | **CURRENT: 10M deployment** | **10,000,000** | ✅ **ACTIVE** |
 
 **Why the change?** The 10M supply provides better tokenomics:
@@ -104,14 +104,16 @@ The following contracts were deployed with 100M SHIELD supply and are now **perm
 ### Deprecated Deployment #3 (100M Supply)
 - **ShieldToken**: `0x07F943F173a6bE5EC63a8475597d28aAA6B24992`
   - [View on Explorer](https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992)
-  - Status: ❌ **DEPRECATED - To Be Renounced**
+  - Status: ❌ **DEPRECATED - Ownership Renounced**
+  - Renounce TX: [0x271b89ff...](https://coston2-explorer.flare.network/tx/0x271b89ff5ba9cf3a9a2a43e3a65ab71bd3b419558edeecaaf7c3cd2b9c2da66a)
+  - Block: 24297889
   - Total Supply: 100,000,000 SHIELD (incorrect supply)
+  - **Contract permanently frozen - cannot mint or burn**
   - Associated contracts (also deprecated):
     - ShXRP Vault: `0x82d74B5fb005F7469e479C224E446bB89031e17F`
     - RevenueRouter: `0x8e5C9933c08451a6a31635a3Ea1221c010DF158e`
     - StakingBoost: `0xD8DF192872e94F189602ae3634850C989A1802C6`
     - MerkleDistributor: `0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31`
-  - **Will be renounced after 10M deployment is complete**
 
 ### Why Were These Deprecated?
 

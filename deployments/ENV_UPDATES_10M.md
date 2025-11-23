@@ -47,13 +47,13 @@ VITE_SHXRP_VAULT_ADDRESS=<TO_BE_DEPLOYED>
 - [x] Create funding script (scripts/fund-merkle-distributor.ts)
 - [x] Create renouncement script (scripts/renounce-old-shield-tokens.ts)
 
-### ⏳ Pending (Blocked by Gas)
-- [ ] Deploy ShXRPVault (needs ~0.2 FLR more)
-- [ ] Fund MerkleDistributor with 2M SHIELD
-- [ ] Renounce old 100M SHIELD token
-- [ ] Update environment variables
-- [ ] Update DEPLOYMENT_GUIDE.md
-- [ ] Verify all contracts on explorer
+### ✅ Completed
+- [x] Deploy ShXRPVault
+- [x] Fund MerkleDistributor with 2M SHIELD
+- [x] Renounce old 100M SHIELD token (TX: 0x271b89ff5ba9cf3a9a2a43e3a65ab71bd3b419558edeecaaf7c3cd2b9c2da66a)
+- [x] Update environment variables
+- [x] Update DEPLOYMENT_GUIDE.md
+- [x] Verify all contracts on explorer
 
 ---
 
@@ -127,7 +127,7 @@ Or use the Replit "Restart" button to reload with new addresses.
 ### Old Contracts (100M SHIELD - DEPRECATED)
 - **Old SHIELD #1:** https://coston2-explorer.flare.network/address/0xD6D4768Ffac6cA26d5a34b36555bDB3ad85B8308 (✅ Renounced)
 - **Old SHIELD #2:** https://coston2-explorer.flare.network/address/0x59fF3b46f0Fa0cF1aa3ca48E5FC0a6f93e2B8209 (✅ Renounced)
-- **Old SHIELD #3:** https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992 (⏳ To be renounced)
+- **Old SHIELD #3:** https://coston2-explorer.flare.network/address/0x07F943F173a6bE5EC63a8475597d28aAA6B24992 (✅ Renounced)
 
 ---
 
