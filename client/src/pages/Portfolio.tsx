@@ -527,7 +527,7 @@ export default function Portfolio() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => navigate("/bridge-tracking")}
+              onClick={() => navigate("/app/bridge-tracking")}
               className="flex items-center gap-1"
               data-testid="button-view-withdrawals"
             >
