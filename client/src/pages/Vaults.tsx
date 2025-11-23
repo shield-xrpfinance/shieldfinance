@@ -253,20 +253,11 @@ export default function Vaults() {
 
     const paymentAsset = selectedVault.depositAssets[0];
 
-    // PRIMARY: Check vault name for FXRP - this is the most reliable method
-    // If vault name contains "fxrp" → force EVM deposit flow
-    const nameHasFXRP = selectedVault.name.toLowerCase().includes("fxrp");
-    const assetsHasFXRP = selectedVault.depositAssets && selectedVault.depositAssets.some((a: string) => a.toUpperCase() === "FXRP");
-    const isFXRPDeposit = nameHasFXRP || assetsHasFXRP;
+    // BULLETPROOF: If EVM wallet is connected + vault name contains "fxrp" → EVM deposit
+    // This is the most reliable indicator
+    const isFXRPDeposit = !!(evmAddress && selectedVault.name.toLowerCase().includes("fxrp"));
     
-    console.log(`
-🔄 DEPOSIT FLOW DETECTION:
-  Vault: "${selectedVault.name}"
-  Name has FXRP: ${nameHasFXRP}
-  Assets has FXRP: ${assetsHasFXRP}
-  → FXRP Deposit: ${isFXRPDeposit}
-  Deposit Assets: ${JSON.stringify(selectedVault.depositAssets)}
-    `);
+    console.log(`🔄 Deposit: vault="${selectedVault.name}", evmAddress="${evmAddress}", isFXRPDeposit=${isFXRPDeposit}`);
 
     if (isFXRPDeposit) {
       // Use direct FXRP deposit flow - user deposits FXRP via EVM wallet, gets shXRP immediately
