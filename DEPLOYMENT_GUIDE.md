@@ -55,19 +55,18 @@ Shield Finance underwent several iterations during testnet development to reach 
 
 - **MerkleDistributor**: `0x8b3eC671c14E44B9EC8274eA3B6884A4259Ef490`
   - [View on Explorer](https://coston2-explorer.flare.network/address/0x8b3eC671c14E44B9EC8274eA3B6884A4259Ef490)
-  - Airdrop distribution: 2,000,000 SHIELD tokens (20% of total supply)
+  - Airdrop distribution: 2,000,000 SHIELD tokens (20% of total supply) 
   - Merkle Root: `0xee1f232297e8aeb301dbf175781d8e8d2356cdf0d5d9276989463417cd0510d4`
   - Eligible addresses: 20 (test airdrop)
-  - Status: ✅ Deployed and verified (pending funding)
+  - Funding TX: [0x74905c13...](https://coston2-explorer.flare.network/tx/0x74905c13c3359294545ee2ac111b3b2214b4f0a9bee787f36d105bcb7b446e1f)
+  - Status: ✅ Deployed, verified, and **FUNDED**
 
-- **ShXRP Vault (ERC-4626)**: ⏳ **PENDING DEPLOYMENT**
-  - Status: ❌ Deployment blocked - insufficient gas (need ~0.2 FLR)
-  - Required constructor args:
-    - FXRP Token: `0x0b6A3645c240605887a5532109323A3E12273dc7`
-    - RevenueRouter: `0x262582942Dcf97F59Cb0fe61e5852DDa10fD6fFB`
-    - StakingBoost: `0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4`
-  - Deploy script: `npx tsx scripts/deploy-shxrp-only.ts`
-  - **Note:** Get test FLR from [Coston2 Faucet](https://faucet.flare.network/coston2) to complete deployment
+- **ShXRP Vault (ERC-4626)**: `0x3219232a45880b79736Ee899Cb3b2f95D527C631`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0x3219232a45880b79736Ee899Cb3b2f95D527C631)
+  - FXRP Token: `0x0b6A3645c240605887a5532109323A3E12273dc7`
+  - RevenueRouter: `0x262582942Dcf97F59Cb0fe61e5852DDa10fD6fFB`
+  - StakingBoost: `0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4`
+  - Status: ✅ **DEPLOYED AND VERIFIED**
 
 - **Smart Account (Etherspot)**: `0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd`
   - [View on Explorer](https://coston2-explorer.flare.network/address/0x0C2b9f0a5A61173324bC08Fb9C1Ef91a791a4DDd)
