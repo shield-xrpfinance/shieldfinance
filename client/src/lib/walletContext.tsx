@@ -27,6 +27,7 @@ interface WalletContextType {
   address: string | null; // XRPL address (r...)
   evmAddress: string | null; // EVM address (0x...) for Flare Network
   provider: "xaman" | "walletconnect" | null;
+  walletType: "xrpl" | "evm" | null; // Derived from provider for easy filtering
   isConnected: boolean;
   isEvmConnected: boolean;
   walletConnectProvider: UniversalProvider | null;
@@ -39,6 +40,7 @@ const WalletContext = createContext<WalletContextType>({
   address: null,
   evmAddress: null,
   provider: null,
+  walletType: null,
   isConnected: false,
   isEvmConnected: false,
   walletConnectProvider: null,
@@ -439,9 +441,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
 
   const isConnected = address !== null;
   const isEvmConnected = evmAddress !== null;
+  
+  // Derive walletType from provider
+  const walletType = provider === "xaman" ? "xrpl" : provider === "walletconnect" ? "evm" : null;
 
   return (
-    <WalletContext.Provider value={{ address, evmAddress, provider, isConnected, isEvmConnected, walletConnectProvider, connect, disconnect, requestPayment }}>
+    <WalletContext.Provider value={{ address, evmAddress, provider, walletType, isConnected, isEvmConnected, walletConnectProvider, connect, disconnect, requestPayment }}>
       {children}
     </WalletContext.Provider>
   );
