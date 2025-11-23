@@ -3,13 +3,16 @@ import usdcLogo from "@assets/usdc-icon.5f31fb80_1762588566536.png";
 import rlusdLogo from "@assets/rlusd-icon.d10ce925_1762588566536.png";
 import flrLogo from "@assets/flr.svg";
 import fxrpLogo from "@assets/fxrp-logo.png";
+import { getAssetDisplayName, type AssetKey } from "@shared/assetConfig";
+import { useNetwork } from "@/lib/networkContext";
 
-type AssetType = "XRP" | "RLUSD" | "USDC" | "FLR" | "WFLR" | "USDT" | "SHIELD" | "shXRP" | "FXRP";
+type AssetType = AssetKey;
 
 interface AssetIconProps {
   asset: AssetType;
   size?: number;
   className?: string;
+  network?: "mainnet" | "testnet"; // Optional network override
 }
 
 const assetLogos: Record<AssetType, string> = {
@@ -24,23 +27,20 @@ const assetLogos: Record<AssetType, string> = {
   FXRP: fxrpLogo,
 };
 
-const assetNames: Record<AssetType, string> = {
-  XRP: "XRP",
-  RLUSD: "Ripple USD",
-  USDC: "USD Coin",
-  FLR: "Flare",
-  WFLR: "Wrapped Flare",
-  USDT: "Bridged USDT",
-  SHIELD: "Shield",
-  shXRP: "Liquid Staked XRP",
-  FXRP: "Flare XRP",
-};
-
-export function AssetIcon({ asset, size = 24, className = "" }: AssetIconProps) {
+export function AssetIcon({ asset, size = 24, className = "", network: networkOverride }: AssetIconProps) {
+  const { network: contextNetwork } = useNetwork();
+  const network = networkOverride || contextNetwork;
+  
+  // Get network-aware display name (e.g., "FXRP" on mainnet, "FTestXRP" on testnet)
+  const displayName = getAssetDisplayName(asset, network);
+  
+  // Get logo with fallback for missing assets
+  const logoSrc = assetLogos[asset] || "/shield-logo.png";
+  
   return (
     <img
-      src={assetLogos[asset]}
-      alt={assetNames[asset]}
+      src={logoSrc}
+      alt={displayName}
       width={size}
       height={size}
       className={`inline-block rounded-full ${className}`}

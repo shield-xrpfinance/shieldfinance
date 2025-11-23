@@ -87,13 +87,13 @@ async function main() {
     // Check current balances
     console.log("📊 Checking on-chain balances...");
     const fxrpBalanceRaw = await fxrp.balanceOf(SMART_ACCOUNT);
-    const fxrpBalance = parseFloat(ethers.formatUnits(fxrpBalanceRaw, 18));
+    const fxrpBalance = parseFloat(ethers.formatUnits(fxrpBalanceRaw, 6)); // FXRP uses 6 decimals
     
     const shxrpBalanceRaw = await vault.balanceOf(SMART_ACCOUNT);
     const shxrpBalance = parseFloat(ethers.formatUnits(shxrpBalanceRaw, 18));
     
     const allowanceRaw = await fxrp.allowance(SMART_ACCOUNT, VAULT_ADDRESS);
-    const allowance = parseFloat(ethers.formatUnits(allowanceRaw, 18));
+    const allowance = parseFloat(ethers.formatUnits(allowanceRaw, 6)); // FXRP allowance uses 6 decimals
 
     console.log(`  FXRP Balance: ${fxrpBalance.toFixed(2)}`);
     console.log(`  shXRP Balance: ${shxrpBalance.toFixed(6)}`);

@@ -2,20 +2,9 @@ import { useState, useEffect, useMemo } from "react";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { ethers } from "ethers";
-import { ERC20_ABI, getContracts } from "@/lib/sparkdex";
+import { ERC20_ABI } from "@/lib/sparkdex";
 import { useFtsoPrice } from "./useFtsoPrice";
-
-// USDT (Stargate) addresses on Flare Network
-const USDT_ADDRESSES = {
-  mainnet: "0x9C3046C0DaA60b6F061f123CccfC29B7920d0d4f", // Stargate USDT on Flare
-  testnet: "0x3E8B8d9B9ee8C1E0D6d10Ea03e1F6eB8e3d1e8a0", // Coston2 testnet USDT
-};
-
-// FXRP (FAssets XRP) addresses on Flare Network
-const FXRP_ADDRESSES = {
-  mainnet: "0x0000000000000000000000000000000000000000", // TODO: Update with mainnet FXRP
-  testnet: "0xaD67cB3e0B037E0eb8cc7Fe65328578f61e6b0b6", // FXRP on Coston2
-};
+import { getAssetAddress, getAssetDecimals, type Network } from "@shared/assetConfig";
 
 /**
  * Comprehensive wallet balance hook
@@ -213,15 +202,16 @@ export function useComprehensiveBalance() {
           }
 
           // 3b. Fetch WFLR balance (ERC20)
-          const contracts = getContracts(network === 'testnet');
-          if (contracts.WFLR && contracts.WFLR !== "0x0000000000000000000000000000000000000000") {
+          const wflrAddress = getAssetAddress("WFLR", network as Network);
+          if (wflrAddress && wflrAddress !== "0x0000000000000000000000000000000000000000") {
             promises.push(
               withTimeout(
                 (async () => {
                   try {
-                    const wflrContract = new ethers.Contract(contracts.WFLR, ERC20_ABI, provider);
+                    const wflrContract = new ethers.Contract(wflrAddress, ERC20_ABI, provider);
                     const balanceWei = await wflrContract.balanceOf(evmAddress);
-                    results.wflr = ethers.formatUnits(balanceWei, 18);
+                    const decimals = getAssetDecimals("WFLR", network as Network);
+                    results.wflr = ethers.formatUnits(balanceWei, decimals);
                   } catch (err: any) {
                     results.wflr = "0";
                   }
@@ -237,7 +227,7 @@ export function useComprehensiveBalance() {
           }
 
           // 3c. Fetch USDT balance (ERC20) - Stargate USDT
-          const usdtAddress = network === 'testnet' ? USDT_ADDRESSES.testnet : USDT_ADDRESSES.mainnet;
+          const usdtAddress = getAssetAddress("USDT", network as Network);
           if (usdtAddress && usdtAddress !== "0x0000000000000000000000000000000000000000") {
             promises.push(
               withTimeout(
@@ -245,7 +235,8 @@ export function useComprehensiveBalance() {
                   try {
                     const usdtContract = new ethers.Contract(usdtAddress, ERC20_ABI, provider);
                     const balanceWei = await usdtContract.balanceOf(evmAddress);
-                    results.usdt = ethers.formatUnits(balanceWei, 6); // USDT has 6 decimals
+                    const decimals = getAssetDecimals("USDT", network as Network);
+                    results.usdt = ethers.formatUnits(balanceWei, decimals);
                   } catch (err: any) {
                     results.usdt = "0";
                   }
@@ -260,8 +251,8 @@ export function useComprehensiveBalance() {
             );
           }
 
-          // 3d. Fetch FXRP balance (ERC20) - FAssets XRP
-          const fxrpAddress = network === 'testnet' ? FXRP_ADDRESSES.testnet : FXRP_ADDRESSES.mainnet;
+          // 3d. Fetch FXRP balance (ERC20) - FAssets XRP (network-aware: FXRP on mainnet, FTestXRP on testnet)
+          const fxrpAddress = getAssetAddress("FXRP", network as Network);
           if (fxrpAddress && fxrpAddress !== "0x0000000000000000000000000000000000000000") {
             promises.push(
               withTimeout(
@@ -269,7 +260,8 @@ export function useComprehensiveBalance() {
                   try {
                     const fxrpContract = new ethers.Contract(fxrpAddress, ERC20_ABI, provider);
                     const balanceWei = await fxrpContract.balanceOf(evmAddress);
-                    results.fxrp = ethers.formatUnits(balanceWei, 18); // FXRP uses 18 decimals (standard ERC-20)
+                    const decimals = getAssetDecimals("FXRP", network as Network);
+                    results.fxrp = ethers.formatUnits(balanceWei, decimals);
                   } catch (err: any) {
                     results.fxrp = "0";
                   }

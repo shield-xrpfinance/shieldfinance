@@ -22,6 +22,7 @@ import { useNetwork } from "@/lib/networkContext";
 import { Link, useLocation } from "wouter";
 import { AssetIcon } from "@/components/AssetIcon";
 import { useCurrency, convertToSelectedCurrency, getCurrencySymbol } from "@/lib/currencyContext";
+import { getAssetDisplayName } from "@shared/assetConfig";
 
 export default function Dashboard() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -588,7 +589,7 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between" data-testid="balance-fxrp">
                       <div className="flex items-center gap-2">
                         <AssetIcon asset="FXRP" size={20} />
-                        <span className="text-sm text-muted-foreground">FXRP</span>
+                        <span className="text-sm text-muted-foreground">{getAssetDisplayName("FXRP", network)}</span>
                       </div>
                       <div className="text-right">
                         <div className="text-lg font-bold tabular-nums" data-testid="text-balance-fxrp">{parseFloat(comprehensiveBalances.fxrp).toFixed(2)}</div>

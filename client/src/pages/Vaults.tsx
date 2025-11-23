@@ -25,6 +25,7 @@ import { useNetwork } from "@/lib/networkContext";
 import UniversalProvider from "@walletconnect/universal-provider";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
+import { getAssetAddress, getAssetDecimals, getAssetDisplayName, type Network } from "@shared/assetConfig";
 
 export default function Vaults() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -257,8 +258,12 @@ export default function Vaults() {
         const provider = new ethers.BrowserProvider(walletConnectProvider as any);
         const signer = await provider.getSigner();
         
-        // FXRP token address on Flare Network (testnet Coston2)
-        const FXRP_ADDRESS = "0xaD67cB3e0B037E0eb8cc7Fe65328578f61e6b0b6"; // FXRP on Coston2
+        // Get network-aware FXRP token address (FXRP on mainnet, FTestXRP on testnet)
+        const FXRP_ADDRESS = getAssetAddress("FXRP", network as Network);
+        if (!FXRP_ADDRESS || FXRP_ADDRESS === "0x0000000000000000000000000000000000000000") {
+          throw new Error(`${getAssetDisplayName("FXRP", network as Network)} not deployed on ${network}`);
+        }
+        
         const VAULT_ADDRESS = "0x0000000000000000000000000000000000000001"; // TODO: Update with actual vault address
         
         // ERC-20 ABI for approval and transfer
@@ -269,17 +274,19 @@ export default function Vaults() {
         ];
         
         const fxrpContract = new ethers.Contract(FXRP_ADDRESS, ERC20_ABI, signer);
-        const amountInWei = ethers.parseUnits(totalAmount, 6); // FXRP uses 6 decimals
+        const decimals = getAssetDecimals("FXRP", network as Network);
+        const amountInWei = ethers.parseUnits(totalAmount.toString(), decimals);
 
         // Step 2: Request approval from user's wallet
-        console.log(`🔄 Requesting FXRP approval from ${evmAddress}...`);
+        const tokenName = getAssetDisplayName("FXRP", network as Network);
+        console.log(`🔄 Requesting ${tokenName} approval from ${evmAddress}...`);
         const approveTx = await fxrpContract.approve(VAULT_ADDRESS, amountInWei);
         console.log(`⏳ Approval tx: ${approveTx.hash}`);
         await approveTx.wait();
         console.log(`✅ Approval confirmed`);
 
         // Step 3: Request transfer
-        console.log(`🔄 Requesting FXRP transfer...`);
+        console.log(`🔄 Requesting ${tokenName} transfer...`);
         const transferTx = await fxrpContract.transfer(VAULT_ADDRESS, amountInWei);
         console.log(`⏳ Transfer tx: ${transferTx.hash}`);
         await transferTx.wait();
@@ -316,17 +323,18 @@ export default function Vaults() {
           setProgressModalOpen(false);
           toast({
             title: "Deposit Successful",
-            description: `${totalAmount} FXRP deposited! You received ${data.shXRPShares} shXRP shares.`,
+            description: `${totalAmount} ${tokenName} deposited! You received ${data.shXRPShares} shXRP shares.`,
           });
           setLocation('/portfolio');
         }, 2000);
 
       } catch (error) {
-        console.error("FXRP deposit error:", error);
+        const tokenName = getAssetDisplayName("FXRP", network as Network);
+        console.error(`${tokenName} deposit error:`, error);
         setProgressModalOpen(false);
         toast({
           title: "Deposit Failed",
-          description: error instanceof Error ? error.message : "Failed to deposit FXRP. Make sure you have enough FXRP and are on Flare Coston2 testnet.",
+          description: error instanceof Error ? error.message : `Failed to deposit ${tokenName}. Make sure you have enough ${tokenName} and are connected to the correct network.`,
           variant: "destructive",
         });
       }
