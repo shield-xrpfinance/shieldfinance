@@ -31,6 +31,10 @@ localPort = 33877
 externalPort = 3002
 
 [[ports]]
+localPort = 34897
+externalPort = 8000
+
+[[ports]]
 localPort = 39079
 externalPort = 5173
 
@@ -85,3 +89,11 @@ waitForPort = 5000
 
 [agent]
 integrations = ["javascript_mem_db:1.0.0", "javascript_database:1.0.0"]
+
+[userenv]
+
+[userenv.shared]
+VITE_SHXRP_VAULT_ADDRESS = "0x82d74B5fb005F7469e479C224E446bB89031e17F"
+VITE_REVENUE_ROUTER_ADDRESS = "0x8e5C9933c08451a6a31635a3Ea1221c010DF158e"
+VITE_STAKING_BOOST_ADDRESS = "0xD8DF192872e94F189602ae3634850C989A1802C6"
+VITE_MERKLE_DISTRIBUTOR_ADDRESS = "0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31"

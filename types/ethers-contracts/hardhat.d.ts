@@ -15,6 +15,7 @@ getContractFactory(name: 'FirelightStrategy', signerOrOptions?: ethers.Signer | 
 getContractFactory(name: 'KineticStrategy', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.KineticStrategy__factory>
 getContractFactory(name: 'MerkleDistributor', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.MerkleDistributor__factory>
 getContractFactory(name: 'RevenueRouter', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.RevenueRouter__factory>
+getContractFactory(name: 'IStakingBoost', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.IStakingBoost__factory>
 getContractFactory(name: 'ShXRPVault', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ShXRPVault__factory>
 getContractFactory(name: 'ShieldToken', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.ShieldToken__factory>
 getContractFactory(name: 'StakingBoost', signerOrOptions?: ethers.Signer | FactoryOptions): Promise<Contracts.StakingBoost__factory>
@@ -33,6 +34,7 @@ getContractAt(name: 'FirelightStrategy', address: string | ethers.Addressable, s
 getContractAt(name: 'KineticStrategy', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.KineticStrategy>
 getContractAt(name: 'MerkleDistributor', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.MerkleDistributor>
 getContractAt(name: 'RevenueRouter', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.RevenueRouter>
+getContractAt(name: 'IStakingBoost', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.IStakingBoost>
 getContractAt(name: 'ShXRPVault', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ShXRPVault>
 getContractAt(name: 'ShieldToken', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.ShieldToken>
 getContractAt(name: 'StakingBoost', address: string | ethers.Addressable, signer?: ethers.Signer): Promise<Contracts.StakingBoost>
@@ -51,6 +53,7 @@ deployContract(name: 'FirelightStrategy', signerOrOptions?: ethers.Signer | Depl
 deployContract(name: 'KineticStrategy', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.KineticStrategy>
 deployContract(name: 'MerkleDistributor', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MerkleDistributor>
 deployContract(name: 'RevenueRouter', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RevenueRouter>
+deployContract(name: 'IStakingBoost', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IStakingBoost>
 deployContract(name: 'ShXRPVault', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShXRPVault>
 deployContract(name: 'ShieldToken', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShieldToken>
 deployContract(name: 'StakingBoost', signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.StakingBoost>
@@ -69,6 +72,7 @@ deployContract(name: 'FirelightStrategy', args: any[], signerOrOptions?: ethers.
 deployContract(name: 'KineticStrategy', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.KineticStrategy>
 deployContract(name: 'MerkleDistributor', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.MerkleDistributor>
 deployContract(name: 'RevenueRouter', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.RevenueRouter>
+deployContract(name: 'IStakingBoost', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.IStakingBoost>
 deployContract(name: 'ShXRPVault', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShXRPVault>
 deployContract(name: 'ShieldToken', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.ShieldToken>
 deployContract(name: 'StakingBoost', args: any[], signerOrOptions?: ethers.Signer | DeployContractOptions): Promise<Contracts.StakingBoost>

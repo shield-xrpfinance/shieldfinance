@@ -1,0 +1,16 @@
+{
+  "network": "coston2",
+  "chainId": 114,
+  "timestamp": "2025-11-23T03:45:12.809Z",
+  "deployer": "0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D",
+  "contracts": {
+    "ShXRPVault": {
+      "address": "0x82d74B5fb005F7469e479C224E446bB89031e17F",
+      "fxrp": "0x0b6A3645c240605887a5532109323A3E12273dc7",
+      "name": "Shield XRP",
+      "symbol": "shXRP",
+      "revenueRouter": "0x8e5C9933c08451a6a31635a3Ea1221c010DF158e",
+      "stakingBoost": "0xD8DF192872e94F189602ae3634850C989A1802C6"
+    }
+  }
+}
