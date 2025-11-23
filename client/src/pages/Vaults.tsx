@@ -199,12 +199,25 @@ export default function Vaults() {
       return;
     }
     
+    // Infer depositAssets from asset field if not explicitly set
+    let depositAssets = vault.depositAssets;
+    if (!depositAssets) {
+      // If vault has asset field, use it to determine depositAssets
+      if ((vault as any).asset === "FXRP") {
+        depositAssets = ["FXRP"];
+      } else if ((vault as any).asset === "XRP") {
+        depositAssets = ["XRP"];
+      } else {
+        depositAssets = ["XRP"]; // Default fallback
+      }
+    }
+    
     setSelectedVault({ 
       id: vault.id, 
       name: vault.name, 
       apy: vault.apy,
       apyLabel: vault.apyLabel,
-      depositAssets: vault.depositAssets || ["XRP"],
+      depositAssets: depositAssets,
     });
     setDepositModalOpen(true);
   };
