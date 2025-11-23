@@ -258,6 +258,13 @@ export default function BridgeStatusModal({
     }
 
     setIsSendingPayment(true);
+    
+    // Show modal immediately for WalletConnect
+    if (provider === "walletconnect") {
+      setWcError(null);
+      setWcWaitingOpen(true);
+    }
+
     try {
       // Use totalAmountUBA which already includes base amount + FAssets bridge fee
       // This is critical - using xrpAmount would cause payment amount mismatch errors
@@ -279,28 +286,35 @@ export default function BridgeStatusModal({
           setXamanDeepLink(result.deepLink || null);
           setShowXamanModal(true);
         } else if (provider === "walletconnect") {
-          // Show WalletConnect waiting modal
-          setWcError(null);
-          setWcWaitingOpen(true);
+          // WalletConnect: payment was processed in requestPayment
+          // Modal already showing, just keep it visible
+          console.log("✅ WalletConnect payment processed:", result.txHash);
         }
       } else {
-        toast({
-          title: "Payment Failed",
-          description: result.error || "Failed to create payment request",
-          variant: "destructive",
-        });
+        // Set error state for modal to show
         if (provider === "walletconnect") {
           setWcError(result.error || "Failed to create payment request");
-          setWcWaitingOpen(true);
+        } else {
+          toast({
+            title: "Payment Failed",
+            description: result.error || "Failed to create payment request",
+            variant: "destructive",
+          });
         }
       }
     } catch (error) {
       console.error("Error sending payment:", error);
-      toast({
-        title: "Payment Error",
-        description: error instanceof Error ? error.message : "Failed to send payment",
-        variant: "destructive",
-      });
+      const errorMessage = error instanceof Error ? error.message : "Failed to send payment";
+      
+      if (provider === "walletconnect") {
+        setWcError(errorMessage);
+      } else {
+        toast({
+          title: "Payment Error",
+          description: errorMessage,
+          variant: "destructive",
+        });
+      }
     } finally {
       setIsSendingPayment(false);
     }
