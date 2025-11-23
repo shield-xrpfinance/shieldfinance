@@ -7,12 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2, History, ArrowDownToLine, ArrowUpFromLine, ExternalLink } from "lucide-react";
+import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2, History, ArrowDownToLine, ArrowUpFromLine, ExternalLink, Copy } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
 import { format } from "date-fns";
-import type { SelectXrpToFxrpBridge, Vault, BridgeHistoryEntry } from "@shared/schema";
+import type { SelectXrpToFxrpBridge, SelectFxrpToXrpRedemption, Vault, BridgeHistoryEntry } from "@shared/schema";
 import { useBridgeTracking } from "@/hooks/useBridgeTracking";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
@@ -79,6 +79,7 @@ function getStatusVariant(status: string): "default" | "destructive" | "secondar
 interface BridgeSectionProps {
   type: 'active' | 'completed' | 'failed';
   bridges: SelectXrpToFxrpBridge[];
+  withdrawals?: SelectFxrpToXrpRedemption[];
   isLoading: boolean;
   address: string | null;
   onSendPayment: (bridge: SelectXrpToFxrpBridge) => void;
@@ -90,6 +91,7 @@ interface BridgeSectionProps {
 const BridgeSection = ({ 
   type, 
   bridges, 
+  withdrawals = [],
   isLoading, 
   address, 
   onSendPayment, 
@@ -105,8 +107,8 @@ const BridgeSection = ({
   
   const emptyMessages = {
     active: {
-      title: "No active bridge operations",
-      description: "Start a new deposit to see your bridge operations here",
+      title: "No active operations",
+      description: "Your deposits and withdrawals will appear here",
     },
     completed: {
       title: "No completed bridge operations",
@@ -151,7 +153,7 @@ const BridgeSection = ({
     return <LoadingMessage />;
   }
   
-  if (bridges.length === 0) {
+  if (bridges.length === 0 && withdrawals.length === 0) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
@@ -195,6 +197,7 @@ const BridgeSection = ({
           </Button>
         </div>
       )}
+      {/* Display Deposits */}
       {bridges.map((bridge) => (
         <BridgeStatus
           key={bridge.id}
@@ -211,6 +214,96 @@ const BridgeSection = ({
           onCancelBridge={onCancelBridge ? () => onCancelBridge(bridge) : undefined}
           isVaultsLoading={isVaultsLoading}
         />
+      ))}
+      {/* Display Withdrawals */}
+      {withdrawals.map((redemption) => (
+        <Card key={redemption.id} data-testid={`card-withdrawal-${redemption.id}`}>
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-2">
+                  <ArrowUpFromLine className="h-5 w-5 text-blue-500" />
+                  <h3 className="text-lg font-semibold">Withdrawal Processing</h3>
+                </div>
+                <Badge 
+                  variant={getStatusVariant(redemption.status || redemption.userStatus)}
+                  data-testid={`badge-withdrawal-status-${redemption.id}`}
+                >
+                  {formatStatus(redemption.status || redemption.userStatus)}
+                </Badge>
+              </div>
+              
+              <div className="rounded-lg bg-muted p-3 space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Redemption ID</p>
+                <div className="flex items-center gap-2">
+                  <code className="flex-1 rounded bg-background px-2 py-1.5 font-mono text-xs break-all" data-testid={`text-redemption-id-${redemption.id}`}>
+                    {redemption.id}
+                  </code>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      navigator.clipboard.writeText(redemption.id);
+                    }}
+                    data-testid="button-copy-redemption-id"
+                    className="self-start"
+                  >
+                    <Copy className="h-3 w-3" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground">
+                  Withdrawing {parseFloat(redemption.shareAmount?.toString() || "0").toFixed(6)} shXRP shares
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {redemption.vaultRedeemTxHash && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      data-testid={`button-vault-redeem-tx-${redemption.id}`}
+                    >
+                      <a
+                        href={`https://coston2-explorer.flare.network/tx/${redemption.vaultRedeemTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Redeem TX
+                      </a>
+                    </Button>
+                  )}
+                  {redemption.xrplPayoutTxHash && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                      data-testid={`button-xrpl-payout-tx-${redemption.id}`}
+                    >
+                      <a
+                        href={`https://testnet.xrpscan.com/tx/${redemption.xrplPayoutTxHash}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <ExternalLink className="h-3 w-3 mr-1" />
+                        Payout TX
+                      </a>
+                    </Button>
+                  )}
+                </div>
+              </div>
+
+              {redemption.errorMessage && (
+                <div className="rounded border border-destructive bg-destructive/10 p-3 text-sm" data-testid={`text-withdrawal-error-${redemption.id}`}>
+                  <p className="font-medium text-destructive">Error:</p>
+                  <p className="text-destructive/80">{redemption.errorMessage}</p>
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
       ))}
     </div>
   );
@@ -391,6 +484,11 @@ export default function BridgeTracking() {
     enabled: !!address,
   });
 
+  const { data: redemptions = [] } = useQuery<SelectFxrpToXrpRedemption[]>({
+    queryKey: [`/api/withdrawals/wallet/${address}`],
+    enabled: !!address,
+  });
+
   // Memoize vault lookup map for performance
   const vaultMap = useMemo(() => {
     if (!vaults) return new Map<string, Vault>();
@@ -478,9 +576,9 @@ export default function BridgeTracking() {
     },
   });
 
-  const { activeBridges, completedBridges, failedBridges } = useMemo(() => {
+  const { activeBridges, completedBridges, failedBridges, activeWithdrawals } = useMemo(() => {
     if (!bridges) {
-      return { activeBridges: [], completedBridges: [], failedBridges: [] };
+      return { activeBridges: [], completedBridges: [], failedBridges: [], activeWithdrawals: [] };
     }
 
     const failed = bridges.filter(
@@ -505,15 +603,24 @@ export default function BridgeTracking() {
           b.status === "vault_minting")
     );
 
+    // Filter active withdrawals (not completed, failed, or xrpl_received)
+    const activeWithdrawals = (redemptions || []).filter(
+      (r) => {
+        const displayStatus = r.userStatus || r.status;
+        return displayStatus && !['completed', 'xrpl_received', 'failed', 'cancelled'].includes(displayStatus);
+      }
+    );
+
     return {
       activeBridges: active,
       completedBridges: completed,
       failedBridges: failed,
+      activeWithdrawals,
     };
-  }, [bridges]);
+  }, [bridges, redemptions]);
 
-  // Enable real-time polling when there are active bridges
-  useBridgeTracking(activeBridges.length > 0, address);
+  // Enable real-time polling when there are active bridges or withdrawals
+  useBridgeTracking(activeBridges.length > 0 || activeWithdrawals.length > 0, address);
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
@@ -543,7 +650,7 @@ export default function BridgeTracking() {
               <Activity className="h-4 w-4" />
               <span>Active</span>
               <Badge variant="secondary" className="ml-auto mr-2">
-                {activeBridges.length}
+                {activeBridges.length + activeWithdrawals.length}
               </Badge>
             </div>
           </AccordionTrigger>
@@ -551,6 +658,7 @@ export default function BridgeTracking() {
             <BridgeSection
               type="active"
               bridges={activeBridges}
+              withdrawals={activeWithdrawals}
               isLoading={isLoading}
               address={address}
               onSendPayment={handleSendPayment}
@@ -639,7 +747,7 @@ export default function BridgeTracking() {
           <TabsList className="inline-flex gap-1 w-full min-w-max sm:grid sm:grid-cols-4 sm:gap-0 sm:min-w-0" data-testid="tabs-bridge-tracking">
             <TabsTrigger value="active" data-testid="tab-active" className="flex-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <Activity className="h-4 w-4 mr-2" />
-              Active ({activeBridges.length})
+              Active ({activeBridges.length + activeWithdrawals.length})
             </TabsTrigger>
             <TabsTrigger value="completed" data-testid="tab-completed" className="flex-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <CheckCircle2 className="h-4 w-4 mr-2" />
@@ -660,6 +768,7 @@ export default function BridgeTracking() {
           <BridgeSection
             type="active"
             bridges={activeBridges}
+            withdrawals={activeWithdrawals}
             isLoading={isLoading}
             address={address}
             onSendPayment={handleSendPayment}
