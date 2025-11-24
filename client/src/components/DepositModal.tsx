@@ -266,29 +266,41 @@ export default function DepositModal({
       // Create ethers provider and signer (works with both WalletConnect and MetaMask)
       console.log("🔐 Creating ethers provider...");
       
-      // For WalletConnect, we need to enable the provider first
+      // For WalletConnect UniversalProvider, extract the EVM-specific provider
+      let evmProvider = provider;
       if (walletConnectProvider) {
-        console.log("🔌 Enabling WalletConnect provider...");
+        console.log("🔌 Extracting EVM provider from WalletConnect...");
         try {
-          // Enable the provider to ensure it's ready for signing
-          await provider.request({ method: "eth_requestAccounts" });
-          console.log("✅ WalletConnect provider enabled");
+          // UniversalProvider is multi-namespace - we need the Ethereum-specific provider
+          // Use getEthereumProvider() to get an EIP-1193 compliant provider for ethers.js
+          if (typeof (walletConnectProvider as any).getEthereumProvider === 'function') {
+            evmProvider = await (walletConnectProvider as any).getEthereumProvider();
+            console.log("✅ Got Ethereum provider from WalletConnect");
+          } else {
+            // Fallback: access the eip155 provider directly
+            const rpcProviders = (walletConnectProvider as any).engine?.rpcProviders;
+            if (rpcProviders && rpcProviders.get) {
+              evmProvider = rpcProviders.get("eip155");
+              console.log("✅ Got eip155 provider from WalletConnect engine");
+            }
+          }
+          
+          // Enable the EVM provider
+          if (evmProvider && typeof (evmProvider as any).enable === 'function') {
+            await (evmProvider as any).enable();
+            console.log("✅ EVM provider enabled");
+          }
         } catch (error) {
-          console.error("Failed to enable WalletConnect:", error);
-          throw new Error("Failed to connect to WalletConnect. Please try reconnecting your wallet.");
+          console.error("Failed to extract EVM provider:", error);
+          throw new Error("Failed to connect to Flare network via WalletConnect. Please ensure your wallet supports Flare.");
         }
       }
       
-      const ethersProvider = new ethers.BrowserProvider(provider);
+      const ethersProvider = new ethers.BrowserProvider(evmProvider);
       console.log("✍️ Getting signer...");
       
-      // Add timeout to getSigner to prevent infinite hanging
-      const signerPromise = ethersProvider.getSigner();
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error("Signer request timed out after 30 seconds")), 30000)
-      );
-      
-      const signer = await Promise.race([signerPromise, timeoutPromise]) as ethers.JsonRpcSigner;
+      // Get signer with the EVM address to prevent ambiguity
+      const signer = await ethersProvider.getSigner(evmAddress);
       const signerAddress = await signer.getAddress();
       console.log("✅ Signer obtained:", signerAddress);
       
