@@ -115,12 +115,13 @@ export default function WithdrawModal({
     try {
       // Call direct FXRP withdrawal endpoint
       // Server now gets vault address from its own configuration
-      const res = await apiRequest("POST", "/api/withdrawals/fxrp", {
-        userAddress: address,
-        evmAddress,
-        amount
+      const response = await apiRequest('/api/withdrawals/fxrp', {
+        method: 'POST',
+        body: {
+          userAddress: evmAddress, // Use evmAddress, not address
+          amount: parseFloat(amount),
+        },
       });
-      const response = await res.json();
 
       if (!response.success || !response.withdrawalId) {
         throw new Error(response.error || "Failed to initiate withdrawal");
