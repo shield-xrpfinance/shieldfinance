@@ -265,10 +265,32 @@ export default function DepositModal({
       
       // Create ethers provider and signer (works with both WalletConnect and MetaMask)
       console.log("🔐 Creating ethers provider...");
+      
+      // For WalletConnect, we need to enable the provider first
+      if (walletConnectProvider) {
+        console.log("🔌 Enabling WalletConnect provider...");
+        try {
+          // Enable the provider to ensure it's ready for signing
+          await provider.request({ method: "eth_requestAccounts" });
+          console.log("✅ WalletConnect provider enabled");
+        } catch (error) {
+          console.error("Failed to enable WalletConnect:", error);
+          throw new Error("Failed to connect to WalletConnect. Please try reconnecting your wallet.");
+        }
+      }
+      
       const ethersProvider = new ethers.BrowserProvider(provider);
       console.log("✍️ Getting signer...");
-      const signer = await ethersProvider.getSigner();
-      console.log("✅ Signer obtained:", await signer.getAddress());
+      
+      // Add timeout to getSigner to prevent infinite hanging
+      const signerPromise = ethersProvider.getSigner();
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error("Signer request timed out after 30 seconds")), 30000)
+      );
+      
+      const signer = await Promise.race([signerPromise, timeoutPromise]) as ethers.JsonRpcSigner;
+      const signerAddress = await signer.getAddress();
+      console.log("✅ Signer obtained:", signerAddress);
       
       // Import ABIs
       const { ERC20_ABI, FIRELIGHT_VAULT_ABI } = await import("@shared/flare-abis");
