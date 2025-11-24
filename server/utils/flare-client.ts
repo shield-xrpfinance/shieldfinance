@@ -19,8 +19,18 @@ export interface FlareClientConfig {
 }
 
 /**
- * FlareClient - Smart Account Only
- * All transactions are routed through ERC-4337 account abstraction for gasless, batched execution.
+ * FlareClient - Smart Account Implementation for BRIDGING ONLY
+ * 
+ * IMPORTANT: This client should ONLY be used for XRPL bridging operations.
+ * Direct FXRP deposits/withdrawals on Flare should be signed by users' EOA wallets.
+ * 
+ * Use cases:
+ * - ✅ XRPL → FXRP bridging via FAssets protocol
+ * - ✅ Managing bridged funds during the bridging process
+ * - ❌ Direct FXRP deposits (users should sign with their own wallets)
+ * - ❌ Direct FXRP withdrawals (users should sign with their own wallets)
+ * 
+ * All transactions through this client are routed via ERC-4337 account abstraction.
  */
 export class FlareClient {
   public provider: ethers.JsonRpcProvider;

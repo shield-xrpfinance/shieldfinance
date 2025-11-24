@@ -23,6 +23,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ethers } from "ethers";
 
 interface WithdrawModalProps {
   open: boolean;
@@ -57,7 +58,7 @@ export default function WithdrawModal({
   const [withdrawalError, setWithdrawalError] = useState<string | null>(null);
   
   const { toast } = useToast();
-  const { evmAddress, address } = useWallet();
+  const { evmAddress, address, walletConnectProvider } = useWallet();
   const { ecosystem } = useNetwork();
   const gasEstimate = "0.00008";
   const assetSymbol = asset.split(",")[0];
@@ -110,25 +111,89 @@ export default function WithdrawModal({
       return;
     }
 
+    // Support both WalletConnect and injected providers (MetaMask)
+    const provider = walletConnectProvider || (window as any).ethereum;
+    if (!provider) {
+      toast({
+        title: "Web3 Provider Required",
+        description: "Please connect via WalletConnect or MetaMask to sign transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setProcessingWithdrawal(true);
     
     try {
-      // Call direct FXRP withdrawal endpoint
-      // Server now gets vault address from its own configuration
-      const response = await apiRequest('/api/withdrawals/fxrp', {
-        method: 'POST',
-        body: {
-          userAddress: evmAddress, // Use evmAddress, not address
-          amount: parseFloat(amount),
-        },
-      });
-
-      if (!response.success || !response.withdrawalId) {
-        throw new Error(response.error || "Failed to initiate withdrawal");
+      // Get vault configuration from backend (read-only)
+      const vaultInfoRes = await apiRequest("GET", "/api/vaults/fxrp/info");
+      const vaultInfo = await vaultInfoRes.json();
+      
+      if (!vaultInfo.success || !vaultInfo.vaultAddress) {
+        throw new Error("Failed to fetch vault configuration");
       }
 
-      // Open progress modal to track withdrawal
-      setWithdrawalId(response.withdrawalId);
+      const { vaultAddress, fxrpTokenAddress } = vaultInfo;
+      
+      // Create ethers provider and signer (works with both WalletConnect and MetaMask)
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      const signer = await ethersProvider.getSigner();
+      
+      // Import ABIs
+      const { FIRELIGHT_VAULT_ABI } = await import("@shared/flare-abis");
+      
+      // Create vault contract instance
+      const vault = new ethers.Contract(vaultAddress, FIRELIGHT_VAULT_ABI, signer);
+      
+      // Amount in wei (shXRP shares have 18 decimals)
+      const sharesWei = ethers.parseUnits(amount, 18);
+      
+      // Check shXRP balance
+      const shXRPBalance = await vault.balanceOf(evmAddress);
+      if (shXRPBalance < sharesWei) {
+        throw new Error(`Insufficient shXRP balance. You have ${ethers.formatUnits(shXRPBalance, 18)} shXRP`);
+      }
+      
+      // Execute withdrawal (redeem shares for FXRP)
+      toast({
+        title: "Withdrawal Transaction",
+        description: "Please sign the withdrawal transaction in your wallet.",
+      });
+      
+      // ERC-4626 redeem: burn shXRP shares to get FXRP back
+      const withdrawTx = await vault.redeem(
+        sharesWei,
+        evmAddress,  // Receive FXRP to user's own address
+        evmAddress   // Owner of shares is user's address
+      );
+      
+      toast({
+        title: "Withdrawal Submitted",
+        description: "Waiting for confirmation...",
+      });
+      
+      // Wait for withdrawal confirmation
+      const withdrawReceipt = await withdrawTx.wait();
+      const withdrawTxHash = withdrawReceipt.hash;
+      
+      // Track withdrawal on backend (status only, no execution)
+      const trackingRes = await apiRequest("POST", "/api/withdrawals/fxrp/track", {
+        userAddress: evmAddress, // Use EVM address as primary identifier for Flare ecosystem
+        evmAddress, // EVM wallet that signed the transaction
+        amount,
+        withdrawHash: withdrawTxHash, // Use 'withdrawHash' for consistency
+        vaultAddress, // Include vault address as required
+        tokenAddress: fxrpTokenAddress, // Include token address as required
+      });
+      const trackingResponse = await trackingRes.json();
+
+      if (!trackingResponse.success) {
+        console.warn("Failed to track withdrawal on backend:", trackingResponse.error);
+        // Don't fail the whole operation - withdrawal succeeded on-chain
+      }
+      
+      // Open progress modal to show completion
+      setWithdrawalId(trackingResponse.withdrawalId || withdrawTxHash);
       setProgressModalOpen(true);
       
       // Clear state
@@ -136,18 +201,28 @@ export default function WithdrawModal({
       onOpenChange(false);
       
       toast({
-        title: "Withdrawal Initiated",
-        description: "Your FXRP withdrawal is being processed.",
+        title: "Withdrawal Successful",
+        description: `Your FXRP has been withdrawn. Transaction: ${withdrawTxHash.slice(0, 10)}...`,
       });
       
     } catch (error) {
       console.error("Flare withdrawal error:", error);
-      setWithdrawalError(error instanceof Error ? error.message : "Failed to process withdrawal");
-      toast({
-        title: "Withdrawal Failed",
-        description: error instanceof Error ? error.message : "Failed to process withdrawal",
-        variant: "destructive",
-      });
+      
+      // Handle user rejection
+      if (error instanceof Error && error.message.includes("rejected")) {
+        toast({
+          title: "Transaction Rejected",
+          description: "You rejected the transaction in your wallet.",
+          variant: "destructive",
+        });
+      } else {
+        setWithdrawalError(error instanceof Error ? error.message : "Failed to process withdrawal");
+        toast({
+          title: "Withdrawal Failed",
+          description: error instanceof Error ? error.message : "Failed to process withdrawal",
+          variant: "destructive",
+        });
+      }
     } finally {
       setProcessingWithdrawal(false);
     }

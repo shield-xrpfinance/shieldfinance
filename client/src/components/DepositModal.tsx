@@ -26,6 +26,7 @@ import { MultiAssetIcon } from "@/components/AssetIcon";
 import type { PaymentRequest } from "@shared/schema";
 import { calculateLotRounding, type LotRoundingResult, LOT_SIZE } from "@shared/lotRounding";
 import { apiRequest } from "@/lib/queryClient";
+import { ethers } from "ethers";
 
 interface DepositModalProps {
   open: boolean;
@@ -80,7 +81,7 @@ export default function DepositModal({
     }
   }, [open]);
 
-  const { address, isConnected, provider, requestPayment, evmAddress, walletType } = useWallet();
+  const { address, isConnected, provider, requestPayment, evmAddress, walletType, walletConnectProvider } = useWallet();
   const { balances, isLoading: balancesLoading, error: balancesError, getBalance, getBalanceFormatted } = useWalletBalances();
   const comprehensiveBalances = useComprehensiveBalance();
   const { network, ecosystem } = useNetwork();
@@ -223,6 +224,17 @@ export default function DepositModal({
       return;
     }
 
+    // Support both WalletConnect and injected providers (MetaMask)
+    const provider = walletConnectProvider || (window as any).ethereum;
+    if (!provider) {
+      toast({
+        title: "Web3 Provider Required",
+        description: "Please connect via WalletConnect or MetaMask to sign transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setProcessingPayment(true);
     
     try {
@@ -232,21 +244,93 @@ export default function DepositModal({
         throw new Error("No FXRP amount specified");
       }
 
-      // Call direct FXRP deposit endpoint
-      // Server now gets vault address from its own configuration
-      const res = await apiRequest("POST", "/api/deposits/fxrp", {
-        userAddress: address,
-        evmAddress,
-        amount
-      });
-      const response = await res.json();
-
-      if (!response.success || !response.depositId) {
-        throw new Error(response.error || "Failed to initiate deposit");
+      // Get vault configuration from backend (read-only)
+      const vaultInfoRes = await apiRequest("GET", "/api/vaults/fxrp/info");
+      const vaultInfo = await vaultInfoRes.json();
+      
+      if (!vaultInfo.success || !vaultInfo.vaultAddress || !vaultInfo.fxrpTokenAddress) {
+        throw new Error("Failed to fetch vault configuration");
       }
 
-      // Open progress modal to track deposit
-      setDepositId(response.depositId);
+      const { vaultAddress, fxrpTokenAddress } = vaultInfo;
+      
+      // Create ethers provider and signer (works with both WalletConnect and MetaMask)
+      const ethersProvider = new ethers.BrowserProvider(provider);
+      const signer = await ethersProvider.getSigner();
+      
+      // Import ABIs
+      const { ERC20_ABI, FIRELIGHT_VAULT_ABI } = await import("@shared/flare-abis");
+      
+      // Create contract instances
+      const fxrpToken = new ethers.Contract(fxrpTokenAddress, ERC20_ABI, signer);
+      const vault = new ethers.Contract(vaultAddress, FIRELIGHT_VAULT_ABI, signer);
+      
+      // Amount in wei (FXRP has 6 decimals)
+      const amountWei = ethers.parseUnits(amount, 6);
+      
+      // Step 1: Check and approve FXRP spending
+      const currentAllowance = await fxrpToken.allowance(evmAddress, vaultAddress);
+      
+      let approveTxHash = null;
+      if (currentAllowance < amountWei) {
+        toast({
+          title: "Approval Required",
+          description: "Please approve FXRP spending in your wallet.",
+        });
+        
+        // Prepare and send approve transaction
+        const approveTx = await fxrpToken.approve(vaultAddress, amountWei);
+        toast({
+          title: "Approval Submitted",
+          description: "Waiting for confirmation...",
+        });
+        
+        // Wait for approval confirmation
+        const approveReceipt = await approveTx.wait();
+        approveTxHash = approveReceipt.hash;
+        
+        toast({
+          title: "Approval Confirmed",
+          description: "FXRP spending approved successfully.",
+        });
+      }
+      
+      // Step 2: Deposit FXRP to vault
+      toast({
+        title: "Deposit Transaction",
+        description: "Please sign the deposit transaction in your wallet.",
+      });
+      
+      const depositTx = await vault.deposit(amountWei, evmAddress); // Mint shares to user's own address
+      
+      toast({
+        title: "Deposit Submitted",
+        description: "Waiting for confirmation...",
+      });
+      
+      // Wait for deposit confirmation
+      const depositReceipt = await depositTx.wait();
+      const depositTxHash = depositReceipt.hash;
+      
+      // Step 3: Track deposit on backend (status only, no execution)
+      const trackingRes = await apiRequest("POST", "/api/deposits/fxrp/track", {
+        userAddress: evmAddress, // Use EVM address as primary identifier for Flare ecosystem
+        evmAddress, // EVM wallet that signed the transaction
+        amount,
+        approveHash: approveTxHash, // Use 'approveHash' as per requirement spec
+        depositHash: depositTxHash, // Use 'depositHash' as per requirement spec
+        vaultAddress, // Include vault address as required
+        tokenAddress: fxrpTokenAddress, // Include token address as required
+      });
+      const trackingResponse = await trackingRes.json();
+
+      if (!trackingResponse.success) {
+        console.warn("Failed to track deposit on backend:", trackingResponse.error);
+        // Don't fail the whole operation - deposit succeeded on-chain
+      }
+      
+      // Open progress modal to show completion
+      setDepositId(trackingResponse.depositId || depositTxHash);
       setProgressModalOpen(true);
       
       // Clear state
@@ -256,18 +340,28 @@ export default function DepositModal({
       onOpenChange(false);
       
       toast({
-        title: "Deposit Initiated",
-        description: "Your FXRP deposit is being processed.",
+        title: "Deposit Successful",
+        description: `Your FXRP has been deposited. Transaction: ${depositTxHash.slice(0, 10)}...`,
       });
       
     } catch (error) {
       console.error("Flare deposit error:", error);
-      setDepositError(error instanceof Error ? error.message : "Failed to process deposit");
-      toast({
-        title: "Deposit Failed",
-        description: error instanceof Error ? error.message : "Failed to process deposit",
-        variant: "destructive",
-      });
+      
+      // Handle user rejection
+      if (error instanceof Error && error.message.includes("rejected")) {
+        toast({
+          title: "Transaction Rejected",
+          description: "You rejected the transaction in your wallet.",
+          variant: "destructive",
+        });
+      } else {
+        setDepositError(error instanceof Error ? error.message : "Failed to process deposit");
+        toast({
+          title: "Deposit Failed",
+          description: error instanceof Error ? error.message : "Failed to process deposit",
+          variant: "destructive",
+        });
+      }
     } finally {
       setProcessingPayment(false);
     }

@@ -91,8 +91,12 @@ export class DepositService {
   }
 
   /**
-   * Process direct FXRP deposit (Flare ecosystem - no bridging required)
-   * FIXED: Proper state persistence, smart account usage, and secure vault retrieval
+   * @deprecated - DO NOT USE
+   * FXRP deposits should be signed directly by the user's EOA wallet via WalletConnect.
+   * The backend should only track transactions via /api/deposits/fxrp/track.
+   * Smart Accounts are ONLY for XRPL bridging operations, NOT for direct FXRP deposits.
+   * 
+   * This method is retained for reference but should not be called.
    */
   async processDirectFXRPDeposit(request: DirectDepositRequest): Promise<{ depositId: string; txHash?: string }> {
     if (!this.config.flareClient) {
@@ -219,8 +223,12 @@ export class DepositService {
   }
 
   /**
-   * Process direct FXRP withdrawal (Flare ecosystem - no bridging required)
-   * FIXED: Proper state persistence, smart account usage, and secure vault retrieval
+   * @deprecated - DO NOT USE
+   * FXRP withdrawals should be signed directly by the user's EOA wallet via WalletConnect.
+   * The backend should only track transactions via /api/withdrawals/fxrp/track.
+   * Smart Accounts are ONLY for XRPL bridging operations, NOT for direct FXRP withdrawals.
+   * 
+   * This method is retained for reference but should not be called.
    */
   async processDirectFXRPWithdrawal(
     request: { userAddress: string; evmAddress: string; amount: string }

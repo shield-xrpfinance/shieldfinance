@@ -392,154 +392,196 @@ export async function registerRoutes(
     }
   });
 
-  // Direct FXRP deposit (Flare ecosystem - no bridging)
-  // SECURITY FIX: Removed vaultAddress from request body
-  app.post("/api/deposits/fxrp", async (req, res) => {
+  // Get FXRP vault information (read-only for frontend)
+  app.get("/api/vaults/fxrp/info", async (_req, res) => {
     try {
-      const { evmAddress, amount, userAddress } = req.body;
-
-      if (!evmAddress || !amount) {
-        return res.status(400).json({ 
-          error: "Missing required fields: evmAddress, amount" 
+      if (!flareClient) {
+        return res.status(503).json({
+          success: false,
+          error: "Flare client not configured"
         });
       }
 
-      // Validate EVM address format
-      if (!ethers.isAddress(evmAddress)) {
-        return res.status(400).json({
-          error: "Invalid EVM address format"
-        });
-      }
+      // Get vault address from environment or deployment
+      const vaultAddress = getVaultAddress();
+      
+      // Get FXRP token address from Flare AssetManager
+      const fxrpTokenAddress = await flareClient.getFXRPTokenAddress();
 
-      // Validate amount is a positive number
-      const amountNum = parseFloat(amount);
-      if (isNaN(amountNum) || amountNum <= 0) {
-        return res.status(400).json({
-          error: "Amount must be a positive number"
-        });
-      }
-
-      // Validate amount precision (max 6 decimals for FXRP)
-      if (amount.includes('.') && amount.split('.')[1].length > 6) {
-        return res.status(400).json({
-          error: "Amount precision exceeds maximum (6 decimals for FXRP)"
-        });
-      }
-
-      // Validate reasonable amount limits
-      const MIN_DEPOSIT = 0.01; // Minimum deposit
-      const MAX_DEPOSIT = 1000000; // Maximum single deposit (1M FXRP)
-      if (amountNum < MIN_DEPOSIT || amountNum > MAX_DEPOSIT) {
-        return res.status(400).json({
-          error: `Amount must be between ${MIN_DEPOSIT} and ${MAX_DEPOSIT} FXRP`
-        });
-      }
-
-      // Initialize VaultService with FlareClient
-      const vaultService = new VaultService({
-        storage,
-        flareClient: flareClient!
-      });
-
-      const depositService = new DepositService({
-        storage,
-        bridgeService,
-        vaultService,
-        yieldService: new YieldService(),
-        flareClient
-      });
-
-      const result = await depositService.processDirectFXRPDeposit({
-        userAddress: userAddress || evmAddress,
-        evmAddress,
-        amount
-      });
-
-      res.json({ 
+      res.json({
         success: true,
-        depositId: result.depositId,
-        message: "Direct FXRP deposit initiated"
+        vaultAddress,
+        fxrpTokenAddress,
       });
     } catch (error) {
-      console.error("Direct FXRP deposit error:", error);
-      res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to process direct FXRP deposit" 
+      console.error("Failed to get vault info:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to get vault information"
       });
     }
   });
 
-  // Direct FXRP withdrawal (Flare ecosystem - no bridging)
-  // SECURITY FIX: Removed vaultAddress from request body
-  app.post("/api/withdrawals/fxrp", async (req, res) => {
+  // Track FXRP deposit (no execution, only tracking)
+  app.post("/api/deposits/fxrp/track", async (req, res) => {
     try {
-      const { evmAddress, amount, userAddress } = req.body;
-
-      if (!evmAddress || !amount) {
+      const { userAddress, evmAddress, amount, txHash, approveTxHash } = req.body;
+      
+      if (!userAddress || !evmAddress || !amount || !txHash) {
         return res.status(400).json({ 
-          error: "Missing required fields: evmAddress, amount" 
+          success: false,
+          error: "Missing required fields: userAddress, evmAddress, amount, txHash" 
         });
       }
 
       // Validate EVM address format
       if (!ethers.isAddress(evmAddress)) {
         return res.status(400).json({
+          success: false,
           error: "Invalid EVM address format"
         });
       }
 
-      // Validate amount is a positive number
-      const amountNum = parseFloat(amount);
-      if (isNaN(amountNum) || amountNum <= 0) {
-        return res.status(400).json({
-          error: "Amount must be a positive number"
+      // Look for FXRP vault in database
+      const vaults = await storage.getVaults();
+      const fxrpVault = vaults.find(v => v.asset === "FXRP" && v.status === "active");
+      if (!fxrpVault) {
+        return res.status(404).json({
+          success: false,
+          error: "FXRP vault not found or not active"
         });
       }
 
-      // Validate amount precision (max 18 decimals for shXRP shares)
-      if (amount.includes('.') && amount.split('.')[1].length > 18) {
-        return res.status(400).json({
-          error: "Amount precision exceeds maximum (18 decimals for shares)"
+      // Create transaction record for tracking
+      const transaction = await storage.createTransaction({
+        walletAddress: userAddress,
+        vaultId: fxrpVault.id,
+        positionId: undefined,
+        type: "direct_fxrp_deposit",
+        amount,
+        status: "completed", // Already completed on-chain
+        txHash,
+        network: flareClient?.provider.network?.name === "flare" ? "mainnet" : "testnet",
+      });
+
+      // Update or create position
+      let position = await storage.getPositionByWalletAndVault(userAddress, fxrpVault.id);
+      
+      if (position) {
+        // Accumulate to existing position
+        const newAmount = (parseFloat(position.amount) + parseFloat(amount)).toString();
+        position = await storage.updatePosition(position.id, {
+          amount: newAmount,
+          status: "active",
+        });
+      } else {
+        // Create new position
+        position = await storage.createPosition({
+          walletAddress: userAddress,
+          vaultId: fxrpVault.id,
+          amount,
+          rewards: "0",
+          status: "active",
         });
       }
 
-      // Validate reasonable amount limits
-      const MIN_WITHDRAWAL = 0.01; // Minimum withdrawal
-      const MAX_WITHDRAWAL = 1000000; // Maximum single withdrawal (1M shares)
-      if (amountNum < MIN_WITHDRAWAL || amountNum > MAX_WITHDRAWAL) {
-        return res.status(400).json({
-          error: `Amount must be between ${MIN_WITHDRAWAL} and ${MAX_WITHDRAWAL} shXRP`
-        });
-      }
-
-      // Initialize VaultService with FlareClient
-      const vaultService = new VaultService({
-        storage,
-        flareClient: flareClient!
+      // Update transaction with position ID
+      await storage.updateTransaction(transaction.id, {
+        positionId: position.id,
       });
 
-      const depositService = new DepositService({
-        storage,
-        bridgeService,
-        vaultService,
-        yieldService: new YieldService(),
-        flareClient
-      });
-
-      const result = await depositService.processDirectFXRPWithdrawal({
-        userAddress: userAddress || evmAddress,
-        evmAddress,
-        amount
-      });
-
-      res.json({ 
+      res.json({
         success: true,
-        withdrawalId: result.withdrawalId,
-        message: "Direct FXRP withdrawal initiated"
+        depositId: transaction.id,
+        positionId: position.id
       });
     } catch (error) {
-      console.error("Direct FXRP withdrawal error:", error);
+      console.error("Failed to track FXRP deposit:", error);
       res.status(500).json({ 
-        error: error instanceof Error ? error.message : "Failed to process direct FXRP withdrawal" 
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to track FXRP deposit"
+      });
+    }
+  });
+
+  // Track FXRP withdrawal (no execution, only tracking)
+  app.post("/api/withdrawals/fxrp/track", async (req, res) => {
+    try {
+      const { userAddress, evmAddress, amount, txHash } = req.body;
+
+      if (!userAddress || !evmAddress || !amount || !txHash) {
+        return res.status(400).json({ 
+          success: false,
+          error: "Missing required fields: userAddress, evmAddress, amount, txHash" 
+        });
+      }
+
+      // Validate EVM address format
+      if (!ethers.isAddress(evmAddress)) {
+        return res.status(400).json({
+          success: false,
+          error: "Invalid EVM address format"
+        });
+      }
+
+      // Look for FXRP vault in database
+      const vaults = await storage.getVaults();
+      const fxrpVault = vaults.find(v => v.asset === "FXRP" && v.status === "active");
+      if (!fxrpVault) {
+        return res.status(404).json({
+          success: false,
+          error: "FXRP vault not found or not active"
+        });
+      }
+
+      // Create transaction record for tracking
+      const transaction = await storage.createTransaction({
+        walletAddress: userAddress,
+        vaultId: fxrpVault.id,
+        positionId: undefined,
+        type: "direct_fxrp_withdrawal",
+        amount,
+        status: "completed", // Already completed on-chain
+        txHash,
+        network: flareClient?.provider.network?.name === "flare" ? "mainnet" : "testnet",
+      });
+
+      // Get position for this user and vault
+      const position = await storage.getPositionByWalletAndVault(userAddress, fxrpVault.id);
+      if (position) {
+        // Update position - reduce deposited amount
+        const newAmount = Math.max(0, parseFloat(position.amount) - parseFloat(amount));
+        
+        if (newAmount > 0) {
+          // Update position with reduced amount
+          await storage.updatePosition(position.id, {
+            amount: newAmount.toString(),
+            status: "active",
+          });
+        } else {
+          // Position fully withdrawn - mark as withdrawn
+          await storage.updatePosition(position.id, {
+            amount: "0",
+            status: "withdrawn",
+          });
+        }
+
+        // Update transaction with position ID
+        await storage.updateTransaction(transaction.id, {
+          positionId: position.id,
+        });
+      }
+
+      res.json({
+        success: true,
+        withdrawalId: transaction.id,
+        positionId: position?.id
+      });
+    } catch (error) {
+      console.error("Failed to track FXRP withdrawal:", error);
+      res.status(500).json({ 
+        success: false,
+        error: error instanceof Error ? error.message : "Failed to track FXRP withdrawal"
       });
     }
   });
