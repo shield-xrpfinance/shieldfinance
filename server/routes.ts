@@ -406,7 +406,7 @@ export async function registerRoutes(
       const vaultAddress = getVaultAddress();
       
       // Get FXRP token address from Flare AssetManager
-      const fxrpTokenAddress = await flareClient.getFXRPTokenAddress();
+      const fxrpTokenAddress = await flareClient.getFAssetTokenAddress();
 
       res.json({
         success: true,
@@ -473,7 +473,7 @@ export async function registerRoutes(
         amount,
         status: "completed", // Already completed on-chain
         txHash,
-        network: flareClient?.provider.network?.name === "flare" ? "mainnet" : "testnet",
+        network: (await flareClient?.provider._network)?.name === "flare" ? "mainnet" : "testnet",
       });
 
       // Update or create position
@@ -565,7 +565,7 @@ export async function registerRoutes(
         amount,
         status: "completed", // Already completed on-chain
         txHash,
-        network: flareClient?.provider.network?.name === "flare" ? "mainnet" : "testnet",
+        network: (await flareClient?.provider._network)?.name === "flare" ? "mainnet" : "testnet",
       });
 
       // Get position for this user and vault
@@ -620,7 +620,11 @@ export async function registerRoutes(
         storage,
         bridgeService,
         vaultService,
-        yieldService: new YieldService(),
+        yieldService: new YieldService({
+          storage,
+          flareClient: flareClient!,
+          firelightVaultAddress: process.env.FIRELIGHT_VAULT_ADDRESS || ""
+        }),
         flareClient
       });
 
@@ -645,7 +649,11 @@ export async function registerRoutes(
         storage,
         bridgeService,
         vaultService,
-        yieldService: new YieldService(),
+        yieldService: new YieldService({
+          storage,
+          flareClient: flareClient!,
+          firelightVaultAddress: process.env.FIRELIGHT_VAULT_ADDRESS || ""
+        }),
         flareClient
       });
 
