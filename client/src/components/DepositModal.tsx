@@ -232,22 +232,14 @@ export default function DepositModal({
         throw new Error("No FXRP amount specified");
       }
 
-      // Get vault address (this should be passed as prop or fetched from context)
-      const vaultAddress = import.meta.env.VITE_SHXRP_VAULT_ADDRESS;
-      if (!vaultAddress || vaultAddress === "0x...") {
-        throw new Error("Vault address not configured");
-      }
-
       // Call direct FXRP deposit endpoint
-      const response = await apiRequest("/api/deposits/fxrp", {
-        method: "POST",
-        body: {
-          userAddress: address,
-          evmAddress,
-          amount,
-          vaultAddress
-        },
+      // Server now gets vault address from its own configuration
+      const res = await apiRequest("POST", "/api/deposits/fxrp", {
+        userAddress: address,
+        evmAddress,
+        amount
       });
+      const response = await res.json();
 
       if (!response.success || !response.depositId) {
         throw new Error(response.error || "Failed to initiate deposit");

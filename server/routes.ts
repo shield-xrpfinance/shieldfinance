@@ -404,6 +404,37 @@ export async function registerRoutes(
         });
       }
 
+      // Validate EVM address format
+      if (!ethers.isAddress(evmAddress)) {
+        return res.status(400).json({
+          error: "Invalid EVM address format"
+        });
+      }
+
+      // Validate amount is a positive number
+      const amountNum = parseFloat(amount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        return res.status(400).json({
+          error: "Amount must be a positive number"
+        });
+      }
+
+      // Validate amount precision (max 6 decimals for FXRP)
+      if (amount.includes('.') && amount.split('.')[1].length > 6) {
+        return res.status(400).json({
+          error: "Amount precision exceeds maximum (6 decimals for FXRP)"
+        });
+      }
+
+      // Validate reasonable amount limits
+      const MIN_DEPOSIT = 0.01; // Minimum deposit
+      const MAX_DEPOSIT = 1000000; // Maximum single deposit (1M FXRP)
+      if (amountNum < MIN_DEPOSIT || amountNum > MAX_DEPOSIT) {
+        return res.status(400).json({
+          error: `Amount must be between ${MIN_DEPOSIT} and ${MAX_DEPOSIT} FXRP`
+        });
+      }
+
       // Initialize VaultService with FlareClient
       const vaultService = new VaultService({
         storage,
@@ -446,6 +477,37 @@ export async function registerRoutes(
       if (!evmAddress || !amount) {
         return res.status(400).json({ 
           error: "Missing required fields: evmAddress, amount" 
+        });
+      }
+
+      // Validate EVM address format
+      if (!ethers.isAddress(evmAddress)) {
+        return res.status(400).json({
+          error: "Invalid EVM address format"
+        });
+      }
+
+      // Validate amount is a positive number
+      const amountNum = parseFloat(amount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        return res.status(400).json({
+          error: "Amount must be a positive number"
+        });
+      }
+
+      // Validate amount precision (max 18 decimals for shXRP shares)
+      if (amount.includes('.') && amount.split('.')[1].length > 18) {
+        return res.status(400).json({
+          error: "Amount precision exceeds maximum (18 decimals for shares)"
+        });
+      }
+
+      // Validate reasonable amount limits
+      const MIN_WITHDRAWAL = 0.01; // Minimum withdrawal
+      const MAX_WITHDRAWAL = 1000000; // Maximum single withdrawal (1M shares)
+      if (amountNum < MIN_WITHDRAWAL || amountNum > MAX_WITHDRAWAL) {
+        return res.status(400).json({
+          error: `Amount must be between ${MIN_WITHDRAWAL} and ${MAX_WITHDRAWAL} shXRP`
         });
       }
 
