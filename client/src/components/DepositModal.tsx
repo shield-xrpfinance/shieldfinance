@@ -270,7 +270,17 @@ export default function DepositModal({
       let evmProvider = provider;
       if (walletConnectProvider) {
         console.log("🔌 Extracting EVM provider from WalletConnect...");
+        console.log("WC session namespaces:", Object.keys((walletConnectProvider as any).session?.namespaces || {}));
+        
         try {
+          // Check if WalletConnect has an EVM namespace active
+          const hasEIP155 = (walletConnectProvider as any).session?.namespaces?.eip155;
+          console.log("Has eip155 namespace?", !!hasEIP155);
+          
+          if (!hasEIP155) {
+            throw new Error("WalletConnect is not connected to Flare network. Your wallet only connected to XRPL. Please disconnect and reconnect with a wallet that supports Flare (EVM), such as MetaMask.");
+          }
+          
           // UniversalProvider is multi-namespace - we need the Ethereum-specific provider
           // Use getEthereumProvider() to get an EIP-1193 compliant provider for ethers.js
           if (typeof (walletConnectProvider as any).getEthereumProvider === 'function') {
@@ -279,10 +289,18 @@ export default function DepositModal({
           } else {
             // Fallback: access the eip155 provider directly
             const rpcProviders = (walletConnectProvider as any).engine?.rpcProviders;
+            console.log("RPC providers available:", rpcProviders ? "yes" : "no");
             if (rpcProviders && rpcProviders.get) {
               evmProvider = rpcProviders.get("eip155");
               console.log("✅ Got eip155 provider from WalletConnect engine");
+            } else {
+              console.log("⚠️ No rpcProviders found, using original provider");
             }
+          }
+          
+          // Verify we have a valid EVM provider
+          if (!evmProvider || evmProvider === provider) {
+            console.warn("⚠️ Could not extract EVM provider from WalletConnect");
           }
           
           // Enable the EVM provider
@@ -292,7 +310,7 @@ export default function DepositModal({
           }
         } catch (error) {
           console.error("Failed to extract EVM provider:", error);
-          throw new Error("Failed to connect to Flare network via WalletConnect. Please ensure your wallet supports Flare.");
+          throw error;
         }
       }
       
