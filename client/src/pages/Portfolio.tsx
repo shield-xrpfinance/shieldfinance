@@ -45,7 +45,7 @@ export default function Portfolio() {
   
   const { toast } = useToast();
   const { isConnected, address, evmAddress, walletType } = useWallet();
-  const { network } = useNetwork();
+  const { network, ecosystem } = useNetwork();
   const [, navigate] = useLocation();
 
   const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
@@ -97,11 +97,8 @@ export default function Portfolio() {
 
   const getVaultById = (vaultId: string) => vaults.find((v) => v.id === vaultId);
 
-  // Filter positions based on wallet type
+  // Filter positions based on selected ecosystem
   const filteredPositions = useMemo(() => {
-    // Don't filter if no wallet type
-    if (!walletType) return positions;
-    
     // Don't filter if vaults data is still loading or empty
     // (wait for vault metadata to be available before filtering)
     if (!vaults || vaults.length === 0) return positions;
@@ -112,14 +109,14 @@ export default function Portfolio() {
       
       const vaultAsset = vault.asset || "XRP";
       
-      if (walletType === "xrpl") {
+      if (ecosystem === "xrpl") {
         return vaultAsset === "XRP";
-      } else if (walletType === "evm") {
+      } else if (ecosystem === "flare") {
         return vaultAsset === "FXRP";
       }
       return false;
     });
-  }, [positions, walletType, vaults]);
+  }, [positions, ecosystem, vaults]);
 
   const formattedPositions = filteredPositions.map((pos) => {
     const vault = getVaultById(pos.vaultId);
@@ -273,7 +270,7 @@ export default function Portfolio() {
           title: "Withdrawal Successful",
           description: `${amount} shXRP converted to FXRP and sent to your wallet!`,
         });
-        setLocation('/portfolio');
+        navigate('/portfolio');
       } else {
         // XRP withdrawal - show progress modal for async processing
         setWithdrawRedemptionId(data.redemptionId);

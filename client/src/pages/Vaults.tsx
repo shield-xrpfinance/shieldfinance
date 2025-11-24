@@ -43,7 +43,7 @@ export default function Vaults() {
   const [progressErrorMessage, setProgressErrorMessage] = useState<string | undefined>(undefined);
   const { toast } = useToast();
   const { address, evmAddress, provider, walletType, isConnected, walletConnectProvider, requestPayment } = useWallet();
-  const { network, isTestnet } = useNetwork();
+  const { network, isTestnet, ecosystem } = useNetwork();
   const [, setLocation] = useLocation();
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
@@ -168,24 +168,24 @@ export default function Vaults() {
     };
   }) || [];
 
-  // Filter vaults based on wallet type
-  const walletFilteredVaults = useMemo(() => {
-    if (!isConnected || !walletType) {
+  // Filter vaults based on selected ecosystem (users can switch between XRPL and Flare)
+  const ecosystemFilteredVaults = useMemo(() => {
+    if (!isConnected) {
       return []; // No wallet connected, return empty array
     }
     
-    if (walletType === "xrpl") {
-      // Xaman users see XRP vaults only
+    if (ecosystem === "xrpl") {
+      // XRPL ecosystem shows XRP vaults only
       return allVaults.filter(vault => vault.asset === "XRP");
-    } else if (walletType === "evm") {
-      // WalletConnect/BiFrost users see FXRP vaults only
+    } else if (ecosystem === "flare") {
+      // Flare ecosystem shows FXRP vaults only
       return allVaults.filter(vault => vault.asset === "FXRP");
     }
     
     return allVaults;
-  }, [allVaults, isConnected, walletType]);
+  }, [allVaults, isConnected, ecosystem]);
 
-  const filteredVaults = walletFilteredVaults
+  const filteredVaults = ecosystemFilteredVaults
     .filter((vault) =>
       vault.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
@@ -261,16 +261,26 @@ export default function Vaults() {
     
     console.log(`🔄 Deposit: vault="${selectedVault.name}", depositAsset="${depositAsset}", selectedVault.depositAssets=${JSON.stringify(selectedVault.depositAssets)}, walletType="${walletType}", isFXRPDeposit=${isFXRPDeposit}`);
 
+    // CRITICAL: Validate wallet compatibility before proceeding
+    if (isFXRPDeposit && walletType !== "evm") {
+      toast({
+        title: "Incompatible Wallet",
+        description: "FXRP deposits require an EVM wallet (like BiFrost). Please connect a compatible wallet or switch to the XRPL ecosystem.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (!isFXRPDeposit && walletType !== "xrpl") {
+      toast({
+        title: "Incompatible Wallet",
+        description: "XRP deposits require an XRPL wallet (like Xaman). Please connect a compatible wallet or switch to the Flare ecosystem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (isFXRPDeposit) {
-      // FXRP deposit requires EVM wallet type
-      if (walletType !== "evm") {
-        toast({
-          title: "Wrong Wallet Type",
-          description: "Please connect an EVM wallet (like BiFrost) to deposit FXRP.",
-          variant: "destructive",
-        });
-        return;
-      }
 
       try {
         setDepositModalOpen(false);

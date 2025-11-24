@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Shield, ShieldAlert, ShieldCheck, Clock, Users, Lock, TrendingUp, AlertTriangle, DollarSign } from "lucide-react";
+import { Shield, ShieldAlert, ShieldCheck, Clock, Users, Lock, TrendingUp, AlertTriangle, DollarSign, Link2 } from "lucide-react";
 import { MultiAssetIcon } from "@/components/AssetIcon";
 import { useNetwork } from "@/lib/networkContext";
 import { getTooltipContent } from "@/lib/tooltipCopy";
@@ -115,6 +115,11 @@ export default function VaultListItem({
                 )}
               </div>
               <div className="flex items-center gap-2 mt-2">
+                {/* Chain Badge */}
+                <Badge variant="outline" className="text-xs" data-testid={`badge-chain-${id}`}>
+                  <Link2 className="h-3 w-3 mr-1" />
+                  {asset === "FXRP" ? "Flare" : "XRPL"}
+                </Badge>
                 <Badge variant="outline" className={`text-xs ${risk.bg} ${risk.color} border-current`} data-testid={`badge-risk-${id}`}>
                   <RiskIcon className="h-3 w-3 mr-1" />
                   {risk.label}

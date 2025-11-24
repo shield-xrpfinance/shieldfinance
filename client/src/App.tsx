@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Switch as RouterSwitch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
@@ -16,6 +16,7 @@ import { CurrencyProvider } from "@/lib/currencyContext";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import { Wallet, LogOut, Beaker } from "lucide-react";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
@@ -98,6 +99,53 @@ function Header() {
   );
 }
 
+function EcosystemSync() {
+  const { walletType, isConnected } = useWallet();
+  const { setEcosystem, ecosystem, manualOverride, resetManualOverride } = useNetwork();
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (!isConnected || !walletType) return;
+
+    const targetEcosystem = walletType === "xrpl" ? "xrpl" : "flare";
+
+    // Check for mismatch between wallet type and ecosystem
+    if (manualOverride && ecosystem !== targetEcosystem) {
+      // User manually selected incompatible ecosystem before connecting
+      const walletName = walletType === "xrpl" ? "XRPL" : "EVM";
+      const ecosystemName = targetEcosystem === "xrpl" ? "XRPL" : "Flare";
+      
+      toast({
+        title: "Ecosystem Auto-Corrected",
+        description: `Your ${walletName} wallet has been connected. Switching to ${ecosystemName} ecosystem to show compatible vaults.`,
+      });
+
+      // Auto-correct the ecosystem and clear manual override
+      setEcosystem(targetEcosystem, false);
+      resetManualOverride();
+    } else if (!manualOverride && ecosystem !== targetEcosystem) {
+      // Normal auto-sync when no manual override
+      setEcosystem(targetEcosystem, false);
+    }
+  }, [walletType, isConnected, manualOverride, ecosystem, setEcosystem, resetManualOverride, toast]);
+
+  return null;
+}
+
+function WalletDisconnectHandler() {
+  const { isConnected } = useWallet();
+  const { resetManualOverride } = useNetwork();
+
+  useEffect(() => {
+    // Reset manual override when wallet disconnects
+    if (!isConnected) {
+      resetManualOverride();
+    }
+  }, [isConnected, resetManualOverride]);
+
+  return null;
+}
+
 function DashboardLayout() {
   const style = {
     "--sidebar-width": "20rem",
@@ -108,6 +156,8 @@ function DashboardLayout() {
   return (
     <NetworkProvider>
       <WalletProvider>
+        <EcosystemSync />
+        <WalletDisconnectHandler />
         <CurrencyProvider>
           <SidebarProvider style={style as React.CSSProperties}>
             <div className="flex h-screen w-full">

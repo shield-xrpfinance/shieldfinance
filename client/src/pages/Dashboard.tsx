@@ -40,7 +40,7 @@ export default function Dashboard() {
   const [progressErrorMessage, setProgressErrorMessage] = useState<string | undefined>(undefined);
   const { toast } = useToast();
   const { address, evmAddress, provider, walletType, isConnected, walletConnectProvider, requestPayment } = useWallet();
-  const { network, isTestnet } = useNetwork();
+  const { network, isTestnet, ecosystem } = useNetwork();
   const [, setLocation] = useLocation();
   const comprehensiveBalances = useComprehensiveBalance();
   const { currency, exchangeRates } = useCurrency();
@@ -49,22 +49,22 @@ export default function Dashboard() {
     queryKey: ["/api/vaults"],
   });
 
-  // Filter vaults based on wallet type
-  const walletFilteredVaults = useMemo(() => {
-    if (!isConnected || !walletType) {
+  // Filter vaults based on selected ecosystem
+  const ecosystemFilteredVaults = useMemo(() => {
+    if (!isConnected) {
       return [];
     }
     
     const allVaults = apiVaults || [];
     
-    if (walletType === "xrpl") {
+    if (ecosystem === "xrpl") {
       return allVaults.filter(vault => vault.asset === "XRP");
-    } else if (walletType === "evm") {
+    } else if (ecosystem === "flare") {
       return allVaults.filter(vault => vault.asset === "FXRP");
     }
     
     return allVaults;
-  }, [apiVaults, isConnected, walletType]);
+  }, [apiVaults, isConnected, ecosystem]);
 
   // NOTE: Legacy polling removed - ProgressStepsModal now handles all polling internally
 
@@ -96,7 +96,7 @@ export default function Dashboard() {
   };
 
   // Filter out coming soon vaults and take first 3 active vaults
-  const vaults = walletFilteredVaults
+  const vaults = ecosystemFilteredVaults
     .filter(vault => !(vault as any).comingSoon)
     .slice(0, 3)
     .map(vault => ({

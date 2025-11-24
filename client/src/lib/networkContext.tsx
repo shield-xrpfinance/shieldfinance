@@ -10,7 +10,9 @@ interface NetworkContextType {
   toggleNetwork: () => void;
   setNetwork: (network: Network) => void;
   ecosystem: Ecosystem;
-  setEcosystem: (ecosystem: Ecosystem) => void;
+  setEcosystem: (ecosystem: Ecosystem, isManual?: boolean) => void;
+  manualOverride: boolean;
+  resetManualOverride: () => void;
 }
 
 const NetworkContext = createContext<NetworkContextType>({
@@ -20,6 +22,8 @@ const NetworkContext = createContext<NetworkContextType>({
   setNetwork: () => {},
   ecosystem: "xrpl",
   setEcosystem: () => {},
+  manualOverride: false,
+  resetManualOverride: () => {},
 });
 
 export function NetworkProvider({ children }: { children: ReactNode }) {
@@ -28,18 +32,12 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
     return (saved === "testnet" ? "testnet" : "mainnet") as Network;
   });
 
-  const [ecosystem, setEcosystemState] = useState<Ecosystem>(() => {
-    const saved = localStorage.getItem("xrp-ecosystem");
-    return (saved === "flare" ? "flare" : "xrpl") as Ecosystem;
-  });
+  const [ecosystem, setEcosystemState] = useState<Ecosystem>("xrpl");
+  const [manualOverride, setManualOverride] = useState(false);
 
   useEffect(() => {
     localStorage.setItem("xrp-network", network);
   }, [network]);
-
-  useEffect(() => {
-    localStorage.setItem("xrp-ecosystem", ecosystem);
-  }, [ecosystem]);
 
   const toggleNetwork = () => {
     setNetworkState(prev => prev === "mainnet" ? "testnet" : "mainnet");
@@ -49,8 +47,15 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
     setNetworkState(newNetwork);
   };
 
-  const setEcosystem = (newEcosystem: Ecosystem) => {
+  const setEcosystem = (newEcosystem: Ecosystem, isManual: boolean = true) => {
     setEcosystemState(newEcosystem);
+    if (isManual) {
+      setManualOverride(true);
+    }
+  };
+
+  const resetManualOverride = () => {
+    setManualOverride(false);
   };
 
   const value = {
@@ -60,6 +65,8 @@ export function NetworkProvider({ children }: { children: ReactNode }) {
     setNetwork,
     ecosystem,
     setEcosystem,
+    manualOverride,
+    resetManualOverride,
   };
 
   return (
