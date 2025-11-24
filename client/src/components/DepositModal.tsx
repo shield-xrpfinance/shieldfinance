@@ -240,27 +240,35 @@ export default function DepositModal({
     }
 
     setProcessingPayment(true);
+    console.log("⏳ Processing payment started");
     
     try {
       // For Flare ecosystem, process FXRP deposit directly
       const amount = amounts.FXRP;
+      console.log("💰 Amount:", amount);
       if (!amount) {
         throw new Error("No FXRP amount specified");
       }
 
       // Get vault configuration from backend (read-only)
+      console.log("📡 Fetching vault info...");
       const vaultInfoRes = await apiRequest("GET", "/api/vaults/fxrp/info");
       const vaultInfo = await vaultInfoRes.json();
+      console.log("📦 Vault info:", vaultInfo);
       
       if (!vaultInfo.success || !vaultInfo.vaultAddress || !vaultInfo.fxrpTokenAddress) {
         throw new Error("Failed to fetch vault configuration");
       }
 
       const { vaultAddress, fxrpTokenAddress } = vaultInfo;
+      console.log("✅ Vault config:", { vaultAddress, fxrpTokenAddress });
       
       // Create ethers provider and signer (works with both WalletConnect and MetaMask)
+      console.log("🔐 Creating ethers provider...");
       const ethersProvider = new ethers.BrowserProvider(provider);
+      console.log("✍️ Getting signer...");
       const signer = await ethersProvider.getSigner();
+      console.log("✅ Signer obtained:", await signer.getAddress());
       
       // Import ABIs
       const { ERC20_ABI, FIRELIGHT_VAULT_ABI } = await import("@shared/flare-abis");
@@ -349,7 +357,11 @@ export default function DepositModal({
       });
       
     } catch (error) {
-      console.error("Flare deposit error:", error);
+      console.error("❌ Flare deposit error:", error);
+      console.error("❌ Error details:", {
+        message: error instanceof Error ? error.message : String(error),
+        stack: error instanceof Error ? error.stack : undefined,
+      });
       
       // Handle user rejection
       if (error instanceof Error && error.message.includes("rejected")) {
