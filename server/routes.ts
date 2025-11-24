@@ -425,12 +425,24 @@ export async function registerRoutes(
   // Track FXRP deposit (no execution, only tracking)
   app.post("/api/deposits/fxrp/track", async (req, res) => {
     try {
-      const { userAddress, evmAddress, amount, txHash, approveTxHash } = req.body;
+      const { 
+        userAddress, 
+        evmAddress, 
+        amount, 
+        depositHash, // New field name from frontend
+        approveHash, // New field name from frontend
+        vaultAddress, // New field from frontend
+        tokenAddress, // New field from frontend
+        // Backward compatibility - fallback to old field names
+        txHash = depositHash, 
+        approveTxHash = approveHash 
+      } = req.body;
       
+      // Use the resolved field names for validation
       if (!userAddress || !evmAddress || !amount || !txHash) {
         return res.status(400).json({ 
           success: false,
-          error: "Missing required fields: userAddress, evmAddress, amount, txHash" 
+          error: "Missing required fields: userAddress, evmAddress, amount, depositHash (or txHash)" 
         });
       }
 
@@ -507,12 +519,22 @@ export async function registerRoutes(
   // Track FXRP withdrawal (no execution, only tracking)
   app.post("/api/withdrawals/fxrp/track", async (req, res) => {
     try {
-      const { userAddress, evmAddress, amount, txHash } = req.body;
+      const { 
+        userAddress, 
+        evmAddress, 
+        amount, 
+        withdrawHash, // New field name from frontend
+        vaultAddress, // New field from frontend
+        tokenAddress, // New field from frontend
+        // Backward compatibility - fallback to old field name
+        txHash = withdrawHash 
+      } = req.body;
 
+      // Use the resolved field name for validation
       if (!userAddress || !evmAddress || !amount || !txHash) {
         return res.status(400).json({ 
           success: false,
-          error: "Missing required fields: userAddress, evmAddress, amount, txHash" 
+          error: "Missing required fields: userAddress, evmAddress, amount, withdrawHash (or txHash)" 
         });
       }
 
