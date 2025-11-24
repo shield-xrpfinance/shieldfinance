@@ -124,6 +124,7 @@ export default function DepositModal({
     : "0";
 
   const handleContinue = () => {
+    console.log("🔵 handleContinue called", { step, amounts, ecosystem, evmAddress });
     if (step === 1 && Object.keys(amounts).length > 0) {
       // Filter out empty amounts and validate against available balances (defensive sanitization)
       const validAmounts = Object.entries(amounts)
@@ -215,7 +216,9 @@ export default function DepositModal({
   };
 
   const handleFlareDeposit = async (amounts: { [key: string]: string }) => {
+    console.log("🟢 handleFlareDeposit called", { amounts, evmAddress, walletConnectProvider, hasMetaMask: !!(window as any).ethereum });
     if (!evmAddress) {
+      console.log("❌ No EVM address");
       toast({
         title: "EVM Wallet Required",
         description: "Please connect an EVM wallet for Flare ecosystem deposits.",
@@ -226,6 +229,7 @@ export default function DepositModal({
 
     // Support both WalletConnect and injected providers (MetaMask)
     const provider = walletConnectProvider || (window as any).ethereum;
+    console.log("🔍 Provider check", { hasWalletConnect: !!walletConnectProvider, hasMetaMask: !!(window as any).ethereum, provider: !!provider });
     if (!provider) {
       toast({
         title: "Web3 Provider Required",
