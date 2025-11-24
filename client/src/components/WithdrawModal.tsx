@@ -13,7 +13,11 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { AlertCircle, ChevronDown } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { useWallet } from "@/lib/walletContext";
+import { useNetwork } from "@/lib/networkContext";
 import { MultiAssetIcon } from "@/components/AssetIcon";
+import WithdrawalProgressModal from "./WithdrawalProgressModal";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Collapsible,
   CollapsibleContent,
@@ -45,7 +49,16 @@ export default function WithdrawModal({
 }: WithdrawModalProps) {
   const [amount, setAmount] = useState("");
   const [detailsExpanded, setDetailsExpanded] = useState(false);
-  const { toast} = useToast();
+  const [processingWithdrawal, setProcessingWithdrawal] = useState(false);
+  
+  // Progress modal state
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [withdrawalId, setWithdrawalId] = useState<string>("");
+  const [withdrawalError, setWithdrawalError] = useState<string | null>(null);
+  
+  const { toast } = useToast();
+  const { evmAddress, address } = useWallet();
+  const { ecosystem } = useNetwork();
   const gasEstimate = "0.00008";
   const assetSymbol = asset.split(",")[0];
 
@@ -76,9 +89,74 @@ export default function WithdrawModal({
       return;
     }
 
-    onConfirm(amount);
-    setAmount("");
-    onOpenChange(false);
+    // Process withdrawal based on ecosystem
+    if (ecosystem === "flare") {
+      handleFlareWithdrawal();
+    } else {
+      // XRPL ecosystem - use existing flow
+      onConfirm(amount);
+      setAmount("");
+      onOpenChange(false);
+    }
+  };
+
+  const handleFlareWithdrawal = async () => {
+    if (!evmAddress) {
+      toast({
+        title: "EVM Wallet Required",
+        description: "Please connect an EVM wallet for Flare ecosystem withdrawals.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProcessingWithdrawal(true);
+    
+    try {
+      // Get vault address (this should be passed as prop or fetched from context)
+      const vaultAddress = import.meta.env.VITE_SHXRP_VAULT_ADDRESS;
+      if (!vaultAddress || vaultAddress === "0x...") {
+        throw new Error("Vault address not configured");
+      }
+
+      // Call direct FXRP withdrawal endpoint
+      const response = await apiRequest("/api/withdrawals/fxrp", {
+        method: "POST",
+        body: {
+          evmAddress,
+          amount,
+          vaultAddress
+        },
+      });
+
+      if (!response.success || !response.withdrawalId) {
+        throw new Error(response.error || "Failed to initiate withdrawal");
+      }
+
+      // Open progress modal to track withdrawal
+      setWithdrawalId(response.withdrawalId);
+      setProgressModalOpen(true);
+      
+      // Clear state
+      setAmount("");
+      onOpenChange(false);
+      
+      toast({
+        title: "Withdrawal Initiated",
+        description: "Your FXRP withdrawal is being processed.",
+      });
+      
+    } catch (error) {
+      console.error("Flare withdrawal error:", error);
+      setWithdrawalError(error instanceof Error ? error.message : "Failed to process withdrawal");
+      toast({
+        title: "Withdrawal Failed",
+        description: error instanceof Error ? error.message : "Failed to process withdrawal",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingWithdrawal(false);
+    }
   };
 
   return (
@@ -87,7 +165,9 @@ export default function WithdrawModal({
         <DialogHeader>
           <DialogTitle>Withdraw {assetSymbol}</DialogTitle>
           <DialogDescription className="text-xs sm:text-sm">
-            Processed automatically. XRP sent to your XRPL wallet.
+            {ecosystem === "flare" 
+              ? "Direct withdrawal. FXRP sent to your EVM wallet."
+              : "Processed automatically. XRP sent to your XRPL wallet."}
           </DialogDescription>
         </DialogHeader>
 
@@ -180,10 +260,12 @@ export default function WithdrawModal({
                 <div className="flex-1 space-y-1 text-xs">
                   <p className="font-medium text-primary">Automated Process</p>
                   <p className="text-muted-foreground">
-                    Your shXRP tokens will be redeemed for XRP through the FAssets bridge and sent to your wallet.
+                    {ecosystem === "flare" 
+                      ? "Your shXRP tokens will be redeemed for FXRP and sent to your EVM wallet."
+                      : "Your shXRP tokens will be redeemed for XRP through the FAssets bridge and sent to your wallet."}
                   </p>
                   <p className="text-muted-foreground">
-                    Typical time: 1-5 minutes
+                    Typical time: {ecosystem === "flare" ? "30 seconds" : "1-5 minutes"}
                   </p>
                 </div>
               </div>
@@ -221,6 +303,33 @@ export default function WithdrawModal({
           </Button>
         </DialogFooter>
       </DialogContent>
+      <WithdrawalProgressModal
+        open={progressModalOpen}
+        onOpenChange={setProgressModalOpen}
+        withdrawalId={withdrawalId}
+        amount={amount}
+        asset={ecosystem === "flare" ? "FXRP" : assetSymbol}
+        vaultName={vaultName}
+        ecosystem={ecosystem}
+        onComplete={() => {
+          setProgressModalOpen(false);
+          toast({
+            title: "Withdrawal Complete",
+            description: ecosystem === "flare" 
+              ? "Your FXRP has been sent to your wallet."
+              : "Your XRP has been sent to your wallet.",
+          });
+        }}
+        onError={(error) => {
+          setProgressModalOpen(false);
+          setWithdrawalError(error);
+          toast({
+            title: "Withdrawal Failed",
+            description: error,
+            variant: "destructive",
+          });
+        }}
+      />
     </Dialog>
   );
 }

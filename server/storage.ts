@@ -22,6 +22,7 @@ export interface IStorage {
   getTransactions(limit?: number, walletAddress?: string): Promise<Transaction[]>;
   getTransactionByTxHash(txHash: string): Promise<Transaction | undefined>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
+  updateTransaction(id: string, updates: Partial<Transaction>): Promise<Transaction>;
   getTransactionSummary(walletAddress?: string): Promise<{ totalDeposits: string; totalWithdrawals: string; totalRewards: string; depositCount: number; withdrawalCount: number; claimCount: number }>;
   
   getWithdrawalRequests(status?: string, walletAddress?: string): Promise<WithdrawalRequest[]>;
@@ -263,6 +264,17 @@ export class DatabaseStorage implements IStorage {
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
     const [transaction] = await db.insert(transactions).values(insertTransaction).returning();
+    return transaction;
+  }
+
+  async updateTransaction(id: string, updates: Partial<Transaction>): Promise<Transaction> {
+    const [transaction] = await db.update(transactions)
+      .set(updates)
+      .where(eq(transactions.id, id))
+      .returning();
+    if (!transaction) {
+      throw new Error(`Transaction ${id} not found`);
+    }
     return transaction;
   }
 

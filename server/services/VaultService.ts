@@ -18,6 +18,14 @@ export class VaultService {
 
   /**
    * Get the latest deployed vault address from deployment files
+   * Public method for DepositService to use
+   */
+  public getVaultContractAddress(): string {
+    return this.getVaultAddress();
+  }
+  
+  /**
+   * Get the latest deployed vault address from deployment files
    */
   private getVaultAddress(): string {
     let vaultAddress: string | undefined;

@@ -5,6 +5,9 @@ import { insertPositionSchema } from "@shared/schema";
 import { XummSdk } from "xumm-sdk";
 import { Client } from "xrpl";
 import type { BridgeService } from "./services/BridgeService";
+import { DepositService } from "./services/DepositService";
+import { VaultService } from "./services/VaultService";
+import { YieldService } from "./services/YieldService";
 import type { FlareClient } from "./utils/flare-client";
 import type { MetricsService } from "./services/MetricsService";
 import type { AlertingService } from "./services/AlertingService";
@@ -386,6 +389,146 @@ export async function registerRoutes(
       res.json(bridge);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch bridge status" });
+    }
+  });
+
+  // Direct FXRP deposit (Flare ecosystem - no bridging)
+  // SECURITY FIX: Removed vaultAddress from request body
+  app.post("/api/deposits/fxrp", async (req, res) => {
+    try {
+      const { evmAddress, amount, userAddress } = req.body;
+
+      if (!evmAddress || !amount) {
+        return res.status(400).json({ 
+          error: "Missing required fields: evmAddress, amount" 
+        });
+      }
+
+      // Initialize VaultService with FlareClient
+      const vaultService = new VaultService({
+        storage,
+        flareClient: flareClient!
+      });
+
+      const depositService = new DepositService({
+        storage,
+        bridgeService,
+        vaultService,
+        yieldService: new YieldService(),
+        flareClient
+      });
+
+      const result = await depositService.processDirectFXRPDeposit({
+        userAddress: userAddress || evmAddress,
+        evmAddress,
+        amount
+      });
+
+      res.json({ 
+        success: true,
+        depositId: result.depositId,
+        message: "Direct FXRP deposit initiated"
+      });
+    } catch (error) {
+      console.error("Direct FXRP deposit error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to process direct FXRP deposit" 
+      });
+    }
+  });
+
+  // Direct FXRP withdrawal (Flare ecosystem - no bridging)
+  // SECURITY FIX: Removed vaultAddress from request body
+  app.post("/api/withdrawals/fxrp", async (req, res) => {
+    try {
+      const { evmAddress, amount, userAddress } = req.body;
+
+      if (!evmAddress || !amount) {
+        return res.status(400).json({ 
+          error: "Missing required fields: evmAddress, amount" 
+        });
+      }
+
+      // Initialize VaultService with FlareClient
+      const vaultService = new VaultService({
+        storage,
+        flareClient: flareClient!
+      });
+
+      const depositService = new DepositService({
+        storage,
+        bridgeService,
+        vaultService,
+        yieldService: new YieldService(),
+        flareClient
+      });
+
+      const result = await depositService.processDirectFXRPWithdrawal({
+        userAddress: userAddress || evmAddress,
+        evmAddress,
+        amount
+      });
+
+      res.json({ 
+        success: true,
+        withdrawalId: result.withdrawalId,
+        message: "Direct FXRP withdrawal initiated"
+      });
+    } catch (error) {
+      console.error("Direct FXRP withdrawal error:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : "Failed to process direct FXRP withdrawal" 
+      });
+    }
+  });
+
+  // Get direct FXRP deposit status
+  app.get("/api/deposits/fxrp/status/:depositId", async (req, res) => {
+    try {
+      const vaultService = new VaultService({
+        storage,
+        flareClient: flareClient!
+      });
+
+      const depositService = new DepositService({
+        storage,
+        bridgeService,
+        vaultService,
+        yieldService: new YieldService(),
+        flareClient
+      });
+
+      const status = await depositService.getDirectTransactionStatus(req.params.depositId);
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({ 
+        error: "Failed to fetch deposit status" 
+      });
+    }
+  });
+
+  // Get direct FXRP withdrawal status
+  app.get("/api/withdrawals/fxrp/status/:withdrawalId", async (req, res) => {
+    try {
+      const vaultService = new VaultService({
+        storage,
+        flareClient: flareClient!
+      });
+
+      const depositService = new DepositService({
+        storage,
+        bridgeService,
+        vaultService,
+        yieldService: new YieldService(),
+        flareClient
+      });
+
+      const status = await depositService.getDirectTransactionStatus(req.params.withdrawalId);
+      res.json(status);
+    } catch (error) {
+      res.status(500).json({ 
+        error: "Failed to fetch withdrawal status" 
+      });
     }
   });
 

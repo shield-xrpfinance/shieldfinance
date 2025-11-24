@@ -21,9 +21,11 @@ import { useNetwork } from "@/lib/networkContext";
 import { useToast } from "@/hooks/use-toast";
 import ConnectWalletModal from "./ConnectWalletModal";
 import XamanSigningModal from "./XamanSigningModal";
+import DepositProgressModal from "./DepositProgressModal";
 import { MultiAssetIcon } from "@/components/AssetIcon";
 import type { PaymentRequest } from "@shared/schema";
 import { calculateLotRounding, type LotRoundingResult, LOT_SIZE } from "@shared/lotRounding";
+import { apiRequest } from "@/lib/queryClient";
 
 interface DepositModalProps {
   open: boolean;
@@ -60,6 +62,11 @@ export default function DepositModal({
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [infoExpanded, setInfoExpanded] = useState(false);
   
+  // Progress modal state for tracking deposit
+  const [progressModalOpen, setProgressModalOpen] = useState(false);
+  const [depositId, setDepositId] = useState<string>("");
+  const [depositError, setDepositError] = useState<string | null>(null);
+  
   // Helper to sanitize numeric inputs (removes commas and whitespace)
   const sanitizeNumericInput = (value: string) => value.replace(/[\s,]+/g, "");
 
@@ -76,7 +83,7 @@ export default function DepositModal({
   const { address, isConnected, provider, requestPayment, evmAddress, walletType } = useWallet();
   const { balances, isLoading: balancesLoading, error: balancesError, getBalance, getBalanceFormatted } = useWalletBalances();
   const comprehensiveBalances = useComprehensiveBalance();
-  const { network } = useNetwork();
+  const { network, ecosystem } = useNetwork();
   const { toast } = useToast();
   const gasEstimate = "0.00012";
 
@@ -105,8 +112,8 @@ export default function DepositModal({
     return sum + val;
   }, 0);
 
-  // Calculate FAssets minting fee (0.25% for XRP bridges)
-  const isXRPDeposit = depositAssets.includes("XRP");
+  // Calculate FAssets minting fee (0.25% for XRP bridges, but only in XRPL ecosystem)
+  const isXRPDeposit = depositAssets.includes("XRP") && ecosystem === "xrpl";
   const mintingFeePercentage = 0.25; // 0.25% = 25 BIPS
   const mintingFee = isXRPDeposit ? (totalValue * (mintingFeePercentage / 100)) : 0;
   const totalWithFee = totalValue + mintingFee;
@@ -192,12 +199,85 @@ export default function DepositModal({
         }
       }
       
-      // Use stored validated amounts for confirmation
-      onConfirm(validatedAmounts);
+      // Process deposit based on ecosystem
+      if (ecosystem === "flare") {
+        handleFlareDeposit(validatedAmounts);
+      } else {
+        // XRPL ecosystem - use existing flow
+        onConfirm(validatedAmounts);
+        setAmounts({});
+        setValidatedAmounts({});
+        setStep(1);
+        onOpenChange(false);
+      }
+    }
+  };
+
+  const handleFlareDeposit = async (amounts: { [key: string]: string }) => {
+    if (!evmAddress) {
+      toast({
+        title: "EVM Wallet Required",
+        description: "Please connect an EVM wallet for Flare ecosystem deposits.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setProcessingPayment(true);
+    
+    try {
+      // For Flare ecosystem, process FXRP deposit directly
+      const amount = amounts.FXRP;
+      if (!amount) {
+        throw new Error("No FXRP amount specified");
+      }
+
+      // Get vault address (this should be passed as prop or fetched from context)
+      const vaultAddress = import.meta.env.VITE_SHXRP_VAULT_ADDRESS;
+      if (!vaultAddress || vaultAddress === "0x...") {
+        throw new Error("Vault address not configured");
+      }
+
+      // Call direct FXRP deposit endpoint
+      const response = await apiRequest("/api/deposits/fxrp", {
+        method: "POST",
+        body: {
+          userAddress: address,
+          evmAddress,
+          amount,
+          vaultAddress
+        },
+      });
+
+      if (!response.success || !response.depositId) {
+        throw new Error(response.error || "Failed to initiate deposit");
+      }
+
+      // Open progress modal to track deposit
+      setDepositId(response.depositId);
+      setProgressModalOpen(true);
+      
+      // Clear state
       setAmounts({});
       setValidatedAmounts({});
       setStep(1);
       onOpenChange(false);
+      
+      toast({
+        title: "Deposit Initiated",
+        description: "Your FXRP deposit is being processed.",
+      });
+      
+    } catch (error) {
+      console.error("Flare deposit error:", error);
+      setDepositError(error instanceof Error ? error.message : "Failed to process deposit");
+      toast({
+        title: "Deposit Failed",
+        description: error instanceof Error ? error.message : "Failed to process deposit",
+        variant: "destructive",
+      });
+    } finally {
+      setProcessingPayment(false);
     }
   };
 
@@ -255,9 +335,11 @@ export default function DepositModal({
           </DialogTitle>
           <DialogDescription>
             {step === 1
-              ? depositAssets.includes("XRP")
-                ? "Deposit XRP to receive shXRP shares. Your deposit will be automatically bridged to FXRP and deposited into the vault."
-                : `Enter the amount${depositAssets.length > 1 ? 's' : ''} you want to deposit`
+              ? ecosystem === "flare"
+                ? "Deposit FXRP directly to receive shXRP shares. No bridging required."
+                : depositAssets.includes("XRP")
+                  ? "Deposit XRP to receive shXRP shares. Your deposit will be automatically bridged to FXRP and deposited into the vault."
+                  : `Enter the amount${depositAssets.length > 1 ? 's' : ''} you want to deposit`
               : "Review and confirm your deposit"}
           </DialogDescription>
         </DialogHeader>
@@ -535,6 +617,48 @@ export default function DepositModal({
       <ConnectWalletModal
         open={connectWalletModalOpen}
         onOpenChange={setConnectWalletModalOpen}
+      />
+      <XamanSigningModal
+        open={xamanSigningModalOpen}
+        onOpenChange={setXamanSigningModalOpen}
+        payload={xamanPayload}
+        onSuccess={() => {
+          setXamanSigningModalOpen(false);
+          onOpenChange(false);
+        }}
+        onError={(error) => {
+          setXamanSigningModalOpen(false);
+          toast({
+            title: "Payment Failed",
+            description: error,
+            variant: "destructive",
+          });
+        }}
+      />
+      <DepositProgressModal
+        open={progressModalOpen}
+        onOpenChange={setProgressModalOpen}
+        depositId={depositId}
+        amount={Object.values(validatedAmounts).join(", ")}
+        asset={ecosystem === "flare" ? "FXRP" : depositAsset}
+        vaultName={vaultName}
+        ecosystem={ecosystem}
+        onComplete={() => {
+          setProgressModalOpen(false);
+          toast({
+            title: "Deposit Complete",
+            description: "Your deposit has been successfully processed.",
+          });
+        }}
+        onError={(error) => {
+          setProgressModalOpen(false);
+          setDepositError(error);
+          toast({
+            title: "Deposit Failed",
+            description: error,
+            variant: "destructive",
+          });
+        }}
       />
     </Dialog>
   );
