@@ -707,7 +707,9 @@ export default function DepositModal({
       <XamanSigningModal
         open={xamanSigningModalOpen}
         onOpenChange={setXamanSigningModalOpen}
-        payload={xamanPayload}
+        payloadUuid={xamanPayload?.uuid || null}
+        qrUrl={xamanPayload?.qrUrl || null}
+        deepLink={xamanPayload?.deepLink || null}
         onSuccess={() => {
           setXamanSigningModalOpen(false);
           onOpenChange(false);
