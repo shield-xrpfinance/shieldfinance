@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/collapsible";
 import { ethers } from "ethers";
 
+const COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc";
+
 interface WithdrawModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -111,12 +113,22 @@ export default function WithdrawModal({
       return;
     }
 
-    // Support both WalletConnect and injected providers (MetaMask)
-    const provider = walletConnectProvider || (window as any).ethereum;
-    if (!provider) {
+    if (!walletConnectProvider) {
       toast({
-        title: "Web3 Provider Required",
-        description: "Please connect via WalletConnect or MetaMask to sign transactions.",
+        title: "WalletConnect Required",
+        description: "Please connect via WalletConnect to sign transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate WalletConnect session has EVM namespace
+    const session = walletConnectProvider.session;
+    const evmAccounts = session?.namespaces?.eip155?.accounts || [];
+    if (!session || evmAccounts.length === 0) {
+      toast({
+        title: "EVM Session Not Found",
+        description: "Please disconnect and reconnect using an EVM wallet.",
         variant: "destructive",
       });
       return;
@@ -125,6 +137,28 @@ export default function WithdrawModal({
     setProcessingWithdrawal(true);
     
     try {
+      // Ensure wallet is on Coston2 network
+      console.log("Ensuring wallet is on Coston2 for withdrawal...");
+      try {
+        await walletConnectProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x72' }], // 114 in hex
+        });
+      } catch (switchError: any) {
+        if (switchError.code === 4902 || switchError.message?.includes('chain')) {
+          await walletConnectProvider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x72',
+              chainName: 'Flare Coston2 Testnet',
+              nativeCurrency: { name: 'Coston2 Flare', symbol: 'C2FLR', decimals: 18 },
+              rpcUrls: [COSTON2_RPC],
+              blockExplorerUrls: ['https://coston2-explorer.flare.network'],
+            }],
+          });
+        }
+      }
+
       // Get vault configuration from backend (read-only)
       const vaultInfoRes = await apiRequest("GET", "/api/vaults/fxrp/info");
       const vaultInfo = await vaultInfoRes.json();
@@ -135,21 +169,20 @@ export default function WithdrawModal({
 
       const { vaultAddress, fxrpTokenAddress } = vaultInfo;
       
-      // Create ethers provider and signer (works with both WalletConnect and MetaMask)
-      const ethersProvider = new ethers.BrowserProvider(provider);
-      const signer = await ethersProvider.getSigner();
+      // Use direct RPC provider for read operations
+      const rpcProvider = new ethers.JsonRpcProvider(COSTON2_RPC);
       
       // Import ABIs
       const { FIRELIGHT_VAULT_ABI } = await import("@shared/flare-abis");
       
-      // Create vault contract instance
-      const vault = new ethers.Contract(vaultAddress, FIRELIGHT_VAULT_ABI, signer);
+      // Create read-only vault contract instance
+      const vaultReadContract = new ethers.Contract(vaultAddress, FIRELIGHT_VAULT_ABI, rpcProvider);
       
       // Amount in wei (shXRP shares have 18 decimals)
       const sharesWei = ethers.parseUnits(amount, 18);
       
-      // Check shXRP balance
-      const shXRPBalance = await vault.balanceOf(evmAddress);
+      // Check shXRP balance using read-only RPC
+      const shXRPBalance = await vaultReadContract.balanceOf(evmAddress);
       if (shXRPBalance < sharesWei) {
         throw new Error(`Insufficient shXRP balance. You have ${ethers.formatUnits(shXRPBalance, 18)} shXRP`);
       }
@@ -160,21 +193,34 @@ export default function WithdrawModal({
         description: "Please sign the withdrawal transaction in your wallet.",
       });
       
-      // ERC-4626 redeem: burn shXRP shares to get FXRP back
-      const withdrawTx = await vault.redeem(
+      // Encode redeem function call: redeem(uint256 shares, address receiver, address owner)
+      const vaultIface = new ethers.Interface(FIRELIGHT_VAULT_ABI);
+      const redeemData = vaultIface.encodeFunctionData("redeem", [
         sharesWei,
         evmAddress,  // Receive FXRP to user's own address
         evmAddress   // Owner of shares is user's address
-      );
+      ]);
+      
+      // Send transaction via WalletConnect directly
+      console.log("Sending redeem transaction via WalletConnect...");
+      const withdrawTxHash = await walletConnectProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: evmAddress,
+          to: vaultAddress,
+          data: redeemData,
+        }],
+      });
+      console.log("Withdraw tx submitted:", withdrawTxHash);
       
       toast({
         title: "Withdrawal Submitted",
         description: "Waiting for confirmation...",
       });
       
-      // Wait for withdrawal confirmation
-      const withdrawReceipt = await withdrawTx.wait();
-      const withdrawTxHash = withdrawReceipt.hash;
+      // Wait for withdrawal confirmation using RPC provider
+      const withdrawReceipt = await rpcProvider.waitForTransaction(withdrawTxHash as string);
+      console.log("Withdraw confirmed:", withdrawReceipt?.hash);
       
       // Track withdrawal on backend (status only, no execution)
       const trackingRes = await apiRequest("POST", "/api/withdrawals/fxrp/track", {
@@ -202,17 +248,28 @@ export default function WithdrawModal({
       
       toast({
         title: "Withdrawal Successful",
-        description: `Your FXRP has been withdrawn. Transaction: ${withdrawTxHash.slice(0, 10)}...`,
+        description: `Your FXRP has been withdrawn. Transaction: ${(withdrawTxHash as string).slice(0, 10)}...`,
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("Flare withdrawal error:", error);
+      console.error("Error details:", { 
+        code: error.code, 
+        reason: error.reason, 
+        message: error.message 
+      });
       
       // Handle user rejection
-      if (error instanceof Error && error.message.includes("rejected")) {
+      if (error.message?.includes("rejected") || error.message?.includes("denied") || error.message?.includes("User rejected")) {
         toast({
           title: "Transaction Rejected",
           description: "You rejected the transaction in your wallet.",
+          variant: "destructive",
+        });
+      } else if (error.message?.includes("expired")) {
+        toast({
+          title: "Request Expired",
+          description: "Transaction request expired. Please try again.",
           variant: "destructive",
         });
       } else {

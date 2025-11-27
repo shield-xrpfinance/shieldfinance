@@ -28,6 +28,8 @@ import { calculateLotRounding, type LotRoundingResult, LOT_SIZE } from "@shared/
 import { apiRequest } from "@/lib/queryClient";
 import { ethers } from "ethers";
 
+const COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc";
+
 interface DepositModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -216,7 +218,7 @@ export default function DepositModal({
   };
 
   const handleFlareDeposit = async (amounts: { [key: string]: string }) => {
-    console.log("🟢 handleFlareDeposit called", { amounts, evmAddress, walletConnectProvider, hasMetaMask: !!(window as any).ethereum });
+    console.log("🟢 handleFlareDeposit called", { amounts, evmAddress, walletConnectProvider });
     if (!evmAddress) {
       console.log("❌ No EVM address");
       toast({
@@ -227,13 +229,29 @@ export default function DepositModal({
       return;
     }
 
-    // Support both WalletConnect and injected providers (MetaMask)
-    const provider = walletConnectProvider || (window as any).ethereum;
-    console.log("🔍 Provider check", { hasWalletConnect: !!walletConnectProvider, hasMetaMask: !!(window as any).ethereum, provider: !!provider });
-    if (!provider) {
+    if (!walletConnectProvider) {
       toast({
-        title: "Web3 Provider Required",
-        description: "Please connect via WalletConnect or MetaMask to sign transactions.",
+        title: "WalletConnect Required",
+        description: "Please connect via WalletConnect to sign transactions.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate WalletConnect session has EVM namespace
+    const session = walletConnectProvider.session;
+    const evmAccounts = session?.namespaces?.eip155?.accounts || [];
+    console.log("WalletConnect session validation:", { 
+      hasSession: !!session, 
+      evmAccounts,
+      allNamespaces: session?.namespaces ? Object.keys(session.namespaces) : []
+    });
+    
+    if (!session || evmAccounts.length === 0) {
+      console.error("No active EVM session in WalletConnect");
+      toast({
+        title: "EVM Session Not Found",
+        description: "Please disconnect and reconnect using an EVM wallet.",
         variant: "destructive",
       });
       return;
@@ -243,6 +261,32 @@ export default function DepositModal({
     console.log("⏳ Processing payment started");
     
     try {
+      // Ensure wallet is on Coston2 network
+      console.log("Ensuring wallet is on Coston2 for deposit...");
+      try {
+        await walletConnectProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x72' }], // 114 in hex
+        });
+        console.log("Chain switch successful");
+      } catch (switchError: any) {
+        console.log("Chain switch error:", switchError.code, switchError.message);
+        if (switchError.code === 4902 || switchError.message?.includes('chain')) {
+          console.log("Attempting to add Coston2 network to wallet...");
+          await walletConnectProvider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x72',
+              chainName: 'Flare Coston2 Testnet',
+              nativeCurrency: { name: 'Coston2 Flare', symbol: 'C2FLR', decimals: 18 },
+              rpcUrls: [COSTON2_RPC],
+              blockExplorerUrls: ['https://coston2-explorer.flare.network'],
+            }],
+          });
+          console.log("Network added successfully");
+        }
+      }
+
       // For Flare ecosystem, process FXRP deposit directly
       const amount = amounts.FXRP;
       console.log("💰 Amount:", amount);
@@ -263,100 +307,65 @@ export default function DepositModal({
       const { vaultAddress, fxrpTokenAddress } = vaultInfo;
       console.log("✅ Vault config:", { vaultAddress, fxrpTokenAddress });
       
-      // Create ethers provider and signer (works with both WalletConnect and MetaMask)
-      console.log("🔐 Creating ethers provider...");
-      
-      // For WalletConnect UniversalProvider, extract the EVM-specific provider
-      let evmProvider = provider;
-      if (walletConnectProvider) {
-        console.log("🔌 Extracting EVM provider from WalletConnect...");
-        console.log("WC session namespaces:", Object.keys((walletConnectProvider as any).session?.namespaces || {}));
-        
-        try {
-          // Check if WalletConnect has an EVM namespace active
-          const hasEIP155 = (walletConnectProvider as any).session?.namespaces?.eip155;
-          console.log("Has eip155 namespace?", !!hasEIP155);
-          
-          if (!hasEIP155) {
-            throw new Error("WalletConnect is not connected to Flare network. Your wallet only connected to XRPL. Please disconnect and reconnect with a wallet that supports Flare (EVM), such as MetaMask.");
-          }
-          
-          // UniversalProvider is multi-namespace - we need the Ethereum-specific provider
-          // Use getEthereumProvider() to get an EIP-1193 compliant provider for ethers.js
-          if (typeof (walletConnectProvider as any).getEthereumProvider === 'function') {
-            evmProvider = await (walletConnectProvider as any).getEthereumProvider();
-            console.log("✅ Got Ethereum provider from WalletConnect");
-          } else {
-            // Fallback: access the eip155 provider directly
-            const rpcProviders = (walletConnectProvider as any).engine?.rpcProviders;
-            console.log("RPC providers available:", rpcProviders ? "yes" : "no");
-            if (rpcProviders && rpcProviders.get) {
-              evmProvider = rpcProviders.get("eip155");
-              console.log("✅ Got eip155 provider from WalletConnect engine");
-            } else {
-              console.log("⚠️ No rpcProviders found, using original provider");
-            }
-          }
-          
-          // Verify we have a valid EVM provider
-          if (!evmProvider || evmProvider === provider) {
-            console.warn("⚠️ Could not extract EVM provider from WalletConnect");
-          }
-          
-          // Enable the EVM provider
-          if (evmProvider && typeof (evmProvider as any).enable === 'function') {
-            await (evmProvider as any).enable();
-            console.log("✅ EVM provider enabled");
-          }
-        } catch (error) {
-          console.error("Failed to extract EVM provider:", error);
-          throw error;
-        }
-      }
-      
-      const ethersProvider = new ethers.BrowserProvider(evmProvider);
-      console.log("✍️ Getting signer...");
-      
-      // Get signer with the EVM address to prevent ambiguity
-      const signer = await ethersProvider.getSigner(evmAddress);
-      const signerAddress = await signer.getAddress();
-      console.log("✅ Signer obtained:", signerAddress);
+      // Use direct RPC provider for read operations
+      const rpcProvider = new ethers.JsonRpcProvider(COSTON2_RPC);
       
       // Import ABIs
       const { ERC20_ABI, FIRELIGHT_VAULT_ABI } = await import("@shared/flare-abis");
       
-      // Create contract instances
-      const fxrpToken = new ethers.Contract(fxrpTokenAddress, ERC20_ABI, signer);
-      const vault = new ethers.Contract(vaultAddress, FIRELIGHT_VAULT_ABI, signer);
+      // Create read-only contract instances
+      const fxrpReadContract = new ethers.Contract(fxrpTokenAddress, ERC20_ABI, rpcProvider);
       
       // Amount in wei (FXRP has 6 decimals)
       const amountWei = ethers.parseUnits(amount, 6);
       
       // Step 1: Check and approve FXRP spending
-      const currentAllowance = await fxrpToken.allowance(evmAddress, vaultAddress);
+      console.log("Checking current allowance via RPC provider...");
+      const currentAllowance = await fxrpReadContract.allowance(evmAddress, vaultAddress);
+      console.log("Current allowance:", currentAllowance.toString());
       
-      let approveTxHash = null;
+      let approveTxHash: string | null = null;
       if (currentAllowance < amountWei) {
+        console.log("Approving FXRP tokens for vault...");
         toast({
           title: "Approval Required",
           description: "Please approve FXRP spending in your wallet.",
         });
         
-        // Prepare and send approve transaction
-        const approveTx = await fxrpToken.approve(vaultAddress, amountWei);
+        // Encode approve function call
+        const erc20Iface = new ethers.Interface(ERC20_ABI);
+        const approveData = erc20Iface.encodeFunctionData("approve", [vaultAddress, amountWei]);
+        
+        console.log("Sending approve transaction via WalletConnect...");
+        approveTxHash = await walletConnectProvider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: evmAddress,
+            to: fxrpTokenAddress,
+            data: approveData,
+          }],
+        }) as string;
+        console.log("Approval tx submitted:", approveTxHash);
+        
         toast({
           title: "Approval Submitted",
           description: "Waiting for confirmation...",
         });
         
-        // Wait for approval confirmation
-        const approveReceipt = await approveTx.wait();
-        approveTxHash = approveReceipt.hash;
+        // Wait for approval confirmation using RPC provider
+        const approveReceipt = await rpcProvider.waitForTransaction(approveTxHash);
+        console.log("Approval confirmed:", approveReceipt?.hash);
+        
+        // Re-verify allowance after approval
+        const newAllowance = await fxrpReadContract.allowance(evmAddress, vaultAddress);
+        console.log("New allowance after approval:", newAllowance.toString());
         
         toast({
           title: "Approval Confirmed",
           description: "FXRP spending approved successfully.",
         });
+      } else {
+        console.log("Sufficient allowance already exists, skipping approval");
       }
       
       // Step 2: Deposit FXRP to vault
@@ -365,16 +374,29 @@ export default function DepositModal({
         description: "Please sign the deposit transaction in your wallet.",
       });
       
-      const depositTx = await vault.deposit(amountWei, evmAddress); // Mint shares to user's own address
+      // Encode deposit function call: deposit(uint256 assets, address receiver)
+      const vaultIface = new ethers.Interface(FIRELIGHT_VAULT_ABI);
+      const depositData = vaultIface.encodeFunctionData("deposit", [amountWei, evmAddress]);
+      
+      console.log("Sending deposit transaction via WalletConnect...");
+      const depositTxHash = await walletConnectProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: evmAddress,
+          to: vaultAddress,
+          data: depositData,
+        }],
+      }) as string;
+      console.log("Deposit tx submitted:", depositTxHash);
       
       toast({
         title: "Deposit Submitted",
         description: "Waiting for confirmation...",
       });
       
-      // Wait for deposit confirmation
-      const depositReceipt = await depositTx.wait();
-      const depositTxHash = depositReceipt.hash;
+      // Wait for deposit confirmation using RPC provider
+      const depositReceipt = await rpcProvider.waitForTransaction(depositTxHash);
+      console.log("Deposit confirmed:", depositReceipt?.hash);
       
       // Step 3: Track deposit on backend (status only, no execution)
       const trackingRes = await apiRequest("POST", "/api/deposits/fxrp/track", {
@@ -408,18 +430,25 @@ export default function DepositModal({
         description: `Your FXRP has been deposited. Transaction: ${depositTxHash.slice(0, 10)}...`,
       });
       
-    } catch (error) {
+    } catch (error: any) {
       console.error("❌ Flare deposit error:", error);
       console.error("❌ Error details:", {
-        message: error instanceof Error ? error.message : String(error),
-        stack: error instanceof Error ? error.stack : undefined,
+        code: error.code,
+        reason: error.reason,
+        message: error.message,
       });
       
       // Handle user rejection
-      if (error instanceof Error && error.message.includes("rejected")) {
+      if (error.message?.includes("rejected") || error.message?.includes("denied") || error.message?.includes("User rejected")) {
         toast({
           title: "Transaction Rejected",
           description: "You rejected the transaction in your wallet.",
+          variant: "destructive",
+        });
+      } else if (error.message?.includes("expired")) {
+        toast({
+          title: "Request Expired",
+          description: "Transaction request expired. Please try again.",
           variant: "destructive",
         });
       } else {
