@@ -107,6 +107,9 @@ DATABASE_URL=postgresql://user:password@host:port/database
 # Session
 SESSION_SECRET=your-secure-session-secret
 
+# Admin API (Required for admin endpoints)
+ADMIN_API_KEY=your-secure-admin-api-key-min-32-chars
+
 # Wallet Integration (Optional - falls back to demo mode if not set)
 XUMM_API_KEY=your-xumm-api-key
 XUMM_API_SECRET=your-xumm-api-secret
@@ -220,8 +223,8 @@ Shield Finance is a **$10K fair launch** with complete smart contract infrastruc
 ### Quick Start
 
 For complete deployment instructions, see:
-- **📖 [SHIELD_DEPLOYMENT.md](docs/SHIELD_DEPLOYMENT.md)** - Step-by-step deployment guide with verification commands
-- **🔒 [SHIELD_SECURITY_CHECKLIST.md](docs/SHIELD_SECURITY_CHECKLIST.md)** - Pre-launch security checklist (100+ items)
+- **📖 [SHIELD_DEPLOYMENT.md](docs/protocol/SHIELD_DEPLOYMENT.md)** - Step-by-step deployment guide with verification commands
+- **🔒 [SHIELD_SECURITY_CHECKLIST.md](docs/protocol/SHIELD_SECURITY_CHECKLIST.md)** - Pre-launch security checklist (100+ items)
 
 ### Deployment Sequence (7 Steps)
 
@@ -277,7 +280,7 @@ DEPLOYER_PRIVATE_KEY=<key> MERKLE_ROOT=<root> \
 npx hardhat run scripts/verify-shield-deployment.ts --network coston2
 ```
 
-**See [SHIELD_DEPLOYMENT.md](docs/SHIELD_DEPLOYMENT.md) for complete guide with:**
+**See [SHIELD_DEPLOYMENT.md](docs/protocol/SHIELD_DEPLOYMENT.md) for complete guide with:**
 - Pre-deployment checklist
 - Detailed step-by-step instructions
 - Verification commands for each step
@@ -292,18 +295,18 @@ Before deploying to Flare mainnet:
 1. ✅ All 176 tests passing - verified
 2. ⏳ External audit - recommended (CertiK, Trail of Bits, OpenZeppelin)
 3. ⏳ Testnet deployment and validation
-4. ⏳ Security checklist review - see [SHIELD_SECURITY_CHECKLIST.md](docs/SHIELD_SECURITY_CHECKLIST.md)
+4. ⏳ Security checklist review - see [SHIELD_SECURITY_CHECKLIST.md](docs/protocol/SHIELD_SECURITY_CHECKLIST.md)
 5. ⏳ Community review period (1-2 weeks)
 
 ### Documentation
 
-- **[SHIELD_DEPLOYMENT.md](docs/SHIELD_DEPLOYMENT.md)** - Complete deployment guide (400+ lines)
+- **[SHIELD_DEPLOYMENT.md](docs/protocol/SHIELD_DEPLOYMENT.md)** - Complete deployment guide (400+ lines)
   - 7-step deployment sequence
   - Verification commands for each step
   - Emergency procedures
   - Cost estimates and troubleshooting
 
-- **[SHIELD_SECURITY_CHECKLIST.md](docs/SHIELD_SECURITY_CHECKLIST.md)** - Pre-launch security (100+ items)
+- **[SHIELD_SECURITY_CHECKLIST.md](docs/protocol/SHIELD_SECURITY_CHECKLIST.md)** - Pre-launch security (100+ items)
   - Smart contract security audit checklist
   - Deployment security requirements
   - Operational security guidelines
@@ -416,25 +419,28 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 │   ├── src/
 │   │   ├── components/    # Reusable UI components
 │   │   ├── pages/         # Page components
-│   │   ├── lib/           # Utilities and helpers
-│   │   └── hooks/         # Custom React hooks
+│   │   ├── hooks/         # Custom React hooks
+│   │   └── lib/           # Utilities and helpers
 │   └── index.html         # HTML entry point
 ├── server/                # Backend Express application
 │   ├── routes.ts          # API route definitions
+│   ├── services/          # Business logic (Bridge, Vault, XRPL)
 │   ├── storage.ts         # Database interface
 │   └── index.ts           # Server entry point
 ├── shared/                # Shared types and schemas
 │   └── schema.ts          # Database schema definitions
 ├── contracts/             # Solidity smart contracts
 │   ├── ShieldToken.sol    # ERC-20 governance token
-│   └── Shield XRP Vault.sol     # Liquid staking vault
+│   └── ShXRPVault.sol     # ERC-4626 liquid staking vault
 ├── scripts/               # Deployment scripts
-│   └── deploy-direct.ts   # Direct ethers.js deployment (Hardhat 3)
+│   └── deploy-shield-10m.ts  # Production deployment script
 ├── deployments/           # Deployment artifacts
 │   └── *.json             # Deployment info per network
-├── db/                    # Database migrations
+├── docs/                  # Documentation
+│   ├── protocol/          # Token & contract docs
+│   ├── integration/       # External service integrations
+│   └── platform/          # App architecture docs
 ├── hardhat.config.ts      # Hardhat configuration
-├── DEPLOYMENT_GUIDE.md    # Quick deployment reference
 └── design_guidelines.md   # UI/UX design system
 ```
 
@@ -449,11 +455,11 @@ npm run db:studio    # Open Drizzle Studio (database GUI)
 
 # Smart Contract Deployment
 npx hardhat compile                                              # Compile contracts
-tsx scripts/deploy-direct.ts                                     # Deploy to testnet/mainnet
+npx hardhat run scripts/deploy-shield-10m.ts --network coston2   # Deploy to testnet
 npx hardhat verify --network coston2 <ADDRESS> "<CONSTRUCTOR>"   # Verify contracts
 ```
 
-For detailed deployment instructions, see [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md).
+For detailed deployment instructions, see [docs/protocol/SHIELD_DEPLOYMENT.md](docs/protocol/SHIELD_DEPLOYMENT.md).
 
 ## 📊 Liquid Staking System
 
@@ -519,7 +525,7 @@ Shield Finance generates **real revenue** from vault fees, creating **deflationa
 
 ### Contract Addresses (Flare Mainnet)
 
-**Note:** Deploy contracts using `tsx scripts/deploy-direct.ts` before fair launch.
+**Note:** Deploy contracts using `npx hardhat run scripts/deploy-shield-10m.ts --network coston2` before fair launch.
 
 After deployment, update these addresses:
 - **SHIELD Token**: TBD
@@ -536,12 +542,12 @@ After deployment, update these addresses:
    # Set environment variables
    export DEPLOYER_PRIVATE_KEY="your-private-key"
    export TREASURY_ADDRESS="your-treasury-address"
-   export REVENUE_ROUTER_ADDRESS="deployed-router-address"
+   export MERKLE_ROOT="your-merkle-root"
    
-   # Deploy
-   tsx scripts/deploy-direct.ts
+   # Deploy all contracts
+   npx hardhat run scripts/deploy-shield-10m.ts --network flare
    ```
-   Deploys: ShieldToken.sol, RevenueRouter.sol, ShXRPVault.sol, MerkleDistributor.sol
+   Deploys: ShieldToken.sol, RevenueRouter.sol, StakingBoost.sol, ShXRPVault.sol, MerkleDistributor.sol
 
 2. **Generate Merkle Tree for Airdrop**
    ```bash
@@ -634,10 +640,13 @@ This project is proprietary software owned by Shield Yield Vaults Ltd.
 ## 📚 Documentation
 
 - **[README.md](README.md)** - Main project documentation (this file)
+- **[REVIEWERS.md](REVIEWERS.md)** - Research team navigation guide
 - **[replit.md](replit.md)** - Technical architecture and system design
 - **[DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md)** - Quick deployment command reference
+- **[docs/protocol/](docs/protocol/)** - Token & contract documentation
+- **[docs/integration/](docs/integration/)** - External service integrations (FAssets, Firelight)
+- **[docs/platform/](docs/platform/)** - App architecture docs
 - **[design_guidelines.md](design_guidelines.md)** - UI/UX design system
-- **[.env.example](.env.example)** - Environment variables reference
 
 ## 🔗 Links
 
