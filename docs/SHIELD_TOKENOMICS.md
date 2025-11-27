@@ -253,7 +253,7 @@ As Shield Finance grows, the flywheel accelerates: more users → more fees → 
 ## Links & Resources
 
 - **Website:** [shyield.finance](https://shyield.finance)
-- **App:** [app.shyield.finance](https://app.shyield.finance)
+- **App:** [shyield.finance/app](https://shyield.finance/app)
 - **Block Explorer:** View contracts on [Flare Explorer](https://flare-explorer.flare.network)
 - **SparkDEX:** Trade $SHIELD on [SparkDEX](https://sparkdex.ai)
 - **Discord:** Join our community
