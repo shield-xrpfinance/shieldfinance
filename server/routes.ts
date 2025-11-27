@@ -20,6 +20,7 @@ import path from "path";
 import { readinessRegistry } from "./services/ReadinessRegistry";
 import crypto from "crypto";
 import { generateFDCProof } from "./utils/fdc-proof";
+import { globalRateLimiter, strictRateLimiter } from "./middleware/rateLimiter";
 
 /**
  * Admin authentication middleware for operational endpoints
@@ -306,6 +307,9 @@ export async function registerRoutes(
     next();
   });
 
+  // Global rate limiting for all API routes (100 requests per minute per IP)
+  app.use("/api", globalRateLimiter);
+
   // Get all vaults
   app.get("/api/vaults", async (_req, res) => {
     try {
@@ -420,8 +424,8 @@ export async function registerRoutes(
     }
   });
 
-  // Track FXRP deposit (no execution, only tracking)
-  app.post("/api/deposits/fxrp/track", async (req, res) => {
+  // Track FXRP deposit (no execution, only tracking) (stricter rate limit: 20/min)
+  app.post("/api/deposits/fxrp/track", strictRateLimiter, async (req, res) => {
     try {
       const { 
         userAddress, 
@@ -514,8 +518,8 @@ export async function registerRoutes(
     }
   });
 
-  // Track FXRP withdrawal (no execution, only tracking)
-  app.post("/api/withdrawals/fxrp/track", async (req, res) => {
+  // Track FXRP withdrawal (no execution, only tracking) (stricter rate limit: 20/min)
+  app.post("/api/withdrawals/fxrp/track", strictRateLimiter, async (req, res) => {
     try {
       const { 
         userAddress, 
@@ -1243,8 +1247,8 @@ export async function registerRoutes(
     }
   });
 
-  // Create deposit via FAssets bridge
-  app.post("/api/deposits", async (req, res) => {
+  // Create deposit via FAssets bridge (stricter rate limit: 20/min)
+  app.post("/api/deposits", strictRateLimiter, async (req, res) => {
     try {
       const { walletAddress, vaultId, amount, network } = req.body;
       
@@ -1362,8 +1366,8 @@ export async function registerRoutes(
     }
   });
 
-  // FXRP Direct Deposit Endpoint (EVM users deposit FXRP, get shXRP immediately)
-  app.post("/api/deposits/fxrp", async (req, res) => {
+  // FXRP Direct Deposit Endpoint (EVM users deposit FXRP, get shXRP immediately) (stricter rate limit: 20/min)
+  app.post("/api/deposits/fxrp", strictRateLimiter, async (req, res) => {
     try {
       const { walletAddress, vaultId, amount, network } = req.body;
       
@@ -2354,8 +2358,8 @@ export async function registerRoutes(
     }
   }
 
-  // FXRP Direct Withdrawal Endpoint (EVM users withdraw shXRP, get FXRP back)
-  app.post("/api/withdrawals/fxrp", async (req, res) => {
+  // FXRP Direct Withdrawal Endpoint (EVM users withdraw shXRP, get FXRP back) (stricter rate limit: 20/min)
+  app.post("/api/withdrawals/fxrp", strictRateLimiter, async (req, res) => {
     try {
       const { positionId, shareAmount, walletAddress } = req.body;
 
@@ -2442,8 +2446,8 @@ export async function registerRoutes(
     }
   });
 
-  // Automated withdrawal flow: shXRP → FXRP → XRP (Async version)
-  app.post("/api/withdrawals", async (req, res) => {
+  // Automated withdrawal flow: shXRP → FXRP → XRP (Async version) (stricter rate limit: 20/min)
+  app.post("/api/withdrawals", strictRateLimiter, async (req, res) => {
     const { positionId, shareAmount, userAddress } = req.body;
 
     // Validate request
