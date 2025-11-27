@@ -1,6 +1,31 @@
 node_modules
-dist
-.DS_Store
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Hardhat build artifacts
+artifacts/
+cache/
+types/ethers-contracts/
+
+# Temporary files
+*.log
+*.png
+*.json.bak
+addresses-output.json
+test-output.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Build
+dist/
+build/
+*.tsbuildinfo
