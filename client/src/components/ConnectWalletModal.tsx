@@ -18,7 +18,7 @@ import UniversalProvider from "@walletconnect/universal-provider";
 import { WalletConnectModal } from "@walletconnect/modal";
 import { useAppKit, useAppKitAccount, useDisconnect } from "@reown/appkit/react";
 import { getTooltipContent } from "@/lib/tooltipCopy";
-import xamanLogo from "@assets/xaman-logo.svg";
+import xamanIcon from "@assets/xaman-wallet-icon.svg";
 import walletConnectLogo from "@assets/walletconnect-logo.svg";
 
 interface ConnectWalletModalProps {
@@ -351,8 +351,8 @@ export default function ConnectWalletModal({
               data-testid="button-connect-xaman"
             >
               <div className="flex items-center gap-3 w-full">
-                <div className="h-10 w-10 rounded-md flex items-center justify-center">
-                  <img src={xamanLogo} alt="Xaman" className="h-10 w-10" />
+                <div className="h-10 w-10 rounded-lg overflow-hidden flex items-center justify-center">
+                  <img src={xamanIcon} alt="Xaman" className="h-10 w-10" />
                 </div>
                 <div className="flex-1 text-left">
                   <div className="flex items-center gap-2 mb-1">
@@ -375,16 +375,16 @@ export default function ConnectWalletModal({
               data-testid="button-connect-walletconnect-xrpl"
             >
               <div className="flex items-center gap-3 w-full">
-                <div className="h-10 w-10 rounded-md flex items-center justify-center">
+                <div className="h-10 w-10 rounded-lg overflow-hidden flex items-center justify-center">
                   <img src={walletConnectLogo} alt="WalletConnect" className="h-10 w-10" />
                 </div>
                 <div className="flex-1 text-left">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="font-semibold">WalletConnect</p>
-                    <Badge variant="outline" className="text-xs">XRPL</Badge>
+                    <p className="font-semibold">Other XRPL Wallets</p>
+                    <Badge variant="outline" className="text-xs">WalletConnect</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Bifrost, GemWallet, or other XRPL wallets
+                    Bifrost, GemWallet, CrossMark & more
                   </p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -403,16 +403,16 @@ export default function ConnectWalletModal({
               data-testid="button-connect-walletconnect-evm"
             >
               <div className="flex items-center gap-3 w-full">
-                <div className="h-10 w-10 rounded-md flex items-center justify-center">
+                <div className="h-10 w-10 rounded-lg overflow-hidden flex items-center justify-center">
                   <img src={walletConnectLogo} alt="WalletConnect" className="h-10 w-10" />
                 </div>
                 <div className="flex-1 text-left">
                   <div className="flex items-center gap-2 mb-1">
-                    <p className="font-semibold">WalletConnect</p>
-                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary">EVM</Badge>
+                    <p className="font-semibold">EVM Wallets</p>
+                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary">Flare</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    MetaMask, Trust Wallet, or other EVM wallets
+                    MetaMask, Trust Wallet, Rabby & more
                   </p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
