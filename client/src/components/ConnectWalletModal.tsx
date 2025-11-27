@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,6 +20,15 @@ import { useAppKit, useAppKitAccount, useDisconnect } from "@reown/appkit/react"
 import { getTooltipContent } from "@/lib/tooltipCopy";
 import xamanIcon from "@assets/xaman-wallet-icon.svg";
 import walletConnectLogo from "@assets/walletconnect-logo.svg";
+import { Xumm } from "xumm";
+
+function isXApp(): boolean {
+  if (typeof window === "undefined") return false;
+  const urlParams = new URLSearchParams(window.location.search);
+  const hasXAppToken = !!urlParams.get("xAppToken");
+  const hasReactNativeWebView = typeof (window as any).ReactNativeWebView !== "undefined";
+  return hasXAppToken || hasReactNativeWebView;
+}
 
 interface ConnectWalletModalProps {
   open: boolean;
@@ -119,9 +128,46 @@ export default function ConnectWalletModal({
 
   const handleXamanConnect = async () => {
     setConnecting(true);
-    setStep("xaman-qr");
     
     try {
+      // Check if we're running inside Xaman xApp
+      if (isXApp()) {
+        console.log("Detected xApp environment - attempting direct connection");
+        
+        // Get the xAppToken from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const xAppToken = urlParams.get("xAppToken");
+        
+        // Initialize Xumm SDK with OTT for xApp context
+        const apiKey = import.meta.env.VITE_XUMM_API_KEY || "";
+        const xumm = new Xumm(apiKey, xAppToken || undefined);
+        
+        // Wait for SDK to be ready
+        await xumm.environment.ready;
+        
+        // In xApp context, user is already authenticated
+        const account = await xumm.user.account;
+        
+        if (account) {
+          connect(account, "xaman", null, undefined);
+          if (onConnect) {
+            onConnect(account, "xaman");
+          }
+          onOpenChange(false);
+          toast({
+            title: "Wallet Connected",
+            description: `Connected via xApp: ${account.slice(0, 8)}...${account.slice(-6)}`,
+          });
+          setConnecting(false);
+          return;
+        } else {
+          console.log("No account found in xApp context, falling back to QR");
+        }
+      }
+      
+      // Standard QR code flow for browser
+      setStep("xaman-qr");
+      
       const response = await fetch("/api/wallet/xaman/payload", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -310,7 +356,9 @@ export default function ConnectWalletModal({
 
   const handleOpenXaman = () => {
     if (xamanDeepLink) {
-      window.open(xamanDeepLink, "_blank");
+      // Use location.href for proper mobile deep link handling
+      // window.open doesn't work for deep links on mobile devices
+      window.location.href = xamanDeepLink;
     }
   };
 
