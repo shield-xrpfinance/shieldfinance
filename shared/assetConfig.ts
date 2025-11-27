@@ -61,6 +61,7 @@ const ASSET_CONFIG: Record<Network, Record<AssetKey, AssetMetadata>> = {
     SHIELD: {
       displayName: "Shield",
       symbol: "SHIELD",
+      address: "0x0000000000000000000000000000000000000000", // TODO: Update with mainnet SHIELD address
       decimals: 18,
     },
     shXRP: {
@@ -111,6 +112,7 @@ const ASSET_CONFIG: Record<Network, Record<AssetKey, AssetMetadata>> = {
     SHIELD: {
       displayName: "Test Shield",
       symbol: "SHIELD",
+      address: "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616", // SHIELD token on Coston2
       decimals: 18,
     },
     shXRP: {

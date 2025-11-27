@@ -151,8 +151,8 @@ export function useComprehensiveBalance() {
             })
           );
 
-          // 2. Fetch SHIELD token balance (ERC20)
-          const shieldAddress = import.meta.env.VITE_SHIELD_TOKEN_ADDRESS;
+          // 2. Fetch SHIELD token balance (ERC20) - using asset config
+          const shieldAddress = getAssetAddress("SHIELD", network as Network);
           if (shieldAddress && shieldAddress !== "0x0000000000000000000000000000000000000000") {
             promises.push(
               withTimeout(
@@ -160,9 +160,11 @@ export function useComprehensiveBalance() {
                   try {
                     const shieldContract = new ethers.Contract(shieldAddress, ERC20_ABI, provider);
                     const balanceWei = await shieldContract.balanceOf(evmAddress);
-                    results.shield = ethers.formatUnits(balanceWei, 18);
+                    const decimals = getAssetDecimals("SHIELD", network as Network);
+                    results.shield = ethers.formatUnits(balanceWei, decimals);
                   } catch (err: any) {
                     // Handle BAD_DATA error gracefully (contract not deployed or no balance)
+                    console.warn("Failed to fetch SHIELD balance:", err.message);
                     results.shield = "0";
                   }
                 })(),
