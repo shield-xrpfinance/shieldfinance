@@ -121,16 +121,33 @@ The Shield Finance tokenomics create a **positive feedback loop**:
 
 ## Token Distribution
 
-The initial $SHIELD supply was distributed as follows:
+The initial $SHIELD supply of **10,000,000 tokens** is allocated as follows:
 
-| Allocation | Amount | Percentage | Purpose |
-|------------|--------|------------|---------|
-| **Liquidity Pool** | 1,000,000 | 10% | SparkDEX trading liquidity (locked 12 months) |
-| **Community Airdrop** | 2,000,000 | 20% | Early supporters & community |
-| **Team & Development** | 7,000,000 | 70% | Team allocation, ecosystem growth, partnerships |
-| **Total** | **10,000,000** | **100%** | Fixed supply |
+### Treasury Allocations
 
-**Important:** The liquidity pool tokens are **locked for 12 months** via Team Finance, ensuring the team cannot remove liquidity.
+| Category | Percentage | Tokens | Purpose |
+|----------|------------|--------|---------|
+| **Team** | 9.00% | 900,000 | Core team allocation |
+| **Advisors** | 5.00% | 500,000 | Strategic advisors |
+| **Ecosystem Development** | 15.00% | 1,500,000 | Protocol development & growth |
+| **Airdrops** | 20.00% | 2,000,000 | Community distribution |
+| **Marketing** | 3.50% | 350,000 | Marketing & awareness |
+| **Ambassadors** | 2.50% | 250,000 | Community ambassadors |
+| **Ecosystem Rewards** | 0.00% | 0 | Reserved for future use |
+| **Staking Rewards** | 0.00% | 0 | Reserved for future use |
+| **Treasury** | 10.00% | 1,000,000 | Protocol treasury |
+| **Liquidity / MM / Exchanges** | 10.00% | 1,000,000 | Initial DEX liquidity |
+| **Future Liquidity Adds** | 25.00% | 2,500,000 | Future liquidity expansion |
+| **Total** | **100%** | **10,000,000** | Fixed supply |
+
+### Key Highlights
+
+- **35% for Liquidity** - Combined 10% initial + 25% future ensures deep trading liquidity
+- **20% Airdrop** - Largest single allocation goes directly to the community
+- **15% Ecosystem Development** - Significant budget for protocol growth
+- **9% Team** - Modest team allocation aligned with long-term success
+
+**Important:** Initial liquidity pool tokens are **locked for 12 months** via Team Finance, ensuring the team cannot remove liquidity.
 
 ---
 
