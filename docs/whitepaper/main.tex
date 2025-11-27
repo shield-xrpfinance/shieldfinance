@@ -457,6 +457,48 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
 }
 \end{center}
 
+\vspace{1.5em}
+
+\subsection*{Multi-Strategy Yield Optimization}
+
+\begin{multicols}{2}
+
+The ShXRPVault employs a \textbf{dynamic buffer model} to balance instant liquidity with maximum yield generation:
+
+\vspace{0.5em}
+
+\begin{itemize}
+    \item \textbf{10\% Buffer} --- Retained in vault for instant withdrawals
+    \item \textbf{90\% Deployed} --- Actively earning yield across strategies
+\end{itemize}
+
+\vspace{0.5em}
+
+When the buffer falls below threshold, the vault automatically rebalances by withdrawing from the lowest-priority strategy first.
+
+\columnbreak
+
+\textbf{Integrated Yield Strategies:}
+
+\vspace{0.3em}
+
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{} l l @{}}
+\toprule
+\textbf{Strategy} & \textbf{APY Range} \\
+\midrule
+Kinetic Lending & 5--7\% \\
+Firelight Liquid Staking & 8--12\% \\
+Native Flare Delegation & 6--9\% \\
+\bottomrule
+\end{tabular}
+
+\vspace{0.5em}
+
+{\small Strategy weights are adjusted weekly based on risk-adjusted returns and available liquidity.}
+
+\end{multicols}
+
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
