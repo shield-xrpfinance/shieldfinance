@@ -137,6 +137,9 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     event WithdrawnFromStrategy(address indexed strategy, uint256 amount, uint256 actualAmount);
     event StrategyReported(address indexed strategy, uint256 profit, uint256 loss, uint256 totalAssets);
     
+    // Boost Donation Events
+    event DonatedOnBehalf(address indexed user, uint256 fxrpAmount, uint256 sharesMinted);
+    
     modifier onlyOperator() {
         require(operators[msg.sender] || msg.sender == owner(), "Not authorized");
         _;
@@ -797,6 +800,64 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
      */
     function unpause() external onlyOwner {
         _unpause();
+    }
+    
+    // ========================================
+    // BOOST DONATION (SHIELD STAKING REWARDS)
+    // ========================================
+    
+    /**
+     * @dev Donate FXRP on behalf of a specific user by minting shXRP shares
+     * 
+     * This function enables the weighted yield boost mechanism:
+     * - StakingBoost contract calls this after distributeBoost()
+     * - FXRP is transferred from caller and converted to shXRP shares
+     * - Shares are minted ONLY to the specified user (not all holders)
+     * - This gives SHIELD stakers proportionally more yield
+     * 
+     * Security:
+     * - Only callable by StakingBoost contract
+     * - Uses SafeERC20 for secure transfers
+     * - NonReentrant to prevent reentrancy attacks
+     * 
+     * Flow:
+     * 1. StakingBoost calculates user's pro-rata FXRP reward
+     * 2. StakingBoost approves this vault for FXRP
+     * 3. StakingBoost calls donateOnBehalf(user, fxrpAmount)
+     * 4. Vault transfers FXRP from StakingBoost
+     * 5. Vault mints equivalent shXRP shares to user
+     * 6. User's shXRP balance increases (yield boost applied)
+     * 
+     * @param user Address to receive the minted shXRP shares
+     * @param fxrpAmount Amount of FXRP to donate (transferred from caller)
+     * @return sharesMinted Amount of shXRP shares minted to user
+     */
+    function donateOnBehalf(address user, uint256 fxrpAmount) 
+        external 
+        nonReentrant 
+        returns (uint256 sharesMinted) 
+    {
+        require(msg.sender == address(stakingBoost), "Only StakingBoost can donate");
+        require(user != address(0), "Invalid user address");
+        require(fxrpAmount > 0, "Amount must be positive");
+        
+        IERC20 fxrp = IERC20(asset());
+        
+        // Transfer FXRP from StakingBoost to vault
+        fxrp.safeTransferFrom(msg.sender, address(this), fxrpAmount);
+        
+        // Calculate shares to mint based on current exchange rate
+        // Using the standard ERC4626 conversion (no fees on donations)
+        sharesMinted = _convertToShares(fxrpAmount, Math.Rounding.Floor);
+        
+        // Mint shares directly to user
+        if (sharesMinted > 0) {
+            _mint(user, sharesMinted);
+        }
+        
+        emit DonatedOnBehalf(user, fxrpAmount, sharesMinted);
+        
+        return sharesMinted;
     }
     
     // ========================================
