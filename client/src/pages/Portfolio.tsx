@@ -598,7 +598,7 @@ export default function Portfolio() {
             description="You haven't staked any assets yet. Head to the Vaults page to start earning yield on your XRP, RLUSD, and USDC."
             actionButton={{
               label: "Browse Vaults",
-              onClick: () => navigate("/vaults"),
+              onClick: () => navigate("/app/vaults"),
               testId: "button-browse-vaults"
             }}
             testId="empty-state-positions"

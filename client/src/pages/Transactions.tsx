@@ -146,7 +146,7 @@ export default function Transactions() {
               description="Your transaction history will appear here once you start depositing into vaults, claiming rewards, or making withdrawals."
               actionButton={{
                 label: "Browse Vaults",
-                onClick: () => navigate("/vaults"),
+                onClick: () => navigate("/app/vaults"),
                 testId: "button-browse-vaults-transactions"
               }}
               testId="empty-state-transactions"
