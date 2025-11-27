@@ -3,16 +3,40 @@ import { createContext, useContext, useState, useEffect, useRef, ReactNode } fro
 import type UniversalProvider from "@walletconnect/universal-provider";
 import type { PaymentRequest } from "@shared/schema";
 import { Buffer } from "buffer";
+import { Xumm } from "xumm";
 
 // Store WalletConnect init promise globally to survive HMR reloads
 declare global {
   interface Window {
     _wcInitPromise?: Promise<any> | null;
+    _xummSdk?: Xumm | null;
   }
 }
 
 const getWCInitPromise = () => (window._wcInitPromise as Promise<any> | null | undefined) || null;
 const setWCInitPromise = (p: Promise<any> | null) => { window._wcInitPromise = p; };
+
+// Get or create Xumm SDK instance (singleton pattern)
+const getXummSdk = (): Xumm | null => {
+  if (window._xummSdk) return window._xummSdk;
+  
+  const apiKey = import.meta.env.VITE_XUMM_API_KEY;
+  if (!apiKey) {
+    console.warn('VITE_XUMM_API_KEY not configured');
+    return null;
+  }
+  
+  try {
+    // Initialize Xumm SDK with just the API key (for xApp context)
+    // The SDK will automatically detect if running as xApp and handle OTT
+    window._xummSdk = new Xumm(apiKey);
+    console.log('✅ Xumm SDK initialized for xApp detection');
+    return window._xummSdk;
+  } catch (error) {
+    console.error('Failed to initialize Xumm SDK:', error);
+    return null;
+  }
+};
 
 interface PaymentRequestResult {
   success: boolean;
@@ -71,75 +95,109 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     initRef.current = true;
 
     const restoreConnection = async () => {
-      // PRIORITY 1: Check for xApp OTT (One-Time Token) parameters
-      // This happens when app is loaded from Xaman as xApp (e.g., https://xumm.app/detect/xapp:...)
+      // PRIORITY 1: Check for xApp context using Xumm SDK
+      // The SDK automatically detects xApp environment and handles OTT
       const urlParams = new URLSearchParams(window.location.search);
+      const hasXAppToken = urlParams.has('xAppToken') || urlParams.has('ott') || urlParams.has('xApp');
+      const hasReactNativeWebView = typeof (window as any).ReactNativeWebView !== 'undefined';
       
-      const xAppToken = urlParams.get('xAppToken') || urlParams.get('ott') || urlParams.get('xApp');
-      
-      // Log all URL params and xApp detection status for debugging
       console.log('🔍 xApp Detection Check:', {
         fullUrl: window.location.href,
         search: window.location.search,
-        xAppToken: xAppToken ? `${xAppToken.substring(0, 8)}...` : null,
-        hasReactNativeWebView: typeof (window as any).ReactNativeWebView !== 'undefined',
-        allParams: Object.fromEntries(urlParams.entries()),
+        hasXAppToken,
+        hasReactNativeWebView,
+        userAgent: navigator.userAgent,
       });
       
-      if (xAppToken) {
-        console.log('🔐 Detected xApp context, attempting auto-connect with token:', xAppToken.substring(0, 8) + '...');
-        
+      // Try Xumm SDK-based xApp detection (works for xApps opened in Xaman)
+      const xummSdk = getXummSdk();
+      if (xummSdk) {
         try {
-          // Call backend to verify xApp session and get wallet address
-          // Uses xumm.xApp.get() on backend for proper OTT verification
-          console.log('📡 Calling /api/wallet/xaman/xapp-auth...');
+          console.log('🔐 Checking Xumm SDK for xApp context...');
+          
+          // The SDK's environment property tells us if we're in xApp context
+          const environment = await xummSdk.environment;
+          console.log('📱 Xumm environment:', environment);
+          
+          // Check if running as xApp - environment.jwt indicates xApp context
+          const isXappContext = !!(environment as any)?.jwt || hasXAppToken || hasReactNativeWebView;
+          if (isXappContext) {
+            console.log('✅ xApp context detected, getting user account...');
+            
+            // Get user account - the SDK handles OTT verification automatically
+            const account = await xummSdk.user.account;
+            console.log('👤 User account from Xumm SDK:', account);
+            
+            if (account) {
+              console.log('✅ xApp auto-connect successful! Account:', account);
+              setAddress(account);
+              setProvider('xaman');
+              localStorage.setItem('walletAddress', account);
+              localStorage.setItem('walletProvider', 'xaman');
+              
+              // Clean up URL by removing OTT parameters
+              urlParams.delete('xAppToken');
+              urlParams.delete('ott');
+              urlParams.delete('xApp');
+              const newUrl = urlParams.toString() 
+                ? `${window.location.pathname}?${urlParams.toString()}`
+                : window.location.pathname;
+              window.history.replaceState({}, '', newUrl);
+              
+              // Notify Xumm that xApp is ready (hides loader)
+              if (xummSdk.xapp?.ready) {
+                await xummSdk.xapp.ready();
+                console.log('📱 Notified Xaman that xApp is ready');
+              }
+              
+              setIsInitialized(true);
+              return;
+            }
+          }
+        } catch (error) {
+          console.error('❌ Xumm SDK xApp detection error:', error);
+          // Fall through to normal flow
+        }
+      }
+      
+      // Fallback: Try backend OTT verification if SDK approach didn't work
+      const xAppToken = urlParams.get('xAppToken') || urlParams.get('ott') || urlParams.get('xApp');
+      if (xAppToken) {
+        console.log('🔐 Fallback: trying backend OTT verification...');
+        try {
           const response = await fetch('/api/wallet/xaman/xapp-auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ xAppToken }),
           });
 
-          console.log('📥 xApp auth response status:', response.status);
-
-          if (!response.ok) {
-            const errorData = await response.json();
-            console.error('❌ xApp authentication failed:', errorData);
-            throw new Error(errorData.error || 'Failed to authenticate xApp session');
-          }
-
-          const data = await response.json();
-          console.log('📦 xApp auth response data:', { success: data.success, hasAccount: !!data.account, network: data.network });
-          
-          if (data.success && data.account) {
-            console.log('✅ xApp auto-connect successful! Account:', data.account);
-            // Auto-connect the wallet
-            setAddress(data.account);
-            setProvider('xaman');
-            localStorage.setItem('walletAddress', data.account);
-            localStorage.setItem('walletProvider', 'xaman');
-            
-            // Clean up URL by removing OTT parameter
-            urlParams.delete('xAppToken');
-            urlParams.delete('ott');
-            urlParams.delete('xApp');
-            const newUrl = urlParams.toString() 
-              ? `${window.location.pathname}?${urlParams.toString()}`
-              : window.location.pathname;
-            window.history.replaceState({}, '', newUrl);
-            
-            // Skip localStorage restoration since we just connected
-            setIsInitialized(true);
-            return;
-          } else {
-            console.error('❌ xApp OTT response missing address:', data);
+          if (response.ok) {
+            const data = await response.json();
+            if (data.success && data.account) {
+              console.log('✅ Backend xApp auth successful! Account:', data.account);
+              setAddress(data.account);
+              setProvider('xaman');
+              localStorage.setItem('walletAddress', data.account);
+              localStorage.setItem('walletProvider', 'xaman');
+              
+              urlParams.delete('xAppToken');
+              urlParams.delete('ott');
+              urlParams.delete('xApp');
+              const newUrl = urlParams.toString() 
+                ? `${window.location.pathname}?${urlParams.toString()}`
+                : window.location.pathname;
+              window.history.replaceState({}, '', newUrl);
+              
+              setIsInitialized(true);
+              return;
+            }
           }
         } catch (error) {
-          console.error('❌ xApp auto-signin error:', error);
-          // Fall through to normal localStorage restoration
+          console.error('❌ Backend xApp auth error:', error);
         }
-      } else {
-        console.log('ℹ️ No xAppToken detected in URL - using normal wallet flow');
       }
+      
+      console.log('ℹ️ No xApp context detected - using normal wallet flow');
 
       // PRIORITY 2: Restore from localStorage (normal flow)
       const savedAddress = localStorage.getItem("walletAddress");
