@@ -16,6 +16,7 @@ import { useNetwork } from "@/lib/networkContext";
 import { QRCodeSVG } from "qrcode.react";
 import UniversalProvider from "@walletconnect/universal-provider";
 import { WalletConnectModal } from "@walletconnect/modal";
+import { useAppKit, useAppKitAccount, useDisconnect } from "@reown/appkit/react";
 import { getTooltipContent } from "@/lib/tooltipCopy";
 import xamanLogo from "@assets/xaman-logo.svg";
 import walletConnectLogo from "@assets/walletconnect-logo.svg";
@@ -40,8 +41,18 @@ export default function ConnectWalletModal({
   const [xamanPayloadUuid, setXamanPayloadUuid] = useState<string | null>(null);
   const [xamanDeepLink, setXamanDeepLink] = useState<string>("");
   const { toast } = useToast();
-  const { connect, disconnect } = useWallet();
+  const { connect, disconnect, setDisconnectReown } = useWallet();
   const { isTestnet } = useNetwork();
+  
+  const { open: openReownModal } = useAppKit();
+  const { address: reownAddress, isConnected: isReownConnected } = useAppKitAccount();
+  const { disconnect: reownDisconnect } = useDisconnect();
+  
+  useEffect(() => {
+    if (reownDisconnect) {
+      setDisconnectReown(reownDisconnect);
+    }
+  }, [reownDisconnect, setDisconnectReown]);
   
   const wcModalRef = useRef<WalletConnectModal | null>(null);
   const wcProviderRef = useRef<UniversalProvider | null>(null);
@@ -55,6 +66,25 @@ export default function ConnectWalletModal({
       setConnecting(false);
     }
   }, [open]);
+
+  const prevConnectedRef = useRef(false);
+  
+  useEffect(() => {
+    if (isReownConnected && reownAddress && !prevConnectedRef.current) {
+      prevConnectedRef.current = true;
+      connect(null, "reown", reownAddress, undefined);
+      if (onConnect) {
+        onConnect(reownAddress, "walletconnect");
+      }
+      setConnecting(false);
+      toast({
+        title: "Wallet Connected",
+        description: `Connected to Flare (${isTestnet ? 'Coston2' : 'Mainnet'}): ${reownAddress.slice(0, 6)}...${reownAddress.slice(-4)}`,
+      });
+    } else if (!isReownConnected && prevConnectedRef.current) {
+      prevConnectedRef.current = false;
+    }
+  }, [isReownConnected, reownAddress, connect, onConnect, toast, isTestnet]);
 
   // Poll Xaman payload status
   useEffect(() => {
@@ -125,7 +155,28 @@ export default function ConnectWalletModal({
     }
   };
 
+  const handleEvmConnect = async () => {
+    setConnecting(true);
+    onOpenChange(false);
+    
+    try {
+      await openReownModal();
+    } catch (error) {
+      console.error("Reown AppKit error:", error);
+      setConnecting(false);
+      toast({
+        title: "Connection Failed",
+        description: "Failed to open wallet modal. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const handleWalletConnect = async (walletType: WalletType) => {
+    if (walletType === "evm") {
+      return handleEvmConnect();
+    }
+
     setConnecting(true);
     
     try {
@@ -137,11 +188,6 @@ export default function ConnectWalletModal({
 
       // XRPL WalletConnect chain IDs: mainnet = xrpl:0, testnet = xrpl:1
       const xrplChainId = isTestnet ? "xrpl:1" : "xrpl:0";
-      // Flare EVM chain IDs: mainnet = eip155:14, testnet (Coston2) = eip155:114
-      const evmChainId = isTestnet ? "eip155:114" : "eip155:14";
-
-      // Determine which chain to request based on wallet type
-      const targetChain = walletType === "evm" ? evmChainId : xrplChainId;
 
       // Check if there's an existing session - if so, disconnect it first
       if (wcProviderRef.current?.session) {
@@ -153,8 +199,8 @@ export default function ConnectWalletModal({
       // Initialize WalletConnect Modal with the selected chain
       wcModalRef.current = new WalletConnectModal({
         projectId,
-        chains: [targetChain],
-        themeMode: "light",
+        chains: [xrplChainId],
+        themeMode: "dark",
       });
 
       // Initialize Universal Provider
@@ -174,7 +220,7 @@ export default function ConnectWalletModal({
       provider.on("display_uri", (uri: string) => {
         wcModalRef.current?.openModal({ 
           uri,
-          standaloneChains: [targetChain]
+          standaloneChains: [xrplChainId]
         });
       });
 
@@ -189,80 +235,43 @@ export default function ConnectWalletModal({
       // Close our shadcn dialog - WalletConnect modal will handle the UI
       onOpenChange(false);
 
-      // Connect to the appropriate namespace based on wallet type
-      if (walletType === "evm") {
-        // EVM wallet connection (MetaMask, Trust Wallet, etc.)
-        await provider.connect({
-          namespaces: {
-            eip155: {
-              methods: [
-                "eth_sendTransaction",
-                "eth_signTransaction",
-                "eth_sign",
-                "personal_sign",
-                "eth_signTypedData",
-                "eth_signTypedData_v4",
-              ],
-              chains: [evmChainId],
-              events: ["chainChanged", "accountsChanged"],
-            },
+      // XRPL wallet connection (Bifrost, etc.)
+      await provider.connect({
+        namespaces: {
+          xrpl: {
+            methods: [
+              "xrpl_signTransaction",
+              "xrpl_submitTransaction",
+              "xrpl_getAccountInfo",
+            ],
+            chains: [xrplChainId],
+            events: ["chainChanged", "accountsChanged"],
           },
-        });
-      } else {
-        // XRPL wallet connection (Bifrost, etc.)
-        await provider.connect({
-          namespaces: {
-            xrpl: {
-              methods: [
-                "xrpl_signTransaction",
-                "xrpl_submitTransaction",
-                "xrpl_getAccountInfo",
-              ],
-              chains: [xrplChainId],
-              events: ["chainChanged", "accountsChanged"],
-            },
-          },
-        });
-      }
+        },
+      });
 
       // Close the WalletConnect modal
       wcModalRef.current.closeModal();
 
-      // Get connected accounts based on wallet type
+      // Get connected XRPL accounts
+      const xrplAccounts = provider.session?.namespaces?.xrpl?.accounts || [];
       let xrplAddress: string | null = null;
-      let evmAddress: string | null = null;
-
-      if (walletType === "evm") {
-        const evmAccounts = provider.session?.namespaces?.eip155?.accounts || [];
-        if (evmAccounts.length > 0) {
-          // Format: "eip155:114:0x..."
-          evmAddress = evmAccounts[0].split(":")[2];
-        }
-      } else {
-        const xrplAccounts = provider.session?.namespaces?.xrpl?.accounts || [];
-        if (xrplAccounts.length > 0) {
-          // Format: "xrpl:1:rAddress..."
-          xrplAddress = xrplAccounts[0].split(":")[2];
-        }
+      
+      if (xrplAccounts.length > 0) {
+        // Format: "xrpl:1:rAddress..."
+        xrplAddress = xrplAccounts[0].split(":")[2];
       }
       
       // Connect if address is available
-      if (xrplAddress || evmAddress) {
-        connect(xrplAddress, "walletconnect", evmAddress, provider);
+      if (xrplAddress) {
+        connect(xrplAddress, "walletconnect", null, provider);
         if (onConnect) {
-          onConnect(xrplAddress || evmAddress || "", "walletconnect");
+          onConnect(xrplAddress, "walletconnect");
         }
-        
-        const chainName = walletType === "evm" ? "Flare" : "XRPL";
-        const addressDisplay = evmAddress 
-          ? `${evmAddress.slice(0, 6)}...${evmAddress.slice(-4)}`
-          : xrplAddress
-          ? `${xrplAddress.slice(0, 8)}...${xrplAddress.slice(-6)}`
-          : "Unknown";
         
         toast({
           title: "Wallet Connected",
-          description: `Connected to ${chainName} (${isTestnet ? 'Testnet' : 'Mainnet'}): ${addressDisplay}`,
+          description: `Connected to XRPL (${isTestnet ? 'Testnet' : 'Mainnet'}): ${xrplAddress.slice(0, 8)}...${xrplAddress.slice(-6)}`,
         });
         
         setConnecting(false);

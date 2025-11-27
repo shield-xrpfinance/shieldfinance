@@ -13,6 +13,7 @@ import { NetworkSwitcher } from "@/components/NetworkSwitcher";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import { CurrencyProvider } from "@/lib/currencyContext";
+import { ReownProvider } from "@/lib/ReownProvider";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -154,29 +155,31 @@ function DashboardLayout() {
   };
 
   return (
-    <NetworkProvider>
-      <WalletProvider>
-        <EcosystemSync />
-        <WalletDisconnectHandler />
-        <CurrencyProvider>
-          <SidebarProvider style={style as React.CSSProperties}>
-            <div className="flex h-screen w-full">
-              <AppSidebar />
-              <div className="flex flex-col flex-1">
-                <Header />
-                <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
-                  <div className="max-w-7xl mx-auto">
-                    <TestnetBanner />
-                    <DashboardRouter />
-                  </div>
-                </main>
+    <ReownProvider>
+      <NetworkProvider>
+        <WalletProvider>
+          <EcosystemSync />
+          <WalletDisconnectHandler />
+          <CurrencyProvider>
+            <SidebarProvider style={style as React.CSSProperties}>
+              <div className="flex h-screen w-full">
+                <AppSidebar />
+                <div className="flex flex-col flex-1">
+                  <Header />
+                  <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
+                    <div className="max-w-7xl mx-auto">
+                      <TestnetBanner />
+                      <DashboardRouter />
+                    </div>
+                  </main>
+                </div>
               </div>
-            </div>
-            <MobileBottomNav />
-          </SidebarProvider>
-        </CurrencyProvider>
-      </WalletProvider>
-    </NetworkProvider>
+              <MobileBottomNav />
+            </SidebarProvider>
+          </CurrencyProvider>
+        </WalletProvider>
+      </NetworkProvider>
+    </ReownProvider>
   );
 }
 

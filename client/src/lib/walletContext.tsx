@@ -23,16 +23,20 @@ interface PaymentRequestResult {
   error?: string;
 }
 
+type WalletProviderType = "xaman" | "walletconnect" | "reown" | null;
+
 interface WalletContextType {
   address: string | null; // XRPL address (r...)
   evmAddress: string | null; // EVM address (0x...) for Flare Network
-  provider: "xaman" | "walletconnect" | null;
-  walletType: "xrpl" | "evm" | null; // Derived from provider for easy filtering
+  provider: WalletProviderType;
+  walletType: "xrpl" | "evm" | null; // Derived from connected addresses
   isConnected: boolean;
   isEvmConnected: boolean;
   walletConnectProvider: UniversalProvider | null;
-  connect: (xrplAddress: string | null, provider: "xaman" | "walletconnect", evmAddr?: string | null, wcProvider?: UniversalProvider) => void;
+  connect: (xrplAddress: string | null, provider: WalletProviderType, evmAddr?: string | null, wcProvider?: UniversalProvider) => void;
   disconnect: () => void;
+  disconnectReown?: () => void; // For Reown AppKit disconnect callback
+  setDisconnectReown: (fn: (() => void) | undefined) => void;
   requestPayment: (paymentRequest: PaymentRequest) => Promise<PaymentRequestResult>;
 }
 
@@ -46,14 +50,17 @@ const WalletContext = createContext<WalletContextType>({
   walletConnectProvider: null,
   connect: () => {},
   disconnect: async () => {},
+  disconnectReown: undefined,
+  setDisconnectReown: () => {},
   requestPayment: async () => ({ success: false, error: "Not initialized" }),
 });
 
 export function WalletProvider({ children }: { children: ReactNode }) {
   const [address, setAddress] = useState<string | null>(null); // XRPL address
   const [evmAddress, setEvmAddress] = useState<string | null>(null); // EVM address
-  const [provider, setProvider] = useState<"xaman" | "walletconnect" | null>(null);
+  const [provider, setProvider] = useState<WalletProviderType>(null);
   const [walletConnectProvider, setWalletConnectProvider] = useState<UniversalProvider | null>(null);
+  const [disconnectReownFn, setDisconnectReownFn] = useState<(() => void) | undefined>(undefined);
   const [isInitialized, setIsInitialized] = useState(false);
   const initRef = useRef(false);
 
@@ -121,10 +128,18 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       const savedEvmAddress = localStorage.getItem("evmAddress");
       const savedProvider = localStorage.getItem("walletProvider");
 
-      if (savedAddress && savedProvider) {
+      if ((savedAddress || savedEvmAddress) && savedProvider) {
         if (savedProvider === "xaman") {
           setAddress(savedAddress);
           setProvider(savedProvider);
+        } else if (savedProvider === "reown") {
+          if (savedEvmAddress) {
+            setEvmAddress(savedEvmAddress);
+            setProvider("reown");
+          } else {
+            localStorage.removeItem("evmAddress");
+            localStorage.removeItem("walletProvider");
+          }
         } else if (savedProvider === "walletconnect") {
           const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID;
           if (!projectId || projectId === "demo-project-id") {
@@ -235,7 +250,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     restoreConnection();
   }, []);
 
-  const connect = (xrplAddress: string | null, walletProvider: "xaman" | "walletconnect", evmAddr?: string | null, wcProvider?: UniversalProvider) => {
+  const connect = (xrplAddress: string | null, walletProvider: WalletProviderType, evmAddr?: string | null, wcProvider?: UniversalProvider) => {
     setAddress(xrplAddress);
     setEvmAddress(evmAddr || null);
     setProvider(walletProvider);
@@ -253,10 +268,25 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     } else {
       localStorage.removeItem("evmAddress");
     }
-    localStorage.setItem("walletProvider", walletProvider);
+    if (walletProvider) {
+      localStorage.setItem("walletProvider", walletProvider);
+    }
+  };
+
+  const setDisconnectReown = (fn: (() => void) | undefined) => {
+    setDisconnectReownFn(() => fn);
   };
 
   const disconnect = async () => {
+    // If Reown/AppKit, disconnect via the callback
+    if (provider === "reown" && disconnectReownFn) {
+      try {
+        disconnectReownFn();
+      } catch (error) {
+        console.error("Error disconnecting Reown:", error);
+      }
+    }
+    
     // If WalletConnect, disconnect the session properly
     if (walletConnectProvider) {
       try {
@@ -270,6 +300,7 @@ export function WalletProvider({ children }: { children: ReactNode }) {
     setEvmAddress(null);
     setProvider(null);
     setWalletConnectProvider(null);
+    setDisconnectReownFn(undefined);
     localStorage.removeItem("walletAddress");
     localStorage.removeItem("evmAddress");
     localStorage.removeItem("walletProvider");
@@ -442,11 +473,12 @@ export function WalletProvider({ children }: { children: ReactNode }) {
   const isConnected = address !== null || evmAddress !== null;
   const isEvmConnected = evmAddress !== null;
   
-  // Derive walletType from provider
-  const walletType = provider === "xaman" ? "xrpl" : provider === "walletconnect" ? "evm" : null;
+  // Derive walletType from connected addresses, not just provider
+  // EVM address takes priority for wallet type determination
+  const walletType = evmAddress !== null ? "evm" : address !== null ? "xrpl" : null;
 
   return (
-    <WalletContext.Provider value={{ address, evmAddress, provider, walletType, isConnected, isEvmConnected, walletConnectProvider, connect, disconnect, requestPayment }}>
+    <WalletContext.Provider value={{ address, evmAddress, provider, walletType, isConnected, isEvmConnected, walletConnectProvider, connect, disconnect, disconnectReown: disconnectReownFn, setDisconnectReown, requestPayment }}>
       {children}
     </WalletContext.Provider>
   );

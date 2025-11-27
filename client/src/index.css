@@ -324,3 +324,32 @@
 .animate-slide-up {
   animation: slide-up 500ms ease-in-out forwards;
 }
+
+/* Reown AppKit / WalletConnect Modal Dark Theme Overrides */
+w3m-modal {
+  --w3m-z-index: 9999 !important;
+}
+
+/* Ensure modal backdrop and content have dark theme */
+.w3m-overlay {
+  background-color: rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Dark theme for wallet connect modal buttons and backgrounds */
+w3m-router-container,
+w3m-modal-router,
+w3m-connect-view,
+w3m-wallet-list,
+w3m-connect-featured-widget,
+w3m-connect-wallet-button,
+w3m-all-wallets-widget {
+  --wui-color-bg-100: #000000 !important;
+  --wui-color-bg-125: #0a0a0a !important;
+  --wui-color-bg-150: #141414 !important;
+  --wui-color-bg-175: #1a1a1a !important;
+  --wui-color-bg-200: #1f1f1f !important;
+  --wui-color-fg-100: #ffffff !important;
+  --wui-color-fg-150: #e6e6e6 !important;
+  --wui-color-fg-200: #cccccc !important;
+  --wui-color-fg-275: #999999 !important;
+}
