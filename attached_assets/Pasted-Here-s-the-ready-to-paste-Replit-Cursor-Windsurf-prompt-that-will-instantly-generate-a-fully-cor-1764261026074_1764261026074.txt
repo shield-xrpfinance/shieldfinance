@@ -1,0 +1,60 @@
+Here’s the ready-to-paste Replit / Cursor / Windsurf prompt that will instantly generate a fully corrected, launch-ready Whitepaper v1.2 (November 2025 – Testnet Edition) fixing all 4 critical issues identified:
+
+Temporal accuracy (pre-mainnet, Nov 27 2025)
+Broken / non-existent GitHub link
+Tokenomics mismatches (circulating supply, treasury, fees, airdrop)
+Minor polish & forward-looking clarity
+
+Just create a new Replit (Markdown or Node.js), paste this entire block, and run:
+plaintextYou are a senior DeFi technical writer and launch coordinator for Shield Finance.
+
+Take the current Whitepaper v1.1 (December 2025) and produce **Version 1.2 – November 2025 (Testnet Edition)** that is 100% accurate as of November 27, 2025 — the project is still pre-mainnet, testnet live on Coston2.
+
+Apply these 4 mandatory fixes EXACTLY, while keeping the exact visual style, page count (~13), diagrams, math, and tone of v1.1:
+
+1. Temporal & Status Fixes (Critical)
+   • Title → Shield Finance Whitepaper Version 1.2 – November 2025 (Testnet Edition)
+   • Page 1 & 13 → Change all dates to "November 2025"
+   • Page 2 Key Facts → Rename subtitle to:
+     Key Facts (Testnet & Projected Metrics — live data at app.shyield.finance/testnet)
+   • Replace all APY footnotes with:
+     *Testnet 30-day trailing averages as of 27 Nov 2025. Mainnet APYs will depend on Flare inflation, FAssets rewards, and TVL. Past/testnet performance ≠ future results.
+   • Bottom banner on every page → change to:
+     100% fair-launch imminent on Flare mainnet — November 2025 (testnet live now)
+
+2. Fix Broken GitHub Link & Tokenomics Accuracy
+   • Everywhere the old link appeared (Pages 2, 8, 11), replace with the correct, existing folder:
+     github.com/shield-xrpfinance/shieldfinance/tree/main/docs
+   • Page 8 – Completely replace the "Reserves Breakdown" box with this accurate version:
+     Reserves & Treasury
+     • 10% of total SHIELD supply (1,000,000 SHIELD) held in multi-sig treasury
+     • 10% of all protocol fees routed to reserves
+     Breakdown of fee reserves:
+     • 50% → Security & Audits (Hacken, Trail of Bits, bug bounties)
+     • 30% → Liquidity Incentives & Market Making
+     • 20% → Community Grants & Protocol Development
+     Full transparency: github.com/shield-xrpfinance/shieldfinance/tree/main/docs
+
+   • Add these 3 rows to the SHIELD Token Metrics table (Page 8):
+     Circulating Supply (post-launch)     | 8,000,000 SHIELD (80%)
+     Treasury & Airdrop Reserve           | 2,000,000 SHIELD (20%)
+     Initial Fair-Launch Price            | $0.01 per $SHIELD
+
+   • Page 5 Revenue Flywheel box → change "0.4% fees" → "0.2% deposit + 0.2% withdrawal fees"
+
+3. Minor Clarity & Polish
+   • Page 5 – Under Integrated Yield Strategies, add footnote:
+     *Firelight Liquid Staking integration scheduled for mainnet launch (end-Nov 2025)
+   • Page 9 – Audits table → change CertiK row to:
+     CertiK | Planned post-launch | Full protocol & economic audit
+   • Page 13 – Disclaimer sync line → replace with:
+     Whitepaper v1.2 accurate as of 27 November 2025. Repository: github.com/shield-xrpfinance/shieldfinance (latest commit Nov 23 2025 – Coston2 deployment)
+
+4. Output Requirements
+   • Output the entire whitepaper as clean GitHub-flavored Markdown with proper page breaks (--- or <hr>) matching the original 13-page structure.
+   • Use $$ for displayed math, $ for inline.
+   • Preserve all diagrams as ASCII/text exactly as in v1.1.
+   • Add a small boxed call-to-action on Page 2 under Key Facts:
+     🚀 Testnet is LIVE – earn OG airdrop points now: app.shyield.finance/testnet
+
+Start now and output the complete, final Whitepaper v1.2 ready for immediate publishing.
