@@ -34,7 +34,7 @@ interface WalletContextType {
   isEvmConnected: boolean;
   walletConnectProvider: UniversalProvider | null;
   connect: (xrplAddress: string | null, provider: WalletProviderType, evmAddr?: string | null, wcProvider?: UniversalProvider) => void;
-  disconnect: () => void;
+  disconnect: () => Promise<void>;
   disconnectReown?: () => void; // For Reown AppKit disconnect callback
   setDisconnectReown: (fn: (() => void) | undefined) => void;
   requestPayment: (paymentRequest: PaymentRequest) => Promise<PaymentRequestResult>;
@@ -49,7 +49,7 @@ const WalletContext = createContext<WalletContextType>({
   isEvmConnected: false,
   walletConnectProvider: null,
   connect: () => {},
-  disconnect: async () => {},
+  disconnect: async () => Promise.resolve(),
   disconnectReown: undefined,
   setDisconnectReown: () => {},
   requestPayment: async () => ({ success: false, error: "Not initialized" }),
