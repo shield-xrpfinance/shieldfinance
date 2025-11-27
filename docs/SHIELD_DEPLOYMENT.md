@@ -520,9 +520,9 @@ npx hardhat run scripts/transfer-ownership.ts --network flare
 
 ## Support & Resources
 
-- **GitHub:** https://github.com/shield-finance/contracts
-- **Documentation:** https://docs.shield.finance
-- **Discord:** https://discord.gg/shieldfinance
+- **GitHub:** https://github.com/shyield-finance/contracts
+- **Documentation:** https://docs.shyield.finance
+- **Discord:** https://discord.gg/shyieldfinance
 - **Block Explorer:** https://flare-explorer.flare.network
 - **SparkDEX Docs:** https://docs.sparkdex.ai
 - **Team Finance:** https://www.team.finance

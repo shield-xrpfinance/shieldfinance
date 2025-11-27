@@ -351,7 +351,7 @@ Comprehensive security checklist for Shield Finance fair launch on Flare Network
 
 ### 7.1 Critical Vulnerabilities
 - [ ] **Vulnerability Response Plan:**
-  - Security contact email published (security@shield.finance)
+  - Security contact email published (security@shyield.finance)
   - Bug bounty program active (Immunefi recommended)
   - Vulnerability disclosure policy published
   - Emergency multisig prepared (if applicable)
