@@ -26,7 +26,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Separation of Concerns**: Monorepo structure (`/client`, `/server`, `/shared`).
 - **Smart Accounts**: ERC-4337 account abstraction using Etherspot Prime SDK for gasless transactions.
 - **Automated Systems**: FAssets bridge reconciliation (automated and manual recovery), automated withdrawal system (async processing, ENS resolution, XRPL payment detection, FDC proof generation), deposit watchdog, and withdrawal retry services.
-- **UX Enhancements**: Multi-step progress modals, deposit cancellation, real-time portfolio updates, wallet-type-aware vault filtering, and ecosystem-based network switching.
+- **UX Enhancements**: Multi-step progress modals, deposit cancellation, real-time portfolio updates with on-chain balance verification for FXRP vaults, wallet-type-aware vault filtering, ecosystem-based network switching, and consolidated position display with aggregated rewards.
 - **Security & Controls**: P0 vault controls (deposit limits, pausable emergency controls), minimum deposits, transparent accounting, double-mint prevention, idempotency, crash recovery, wallet-scoped transaction security, and FDC proof generation lock.
 - **Multi-Asset Swap**: Full swap feature with SparkDEX V3 router, real-time quotes, and approval flows.
 - **Analytics & Monitoring**: Revenue transparency analytics, testnet monitoring & alerting system (metrics collection, alerts for delays/failures, API endpoints, real-time dashboard, Prometheus endpoint).

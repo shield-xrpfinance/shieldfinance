@@ -20,6 +20,9 @@ import { useNetwork } from "@/lib/networkContext";
 import { useLocation } from "wouter";
 import { usePortfolioPolling } from "@/hooks/usePortfolioPolling";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { ethers } from "ethers";
+
+const COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc";
 
 export default function Portfolio() {
   const [withdrawModalOpen, setWithdrawModalOpen] = useState(false);
@@ -47,6 +50,42 @@ export default function Portfolio() {
   const { isConnected, address, evmAddress, walletType } = useWallet();
   const { network, ecosystem } = useNetwork();
   const [, navigate] = useLocation();
+  
+  // On-chain shXRP balance for accurate FXRP vault display - using react-query for proper caching/invalidation
+  const { data: onChainShxrpBalance = null } = useQuery<string | null>({
+    queryKey: ["/api/onchain/shxrp-balance", evmAddress],
+    queryFn: async () => {
+      if (!evmAddress) return null;
+      
+      try {
+        const vaultInfoRes = await fetch("/api/vaults/fxrp/info");
+        const vaultInfo = await vaultInfoRes.json();
+        
+        if (!vaultInfo.success || !vaultInfo.vaultAddress) {
+          return null;
+        }
+
+        const rpcProvider = new ethers.JsonRpcProvider(COSTON2_RPC);
+        const { ERC20_ABI } = await import("@shared/flare-abis");
+        const vaultContract = new ethers.Contract(vaultInfo.vaultAddress, ERC20_ABI, rpcProvider);
+        
+        const [balanceWei, decimals] = await Promise.all([
+          vaultContract.balanceOf(evmAddress),
+          vaultContract.decimals()
+        ]);
+        
+        const formattedBalance = ethers.formatUnits(balanceWei, decimals);
+        console.log("Portfolio on-chain shXRP balance:", formattedBalance);
+        return formattedBalance;
+      } catch (err) {
+        console.error("Failed to fetch on-chain shXRP balance:", err);
+        return null;
+      }
+    },
+    enabled: !!evmAddress && ecosystem === "flare",
+    staleTime: 30000, // 30 seconds
+    refetchOnWindowFocus: true,
+  });
 
   const { data: positions = [], isLoading: positionsLoading } = useQuery<Position[]>({
     queryKey: ["/api/positions", address, evmAddress],
@@ -97,17 +136,23 @@ export default function Portfolio() {
 
   const getVaultById = (vaultId: string) => vaults.find((v) => v.id === vaultId);
 
-  // Filter positions based on selected ecosystem
+  // Filter and consolidate positions based on selected ecosystem
   const filteredPositions = useMemo(() => {
     // Don't filter if vaults data is still loading or empty
     // (wait for vault metadata to be available before filtering)
     if (!vaults || vaults.length === 0) return positions;
     
-    return positions.filter(position => {
+    let filtered = positions.filter(position => {
       const vault = vaults.find(v => v.id === position.vaultId);
       if (!vault) return false; // Still hide if vault not found after loading
       
       const vaultAsset = vault.asset || "XRP";
+      
+      // For FXRP vaults, hide position if on-chain balance is 0 (fully withdrawn)
+      if (vaultAsset === "FXRP" && onChainShxrpBalance !== null) {
+        const balance = parseFloat(onChainShxrpBalance);
+        if (balance <= 0) return false;
+      }
       
       if (ecosystem === "xrpl") {
         return vaultAsset === "XRP";
@@ -116,12 +161,74 @@ export default function Portfolio() {
       }
       return false;
     });
-  }, [positions, ecosystem, vaults]);
+    
+    // For FXRP vaults with on-chain balance, consolidate multiple positions into one
+    // to prevent double-counting (since we use a single on-chain balance for all)
+    if (ecosystem === "flare" && onChainShxrpBalance !== null) {
+      const fxrpPositions = filtered.filter(pos => {
+        const vault = vaults.find(v => v.id === pos.vaultId);
+        return vault?.asset === "FXRP";
+      });
+      const nonFxrpPositions = filtered.filter(pos => {
+        const vault = vaults.find(v => v.id === pos.vaultId);
+        return vault?.asset !== "FXRP";
+      });
+      
+      // If there are multiple FXRP positions, use only the first one (oldest)
+      // The on-chain balance represents the consolidated total
+      if (fxrpPositions.length > 0) {
+        filtered = [...nonFxrpPositions, fxrpPositions[0]];
+      }
+    }
+    
+    return filtered;
+  }, [positions, ecosystem, vaults, onChainShxrpBalance]);
+
+  // For FXRP positions, aggregate rewards from all database records when using on-chain balance
+  const aggregatedFxrpRewards = useMemo(() => {
+    if (ecosystem !== "flare" || onChainShxrpBalance === null) return 0;
+    
+    return positions.reduce((sum, pos) => {
+      const vault = vaults.find(v => v.id === pos.vaultId);
+      if (vault?.asset === "FXRP") {
+        return sum + parseFloat(pos.rewards || "0");
+      }
+      return sum;
+    }, 0);
+  }, [positions, vaults, ecosystem, onChainShxrpBalance]);
+
+  // Get earliest deposit date for consolidated FXRP position
+  const earliestFxrpDepositDate = useMemo(() => {
+    if (ecosystem !== "flare" || onChainShxrpBalance === null) return null;
+    
+    const fxrpPositions = positions.filter(pos => {
+      const vault = vaults.find(v => v.id === pos.vaultId);
+      return vault?.asset === "FXRP";
+    });
+    
+    if (fxrpPositions.length === 0) return null;
+    
+    return fxrpPositions.reduce((earliest, pos) => {
+      const posDate = new Date(pos.createdAt);
+      return posDate < earliest ? posDate : earliest;
+    }, new Date(fxrpPositions[0].createdAt));
+  }, [positions, vaults, ecosystem, onChainShxrpBalance]);
 
   const formattedPositions = filteredPositions.map((pos) => {
     const vault = getVaultById(pos.vaultId);
-    const amount = parseFloat(pos.amount);
-    const rewards = parseFloat(pos.rewards);
+    const isFxrpVault = vault?.asset === "FXRP";
+    
+    // For FXRP vaults, use on-chain shXRP balance and aggregated rewards
+    const amount = isFxrpVault && onChainShxrpBalance !== null 
+      ? parseFloat(onChainShxrpBalance)
+      : parseFloat(pos.amount);
+    const rewards = isFxrpVault && onChainShxrpBalance !== null
+      ? aggregatedFxrpRewards
+      : parseFloat(pos.rewards);
+    const depositDate = isFxrpVault && earliestFxrpDepositDate !== null
+      ? earliestFxrpDepositDate
+      : new Date(pos.createdAt);
+    
     return {
       id: pos.id,
       vaultId: pos.vaultId,
@@ -131,7 +238,7 @@ export default function Portfolio() {
       currentValue: (amount + rewards).toLocaleString(),
       rewards: rewards.toLocaleString(),
       apy: vault?.apy || "0",
-      depositDate: new Date(pos.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      depositDate: depositDate.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     };
   });
 
@@ -153,7 +260,8 @@ export default function Portfolio() {
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/positions", address] });
+      queryClient.invalidateQueries({ queryKey: ["/api/positions", address, evmAddress] });
+      queryClient.invalidateQueries({ queryKey: ["/api/onchain/shxrp-balance", evmAddress] });
     },
   });
 
@@ -208,9 +316,10 @@ export default function Portfolio() {
       }
 
       // Invalidate queries to trigger UI refresh
-      queryClient.invalidateQueries({ queryKey: ['/api/positions', address] });
-      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', address] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', address] });
+      queryClient.invalidateQueries({ queryKey: ['/api/positions', address, evmAddress] });
+      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', address, evmAddress] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', address, evmAddress] });
+      queryClient.invalidateQueries({ queryKey: ['/api/onchain/shxrp-balance', evmAddress] });
 
       toast({
         title: "Claim Request Submitted",
@@ -257,9 +366,10 @@ export default function Portfolio() {
       }
 
       // Invalidate queries to trigger UI refresh
-      queryClient.invalidateQueries({ queryKey: ['/api/positions', walletAddr] });
-      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', walletAddr] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', walletAddr] });
+      queryClient.invalidateQueries({ queryKey: ['/api/positions', address, evmAddress] });
+      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', address, evmAddress] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', address, evmAddress] });
+      queryClient.invalidateQueries({ queryKey: ['/api/onchain/shxrp-balance', evmAddress] });
 
       // Close withdraw modal
       setWithdrawModalOpen(false);
@@ -394,8 +504,9 @@ export default function Portfolio() {
         // Stop polling if complete or failed
         if (data.status === 'completed' || data.status === 'failed') {
           // Invalidate queries to refresh data
-          queryClient.invalidateQueries({ queryKey: ["/api/positions", address] });
-          queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/wallet", address] });
+          queryClient.invalidateQueries({ queryKey: ["/api/positions", address, evmAddress] });
+          queryClient.invalidateQueries({ queryKey: ["/api/withdrawals/wallet", address, evmAddress] });
+          queryClient.invalidateQueries({ queryKey: ["/api/onchain/shxrp-balance", evmAddress] });
           
           // Show success toast for completion
           if (data.status === 'completed') {
@@ -441,10 +552,11 @@ export default function Portfolio() {
   // Handle withdrawal progress modal dismissal
   const handleWithdrawProgressDismiss = () => {
     // If withdrawal completed successfully, invalidate positions to refresh UI
-    if (withdrawProgressStep === 'complete' && address) {
-      queryClient.invalidateQueries({ queryKey: ['/api/positions', address] });
-      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', address] });
-      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', address] });
+    if (withdrawProgressStep === 'complete' && (address || evmAddress)) {
+      queryClient.invalidateQueries({ queryKey: ['/api/positions', address, evmAddress] });
+      queryClient.invalidateQueries({ queryKey: ['/api/withdrawals/wallet', address, evmAddress] });
+      queryClient.invalidateQueries({ queryKey: ['/api/transactions/wallet', address, evmAddress] });
+      queryClient.invalidateQueries({ queryKey: ['/api/onchain/shxrp-balance', evmAddress] });
     }
     
     setWithdrawProgressModalOpen(false);
