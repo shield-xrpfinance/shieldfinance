@@ -79,6 +79,8 @@ export default function Staking() {
   }, [unlockTime, isLocked, refetchStakeInfo]);
 
   const handleStake = useCallback(async () => {
+    console.log("handleStake called", { stakeAmount, isEvmConnected, hasProvider: !!walletConnectProvider, evmAddress });
+    
     if (!stakeAmount || parseFloat(stakeAmount) <= 0) {
       toast({
         title: "Invalid Amount",
@@ -89,9 +91,10 @@ export default function Staking() {
     }
 
     if (!isEvmConnected || !walletConnectProvider) {
+      console.log("Wallet check failed:", { isEvmConnected, hasProvider: !!walletConnectProvider });
       toast({
-        title: "Wallet Not Connected",
-        description: "Please connect an EVM wallet (like MetaMask) via WalletConnect to stake",
+        title: "EVM Wallet Required",
+        description: "Please connect an EVM wallet (MetaMask, Trust Wallet, etc.) via WalletConnect. SHIELD staking is on the Flare EVM chain.",
         variant: "destructive",
       });
       return;
