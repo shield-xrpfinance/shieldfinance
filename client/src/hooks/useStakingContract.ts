@@ -167,20 +167,9 @@ export function useStakingContract(): StakingContractHook {
     setTxHash(null);
 
     try {
-      console.log("Getting signer from WalletConnect provider...");
-      
-      const signer = await getSigner();
-      const signerAddress = await signer.getAddress();
-      console.log("Signer obtained:", signerAddress);
-      
-      // IMPORTANT: Use direct RPC provider for read operations to avoid WalletConnect relay issues
-      // WalletConnect's BrowserProvider routes eth_call through the relay which doesn't work for some wallets
+      // Use direct RPC provider for read operations
       const rpcProvider = getProvider();
       const shieldReadContract = new ethers.Contract(SHIELD_TOKEN_ADDRESS, ERC20_ABI, rpcProvider);
-      
-      // Use signer-connected contracts only for write operations
-      const shieldWriteContract = new ethers.Contract(SHIELD_TOKEN_ADDRESS, ERC20_ABI, signer);
-      const stakingWriteContract = new ethers.Contract(STAKING_BOOST_ADDRESS, STAKING_BOOST_ABI, signer);
       
       const amountWei = ethers.parseEther(amount);
       console.log("Amount in wei:", amountWei.toString());
@@ -193,23 +182,25 @@ export function useStakingContract(): StakingContractHook {
         console.log("Approving SHIELD tokens for staking...");
         console.log("Shield contract address:", SHIELD_TOKEN_ADDRESS);
         console.log("Staking boost address:", STAKING_BOOST_ADDRESS);
-        console.log("Sending approve transaction...");
         
-        try {
-          const approveTx = await shieldWriteContract.approve(STAKING_BOOST_ADDRESS, amountWei);
-          console.log("Approval tx submitted:", approveTx.hash);
-          await approveTx.wait();
-          console.log("Approval confirmed");
-        } catch (approveErr: any) {
-          console.error("Approve transaction failed:", approveErr);
-          console.error("Approve error details:", {
-            code: approveErr.code,
-            message: approveErr.message,
-            reason: approveErr.reason,
-            data: approveErr.data
-          });
-          throw approveErr;
-        }
+        // Use direct WalletConnect request instead of ethers.js to ensure transaction reaches wallet
+        const iface = new ethers.Interface(ERC20_ABI);
+        const approveData = iface.encodeFunctionData("approve", [STAKING_BOOST_ADDRESS, amountWei]);
+        
+        console.log("Sending approve transaction via WalletConnect request...");
+        const approveTxHash = await walletConnectProvider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: evmAddress,
+            to: SHIELD_TOKEN_ADDRESS,
+            data: approveData,
+          }],
+        });
+        console.log("Approval tx submitted:", approveTxHash);
+        
+        // Wait for confirmation using RPC provider
+        const receipt = await rpcProvider.waitForTransaction(approveTxHash as string);
+        console.log("Approval confirmed:", receipt?.hash);
         
         // Re-verify allowance after approval using RPC provider
         const newAllowance = await shieldReadContract.allowance(evmAddress, STAKING_BOOST_ADDRESS);
@@ -219,14 +210,29 @@ export function useStakingContract(): StakingContractHook {
       }
 
       console.log("Staking SHIELD tokens...");
-      const stakeTx = await stakingWriteContract.stake(amountWei);
-      console.log("Stake tx submitted:", stakeTx.hash);
-      await stakeTx.wait();
-      console.log("Stake confirmed");
+      
+      // Use direct WalletConnect request for stake transaction too
+      const stakingIface = new ethers.Interface(STAKING_BOOST_ABI);
+      const stakeData = stakingIface.encodeFunctionData("stake", [amountWei]);
+      
+      console.log("Sending stake transaction via WalletConnect request...");
+      const stakeTxHash = await walletConnectProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: evmAddress,
+          to: STAKING_BOOST_ADDRESS,
+          data: stakeData,
+        }],
+      });
+      console.log("Stake tx submitted:", stakeTxHash);
+      
+      // Wait for confirmation
+      const stakeReceipt = await rpcProvider.waitForTransaction(stakeTxHash as string);
+      console.log("Stake confirmed:", stakeReceipt?.hash);
 
-      setTxHash(stakeTx.hash);
+      setTxHash(stakeTxHash as string);
       setIsLoading(false);
-      return { success: true, txHash: stakeTx.hash };
+      return { success: true, txHash: stakeTxHash as string };
     } catch (err: any) {
       const errorMessage = err.reason || err.message || "Failed to stake";
       console.error("Staking error:", err);
@@ -240,7 +246,7 @@ export function useStakingContract(): StakingContractHook {
       setIsLoading(false);
       return { success: false, error: errorMessage };
     }
-  }, [evmAddress, walletConnectProvider, getSigner, getProvider]);
+  }, [evmAddress, walletConnectProvider, getProvider]);
 
   const withdraw = useCallback(async (amount: string): Promise<{ success: boolean; txHash?: string; error?: string }> => {
     if (!evmAddress || !walletConnectProvider) {
@@ -252,21 +258,31 @@ export function useStakingContract(): StakingContractHook {
     setTxHash(null);
 
     try {
-      const signer = await getSigner();
-      // Use signer-connected contract for write operations
-      const stakingWriteContract = new ethers.Contract(STAKING_BOOST_ADDRESS, STAKING_BOOST_ABI, signer);
-      
+      const rpcProvider = getProvider();
       const amountWei = ethers.parseEther(amount);
 
-      console.log("Withdrawing staked SHIELD tokens...");
-      const withdrawTx = await stakingWriteContract.withdraw(amountWei);
-      console.log("Withdraw tx submitted:", withdrawTx.hash);
-      await withdrawTx.wait();
-      console.log("Withdraw confirmed");
+      // Use direct WalletConnect request for withdraw transaction
+      const stakingIface = new ethers.Interface(STAKING_BOOST_ABI);
+      const withdrawData = stakingIface.encodeFunctionData("withdraw", [amountWei]);
 
-      setTxHash(withdrawTx.hash);
+      console.log("Withdrawing staked SHIELD tokens via WalletConnect...");
+      const withdrawTxHash = await walletConnectProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: evmAddress,
+          to: STAKING_BOOST_ADDRESS,
+          data: withdrawData,
+        }],
+      });
+      console.log("Withdraw tx submitted:", withdrawTxHash);
+      
+      // Wait for confirmation
+      const receipt = await rpcProvider.waitForTransaction(withdrawTxHash as string);
+      console.log("Withdraw confirmed:", receipt?.hash);
+
+      setTxHash(withdrawTxHash as string);
       setIsLoading(false);
-      return { success: true, txHash: withdrawTx.hash };
+      return { success: true, txHash: withdrawTxHash as string };
     } catch (err: any) {
       let errorMessage = err.reason || err.message || "Failed to withdraw";
       
@@ -281,7 +297,7 @@ export function useStakingContract(): StakingContractHook {
       setIsLoading(false);
       return { success: false, error: errorMessage };
     }
-  }, [evmAddress, walletConnectProvider, getSigner]);
+  }, [evmAddress, walletConnectProvider, getProvider]);
 
   return {
     isLoading,
