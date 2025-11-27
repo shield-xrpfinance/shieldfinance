@@ -1,16 +1,18 @@
 import { expect } from "chai";
 import { network } from "hardhat";
-import type { StakingBoost, ShieldToken } from "../types/ethers-contracts";
+import type { StakingBoost, ShieldToken, MockERC20 } from "../types/ethers-contracts";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 describe("StakingBoost", function () {
   let ethers: any;
   let stakingBoost: StakingBoost;
   let shieldToken: ShieldToken;
+  let fxrpToken: MockERC20;
   let owner: SignerWithAddress;
   let user1: SignerWithAddress;
   let user2: SignerWithAddress;
   let user3: SignerWithAddress;
+  let revenueRouter: SignerWithAddress;
 
   const LOCK_PERIOD = 30 * 24 * 60 * 60; // 30 days in seconds
   let BOOST_PER_TOKENS: bigint;
@@ -22,16 +24,26 @@ describe("StakingBoost", function () {
   });
 
   beforeEach(async function () {
-    [owner, user1, user2, user3] = await ethers.getSigners();
+    [owner, user1, user2, user3, revenueRouter] = await ethers.getSigners();
 
     // Deploy ShieldToken
     const ShieldTokenFactory = await ethers.getContractFactory("ShieldToken");
     shieldToken = await ShieldTokenFactory.deploy();
     await shieldToken.waitForDeployment();
 
-    // Deploy StakingBoost
+    // Deploy MockERC20 for FXRP
+    const MockERC20Factory = await ethers.getContractFactory("MockERC20");
+    fxrpToken = await MockERC20Factory.deploy("Flare XRP", "FXRP", 6);
+    await fxrpToken.waitForDeployment();
+
+    // Deploy StakingBoost with all required params
     const StakingBoostFactory = await ethers.getContractFactory("StakingBoost");
-    stakingBoost = await StakingBoostFactory.deploy(await shieldToken.getAddress());
+    stakingBoost = await StakingBoostFactory.deploy(
+      await shieldToken.getAddress(),
+      await fxrpToken.getAddress(),
+      ethers.ZeroAddress, // Vault address (not needed for basic tests)
+      revenueRouter.address // Revenue router
+    );
     await stakingBoost.waitForDeployment();
 
     // Distribute SHIELD tokens to users for testing
@@ -57,12 +69,30 @@ describe("StakingBoost", function () {
       expect(await stakingBoost.totalStaked()).to.equal(0);
     });
 
-    it("Should fail deployment with zero address token", async function () {
+    it("Should fail deployment with zero address SHIELD token", async function () {
       const StakingBoostFactory = await ethers.getContractFactory("StakingBoost");
       
       await expect(
-        StakingBoostFactory.deploy(ethers.ZeroAddress)
-      ).to.be.revertedWith("Invalid token address");
+        StakingBoostFactory.deploy(
+          ethers.ZeroAddress,
+          await fxrpToken.getAddress(),
+          ethers.ZeroAddress,
+          revenueRouter.address
+        )
+      ).to.be.revertedWith("Invalid SHIELD address");
+    });
+
+    it("Should fail deployment with zero address FXRP token", async function () {
+      const StakingBoostFactory = await ethers.getContractFactory("StakingBoost");
+      
+      await expect(
+        StakingBoostFactory.deploy(
+          await shieldToken.getAddress(),
+          ethers.ZeroAddress,
+          ethers.ZeroAddress,
+          revenueRouter.address
+        )
+      ).to.be.revertedWith("Invalid FXRP address");
     });
   });
 
@@ -212,40 +242,44 @@ describe("StakingBoost", function () {
   });
 
   describe("Boost Calculation", function () {
-    it("Should calculate correct boost for 100 SHIELD (1 boost)", async function () {
+    it("Should calculate correct boost for 100 SHIELD (100 bps)", async function () {
       const stakeAmount = ethers.parseEther("100");
       
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
       await stakingBoost.connect(user1).stake(stakeAmount);
       
-      expect(await stakingBoost.getBoost(user1.address)).to.equal(1);
+      // New contract returns basis points: 100 SHIELD = 1 boost level = 100 bps
+      expect(await stakingBoost.getBoost(user1.address)).to.equal(100);
     });
 
-    it("Should calculate correct boost for 550 SHIELD (5 boost)", async function () {
+    it("Should calculate correct boost for 550 SHIELD (500 bps)", async function () {
       const stakeAmount = ethers.parseEther("550");
       
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
       await stakingBoost.connect(user1).stake(stakeAmount);
       
-      expect(await stakingBoost.getBoost(user1.address)).to.equal(5);
+      // 550 SHIELD = 5 boost levels = 500 bps
+      expect(await stakingBoost.getBoost(user1.address)).to.equal(500);
     });
 
-    it("Should calculate correct boost for 999 SHIELD (9 boost)", async function () {
+    it("Should calculate correct boost for 999 SHIELD (900 bps)", async function () {
       const stakeAmount = ethers.parseEther("999");
       
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
       await stakingBoost.connect(user1).stake(stakeAmount);
       
-      expect(await stakingBoost.getBoost(user1.address)).to.equal(9);
+      // 999 SHIELD = 9 boost levels = 900 bps
+      expect(await stakingBoost.getBoost(user1.address)).to.equal(900);
     });
 
-    it("Should calculate correct boost for 1000 SHIELD (10 boost)", async function () {
+    it("Should calculate correct boost for 1000 SHIELD (1000 bps)", async function () {
       const stakeAmount = ethers.parseEther("1000");
       
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
       await stakingBoost.connect(user1).stake(stakeAmount);
       
-      expect(await stakingBoost.getBoost(user1.address)).to.equal(10);
+      // 1000 SHIELD = 10 boost levels = 1000 bps
+      expect(await stakingBoost.getBoost(user1.address)).to.equal(1000);
     });
 
     it("Should return zero boost for users with no stake", async function () {
@@ -253,13 +287,23 @@ describe("StakingBoost", function () {
     });
 
     it("Should round down partial boosts", async function () {
-      // 150 SHIELD = 1.5 boosts, should round down to 1
+      // 150 SHIELD = 1.5 boosts, should round down to 1 = 100 bps
       const stakeAmount = ethers.parseEther("150");
       
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
       await stakingBoost.connect(user1).stake(stakeAmount);
       
-      expect(await stakingBoost.getBoost(user1.address)).to.equal(1);
+      expect(await stakingBoost.getBoost(user1.address)).to.equal(100);
+    });
+
+    it("Should cap boost at globalBoostCapBps (default 2500)", async function () {
+      // Stake 5000 SHIELD = 50 boost levels = 5000 bps, but capped at 2500
+      const stakeAmount = ethers.parseEther("5000");
+      
+      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
+      await stakingBoost.connect(user1).stake(stakeAmount);
+      
+      expect(await stakingBoost.getBoost(user1.address)).to.equal(2500);
     });
   });
 
@@ -287,33 +331,50 @@ describe("StakingBoost", function () {
       expect(stakeInfo.stakedAt).to.equal(0);
       expect(stakeInfo.unlockTime).to.equal(0);
     });
+
+    it("Should include pending rewards in stake info", async function () {
+      const stakeAmount = ethers.parseEther("1000");
+      
+      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
+      await stakingBoost.connect(user1).stake(stakeAmount);
+      
+      // Distribute rewards
+      const rewardAmount = BigInt(100) * BigInt(10 ** 6); // 100 FXRP
+      await fxrpToken.mint(revenueRouter.address, rewardAmount);
+      await fxrpToken.connect(revenueRouter).approve(await stakingBoost.getAddress(), rewardAmount);
+      await stakingBoost.connect(revenueRouter).distributeBoost(rewardAmount);
+      
+      const stakeInfo = await stakingBoost.getStakeInfo(user1.address);
+      expect(stakeInfo.pendingRewards).to.equal(rewardAmount);
+    });
   });
 
   describe("Fair Launch Integration", function () {
-    it("Should support APY boost calculation (1 boost = +1% APY)", async function () {
-      // User stakes 550 SHIELD = 5 boost = +5% APY
+    it("Should support APY boost calculation (100 bps = +1% APY)", async function () {
+      // User stakes 550 SHIELD = 5 boost levels = 500 bps = +5% APY
       const stakeAmount = ethers.parseEther("550");
       
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
       await stakingBoost.connect(user1).stake(stakeAmount);
       
       const boost = await stakingBoost.getBoost(user1.address);
-      expect(boost).to.equal(5);
+      expect(boost).to.equal(500);
       
       // In practice: Base APY (e.g., 8%) + boost (5%) = 13% total APY
       // This calculation would be done in the vault contract
     });
 
-    it("Should handle large stakes correctly", async function () {
+    it("Should handle large stakes correctly with cap", async function () {
       // Transfer more tokens for large stake test
       await shieldToken.transfer(user1.address, ethers.parseEther("100000"));
       
-      const largeStake = ethers.parseEther("50000"); // 50k SHIELD = 500 boost
+      const largeStake = ethers.parseEther("50000"); // 50k SHIELD = 500 boost levels = 50000 bps
       
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), largeStake);
       await stakingBoost.connect(user1).stake(largeStake);
       
-      expect(await stakingBoost.getBoost(user1.address)).to.equal(500);
+      // Capped at 2500 bps (25%)
+      expect(await stakingBoost.getBoost(user1.address)).to.equal(2500);
     });
 
     it("Should support 30-day lock period for fair launch", async function () {
@@ -359,6 +420,79 @@ describe("StakingBoost", function () {
       
       // Normal withdraw should work
       await stakingBoost.connect(user1).withdraw(stakeAmount);
+    });
+  });
+
+  describe("Reward Distribution", function () {
+    it("Should only allow RevenueRouter to call distributeBoost", async function () {
+      const stakeAmount = ethers.parseEther("1000");
+      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
+      await stakingBoost.connect(user1).stake(stakeAmount);
+      
+      const rewardAmount = BigInt(100) * BigInt(10 ** 6);
+      await fxrpToken.mint(user1.address, rewardAmount);
+      await fxrpToken.connect(user1).approve(await stakingBoost.getAddress(), rewardAmount);
+      
+      // User cannot call distributeBoost
+      await expect(
+        stakingBoost.connect(user1).distributeBoost(rewardAmount)
+      ).to.be.revertedWith("Only RevenueRouter");
+      
+      // RevenueRouter can call it
+      await fxrpToken.mint(revenueRouter.address, rewardAmount);
+      await fxrpToken.connect(revenueRouter).approve(await stakingBoost.getAddress(), rewardAmount);
+      await stakingBoost.connect(revenueRouter).distributeBoost(rewardAmount);
+    });
+
+    it("Should update rewardPerTokenStored correctly", async function () {
+      const stakeAmount = ethers.parseEther("1000");
+      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
+      await stakingBoost.connect(user1).stake(stakeAmount);
+      
+      expect(await stakingBoost.rewardPerTokenStored()).to.equal(0);
+      
+      const rewardAmount = BigInt(100) * BigInt(10 ** 6);
+      await fxrpToken.mint(revenueRouter.address, rewardAmount);
+      await fxrpToken.connect(revenueRouter).approve(await stakingBoost.getAddress(), rewardAmount);
+      await stakingBoost.connect(revenueRouter).distributeBoost(rewardAmount);
+      
+      expect(await stakingBoost.rewardPerTokenStored()).to.be.gt(0);
+    });
+
+    it("Should calculate earned rewards correctly", async function () {
+      const stakeAmount = ethers.parseEther("1000");
+      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
+      await stakingBoost.connect(user1).stake(stakeAmount);
+      
+      const rewardAmount = BigInt(100) * BigInt(10 ** 6);
+      await fxrpToken.mint(revenueRouter.address, rewardAmount);
+      await fxrpToken.connect(revenueRouter).approve(await stakingBoost.getAddress(), rewardAmount);
+      await stakingBoost.connect(revenueRouter).distributeBoost(rewardAmount);
+      
+      const earned = await stakingBoost.earned(user1.address);
+      expect(earned).to.equal(rewardAmount);
+    });
+  });
+
+  describe("Admin Functions", function () {
+    it("Should allow owner to update RevenueRouter", async function () {
+      await stakingBoost.connect(owner).setRevenueRouter(user3.address);
+      expect(await stakingBoost.revenueRouter()).to.equal(user3.address);
+    });
+
+    it("Should allow owner to update global boost cap", async function () {
+      await stakingBoost.connect(owner).setGlobalBoostCap(5000);
+      expect(await stakingBoost.globalBoostCapBps()).to.equal(5000);
+    });
+
+    it("Should reject non-owner admin calls", async function () {
+      await expect(
+        stakingBoost.connect(user1).setRevenueRouter(user3.address)
+      ).to.be.reverted;
+      
+      await expect(
+        stakingBoost.connect(user1).setGlobalBoostCap(5000)
+      ).to.be.reverted;
     });
   });
 });

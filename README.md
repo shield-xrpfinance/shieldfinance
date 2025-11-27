@@ -522,9 +522,24 @@ Shield Finance generates **real revenue** from vault fees, creating **deflationa
 
 **No minting. No inflation. Only burns.** As vault TVL grows, burn rate accelerates.
 
-### Future: Stake $SHIELD → Boost Your XRP Yield
+### Stake $SHIELD → Boost Your shXRP Yield
 
-**Coming Soon:** Staking functionality will allow SHIELD holders to boost their XRP liquid staking APY. Implementation pending post-launch based on community feedback.
+**LIVE — Stake SHIELD to boost your shXRP APY up to 2.5x**
+
+SHIELD holders can stake their tokens to receive proportionally higher yield on their shXRP holdings:
+
+- **Stake SHIELD**: Lock tokens for 30 days in StakingBoost contract
+- **Earn Boost**: +1% APY per 100 SHIELD staked (e.g., 1000 SHIELD = +10% APY)
+- **Weighted Distribution**: Revenue fees are converted to FXRP and distributed to stakers using Synthetix-style accumulator
+- **Claim Rewards**: Call `claim()` to convert earned FXRP to shXRP shares minted directly to your wallet
+- **Global Cap**: Maximum 25% boost (2500 SHIELD staked)
+
+**How It Works:**
+1. RevenueRouter receives wFLR from vault fees
+2. 40% of revenue → swapped to FXRP → StakingBoost.distributeBoost()
+3. Reward accumulator updates rewardPerToken (O(1) gas, no loops)
+4. Stakers call claim() → FXRP sent to vault.donateOnBehalf() → shXRP minted to staker only
+5. Non-stakers receive zero boost (differentiated yield)
 
 ### Contract Addresses (Flare Mainnet)
 
