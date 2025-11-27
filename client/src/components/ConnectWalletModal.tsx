@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -20,7 +20,6 @@ import { useAppKit, useAppKitAccount, useDisconnect } from "@reown/appkit/react"
 import { getTooltipContent } from "@/lib/tooltipCopy";
 import xamanIcon from "@assets/xaman-wallet-icon.svg";
 import walletConnectLogo from "@assets/walletconnect-logo.svg";
-import { Xumm } from "xumm";
 
 function isXApp(): boolean {
   if (typeof window === "undefined") return false;
@@ -138,30 +137,31 @@ export default function ConnectWalletModal({
         const urlParams = new URLSearchParams(window.location.search);
         const xAppToken = urlParams.get("xAppToken");
         
-        // Initialize Xumm SDK with OTT for xApp context
-        const apiKey = import.meta.env.VITE_XUMM_API_KEY || "";
-        const xumm = new Xumm(apiKey, xAppToken || undefined);
-        
-        // Wait for SDK to be ready
-        await xumm.environment.ready;
-        
-        // In xApp context, user is already authenticated
-        const account = await xumm.user.account;
-        
-        if (account) {
-          connect(account, "xaman", null, undefined);
-          if (onConnect) {
-            onConnect(account, "xaman");
-          }
-          onOpenChange(false);
-          toast({
-            title: "Wallet Connected",
-            description: `Connected via xApp: ${account.slice(0, 8)}...${account.slice(-6)}`,
+        if (xAppToken) {
+          // Send OTT to backend for secure verification (API keys stay server-side)
+          const authResponse = await fetch("/api/wallet/xaman/xapp-auth", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ xAppToken }),
           });
-          setConnecting(false);
-          return;
-        } else {
-          console.log("No account found in xApp context, falling back to QR");
+          
+          const authData = await authResponse.json();
+          
+          if (authData.success && authData.account) {
+            connect(authData.account, "xaman", null, undefined);
+            if (onConnect) {
+              onConnect(authData.account, "xaman");
+            }
+            onOpenChange(false);
+            toast({
+              title: "Wallet Connected",
+              description: `Connected via xApp: ${authData.account.slice(0, 8)}...${authData.account.slice(-6)}`,
+            });
+            setConnecting(false);
+            return;
+          } else {
+            console.log("xApp auth failed, falling back to QR:", authData.error);
+          }
         }
       }
       

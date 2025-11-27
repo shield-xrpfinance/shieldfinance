@@ -1652,6 +1652,49 @@ export async function registerRoutes(
     }
   });
 
+  // Authenticate xApp session using OTT (One Time Token)
+  // The frontend detects xApp context and sends the OTT to backend for secure verification
+  app.post("/api/wallet/xaman/xapp-auth", async (req, res) => {
+    try {
+      const { xAppToken } = req.body;
+      
+      if (!xAppToken) {
+        return res.status(400).json({ error: "xAppToken is required" });
+      }
+      
+      const apiKey = process.env.XUMM_API_KEY?.trim();
+      const apiSecret = process.env.XUMM_API_SECRET?.trim();
+      
+      if (!apiKey || !apiSecret) {
+        return res.status(500).json({ error: "Xaman credentials not configured" });
+      }
+      
+      // Use the xumm-sdk to verify the OTT and get user info
+      const xumm = new XummSdk(apiKey, apiSecret);
+      
+      // Get the xApp session info using the OTT
+      const ottData = await xumm.xApp?.get(xAppToken);
+      
+      if (!ottData || !ottData.account) {
+        return res.status(401).json({ error: "Invalid xApp token or no account associated" });
+      }
+      
+      console.log("xApp auth successful:", {
+        account: ottData.account,
+        network: ottData.network,
+      });
+      
+      res.json({
+        success: true,
+        account: ottData.account,
+        network: ottData.network,
+      });
+    } catch (error) {
+      console.error("xApp auth error:", error);
+      res.status(500).json({ error: "Failed to authenticate xApp session" });
+    }
+  });
+
   // Create Xaman payload for wallet connection
   app.post("/api/wallet/xaman/payload", async (_req, res) => {
     try {
