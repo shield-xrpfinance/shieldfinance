@@ -509,23 +509,48 @@ Native Flare Delegation & 6--9\% \\
 
 \subsection*{Mathematical Framework}
 
-\begin{multicols}{2}
-
 The SHIELD boost mechanism uses a \textbf{Synthetix-style reward accumulator} for gas-efficient, pro-rata distribution. This ensures O(1) complexity regardless of the number of stakers.
 
 \vspace{0.5em}
 
 \textbf{Let:}
-\begin{align*}
-R &= \text{Annual Protocol Revenue (in FXRP)} \\
-S_i &= \text{Your locked SHIELD balance} \\
-S_{\text{total}} &= \text{Total locked SHIELD} \\
-B &= \text{Boost allocation (40\%)}
-\end{align*}
+\begin{itemize}
+    \item $V$ = Total assets in the shXRP vault (FXRP)
+    \item $S$ = Total circulating supply of shXRP shares
+    \item $L$ = Total amount of SHIELD currently locked in StakingBoost
+    \item $L_i$ = Amount of SHIELD locked by user $i$
+    \item $B_t$ = Amount of FXRP donated as boost during week $t$ (sourced from protocol fee revenue)
+\end{itemize}
 
-\columnbreak
+\vspace{0.5em}
 
-\textbf{Core Formula:}
+The boost is distributed \textbf{strictly pro-rata} to locked SHIELD positions:
+
+\begin{equation}
+\text{Boost received by user } i = B_t \times \frac{L_i}{L}
+\end{equation}
+
+This FXRP amount immediately becomes part of the vault's underlying assets and is credited exclusively to user $i$'s position via \texttt{donateOnBehalf(i, $B_t \times L_i / L$)}.
+
+\vspace{0.5em}
+
+The instantaneous vault price (share price) for user $i$ after the boost becomes:
+
+\begin{equation}
+P_i = \frac{V + B_t}{S} \times \left(1 + \frac{L_i}{L} \times \frac{B_t}{V + B_t}\right) \quad \text{(approximate, for small boosts)}
+\end{equation}
+
+\vspace{0.5em}
+
+More importantly, the \textbf{effective extra APY} that locked SHIELD earns from the boost program is:
+
+\begin{equation}
+\text{Boost APY}_i = \text{Base APY} \times \left(1 + \underbrace{\frac{L_i}{L} \times \frac{B_t}{V} \times 52}_{\text{boost multiplier}}\right) \quad \text{(annualized)}
+\end{equation}
+
+\vspace{0.5em}
+
+Or, in its cleanest form (the one every auditor loves):
 
 \begin{tcolorbox}[
     colback=shieldlight,
@@ -538,11 +563,13 @@ B &= \text{Boost allocation (40\%)}
     bottom=10pt
 ]
 \begin{equation}
-\boxed{\text{Boost APY} = \text{Base APY} + \frac{R \times B \times S_i}{S_{\text{total}}}}
+\boxed{\text{Total APY}_i = \text{Flare Staking APY} + \left(\frac{B_{\text{annual}}}{V}\right) \times \frac{L_i}{L}}
 \end{equation}
 \end{tcolorbox}
 
-\end{multicols}
+\vspace{0.3em}
+
+\noindent Where $B_{\text{annual}}$ is the total FXRP donated via the boost program over one year.
 
 \vspace{0.5em}
 
@@ -723,7 +750,10 @@ Every week the protocol donates FXRP bought with real revenue. 100\% of that don
 \parbox{0.85\textwidth}{%
 \centering
 \vspace{0.5em}
-$\displaystyle \text{Your Boost} = \text{Weekly FXRP Revenue} \times \frac{\text{Your SHIELD Staked}}{\text{Total SHIELD Staked}}$
+$\displaystyle \text{Boost}_i = B_t \times \frac{L_i}{L}$
+\vspace{0.3em}
+
+{\small where $B_t$ = weekly FXRP revenue, $L_i$ = your locked SHIELD, $L$ = total locked SHIELD}
 \vspace{0.5em}
 }%
 }
