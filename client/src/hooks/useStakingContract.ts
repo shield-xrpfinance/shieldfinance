@@ -253,11 +253,43 @@ export function useStakingContract(): StakingContractHook {
       return { success: false, error: "Wallet not connected. Please connect your EVM wallet first." };
     }
 
+    // Validate WalletConnect session has EVM namespace
+    const session = walletConnectProvider.session;
+    const evmAccounts = session?.namespaces?.eip155?.accounts || [];
+    if (!session || evmAccounts.length === 0) {
+      return { 
+        success: false, 
+        error: "EVM session not found. Please disconnect and reconnect using the EVM wallet option." 
+      };
+    }
+
     setIsLoading(true);
     setError(null);
     setTxHash(null);
 
     try {
+      // Ensure wallet is on Coston2 network
+      console.log("Ensuring wallet is on Coston2 for withdraw...");
+      try {
+        await walletConnectProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x72' }],
+        });
+      } catch (switchError: any) {
+        if (switchError.code === 4902 || switchError.message?.includes('chain')) {
+          await walletConnectProvider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x72',
+              chainName: 'Flare Coston2 Testnet',
+              nativeCurrency: { name: 'Coston2 Flare', symbol: 'C2FLR', decimals: 18 },
+              rpcUrls: [COSTON2_RPC],
+              blockExplorerUrls: ['https://coston2-explorer.flare.network'],
+            }],
+          });
+        }
+      }
+
       const rpcProvider = getProvider();
       const amountWei = ethers.parseEther(amount);
 
@@ -266,6 +298,8 @@ export function useStakingContract(): StakingContractHook {
       const withdrawData = stakingIface.encodeFunctionData("withdraw", [amountWei]);
 
       console.log("Withdrawing staked SHIELD tokens via WalletConnect...");
+      console.log("Withdraw amount:", amount, "SHIELD (", amountWei.toString(), "wei)");
+      
       const withdrawTxHash = await walletConnectProvider.request({
         method: 'eth_sendTransaction',
         params: [{
@@ -286,13 +320,23 @@ export function useStakingContract(): StakingContractHook {
     } catch (err: any) {
       let errorMessage = err.reason || err.message || "Failed to withdraw";
       
-      if (errorMessage.includes("Tokens still locked")) {
+      // Handle specific contract errors
+      if (errorMessage.includes("Tokens still locked") || errorMessage.includes("still locked")) {
         errorMessage = "Your tokens are still locked. Please wait until the 30-day lock period ends.";
-      } else if (errorMessage.includes("Insufficient stake")) {
+      } else if (errorMessage.includes("Insufficient stake") || errorMessage.includes("Insufficient")) {
         errorMessage = "You don't have enough staked tokens to withdraw this amount.";
+      } else if (errorMessage.includes("expired") || errorMessage.includes("Request expired")) {
+        errorMessage = "Transaction request expired. Please try again.";
+      } else if (errorMessage.includes("rejected") || errorMessage.includes("denied")) {
+        errorMessage = "Transaction was rejected in your wallet.";
       }
       
       console.error("Withdraw error:", err);
+      console.error("Withdraw error details:", { 
+        code: err.code, 
+        reason: err.reason, 
+        message: err.message 
+      });
       setError(errorMessage);
       setIsLoading(false);
       return { success: false, error: errorMessage };
