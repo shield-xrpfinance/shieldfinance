@@ -58,7 +58,39 @@ export function useStakingContract(): StakingContractHook {
       throw new Error("Wallet not connected. Please connect your EVM wallet first.");
     }
 
-    const provider = new ethers.BrowserProvider(walletConnectProvider as any);
+    // Ensure the provider is enabled and connected to Coston2
+    console.log("Requesting chain switch to Coston2 (chainId 114)...");
+    try {
+      // Request wallet to switch to Coston2 network (chainId 114)
+      await walletConnectProvider.request({
+        method: 'wallet_switchEthereumChain',
+        params: [{ chainId: '0x72' }], // 114 in hex
+      });
+      console.log("Chain switch successful");
+    } catch (switchError: any) {
+      console.log("Chain switch error:", switchError.code, switchError.message);
+      // If the chain doesn't exist in the wallet, add it
+      if (switchError.code === 4902 || switchError.message?.includes('chain')) {
+        console.log("Attempting to add Coston2 network to wallet...");
+        try {
+          await walletConnectProvider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x72',
+              chainName: 'Flare Coston2 Testnet',
+              nativeCurrency: { name: 'Coston2 Flare', symbol: 'C2FLR', decimals: 18 },
+              rpcUrls: [COSTON2_RPC],
+              blockExplorerUrls: ['https://coston2-explorer.flare.network'],
+            }],
+          });
+          console.log("Network added successfully");
+        } catch (addError) {
+          console.error("Failed to add Coston2 network:", addError);
+        }
+      }
+    }
+
+    const provider = new ethers.BrowserProvider(walletConnectProvider as any, COSTON2_CHAIN_ID);
     return provider.getSigner();
   }, [walletConnectProvider, evmAddress]);
 
@@ -159,10 +191,25 @@ export function useStakingContract(): StakingContractHook {
       
       if (currentAllowance < amountWei) {
         console.log("Approving SHIELD tokens for staking...");
-        const approveTx = await shieldWriteContract.approve(STAKING_BOOST_ADDRESS, amountWei);
-        console.log("Approval tx submitted:", approveTx.hash);
-        await approveTx.wait();
-        console.log("Approval confirmed");
+        console.log("Shield contract address:", SHIELD_TOKEN_ADDRESS);
+        console.log("Staking boost address:", STAKING_BOOST_ADDRESS);
+        console.log("Sending approve transaction...");
+        
+        try {
+          const approveTx = await shieldWriteContract.approve(STAKING_BOOST_ADDRESS, amountWei);
+          console.log("Approval tx submitted:", approveTx.hash);
+          await approveTx.wait();
+          console.log("Approval confirmed");
+        } catch (approveErr: any) {
+          console.error("Approve transaction failed:", approveErr);
+          console.error("Approve error details:", {
+            code: approveErr.code,
+            message: approveErr.message,
+            reason: approveErr.reason,
+            data: approveErr.data
+          });
+          throw approveErr;
+        }
         
         // Re-verify allowance after approval using RPC provider
         const newAllowance = await shieldReadContract.allowance(evmAddress, STAKING_BOOST_ADDRESS);
