@@ -4,10 +4,17 @@ Complete guide to all documentation files in the Shield Finance XRP Liquid Staki
 
 ---
 
+## Whitepaper
+
+**[Read the Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf)** — Complete technical documentation covering the protocol architecture, yield mechanics, and SHIELD tokenomics.
+
+---
+
 ## Quick Start
 
 | If you want to... | Start here |
 |-------------------|------------|
+| Read the whitepaper | [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) |
 | Review the project | [REVIEWERS.md](../REVIEWERS.md) |
 | Understand tokenomics | [docs/protocol/SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md) |
 | Deploy contracts | [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md) |
@@ -20,6 +27,9 @@ Complete guide to all documentation files in the Shield Finance XRP Liquid Staki
 
 ```
 docs/
+├── whitepaper/         # Official whitepaper
+│   └── main.tex                  # LaTeX source (PDF at shyield.finance/whitepaper.pdf)
+│
 ├── protocol/           # Token & smart contract documentation
 │   ├── SHIELD_TOKENOMICS.md      # Token economics & distribution
 │   ├── SHIELD_DEPLOYMENT.md      # Contract deployment guide
@@ -47,6 +57,15 @@ docs/
 ---
 
 ## Protocol Documentation
+
+### [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf)
+**Purpose**: Complete technical documentation for Shield Finance  
+**Contents**:
+- Protocol architecture and user flow
+- Yield boost mechanics with mathematical formulas
+- Synthetix-style reward accumulator specification
+- SHIELD tokenomics and revenue distribution
+- Smart contract architecture diagrams
 
 ### [SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md)
 **Purpose**: Complete $SHIELD token economics and distribution  
@@ -197,10 +216,11 @@ docs/
 ## Documentation by Use Case
 
 ### For Research Teams / Auditors
-1. [REVIEWERS.md](../REVIEWERS.md) - Executive summary
-2. [docs/protocol/SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md) - Token economics
-3. [docs/protocol/SHIELD_SECURITY_CHECKLIST.md](protocol/SHIELD_SECURITY_CHECKLIST.md) - Security review
-4. Contract source code in `/contracts`
+1. [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) - Complete technical documentation
+2. [REVIEWERS.md](../REVIEWERS.md) - Executive summary
+3. [docs/protocol/SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md) - Token economics
+4. [docs/protocol/SHIELD_SECURITY_CHECKLIST.md](protocol/SHIELD_SECURITY_CHECKLIST.md) - Security review
+5. Contract source code in `/contracts`
 
 ### For Smart Contract Developers
 1. [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md) - Contract addresses

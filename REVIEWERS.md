@@ -4,10 +4,17 @@ Welcome to the Shield Finance codebase. This document provides a structured navi
 
 ---
 
+## Whitepaper
+
+**[Read the Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf)** — Complete technical documentation covering the protocol architecture, yield mechanics, mathematical formulas, and SHIELD tokenomics.
+
+---
+
 ## Quick Navigation
 
 | Area | Primary Document | Description |
 |------|------------------|-------------|
+| **Whitepaper** | [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) | Complete technical documentation with formal notation |
 | **Tokenomics** | [docs/protocol/SHIELD_TOKENOMICS.md](docs/protocol/SHIELD_TOKENOMICS.md) | $SHIELD token economics, distribution, and buyback mechanism |
 | **Smart Contracts** | [docs/protocol/SHIELD_DEPLOYMENT.md](docs/protocol/SHIELD_DEPLOYMENT.md) | Contract addresses, deployment steps, and verification |
 | **Security** | [docs/protocol/SHIELD_SECURITY_CHECKLIST.md](docs/protocol/SHIELD_SECURITY_CHECKLIST.md) | Pre-deployment security checklist and audit requirements |

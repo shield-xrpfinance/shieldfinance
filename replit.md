@@ -1,5 +1,8 @@
 # XRP Liquid Staking Protocol Dashboard
 
+## Whitepaper
+[Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) — Complete technical documentation with formal mathematical notation and architecture diagrams.
+
 ## Overview
 This project is a full-stack DeFi application providing a dashboard for XRP liquid staking. It enables users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform integrates smart contracts on Flare Network for its $SHIELD governance token and shXRP liquid staking vault, with FAssets protocol for cross-chain XRP bridging to Flare. The vision is to enhance DeFi accessibility and efficiency on the XRP Ledger, capitalizing on the growing liquid staking market. It features a dual wallet architecture providing tailored experiences for XRPL (Xaman/XUMM) and EVM (WalletConnect/MetaMask) users, showing XRP or FXRP vaults respectively.
 

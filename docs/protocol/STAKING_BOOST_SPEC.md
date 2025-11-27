@@ -2,13 +2,15 @@
 
 Complete technical specification for the "Stake SHIELD → Boost shXRP Yield" feature.
 
+> **See also:** [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) — Section 3 contains the full mathematical framework with formal notation.
+
 ---
 
 ## Overview
 
 StakingBoost implements a Synthetix-style reward accumulator to distribute FXRP rewards pro-rata to SHIELD stakers. When stakers claim their rewards, shXRP shares are minted directly to their wallet via `vault.donateOnBehalf()`, creating differentiated yield for stakers vs non-stakers.
 
-### Formula (from whitepaper)
+### Formula (from [Whitepaper](https://shyield.finance/whitepaper.pdf))
 
 ```
 Boost APY = Base APY + (Annual Protocol Revenue → FXRP) × (Your Locked SHIELD ÷ Total Locked SHIELD)

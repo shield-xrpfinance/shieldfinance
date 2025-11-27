@@ -1,5 +1,7 @@
 # $SHIELD Tokenomics: The Deflationary Flywheel
 
+> **See also:** [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) — Complete technical documentation with formal mathematical notation and architecture diagrams.
+
 ## Overview
 
 $SHIELD is designed with a **deflationary tokenomics model** that creates constant buying pressure and reduces supply over time. Every time users earn yield on the Shield Finance platform, a portion of the fees automatically goes toward buying and permanently burning $SHIELD tokens.

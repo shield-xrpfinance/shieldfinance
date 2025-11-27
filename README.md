@@ -2,6 +2,10 @@
 
 A full-stack DeFi application for XRP liquid staking, providing a comprehensive dashboard for managing cryptocurrency vaults, depositing assets, tracking positions, and earning yield on the XRP Ledger.
 
+## 📄 Whitepaper
+
+**[Read the Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf)** — Complete technical documentation covering the protocol architecture, yield mechanics, and SHIELD tokenomics.
+
 ## 🌟 Overview
 
 This project enables users to:

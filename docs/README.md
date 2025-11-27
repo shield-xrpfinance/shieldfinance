@@ -2,6 +2,10 @@
 
 Welcome to the Shield Finance documentation. This comprehensive guide covers our XRP liquid staking platform on Flare Network.
 
+## Whitepaper
+
+**[Read the Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf)** — Complete technical documentation covering the protocol architecture, yield mechanics, and SHIELD tokenomics.
+
 ## For External Reviewers
 
 Start with [REVIEWERS.md](../REVIEWERS.md) for a structured overview of the codebase and key documentation.
@@ -11,6 +15,7 @@ Start with [REVIEWERS.md](../REVIEWERS.md) for a structured overview of the code
 ## Documentation Structure
 
 ### Protocol (Token & Contracts)
+- [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) - Complete technical documentation
 - [SHIELD Tokenomics](protocol/SHIELD_TOKENOMICS.md) - Token economics, distribution, buyback & burn
 - [SHIELD Deployment](protocol/SHIELD_DEPLOYMENT.md) - Contract addresses and deployment steps
 - [Security Checklist](protocol/SHIELD_SECURITY_CHECKLIST.md) - Pre-deployment security review
@@ -35,6 +40,7 @@ Start with [REVIEWERS.md](../REVIEWERS.md) for a structured overview of the code
 
 ## Quick Links
 
+- [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf)
 - [Live Application](https://shyield.finance)
 - [Main README](../README.md)
 - [Technical Architecture](../replit.md)
