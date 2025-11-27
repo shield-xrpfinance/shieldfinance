@@ -1,21 +1,47 @@
-# XRP Liquid Staking Protocol Documentation
+# Shield Finance Documentation
 
-Welcome to the Shield Yield Vaults documentation. This comprehensive guide covers everything you need to know about using our XRP liquid staking platform.
+Welcome to the Shield Finance documentation. This comprehensive guide covers our XRP liquid staking platform on Flare Network.
 
-## Table of Contents
+## For External Reviewers
 
-- [Introduction](introduction.md)
-- [Getting Started](getting-started.md)
-- [Features](features/README.md)
-  - [Wallet Integration](features/wallet-integration.md)
-  - [Vault Management](features/vault-management.md)
-  - [Token Swapping](features/swap.md)
-  - [Transaction Signing](features/transaction-signing.md)
-- [Technical Architecture](technical/README.md)
-- [API Reference](api/README.md)
+Start with [REVIEWERS.md](../REVIEWERS.md) for a structured overview of the codebase and key documentation.
+
+---
+
+## Documentation Structure
+
+### Protocol (Token & Contracts)
+- [SHIELD Tokenomics](protocol/SHIELD_TOKENOMICS.md) - Token economics, distribution, buyback & burn
+- [SHIELD Deployment](protocol/SHIELD_DEPLOYMENT.md) - Contract addresses and deployment steps
+- [Security Checklist](protocol/SHIELD_SECURITY_CHECKLIST.md) - Pre-deployment security review
+
+### Integration (External Services)
+- [FAssets Integration](integration/FASSETS_INTEGRATION_GUIDE.md) - XRP → FXRP bridging
+- [Firelight Integration](integration/FIRELIGHT_INTEGRATION.md) - Yield generation strategies
+- [Flare FAssets](integration/FLARE_FASSETS_INTEGRATION.md) - Flare-specific details
+- [LP Locking Guide](integration/LP_LOCKING_GUIDE.md) - Liquidity pool management
+
+### Platform (Application Architecture)
+- [Smart Accounts Spec](platform/SMART_ACCOUNTS_SPEC.md) - ERC-4337 specification
+- [Swap Feature](platform/swap.md) - Multi-asset token swapping
+- [Wallet Integration](platform/wallet-integration.md) - Wallet connection guide
+- [Transaction Signing](platform/transaction-signing.md) - Signing flows
+- [Xaman Integration](platform/xaman-integration.md) - XRPL wallet details
+
+### API Reference
+- [API Documentation](api/README.md) - Backend API endpoints
+
+---
 
 ## Quick Links
 
 - [Live Application](https://shyield.finance)
-- [GitHub Repository](https://github.com/shield-xrpfinance/shieldfinance)
-- [Support](https://github.com/shield-xrpfinance/shieldfinance/issues)
+- [Main README](../README.md)
+- [Technical Architecture](../replit.md)
+- [Design Guidelines](../design_guidelines.md)
+
+---
+
+## Complete Documentation Index
+
+See [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) for the full documentation guide.

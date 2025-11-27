@@ -1,324 +1,231 @@
 # Documentation Index
 
-Complete guide to all documentation files in the XRP Liquid Staking Protocol project.
+Complete guide to all documentation files in the Shield Finance XRP Liquid Staking Protocol.
 
-## 📚 Main Documentation
+---
+
+## Quick Start
+
+| If you want to... | Start here |
+|-------------------|------------|
+| Review the project | [REVIEWERS.md](../REVIEWERS.md) |
+| Understand tokenomics | [docs/protocol/SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md) |
+| Deploy contracts | [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md) |
+| Understand FAssets bridge | [docs/integration/FASSETS_INTEGRATION_GUIDE.md](integration/FASSETS_INTEGRATION_GUIDE.md) |
+| Build UI components | [design_guidelines.md](../design_guidelines.md) |
+
+---
+
+## Documentation Structure
+
+```
+docs/
+├── protocol/           # Token & smart contract documentation
+│   ├── SHIELD_TOKENOMICS.md      # Token economics & distribution
+│   ├── SHIELD_DEPLOYMENT.md      # Contract deployment guide
+│   └── SHIELD_SECURITY_CHECKLIST.md  # Pre-deployment security
+│
+├── integration/        # External service integrations
+│   ├── FASSETS_INTEGRATION_GUIDE.md  # XRP → FXRP bridging
+│   ├── FIRELIGHT_INTEGRATION.md      # Yield generation
+│   ├── FLARE_FASSETS_INTEGRATION.md  # Flare-specific details
+│   └── LP_LOCKING_GUIDE.md           # Liquidity pool locking
+│
+├── platform/           # Application architecture
+│   ├── SMART_ACCOUNTS_SPEC.md    # ERC-4337 specification
+│   ├── swap.md                   # Multi-asset swap feature
+│   ├── wallet-integration.md     # Wallet connection guide
+│   ├── transaction-signing.md    # Signing flows
+│   └── xaman-integration.md      # Xaman wallet details
+│
+├── api/                # API documentation
+│   └── README.md
+│
+└── operations/         # Operational guides (future)
+```
+
+---
+
+## Protocol Documentation
+
+### [SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md)
+**Purpose**: Complete $SHIELD token economics and distribution  
+**Contents**:
+- 10M total supply breakdown (11 categories)
+- Buyback & burn mechanism (50% of revenue)
+- Staking boost system (1% APY per 100 SHIELD)
+- Vesting schedules and unlock timelines
+
+### [SHIELD_DEPLOYMENT.md](protocol/SHIELD_DEPLOYMENT.md)
+**Purpose**: Smart contract deployment guide  
+**Contents**:
+- Deployed contract addresses (Coston2 testnet)
+- Step-by-step deployment process
+- Post-deployment verification
+- LP locking and airdrop funding
+
+### [SHIELD_SECURITY_CHECKLIST.md](protocol/SHIELD_SECURITY_CHECKLIST.md)
+**Purpose**: Security audit and deployment checklist  
+**Contents**:
+- Pre-deployment security review
+- Access control verification
+- Operational security guidelines
+- Emergency procedures
+
+---
+
+## Integration Documentation
+
+### [FASSETS_INTEGRATION_GUIDE.md](integration/FASSETS_INTEGRATION_GUIDE.md)
+**Purpose**: XRP → FXRP bridging via FAssets protocol  
+**Contents**:
+- FAssets protocol overview
+- Collateral reservation flow
+- FDC proof generation
+- FXRP minting process
+
+### [FIRELIGHT_INTEGRATION.md](integration/FIRELIGHT_INTEGRATION.md)
+**Purpose**: Yield generation strategy integration  
+**Contents**:
+- Firelight.finance protocol overview
+- FXRP deposit strategies
+- Yield optimization
+- Compounding automation
+
+### [FLARE_FASSETS_INTEGRATION.md](integration/FLARE_FASSETS_INTEGRATION.md)
+**Purpose**: Flare-specific FAssets implementation details  
+**Contents**:
+- Flare Data Connector (FDC)
+- Attestation submission
+- Cross-chain verification
+
+### [LP_LOCKING_GUIDE.md](integration/LP_LOCKING_GUIDE.md)
+**Purpose**: Liquidity pool token locking  
+**Contents**:
+- SparkDEX V3 LP creation
+- Team Finance locking process
+- NFT position management
+
+---
+
+## Platform Documentation
+
+### [SMART_ACCOUNTS_SPEC.md](platform/SMART_ACCOUNTS_SPEC.md)
+**Purpose**: ERC-4337 account abstraction specification  
+**Contents**:
+- Smart account architecture
+- XRPL-triggered Flare transactions
+- Proxy account system
+- Coming December 2025 features
+
+### [swap.md](platform/swap.md)
+**Purpose**: Multi-asset swap feature documentation  
+**Contents**:
+- Token swapping overview
+- SparkDEX V3 integration
+- Approval and routing logic
+- Troubleshooting guide
+
+### [wallet-integration.md](platform/wallet-integration.md)
+**Purpose**: Wallet connection and management  
+**Contents**:
+- Xaman (XRPL) integration
+- WalletConnect (EVM) integration
+- Dual wallet support
+
+### [transaction-signing.md](platform/transaction-signing.md)
+**Purpose**: Transaction signing flows  
+**Contents**:
+- XRPL transaction signing
+- EVM transaction signing
+- Smart account operations
+
+### [xaman-integration.md](platform/xaman-integration.md)
+**Purpose**: Xaman wallet specific details  
+**Contents**:
+- Xaman SDK integration
+- QR code signing flow
+- Mobile deep linking
+
+---
+
+## Root-Level Documentation
+
+### [REVIEWERS.md](../REVIEWERS.md)
+**Purpose**: Executive summary for research teams and auditors  
+**Audience**: External reviewers, research teams, auditors
 
 ### [README.md](../README.md)
-**Purpose**: Main project documentation and getting started guide  
-**Audience**: Developers, contributors, users  
-**Contents**:
-- Project overview and features
-- Tech stack (frontend, backend, blockchain)
-- Installation and setup instructions
-- Environment variables reference
-- Smart contracts overview
-- Deployment guides (both application and blockchain)
-- Security features
-- Network support details
-- Wallet integration details
-
-**When to Read**: First-time setup, understanding project capabilities, quick reference
-
----
-
-### [replit.md](../replit.md)
-**Purpose**: Technical architecture and system design documentation  
-**Audience**: Developers, architects, technical contributors  
-**Contents**:
-- Detailed system architecture
-- Frontend/backend architecture specifications
-- Data storage schemas
-- External dependencies
-- Blockchain infrastructure (smart contracts, deployment, XRPL escrow system)
-- Complete deployment configuration
-- Environment variables with examples
-- Contract architecture workflow
-- Security features (blockchain-specific)
-
-**When to Read**: Understanding technical implementation, system design, architecture decisions
-
----
+**Purpose**: Main project documentation and getting started  
+**Audience**: Developers, contributors, users
 
 ### [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md)
-**Purpose**: Quick reference for deployment commands  
-**Audience**: DevOps, developers deploying to testnet/mainnet  
-**Contents**:
-- Command summary (compile, deploy, verify)
-- Environment variables required
-- Testnet faucets
-- Block explorers
-- Quick troubleshooting table
-- Next steps after deployment
+**Purpose**: Quick deployment reference with contract addresses  
+**Audience**: DevOps, developers deploying to testnet/mainnet
 
-**When to Read**: Deploying smart contracts, need quick command reference
+### [SMART_ACCOUNTS.md](../SMART_ACCOUNTS.md)
+**Purpose**: ERC-4337 implementation guide (Etherspot Prime SDK)  
+**Audience**: Backend developers, blockchain engineers
 
----
+### [MONITORING_GUIDE.md](../MONITORING_GUIDE.md)
+**Purpose**: Testnet monitoring and alerting system  
+**Audience**: Operations, DevOps
 
 ### [design_guidelines.md](../design_guidelines.md)
-**Purpose**: UI/UX design system and component specifications  
-**Audience**: Frontend developers, designers  
-**Contents**:
-- Design approach and rationale
-- Layout system and spacing primitives
-- Typography hierarchy
-- Component library specifications
-- Chart and visualization guidelines
-- Micro-interactions
-- Responsive behavior
-- Accessibility guidelines
+**Purpose**: UI/UX design system specifications  
+**Audience**: Frontend developers, designers
 
-**When to Read**: Building UI components, maintaining design consistency
-
----
+### [replit.md](../replit.md)
+**Purpose**: Technical architecture and system design  
+**Audience**: Developers, architects
 
 ### [CHANGELOG.md](../CHANGELOG.md)
 **Purpose**: Project history and version tracking  
-**Audience**: All team members, contributors  
-**Contents**:
-- Recent changes and additions
-- Blockchain infrastructure additions
-- New dependencies
-- Environment variables added
-- Security enhancements
-- Cross-chain architecture details
-
-**When to Read**: Understanding recent changes, tracking feature additions
+**Audience**: All team members
 
 ---
 
-## 🔬 Technical Documentation
+## Documentation by Use Case
 
-### [SMART_ACCOUNTS.md](../SMART_ACCOUNTS.md)
-**Purpose**: ERC-4337 smart account implementation and architecture  
-**Audience**: Backend developers, blockchain engineers  
-**Contents**:
-- Two-SDK architecture (paymaster vs. direct gas payment)
-- SmartAccountClient wrapper with retry logic and fee bumping
-- Deployed contract addresses (VaultController, ShXRPVault, FXRP)
-- Wallet-scoped security integration
-- Etherspot Prime SDK configuration
-- Automatic retry system with exponential backoff
-- Usage examples and troubleshooting
+### For Research Teams / Auditors
+1. [REVIEWERS.md](../REVIEWERS.md) - Executive summary
+2. [docs/protocol/SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md) - Token economics
+3. [docs/protocol/SHIELD_SECURITY_CHECKLIST.md](protocol/SHIELD_SECURITY_CHECKLIST.md) - Security review
+4. Contract source code in `/contracts`
 
-**When to Read**: Implementing smart account features, debugging bundler issues, understanding gasless transactions
+### For Smart Contract Developers
+1. [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md) - Contract addresses
+2. [docs/protocol/SHIELD_DEPLOYMENT.md](protocol/SHIELD_DEPLOYMENT.md) - Deployment steps
+3. [SMART_ACCOUNTS.md](../SMART_ACCOUNTS.md) - ERC-4337 implementation
 
----
+### For Integration Engineers
+1. [docs/integration/FASSETS_INTEGRATION_GUIDE.md](integration/FASSETS_INTEGRATION_GUIDE.md) - Bridge integration
+2. [docs/integration/FIRELIGHT_INTEGRATION.md](integration/FIRELIGHT_INTEGRATION.md) - Yield strategies
+3. [replit.md](../replit.md) - System architecture
 
-### [FASSETS_INTEGRATION.md](../FASSETS_INTEGRATION.md)
-**Purpose**: FAssets bridge integration and service architecture  
-**Audience**: Backend developers, integration engineers  
-**Contents**:
-- Service architecture (BridgeService, VaultService, DepositWatchdogService, WithdrawalRetryService)
-- XRP → FXRP → shXRP complete flow documentation
-- Wallet-scoped security model
-- FDC proof generation and attestation
-- Automatic recovery systems
-- Deployed contract addresses
-- Production vs. demo mode configuration
-- Monitoring and maintenance guidelines
-
-**When to Read**: Understanding bridge operations, implementing FAssets integration, debugging stuck deposits/withdrawals
+### For Frontend Developers
+1. [design_guidelines.md](../design_guidelines.md) - Design system
+2. [docs/platform/swap.md](platform/swap.md) - Swap feature
+3. [docs/platform/wallet-integration.md](platform/wallet-integration.md) - Wallet UX
 
 ---
 
-### [docs/SMART_ACCOUNTS_SPEC.md](SMART_ACCOUNTS_SPEC.md)
-**Purpose**: Technical specification for smart account implementation  
-**Audience**: Backend developers, blockchain engineers  
-**Contents**:
-- Detailed ERC-4337 specification
-- Implementation requirements
-- Security considerations
-- Integration patterns
+## Scripts Reference
 
-**When to Read**: Implementing new smart account features, understanding ERC-4337 standard
+Essential operational scripts are in `/scripts`:
 
----
+| Script | Purpose |
+|--------|---------|
+| `deploy-shield-10m.ts` | Main SHIELD token deployment |
+| `deploy-all-contracts-10m.ts` | Full contract suite deployment |
+| `fund-merkle-distributor.ts` | Fund airdrop contract |
+| `generate-merkle-tree.ts` | Generate airdrop merkle tree |
+| `sparkdex-lp.ts` | Create SparkDEX liquidity pool |
+| `compound.ts` | Vault compounding operations |
+| `burn.ts` | Manual SHIELD token burn |
 
-### [docs/features/swap.md](features/swap.md)
-**Purpose**: Multi-Asset Swap feature user and technical documentation  
-**Audience**: Users, developers, integrators  
-**Contents**:
-- Token swapping overview and supported pairs
-- Step-by-step swap guide (buy and sell directions)
-- SparkDEX V3 integration details
-- Swap routing logic and path construction
-- ERC-20 approval flow (unlimited vs exact)
-- Price quote system and slippage protection
-- Safety features (validation, liquidity detection)
-- Comprehensive troubleshooting guide
-- Post-swap UX (confetti, success modal, staking CTA)
-
-**When to Read**: Swapping tokens, understanding approval flow, troubleshooting swap errors, integrating swap functionality
+Archived diagnostic scripts are in `/scripts/archive`.
 
 ---
 
-## 🔧 Configuration Files
-
-### [.env.example](../.env.example)
-**Purpose**: Environment variables template  
-**Contents**:
-- Wallet integration credentials (Xaman, WalletConnect, Web3Auth)
-- Blockchain deployment variables (Flare, XRPL)
-- Database connection strings
-- All required and optional environment variables with descriptions
-
-**When to Use**: Setting up local development, deploying to production
-
----
-
-## 🚀 Deployment Documentation
-
-### Application Deployment
-See **README.md** → "Deployment (Application)" section
-- Replit-specific deployment
-- Publishing process
-- Custom domain configuration
-
-### Blockchain Deployment
-See **README.md** → "How to Deploy to Testnet" section  
-See **DEPLOYMENT_GUIDE.md** for quick command reference
-
-**Key Resources**:
-- Flare Coston2 Testnet Faucet: https://faucet.flare.network/coston2
-- XRPL Testnet Faucet: https://xrpl.org/xrp-testnet-faucet.html
-- Block Explorers listed in DEPLOYMENT_GUIDE.md
-
----
-
-## 📖 Smart Contract Documentation
-
-### ShieldToken.sol
-- **File**: `contracts/ShieldToken.sol`
-- **Type**: ERC-20 governance token
-- **Documentation**: See README.md → "Smart Contracts" section
-
-### Shield XRP Vault.sol
-- **File**: `contracts/Shield XRP Vault.sol`
-- **Type**: Liquid staking vault
-- **Documentation**: See README.md → "Smart Contracts" section
-
-### XRPL Escrow System
-- **Type**: Standard XRPL escrow transactions (EscrowCreate, EscrowFinish, EscrowCancel)
-- **Purpose**: Secure XRP deposits and withdrawals
-- **Documentation**: See replit.md → "XRPL Escrow System" section
-
----
-
-## 🗂️ Documentation by Use Case
-
-### "I'm new to the project"
-1. Start with **README.md** - Overview and features
-2. Read **docs/getting-started.md** - Quick start guide
-3. Read **replit.md** - Technical architecture
-4. Review **design_guidelines.md** - UI/UX standards
-
-### "I want to deploy smart contracts"
-1. **DEPLOYMENT_GUIDE.md** - Quick command reference
-2. **README.md** → "How to Deploy to Testnet"
-3. **.env.example** - Required environment variables
-
-### "I'm building UI components"
-1. **design_guidelines.md** - Design system
-2. **README.md** → "Tech Stack" - Frontend frameworks
-3. **docs/features/** - Feature-specific UI documentation
-
-### "I need to understand smart accounts"
-1. **SMART_ACCOUNTS.md** - Complete ERC-4337 implementation
-2. **docs/SMART_ACCOUNTS_SPEC.md** - Technical specification
-3. **replit.md** → "Two-SDK Smart Account Architecture"
-
-### "I need to understand the FAssets bridge"
-1. **FASSETS_INTEGRATION.md** - Service architecture and flow
-2. **docs/FLARE_FASSETS_INTEGRATION.md** - Flare-specific integration
-3. **replit.md** → "FAssets Bridge Reconciliation"
-
-### "I need to understand the architecture"
-1. **replit.md** - Complete technical architecture
-2. **FASSETS_INTEGRATION.md** - Service layer architecture
-3. **SMART_ACCOUNTS.md** - Smart account architecture
-4. **README.md** → "Project Structure"
-5. **CHANGELOG.md** - Recent architectural changes
-
-### "I'm troubleshooting deployment"
-1. **DEPLOYMENT_GUIDE.md** → "Troubleshooting"
-2. **README.md** → "How to Deploy to Testnet"
-3. Check environment variables in **.env.example**
-
-### "I'm debugging bridge operations"
-1. **FASSETS_INTEGRATION.md** → "Service Architecture" and "Monitoring"
-2. **SMART_ACCOUNTS.md** → "Troubleshooting"
-3. **replit.md** → "Deposit Watchdog Service" and "Withdrawal Retry Service"
-
-### "I want to swap tokens"
-1. **docs/features/swap.md** - Complete swap guide
-2. **replit.md** → "Multi-Asset Swap Integration" - Technical architecture
-3. **client/src/pages/Swap.tsx** - Swap page implementation
-4. **client/src/lib/sparkdex.ts** - SparkDEX V3 integration
-
----
-
-## 🔄 Keeping Documentation Updated
-
-When making changes to the project:
-
-1. **Code Changes**: Update technical details in `replit.md`
-2. **New Features**: Update `README.md` features section and `CHANGELOG.md`
-3. **Deployment Changes**: Update `DEPLOYMENT_GUIDE.md` and deployment sections in `README.md`
-4. **UI Changes**: Update `design_guidelines.md`
-5. **Environment Variables**: Update `.env.example` and environment sections in `README.md`
-
----
-
-## 📝 Documentation Standards
-
-All documentation should:
-- Use clear, simple language
-- Include code examples where applicable
-- Link to related documentation
-- Stay up-to-date with codebase
-- Include both conceptual and practical information
-
----
-
-## 📁 Archived Documentation
-
-### [docs/archive/](archive/)
-**Purpose**: Historical documentation and completed migration summaries  
-**Contents**:
-- DEPLOYMENT_SUCCESS.md - Initial deployment records
-- DOCUMENTATION_UPDATES_SUMMARY.md - Documentation change log
-- RECONCILIATION_COMPLETE.md - Bridge reconciliation implementation
-- REDEMPTION_RECOVERY_SUMMARY.md - Withdrawal recovery system
-- TEST_SUITE_SUMMARY.md - Test suite implementation
-- TESTNET_DEPLOYMENT_SUMMARY.md - Testnet deployment history
-
-**When to Reference**: Historical context, understanding past decisions, migration records
-
----
-
-## 📊 Documentation Types
-
-### Canonical Documentation (Source of Truth)
-- **README.md** - Main project documentation
-- **replit.md** - Technical architecture
-- **SMART_ACCOUNTS.md** - Smart account implementation
-- **FASSETS_INTEGRATION.md** - FAssets service architecture
-- **design_guidelines.md** - UI/UX design system
-- **CHANGELOG.md** - Version history
-
-### Reference Documentation
-- **DEPLOYMENT_GUIDE.md** - Quick command reference
-- **.env.example** - Environment variable template
-- **docs/getting-started.md** - Quick start guide
-- **docs/introduction.md** - Project introduction
-
-### API Documentation
-- **docs/api/README.md** - API endpoint documentation
-
-### Archived Documentation
-- **docs/archive/** - Historical records and completed summaries
-
----
-
-Last Updated: 2025-11-21
+Last Updated: November 27, 2025
