@@ -43,6 +43,9 @@ const USDT_ADDRESSES = {
   testnet: "0x3E8B8d9B9ee8C1E0D6d10Ea03e1F6eB8e3d1e8a0",
 };
 
+const COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc";
+const COSTON2_CHAIN_ID = 114;
+
 export default function Swap() {
   const { evmAddress, isEvmConnected, walletConnectProvider } = useWallet();
   const { isTestnet, network } = useNetwork();
@@ -174,17 +177,17 @@ export default function Swap() {
     return null;
   };
 
-  // Check allowance for ERC-20 tokens
+  // Check allowance for ERC-20 tokens using direct RPC provider (read-only operation)
   useEffect(() => {
-    if (!evmAddress || !walletConnectProvider || !isConfigured || selectedInputAsset.isNative) {
+    if (!evmAddress || !isConfigured || selectedInputAsset.isNative) {
       setNeedsApproval(false);
       return;
     }
 
     const checkAllowance = async () => {
       try {
-        const provider = new ethers.BrowserProvider(walletConnectProvider);
-        const token = new ethers.Contract(selectedInputAsset.address, ERC20_ABI, provider);
+        const rpcProvider = new ethers.JsonRpcProvider(COSTON2_RPC);
+        const token = new ethers.Contract(selectedInputAsset.address, ERC20_ABI, rpcProvider);
         const allowance = await token.allowance(evmAddress, contracts.SPARKDEX_ROUTER);
         setCurrentAllowance(allowance);
         
@@ -201,11 +204,11 @@ export default function Swap() {
     };
 
     checkAllowance();
-  }, [evmAddress, walletConnectProvider, isConfigured, selectedInputAsset, inputAmount, contracts.SPARKDEX_ROUTER]);
+  }, [evmAddress, isConfigured, selectedInputAsset, inputAmount, contracts.SPARKDEX_ROUTER]);
 
-  // Get real-time quote when input changes
+  // Get real-time quote when input changes using direct RPC provider (read-only operation)
   useEffect(() => {
-    if (!inputAmount || parseFloat(inputAmount) <= 0 || !evmAddress || !walletConnectProvider || !isConfigured) {
+    if (!inputAmount || parseFloat(inputAmount) <= 0 || !evmAddress || !isConfigured) {
       setOutputAmount("");
       setPathValidationError("");
       return;
@@ -215,14 +218,8 @@ export default function Swap() {
       setIsLoadingQuote(true);
       setPathValidationError("");
       try {
-        if (!walletConnectProvider) {
-          console.error("🚨 [Swap] walletConnectProvider is null");
-          setOutputAmount("");
-          return;
-        }
-
-        const provider = new ethers.BrowserProvider(walletConnectProvider);
-        const router = new ethers.Contract(contracts.SPARKDEX_ROUTER, ROUTER_ABI, provider);
+        const rpcProvider = new ethers.JsonRpcProvider(COSTON2_RPC);
+        const router = new ethers.Contract(contracts.SPARKDEX_ROUTER, ROUTER_ABI, rpcProvider);
 
         const inputAmountWei = parseTokenAmount(inputAmount, selectedInputAsset.decimals);
         const path = buildSwapPath();
@@ -263,17 +260,59 @@ export default function Swap() {
 
     const debounce = setTimeout(fetchQuote, 500);
     return () => clearTimeout(debounce);
-  }, [inputAmount, selectedInputAsset, selectedOutputAsset, evmAddress, walletConnectProvider, contracts, toast, isConfigured, isBuyingShield]);
+  }, [inputAmount, selectedInputAsset, selectedOutputAsset, evmAddress, contracts, toast, isConfigured, isBuyingShield]);
 
   const handleApprove = async (unlimited: boolean = false) => {
     if (!evmAddress || !walletConnectProvider) return;
 
+    // Validate WalletConnect session has EVM namespace
+    const session = walletConnectProvider.session;
+    const evmAccounts = session?.namespaces?.eip155?.accounts || [];
+    console.log("WalletConnect session validation for approve:", { 
+      hasSession: !!session, 
+      evmAccounts,
+      allNamespaces: session?.namespaces ? Object.keys(session.namespaces) : []
+    });
+    
+    if (!session || evmAccounts.length === 0) {
+      toast({
+        title: "EVM Session Not Found",
+        description: "Please disconnect and reconnect using an EVM wallet.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsApproving(true);
     try {
-      const provider = new ethers.BrowserProvider(walletConnectProvider);
-      const signer = await provider.getSigner();
-      const inputToken = new ethers.Contract(selectedInputAsset.address, ERC20_ABI, signer);
+      // Switch to Coston2 network first
+      console.log("Requesting chain switch to Coston2 (chainId 114)...");
+      try {
+        await walletConnectProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x72' }],
+        });
+        console.log("Chain switch successful");
+      } catch (switchError: any) {
+        console.log("Chain switch error:", switchError.code, switchError.message);
+        if (switchError.code === 4902 || switchError.message?.includes('chain')) {
+          console.log("Attempting to add Coston2 network to wallet...");
+          await walletConnectProvider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x72',
+              chainName: 'Flare Coston2 Testnet',
+              nativeCurrency: { name: 'Coston2 Flare', symbol: 'C2FLR', decimals: 18 },
+              rpcUrls: [COSTON2_RPC],
+              blockExplorerUrls: ['https://coston2-explorer.flare.network'],
+            }],
+          });
+          console.log("Network added successfully");
+        }
+      }
 
+      const rpcProvider = new ethers.JsonRpcProvider(COSTON2_RPC);
+      
       const approvalAmount = unlimited 
         ? ethers.MaxUint256 
         : parseTokenAmount(inputAmount, selectedInputAsset.decimals);
@@ -285,8 +324,24 @@ export default function Swap() {
           : `Approving ${inputAmount} ${selectedInputAsset.symbol}...`,
       });
 
-      const approveTx = await inputToken.approve(contracts.SPARKDEX_ROUTER, approvalAmount);
-      await approveTx.wait();
+      // Encode approve function call using ethers.Interface
+      const erc20Iface = new ethers.Interface(ERC20_ABI);
+      const approveData = erc20Iface.encodeFunctionData("approve", [contracts.SPARKDEX_ROUTER, approvalAmount]);
+
+      console.log("Sending approve transaction via WalletConnect...");
+      const approveTxHash = await walletConnectProvider.request({
+        method: 'eth_sendTransaction',
+        params: [{
+          from: evmAddress,
+          to: selectedInputAsset.address,
+          data: approveData,
+        }],
+      }) as string;
+      console.log("Approval tx submitted:", approveTxHash);
+
+      // Wait for confirmation using RPC provider
+      const receipt = await rpcProvider.waitForTransaction(approveTxHash);
+      console.log("Approval confirmed:", receipt?.hash);
 
       setCurrentAllowance(approvalAmount);
       setNeedsApproval(false);
@@ -299,9 +354,22 @@ export default function Swap() {
       });
     } catch (error: any) {
       console.error("Approval error:", error);
+      console.error("Approval error details:", { 
+        code: error.code, 
+        reason: error.reason, 
+        message: error.message 
+      });
+      
+      let errorMessage = error.message || "Failed to approve token. Please try again.";
+      if (errorMessage.includes("rejected") || errorMessage.includes("denied") || errorMessage.includes("User rejected")) {
+        errorMessage = "Transaction was rejected in your wallet.";
+      } else if (errorMessage.includes("expired")) {
+        errorMessage = "Transaction request expired. Please try again.";
+      }
+      
       toast({
         title: "Approval Failed",
-        description: error.message || "Failed to approve token. Please try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -314,6 +382,24 @@ export default function Swap() {
       toast({
         title: "Wallet Not Connected",
         description: "Please connect your wallet to swap",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate WalletConnect session has EVM namespace
+    const session = walletConnectProvider.session;
+    const evmAccounts = session?.namespaces?.eip155?.accounts || [];
+    console.log("WalletConnect session validation for swap:", { 
+      hasSession: !!session, 
+      evmAccounts,
+      allNamespaces: session?.namespaces ? Object.keys(session.namespaces) : []
+    });
+    
+    if (!session || evmAccounts.length === 0) {
+      toast({
+        title: "EVM Session Not Found",
+        description: "Please disconnect and reconnect using an EVM wallet.",
         variant: "destructive",
       });
       return;
@@ -340,69 +426,125 @@ export default function Swap() {
     setIsSwapping(true);
 
     try {
-      const provider = new ethers.BrowserProvider(walletConnectProvider);
-      const signer = await provider.getSigner();
-      const router = new ethers.Contract(contracts.SPARKDEX_ROUTER, ROUTER_ABI, signer);
+      // Switch to Coston2 network first
+      console.log("Requesting chain switch to Coston2 (chainId 114)...");
+      try {
+        await walletConnectProvider.request({
+          method: 'wallet_switchEthereumChain',
+          params: [{ chainId: '0x72' }],
+        });
+        console.log("Chain switch successful");
+      } catch (switchError: any) {
+        console.log("Chain switch error:", switchError.code, switchError.message);
+        if (switchError.code === 4902 || switchError.message?.includes('chain')) {
+          console.log("Attempting to add Coston2 network to wallet...");
+          await walletConnectProvider.request({
+            method: 'wallet_addEthereumChain',
+            params: [{
+              chainId: '0x72',
+              chainName: 'Flare Coston2 Testnet',
+              nativeCurrency: { name: 'Coston2 Flare', symbol: 'C2FLR', decimals: 18 },
+              rpcUrls: [COSTON2_RPC],
+              blockExplorerUrls: ['https://coston2-explorer.flare.network'],
+            }],
+          });
+          console.log("Network added successfully");
+        }
+      }
+
+      // Use direct RPC provider for read operations
+      const rpcProvider = new ethers.JsonRpcProvider(COSTON2_RPC);
+      const routerReadContract = new ethers.Contract(contracts.SPARKDEX_ROUTER, ROUTER_ABI, rpcProvider);
 
       const inputAmountWei = parseTokenAmount(inputAmount, selectedInputAsset.decimals);
       const path = buildSwapPath();
 
-      const outputWei = await getSwapQuote(router, inputAmountWei, path);
+      // Get quote using RPC provider (read-only operation)
+      const outputWei = await getSwapQuote(routerReadContract, inputAmountWei, path);
       const minOutputWei = applySlippage(outputWei, slippageTolerance);
       const deadline = getDeadline();
 
-      let tx;
+      // Create interface for encoding function calls
+      const routerIface = new ethers.Interface(ROUTER_ABI);
+      let swapData: string;
+      let txValue: string | undefined;
+
+      // Store input values before clearing for success message
+      const swapInputAmount = inputAmount;
+      const swapInputSymbol = selectedInputAsset.symbol;
+      const swapOutputSymbol = selectedOutputAsset.symbol;
 
       if (isBuyingShield) {
         // Buying SHIELD
         if (selectedInputAsset.isNative) {
           // FLR → SHIELD (swapExactETHForTokens)
-          tx = await router.swapExactETHForTokens(
+          swapData = routerIface.encodeFunctionData("swapExactETHForTokens", [
             minOutputWei,
             path,
             evmAddress,
             deadline,
-            { value: inputAmountWei }
-          );
+          ]);
+          txValue = "0x" + inputAmountWei.toString(16);
         } else {
           // ERC-20 → SHIELD (swapExactTokensForTokens)
-          tx = await router.swapExactTokensForTokens(
+          swapData = routerIface.encodeFunctionData("swapExactTokensForTokens", [
             inputAmountWei,
             minOutputWei,
             path,
             evmAddress,
-            deadline
-          );
+            deadline,
+          ]);
         }
       } else {
         // Selling SHIELD
         if (selectedOutputAsset.isNative) {
           // SHIELD → FLR (swapExactTokensForETH)
-          tx = await router.swapExactTokensForETH(
+          swapData = routerIface.encodeFunctionData("swapExactTokensForETH", [
             inputAmountWei,
             minOutputWei,
             path,
             evmAddress,
-            deadline
-          );
+            deadline,
+          ]);
         } else {
           // SHIELD → ERC-20 (swapExactTokensForTokens)
-          tx = await router.swapExactTokensForTokens(
+          swapData = routerIface.encodeFunctionData("swapExactTokensForTokens", [
             inputAmountWei,
             minOutputWei,
             path,
             evmAddress,
-            deadline
-          );
+            deadline,
+          ]);
         }
       }
+
+      // Build transaction params
+      const txParams: { from: string; to: string; data: string; value?: string } = {
+        from: evmAddress,
+        to: contracts.SPARKDEX_ROUTER,
+        data: swapData,
+      };
+
+      // Add value for native token swaps (FLR → Token)
+      if (txValue) {
+        txParams.value = txValue;
+      }
+
+      console.log("Sending swap transaction via WalletConnect...", txParams);
+      const swapTxHash = await walletConnectProvider.request({
+        method: 'eth_sendTransaction',
+        params: [txParams],
+      }) as string;
+      console.log("Swap tx submitted:", swapTxHash);
 
       toast({
         title: "Swap Submitted",
         description: "Waiting for confirmation...",
       });
 
-      await tx.wait();
+      // Wait for confirmation using RPC provider
+      const receipt = await rpcProvider.waitForTransaction(swapTxHash);
+      console.log("Swap confirmed:", receipt?.hash);
 
       // Success! Trigger confetti
       confetti({
@@ -417,15 +559,29 @@ export default function Swap() {
       setOutputAmount("");
 
       toast({
-        title: "Swap Successful! 🎉",
-        description: `Swapped ${inputAmount} ${selectedInputAsset.symbol} for ${outputAmount} ${selectedOutputAsset.symbol}`,
+        title: "Swap Successful!",
+        description: `Swapped ${swapInputAmount} ${swapInputSymbol} for ${outputAmount} ${swapOutputSymbol}`,
       });
     } catch (error: any) {
       console.error("Swap error:", error);
-      const errorMsg = error.message || "Transaction failed. Please try again.";
+      console.error("Swap error details:", { 
+        code: error.code, 
+        reason: error.reason, 
+        message: error.message 
+      });
+      
+      let errorMsg = error.message || "Transaction failed. Please try again.";
+      if (errorMsg.includes("rejected") || errorMsg.includes("denied") || errorMsg.includes("User rejected")) {
+        errorMsg = "Transaction was rejected in your wallet.";
+      } else if (errorMsg.includes("expired")) {
+        errorMsg = "Transaction request expired. Please try again.";
+      } else if (errorMsg.includes("INSUFFICIENT_OUTPUT_AMOUNT")) {
+        errorMsg = "Slippage too high. Try increasing slippage tolerance or reducing swap amount.";
+      }
+      
       toast({
         title: "Swap Failed",
-        description: errorMsg.includes("user rejected") ? "Transaction rejected by user" : errorMsg,
+        description: errorMsg,
         variant: "destructive",
       });
     } finally {
