@@ -3,11 +3,10 @@
 ## Overview
 Complete deployment guide for Shield Finance fair launch on Flare Network mainnet.
 
-**Fair Launch Parameters:**
+**Token Parameters:**
 - Total Supply: 10,000,000 SHIELD (fixed, immutable)
-- Initial Price: $0.01 per SHIELD
-- Total Liquidity: ~$10,000 (1M SHIELD + 535,451 wFLR)
-- Airdrop: 2,000,000 SHIELD (20% of supply)
+- Blockchain: Flare Network
+- Token Decimals: 18
 - LP Lock: 12 months (Team Finance or equivalent)
 
 ---
@@ -312,8 +311,10 @@ npx hardhat run scripts/fund-airdrop.ts --network flare
 ✅ Airdrop Funded
    Amount: 2,000,000 SHIELD
    Distributor: <MERKLE_DISTRIBUTOR_ADDRESS>
-   Remaining Deployer Balance: 7,000,000 SHIELD
+   Remaining Deployer Balance: 8,000,000 SHIELD
 ```
+
+**Note:** After funding the airdrop (20%), the remaining 8M tokens will be distributed according to the Treasury Allocations table below.
 
 **Verification:**
 ```bash
@@ -336,12 +337,20 @@ npx hardhat run scripts/test-airdrop-claim.ts --network flare
 
 After all steps complete, verify final token distribution:
 
-| Holder | Amount | Percentage | Purpose |
-|--------|--------|------------|---------|
-| LP Pool (locked) | 1,000,000 SHIELD | 10% | Initial liquidity |
-| Airdrop (MerkleDistributor) | 2,000,000 SHIELD | 20% | Community airdrop |
-| Deployer/Team | 7,000,000 SHIELD | 70% | Team allocation, future development |
-| **Total** | **10,000,000 SHIELD** | **100%** | Fixed supply |
+| Category | Percentage | Tokens | Purpose |
+|----------|------------|--------|---------|
+| Team | 9.00% | 900,000 | Core team allocation |
+| Advisors | 5.00% | 500,000 | Strategic advisors |
+| Ecosystem Development | 15.00% | 1,500,000 | Protocol development & growth |
+| Airdrops | 20.00% | 2,000,000 | Community distribution |
+| Marketing | 3.50% | 350,000 | Marketing & awareness |
+| Ambassadors | 2.50% | 250,000 | Community ambassadors |
+| Ecosystem Rewards | 0.00% | 0 | Reserved for future use |
+| Staking Rewards | 0.00% | 0 | Reserved for future use |
+| Treasury | 10.00% | 1,000,000 | Protocol treasury |
+| Liquidity / MM / Exchanges | 10.00% | 1,000,000 | Initial DEX liquidity |
+| Future Liquidity Adds | 25.00% | 2,500,000 | Future liquidity expansion |
+| **Total** | **100%** | **10,000,000** | Fixed supply |
 
 **Verification Script:**
 ```bash
@@ -352,9 +361,15 @@ npx hardhat run scripts/verify-token-distribution.ts --network flare
 ```
 ✅ Token Distribution Verified
    Total Supply: 10,000,000 SHIELD
-   LP Pool: 1,000,000 SHIELD (10%)
-   Airdrop: 2,000,000 SHIELD (20%)
-   Deployer: 7,000,000 SHIELD (70%)
+   Team: 900,000 SHIELD (9%)
+   Advisors: 500,000 SHIELD (5%)
+   Ecosystem Development: 1,500,000 SHIELD (15%)
+   Airdrops: 2,000,000 SHIELD (20%)
+   Marketing: 350,000 SHIELD (3.5%)
+   Ambassadors: 250,000 SHIELD (2.5%)
+   Treasury: 1,000,000 SHIELD (10%)
+   Liquidity: 1,000,000 SHIELD (10%)
+   Future Liquidity: 2,500,000 SHIELD (25%)
    Sum: 10,000,000 SHIELD ✓
 ```
 
@@ -418,7 +433,7 @@ npx hardhat run scripts/verify-shield-deployment.ts --network flare
 **Checks:**
 - ✅ All contracts deployed and verified on block explorer
 - ✅ Total supply = 10M SHIELD
-- ✅ Token distribution correct (10% LP, 20% airdrop, 70% deployer)
+- ✅ Token distribution correct (see Treasury Allocations table)
 - ✅ LP NFT locked for 12 months
 - ✅ MerkleDistributor funded with 2M SHIELD
 - ✅ RevenueRouter configured correctly

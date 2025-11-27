@@ -147,13 +147,19 @@ Comprehensive security checklist for Shield Finance fair launch on Flare Network
   - [ ] Step 7: Fund MerkleDistributor
     - 2M SHIELD transferred to MerkleDistributor
     - Distributor balance verified = 2M SHIELD
-    - Deployer balance verified = 7M SHIELD (after LP + airdrop)
+    - Remaining tokens distributed per Treasury Allocations
 
 ### 2.3 Post-Deployment Verification
 - [ ] **Token Distribution:**
-  - LP Pool: 1M SHIELD (10%) ✓
-  - Airdrop: 2M SHIELD (20%) ✓
-  - Deployer: 7M SHIELD (70%) ✓
+  - Team: 900K SHIELD (9%) ✓
+  - Advisors: 500K SHIELD (5%) ✓
+  - Ecosystem Development: 1.5M SHIELD (15%) ✓
+  - Airdrops: 2M SHIELD (20%) ✓
+  - Marketing: 350K SHIELD (3.5%) ✓
+  - Ambassadors: 250K SHIELD (2.5%) ✓
+  - Treasury: 1M SHIELD (10%) ✓
+  - Liquidity / MM / Exchanges: 1M SHIELD (10%) ✓
+  - Future Liquidity Adds: 2.5M SHIELD (25%) ✓
   - Total: 10M SHIELD ✓
 - [ ] **Block Explorer Verification:**
   - All contracts verified on Flare Explorer
@@ -226,8 +232,8 @@ Comprehensive security checklist for Shield Finance fair launch on Flare Network
   - LP Ratio: 535,451 wFLR / 1M SHIELD ≈ 0.535 wFLR per SHIELD ✓
   - Total Liquidity: ~$10,000 ✓
 - [ ] **Supply Distribution:**
-  - No team allocation dumped at launch
-  - Deployer holds 70% (transparent on-chain)
+  - Team allocation: 9% (with vesting recommended)
+  - Treasury allocations transparent on-chain
   - Airdrop vested via merkle distributor (no unlock)
   - LP locked for 12 months ✓
 - [ ] **Burn Mechanics:**
