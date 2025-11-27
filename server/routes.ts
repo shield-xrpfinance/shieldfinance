@@ -1654,44 +1654,72 @@ export async function registerRoutes(
 
   // Authenticate xApp session using OTT (One Time Token)
   // The frontend detects xApp context and sends the OTT to backend for secure verification
+  // OTT is valid for 1 minute and can only be fetched once
   app.post("/api/wallet/xaman/xapp-auth", async (req, res) => {
     try {
       const { xAppToken } = req.body;
       
+      console.log("🔐 xApp auth request received:", {
+        hasToken: !!xAppToken,
+        tokenPreview: xAppToken ? `${xAppToken.substring(0, 8)}...` : 'none',
+      });
+      
       if (!xAppToken) {
-        return res.status(400).json({ error: "xAppToken is required" });
+        return res.status(400).json({ success: false, error: "xAppToken is required" });
       }
       
       const apiKey = process.env.XUMM_API_KEY?.trim();
       const apiSecret = process.env.XUMM_API_SECRET?.trim();
       
       if (!apiKey || !apiSecret) {
-        return res.status(500).json({ error: "Xaman credentials not configured" });
+        console.error("❌ Xaman credentials not configured");
+        return res.status(500).json({ success: false, error: "Xaman credentials not configured" });
       }
       
       // Use the xumm-sdk to verify the OTT and get user info
       const xumm = new XummSdk(apiKey, apiSecret);
       
       // Get the xApp session info using the OTT
+      // Note: OTT can only be fetched once and expires after 1 minute
+      console.log("🔄 Fetching xApp OTT data...");
       const ottData = await xumm.xApp?.get(xAppToken);
       
-      if (!ottData || !ottData.account) {
-        return res.status(401).json({ error: "Invalid xApp token or no account associated" });
+      console.log("📦 xApp OTT response:", {
+        hasData: !!ottData,
+        keys: ottData ? Object.keys(ottData) : [],
+        account: ottData?.account,
+        accountClassic: (ottData as any)?.account_classic,
+        sub: (ottData as any)?.sub,
+      });
+      
+      // The response may have different field names - check multiple possibilities
+      const account = ottData?.account || (ottData as any)?.account_classic || (ottData as any)?.sub;
+      
+      if (!ottData || !account) {
+        console.error("❌ Invalid xApp token or no account:", { ottData });
+        return res.status(401).json({ 
+          success: false, 
+          error: "Invalid xApp token or no account associated. Token may have expired or already been used." 
+        });
       }
       
-      console.log("xApp auth successful:", {
-        account: ottData.account,
-        network: ottData.network,
+      console.log("✅ xApp auth successful:", {
+        account: account,
+        network: ottData.network || (ottData as any)?.networkType,
       });
       
       res.json({
         success: true,
-        account: ottData.account,
-        network: ottData.network,
+        account: account,
+        network: ottData.network || (ottData as any)?.networkType,
       });
     } catch (error) {
-      console.error("xApp auth error:", error);
-      res.status(500).json({ error: "Failed to authenticate xApp session" });
+      console.error("❌ xApp auth error:", error);
+      const errorMessage = error instanceof Error ? error.message : "Unknown error";
+      res.status(500).json({ 
+        success: false, 
+        error: `Failed to authenticate xApp session: ${errorMessage}` 
+      });
     }
   });
 
