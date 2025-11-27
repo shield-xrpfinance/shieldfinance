@@ -346,12 +346,15 @@ export class DepositService {
 
   /**
    * Get status for direct FXRP deposit/withdrawal
-   * FIXED: Now queries from database for proper state persistence
+   * FIXED: Now queries by transaction ID first, then falls back to txHash lookup
    */
   async getDirectTransactionStatus(transactionId: string): Promise<DirectDepositStatus> {
     try {
-      // Query transaction from database
-      const transaction = await this.config.storage.getTransactionByTxHash(transactionId);
+      // Query transaction from database - try by ID first, then by txHash
+      let transaction = await this.config.storage.getTransaction(transactionId);
+      if (!transaction) {
+        transaction = await this.config.storage.getTransactionByTxHash(transactionId);
+      }
       
       if (!transaction) {
         return {
