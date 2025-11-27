@@ -188,6 +188,99 @@ IShieldToken shield = IShieldToken(0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616);
 
 ---
 
+## Deployment Flow: StakingBoost ↔ ShXRPVault (Circular Dependency)
+
+The StakingBoost and ShXRPVault contracts have a mutual dependency that requires a three-step deployment:
+
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                     Three-Step Deployment Flow                               │
+│                                                                              │
+│  Step 1: Deploy ShXRPVault              Step 2: Deploy StakingBoost         │
+│  ───────────────────────────            ──────────────────────────          │
+│  constructor(                           constructor(                         │
+│    fxrpToken,                             shieldToken,                       │
+│    "Shield XRP",                          fxrpToken,                         │
+│    "shXRP",                               vault,     ← Real vault address   │
+│    revenueRouter,                         revenueRouter                      │
+│    address(0)    ← Placeholder          )                                   │
+│  )                                                                          │
+│                                                                              │
+│  Step 3: Wire Vault to StakingBoost                                         │
+│  ──────────────────────────────────                                         │
+│  vault.setStakingBoost(stakingBoostAddress)                                 │
+│  ├── One-time setter (cannot be changed)                                    │
+│  ├── Enables donateOnBehalf() access control                                │
+│  └── Completes the bidirectional wiring                                     │
+└─────────────────────────────────────────────────────────────────────────────┘
+```
+
+### Deployment Script Example
+
+```typescript
+// scripts/deploy-with-circular-dependency.ts
+import { ethers } from "hardhat";
+
+async function main() {
+  const [deployer] = await ethers.getSigners();
+  
+  // Configuration
+  const FXRP_TOKEN = "0x0b6A3645c240605887a5532109323A3E12273dc7";
+  const SHIELD_TOKEN = "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616";
+  const REVENUE_ROUTER = "0x262582942Dcf97F59Cb0fe61e5852DDa10fD6fFB";
+
+  // Step 1: Deploy ShXRPVault with stakingBoost = address(0)
+  console.log("Step 1: Deploying ShXRPVault with placeholder stakingBoost...");
+  const ShXRPVault = await ethers.getContractFactory("ShXRPVault");
+  const vault = await ShXRPVault.deploy(
+    FXRP_TOKEN,
+    "Shield XRP",
+    "shXRP",
+    REVENUE_ROUTER,
+    ethers.ZeroAddress  // ← Placeholder
+  );
+  await vault.waitForDeployment();
+  console.log(`ShXRPVault deployed: ${await vault.getAddress()}`);
+
+  // Step 2: Deploy StakingBoost with real vault address
+  console.log("Step 2: Deploying StakingBoost with real vault...");
+  const StakingBoost = await ethers.getContractFactory("StakingBoost");
+  const stakingBoost = await StakingBoost.deploy(
+    SHIELD_TOKEN,
+    FXRP_TOKEN,
+    await vault.getAddress(),  // ← Real vault address
+    REVENUE_ROUTER
+  );
+  await stakingBoost.waitForDeployment();
+  console.log(`StakingBoost deployed: ${await stakingBoost.getAddress()}`);
+
+  // Step 3: Wire vault to StakingBoost (one-time setter)
+  console.log("Step 3: Wiring vault to StakingBoost...");
+  const tx = await vault.setStakingBoost(await stakingBoost.getAddress());
+  await tx.wait();
+  console.log("Vault successfully wired to StakingBoost");
+
+  // Verify the wiring
+  const vaultStakingBoost = await vault.stakingBoost();
+  const stakingBoostVault = await stakingBoost.vault();
+  console.log(`Verification:`);
+  console.log(`  vault.stakingBoost() = ${vaultStakingBoost}`);
+  console.log(`  stakingBoost.vault() = ${stakingBoostVault}`);
+}
+
+main().catch(console.error);
+```
+
+### Important Notes
+
+1. **One-Time Setter**: `vault.setStakingBoost()` can only be called once. If you need to change StakingBoost, you must redeploy both contracts.
+
+2. **Order Matters**: Always deploy vault first (with address(0)), then StakingBoost, then wire them.
+
+3. **Access Control**: After wiring, only StakingBoost can call `vault.donateOnBehalf()`.
+
+---
+
 ## Commands Summary
 
 ### 1. Compile Smart Contracts

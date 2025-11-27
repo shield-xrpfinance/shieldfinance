@@ -508,38 +508,69 @@ No manual approvals required - all withdrawals are automated and instant via sma
 - **Initial Price**: $0.01 per SHIELD
 - **Liquidity Lock**: 12 months via Team Finance (or equivalent)
 
-### Revenue Model: Real Burns, No Inflation
+### Revenue Model: Burns, Boost, Reserves
 
-Shield Finance generates **real revenue** from vault fees, creating **deflationary pressure** through automated buyback & burn:
+Shield Finance generates **real revenue** from vault fees, creating **deflationary pressure** and **differentiated yield**:
 
 1. **Deposit Fee (0.2%)**: Collected on every vault deposit → sent to RevenueRouter
 2. **Withdrawal Fee (0.2%)**: Collected on every vault withdrawal → sent to RevenueRouter
-3. **Automated Burns**: Every Sunday, GitHub Actions checks if RevenueRouter has ≥5000 wFLR (~$100):
-   - If yes → calls `distribute()` to execute buyback & burn on SparkDEX
-   - SHIELD is bought from DEX using accumulated wFLR
-   - Purchased SHIELD is permanently burned
-   - Reduces total supply, increasing scarcity
+3. **Revenue Distribution**: Every Sunday, GitHub Actions checks if RevenueRouter has ≥5000 wFLR (~$100):
+   - **50% Burn**: wFLR swapped to SHIELD → permanently burned
+   - **40% Boost**: wFLR swapped to FXRP → distributed to SHIELD stakers
+   - **10% Reserves**: Kept for protocol development and security
 
-**No minting. No inflation. Only burns.** As vault TVL grows, burn rate accelerates.
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                        Revenue Flow                             │
+│                                                                 │
+│   Vault Fees      RevenueRouter          Distribution           │
+│   ──────────────► ──────────────►  ┌─────────────────────────┐  │
+│   wFLR (0.2%)     distribute()     │ 50% → SHIELD buyback/burn│  │
+│                                    │ 40% → FXRP → StakingBoost │  │
+│                                    │ 10% → Protocol reserves   │  │
+│                                    └─────────────────────────┘  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**No minting. No inflation. Pure revenue-share.** As vault TVL grows, burn rate and boost rewards accelerate.
 
 ### Stake $SHIELD → Boost Your shXRP Yield
 
-**LIVE — Stake SHIELD to boost your shXRP APY up to 2.5x**
+**LIVE — Stake SHIELD to boost your shXRP APY**
 
-SHIELD holders can stake their tokens to receive proportionally higher yield on their shXRP holdings:
+SHIELD holders can stake their tokens to receive proportionally higher yield on their shXRP holdings. The boost is distributed **strictly pro-rata** to locked SHIELD positions.
 
-- **Stake SHIELD**: Lock tokens for 30 days in StakingBoost contract
-- **Earn Boost**: +1% APY per 100 SHIELD staked (e.g., 1000 SHIELD = +10% APY)
-- **Weighted Distribution**: Revenue fees are converted to FXRP and distributed to stakers using Synthetix-style accumulator
-- **Claim Rewards**: Call `claim()` to convert earned FXRP to shXRP shares minted directly to your wallet
-- **Global Cap**: Maximum 25% boost (2500 SHIELD staked)
+**Formula (from whitepaper):**
+```
+Boost APY = Base APY + (Annual Protocol Revenue → FXRP) × (Your Locked SHIELD ÷ Total Locked SHIELD)
+```
+
+**Key Features:**
+- **30-Day Lock**: Stake SHIELD in StakingBoost contract for minimum 30 days
+- **Pro-Rata Distribution**: Rewards distributed proportionally by stake weight
+- **Synthetix Accumulator**: O(1) gas complexity, fair late-joiner calculations
+- **Claim Rewards**: Call `claim()` to mint shXRP shares directly to your wallet
+- **Global Cap**: Maximum 25% boost (configurable by governance)
 
 **How It Works:**
-1. RevenueRouter receives wFLR from vault fees
-2. 40% of revenue → swapped to FXRP → StakingBoost.distributeBoost()
-3. Reward accumulator updates rewardPerToken (O(1) gas, no loops)
-4. Stakers call claim() → FXRP sent to vault.donateOnBehalf() → shXRP minted to staker only
-5. Non-stakers receive zero boost (differentiated yield)
+1. RevenueRouter receives wFLR from vault fees (0.2% deposit/withdrawal)
+2. 40% of revenue → swapped to FXRP → `StakingBoost.distributeBoost()`
+3. Reward accumulator updates `rewardPerToken` (O(1) gas, no loops)
+4. Stakers call `claim()` → FXRP sent to `vault.donateOnBehalf()` → shXRP minted to staker
+5. **Non-stakers receive zero boost** (differentiated yield)
+
+**One-liner for whitepaper:**
+> "Every week the protocol donates FXRP bought with real revenue. 100% of that donation is distributed pro-rata to SHIELD lockers. No minting. No inflation. Pure revenue-share."
+
+**Deployment Flow (Circular Dependency Solution):**
+```bash
+# Three-step deployment required:
+1. Deploy ShXRPVault with stakingBoost = address(0)
+2. Deploy StakingBoost with real vault address
+3. Call vault.setStakingBoost(stakingBoostAddress)
+```
+
+See [docs/protocol/STAKING_BOOST_SPEC.md](docs/protocol/STAKING_BOOST_SPEC.md) for complete technical specification.
 
 ### Contract Addresses (Flare Mainnet)
 

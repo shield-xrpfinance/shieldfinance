@@ -72,6 +72,15 @@ docs/
 - Operational security guidelines
 - Emergency procedures
 
+### [STAKING_BOOST_SPEC.md](protocol/STAKING_BOOST_SPEC.md)
+**Purpose**: Complete technical specification for SHIELD staking yield boost  
+**Contents**:
+- Synthetix-style reward accumulator math
+- Pro-rata distribution formula
+- StakingBoost ↔ ShXRPVault integration
+- Circular dependency deployment solution
+- Security considerations and test coverage
+
 ---
 
 ## Integration Documentation

@@ -35,8 +35,38 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
-- **Standards**: OpenZeppelin Contracts (ERC-20, access control).
-- **Contracts**: `ShXRPVault.sol` (ERC-4626), `VaultController.sol`, `KineticStrategy.sol`, `FiresparkStrategy.sol`, `MockStrategy.sol`.
+- **Standards**: OpenZeppelin Contracts (ERC-20, access control, ReentrancyGuard).
+- **Contracts**: `ShXRPVault.sol` (ERC-4626), `VaultController.sol`, `StakingBoost.sol` (Synthetix accumulator), `RevenueRouter.sol` (fee distribution), `ShieldToken.sol`.
+
+### StakingBoost ↔ ShXRPVault ↔ RevenueRouter Architecture
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                      Stake SHIELD → Boost shXRP Yield                    │
+│                                                                          │
+│  ┌──────────────┐     fees      ┌───────────────────┐                   │
+│  │ ShXRPVault   │ ────────────► │  RevenueRouter    │                   │
+│  │ (ERC-4626)   │               │  distribute()     │                   │
+│  └──────┬───────┘               └─────────┬─────────┘                   │
+│         │                                 │                              │
+│         │ donateOnBehalf()                │ 50% burn / 40% boost / 10%  │
+│         │ (mints shXRP)                   │ reserves                     │
+│         │                                 ▼                              │
+│         │                       ┌─────────────────────┐                  │
+│         │                       │  StakingBoost       │                  │
+│         │◄──────────────────────│  distributeBoost()  │                  │
+│         │      claim()          │  rewardPerToken     │                  │
+│         │                       │  (Synthetix style)  │                  │
+│         │                       └─────────────────────┘                  │
+│                                                                          │
+│  Formula: Boost = Revenue × (User SHIELD ÷ Total SHIELD)                │
+│  Lock: 30 days | Revenue: 40% to boost | Cap: 25% max                   │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+**Deployment Flow (Circular Dependency Solution):**
+1. Deploy ShXRPVault with `stakingBoost = address(0)`
+2. Deploy StakingBoost with real vault address  
+3. Call `vault.setStakingBoost()` (one-time setter)
 
 ## External Dependencies
 

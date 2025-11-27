@@ -2,6 +2,85 @@
 
 All notable changes to the XRP Liquid Staking Protocol Dashboard will be documented in this file.
 
+## [2.1.0] - 2025-11-27
+
+### Stake SHIELD → Boost shXRP Yield Feature Complete
+
+Production-ready implementation of differentiated yield for SHIELD stakers. Users lock SHIELD tokens for 30 days to receive proportional FXRP rewards that mint additional shXRP shares, creating enhanced yield for stakers vs non-stakers.
+
+#### Smart Contract Updates
+
+**StakingBoost.sol - Synthetix-Style Reward Accumulator**
+- Implemented O(1) gas-efficient `rewardPerTokenStored` accumulator pattern
+- `distributeBoost(uint256 fxrpAmount)`: Called by RevenueRouter to add FXRP rewards
+- `earned(address account)`: View function returning pending FXRP rewards
+- `claim()`: Claims pending rewards → calls `vault.donateOnBehalf()` to mint shXRP
+- `claimAndWithdraw(uint256 amount)`: Convenience function for claim + withdraw in one tx
+- Admin functions: `setGlobalBoostCap()`, `setRevenueRouter()`, `recoverTokens()`
+- Events: `Staked`, `Withdrawn`, `RewardDistributed`, `RewardClaimed`
+- Lock period: 30 days (2,592,000 seconds)
+- Security: ReentrancyGuard, onlyOwner access controls, CEI pattern
+
+**ShXRPVault.sol - Circular Dependency Solution**
+- Changed `stakingBoost` from immutable to one-time settable
+- Added `setStakingBoost(address)`: Owner-only, one-time setter (solves circular dependency)
+- Added `donateOnBehalf(address user, uint256 fxrpAmount)`: 
+  - Access-controlled to StakingBoost only
+  - Transfers FXRP from caller, mints shXRP shares to specified user
+  - Enables differentiated yield for stakers
+- Events: `StakingBoostUpdated`, `DonatedOnBehalf`
+
+**RevenueRouter.sol - Revenue Allocation Update**
+- Updated revenue split: 50% burn / 40% boost / 10% reserves
+- `boostAllocationBps`: Configurable (default 4000 = 40%)
+- `_swapAndDistributeBoost()`: Swaps wFLR → FXRP → StakingBoost.distributeBoost()
+- `setBoostAllocation(uint256 bps)`: Admin function with validation
+
+#### Deployment Flow (Solving Circular Dependency)
+
+Three-step deployment sequence required:
+1. Deploy ShXRPVault with `stakingBoost = address(0)`
+2. Deploy StakingBoost with real vault address
+3. Call `vault.setStakingBoost(stakingBoostAddress)`
+
+#### Boost Formula (Matches PDF Specification)
+
+```
+Boost APY = Base APY + (Annual Protocol Revenue → FXRP) × (Your Locked SHIELD ÷ Total Locked SHIELD)
+```
+
+- 100% of boost allocation distributed pro-rata to SHIELD lockers
+- No minting, no inflation - pure revenue-share
+- Synthetix accumulator ensures fair late-joiner calculations
+
+#### Test Coverage
+
+**test/boost-flow.ts** - 16 comprehensive tests:
+- Tests 1-4: Reward accumulator math validation
+- Tests 5-8: claim() → donateOnBehalf() integration
+- Tests 9-12: End-to-end flow with differentiated yield
+- Security tests: Reentrancy protection, access control, edge cases
+
+#### Technical Specifications
+
+| Parameter | Value |
+|-----------|-------|
+| Lock Period | 30 days |
+| Revenue to Boost | 40% |
+| Revenue to Burn | 50% |
+| Revenue to Reserves | 10% |
+| Global Boost Cap | 25% (2500 bps) |
+| Gas Complexity | O(1) per claim |
+
+#### Documentation Updates
+- `docs/protocol/STAKING_BOOST_SPEC.md`: Complete technical specification
+- `DEPLOYMENT_GUIDE.md`: Three-step deployment flow with code examples
+- `docs/protocol/SHIELD_TOKENOMICS.md`: Updated revenue allocation diagrams
+- `REVIEWERS.md`: Added staking boost section for auditors
+- `README.md`: Updated "Stake $SHIELD" section with new formula
+
+---
+
 ## [2.0.0] - 2025-11-23
 
 ### ✅ Testnet Launch Complete - 10M SHIELD Deployment Corrected & All Contracts Live

@@ -111,11 +111,12 @@ The Shield Finance tokenomics create a **positive feedback loop**:
 | Metric | Value | Description |
 |--------|-------|-------------|
 | **Total Supply** | 10,000,000 SHIELD | Fixed, immutable - can only decrease |
-| **Performance Fee** | 0.2% | Small fee on yield generated |
-| **Buyback Allocation** | 50% | Half of all fees go to burns |
-| **Reserve Allocation** | 50% | Half kept for protocol development |
+| **Performance Fee** | 0.2% | Small fee on deposits/withdrawals |
+| **Burn Allocation** | 50% | Half of fees buy and burn SHIELD |
+| **Boost Allocation** | 40% | 40% of fees distributed to SHIELD stakers |
+| **Reserve Allocation** | 10% | 10% kept for protocol development |
 | **Staking Lock Period** | 30 days | Lock $SHIELD to boost your vault APY |
-| **APY Boost Rate** | +1% per 100 SHIELD | Stake more = earn more |
+| **Global Boost Cap** | 25% | Maximum boost percentage (2500 bps) |
 
 ---
 
@@ -153,24 +154,76 @@ The initial $SHIELD supply of **10,000,000 tokens** is allocated as follows:
 
 ## Staking for APY Boost
 
-Holding $SHIELD isn't just about price appreciation - you can **stake it to boost your vault yields**.
+Holding $SHIELD isn't just about price appreciation - you can **stake it to boost your vault yields** through real revenue-share.
 
 ### How APY Boost Works
 
-1. **Stake $SHIELD** in the StakingBoost contract (30-day lock)
-2. **Get Higher APY** on all your vault deposits
-3. **Formula:** +1% APY boost per 100 $SHIELD staked
+The boost is distributed **strictly pro-rata** to locked SHIELD positions using a Synthetix-style reward accumulator:
 
-### Example
+**Formula (from whitepaper):**
+```
+Boost APY = Base APY + (Annual Protocol Revenue → FXRP) × (Your Locked SHIELD ÷ Total Locked SHIELD)
+```
 
-| Your Stake | Base Vault APY | Boost | Your APY |
-|------------|----------------|-------|----------|
-| 0 SHIELD | 8.0% | +0.0% | 8.0% |
-| 100 SHIELD | 8.0% | +1.0% | 9.0% |
-| 500 SHIELD | 8.0% | +5.0% | 13.0% |
-| 1,000 SHIELD | 8.0% | +10.0% | 18.0% |
+### Revenue Flow
 
-**The more $SHIELD you stake, the more you earn** - creating natural demand for the token while rewarding long-term holders.
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│                         Boost Distribution Flow                           │
+│                                                                           │
+│  Vault Fees (wFLR)                                                        │
+│       │                                                                   │
+│       ▼                                                                   │
+│  RevenueRouter.distribute()                                               │
+│       │                                                                   │
+│       ├── 50% → Buy SHIELD → Burn (deflationary)                         │
+│       ├── 40% → Swap to FXRP → StakingBoost.distributeBoost()            │
+│       └── 10% → Protocol reserves                                         │
+│                      │                                                    │
+│                      ▼                                                    │
+│              rewardPerToken updated (O(1) gas)                           │
+│                      │                                                    │
+│                      ▼                                                    │
+│              Stakers call claim()                                         │
+│                      │                                                    │
+│                      ▼                                                    │
+│              vault.donateOnBehalf() mints shXRP to staker                │
+│                                                                           │
+│  Result: Stakers receive additional shXRP shares (differentiated yield)  │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
+### Example Distribution
+
+Assume $10,000 in weekly vault fees (wFLR):
+
+| Allocation | Amount | Destination |
+|------------|--------|-------------|
+| **50% Burn** | $5,000 | Buy SHIELD → Burn address |
+| **40% Boost** | $4,000 | Swap to FXRP → StakingBoost |
+| **10% Reserves** | $1,000 | Protocol treasury |
+
+The $4,000 FXRP is then distributed to stakers pro-rata:
+
+| Staker | SHIELD Staked | Share of Total | FXRP Reward |
+|--------|---------------|----------------|-------------|
+| Alice | 10,000 SHIELD | 50% | $2,000 FXRP |
+| Bob | 6,000 SHIELD | 30% | $1,200 FXRP |
+| Carol | 4,000 SHIELD | 20% | $800 FXRP |
+
+When they call `claim()`, the FXRP is converted to shXRP shares minted directly to their wallets.
+
+### Key Technical Details
+
+- **Synthetix Accumulator**: O(1) gas complexity for reward distribution
+- **Late-Joiner Safety**: New stakers only earn from distributions after joining
+- **Lock Period**: 30 days minimum
+- **Global Cap**: Maximum 25% boost (configurable by governance)
+- **Non-Staker Exclusion**: Users who don't stake receive zero boost
+
+> **One-liner for website:** "Every week the protocol donates FXRP bought with real revenue. 100% of that donation is distributed pro-rata to SHIELD lockers. No minting. No inflation. Pure revenue-share."
+
+See [STAKING_BOOST_SPEC.md](STAKING_BOOST_SPEC.md) for complete technical specification.
 
 ---
 

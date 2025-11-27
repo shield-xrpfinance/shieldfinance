@@ -32,8 +32,9 @@ Welcome to the Shield Finance codebase. This document provides a structured navi
 
 - **Token**: $SHIELD (10M total supply)
 - **Revenue Model**: 0.2% platform fee on deposits/withdrawals
+- **Revenue Split**: 50% burn / 40% boost / 10% reserves
 - **Buyback & Burn**: 50% of revenue used to buy and burn SHIELD
-- **Staking Boost**: Lock SHIELD for enhanced APY (1% per 100 SHIELD staked)
+- **Staking Boost**: Lock SHIELD for 30 days to receive pro-rata FXRP rewards (minted as shXRP)
 
 ---
 
@@ -152,6 +153,49 @@ Priority files for security review:
 - **Admin Endpoints**: Protected by dedicated `ADMIN_API_KEY` environment variable (separate from session management)
 - **Timing-Safe Comparison**: All secret comparisons use `crypto.timingSafeEqual()` to prevent timing attacks
 - **Minimum Key Length**: Admin keys must be at least 32 characters
+
+---
+
+## Staking Boost Feature (November 2025)
+
+### Overview
+
+The "Stake SHIELD → Boost shXRP Yield" feature enables differentiated yield for SHIELD stakers:
+
+- **Mechanism**: SHIELD holders lock tokens for 30 days to receive proportional FXRP rewards
+- **Distribution**: 40% of protocol revenue is swapped to FXRP and distributed pro-rata to stakers
+- **Claim Flow**: Stakers call `claim()` → FXRP is deposited via `vault.donateOnBehalf()` → shXRP minted to staker
+
+### Formula (from whitepaper)
+
+```
+Boost APY = Base APY + (Annual Protocol Revenue → FXRP) × (Your Locked SHIELD ÷ Total Locked SHIELD)
+```
+
+### Key Contracts
+
+| Contract | Function | Security Notes |
+|----------|----------|----------------|
+| **StakingBoost** | Synthetix-style reward accumulator | O(1) gas, ReentrancyGuard, onlyRevenueRouter for distributeBoost |
+| **ShXRPVault.donateOnBehalf()** | Mints shXRP to specific user | Access-controlled to StakingBoost only |
+| **RevenueRouter** | 50% burn / 40% boost / 10% reserves split | Swaps wFLR → FXRP → distributeBoost() |
+
+### Deployment Notes
+
+Circular dependency between StakingBoost ↔ ShXRPVault solved via:
+1. Deploy vault with `stakingBoost = address(0)`
+2. Deploy StakingBoost with real vault address
+3. Call `vault.setStakingBoost()` (one-time setter)
+
+### Audit Focus Areas
+
+1. **Reward accumulator math**: Verify `rewardPerTokenStored` updates correctly
+2. **Access control**: Only StakingBoost can call `donateOnBehalf()`
+3. **Reentrancy**: All claim/withdraw functions protected
+4. **Late-joiner fairness**: New stakers only earn from post-stake distributions
+5. **One-time setter**: `setStakingBoost()` cannot be called twice
+
+See [docs/protocol/STAKING_BOOST_SPEC.md](docs/protocol/STAKING_BOOST_SPEC.md) for complete technical specification.
 
 ---
 
