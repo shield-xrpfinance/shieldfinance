@@ -75,31 +75,33 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       // This happens when app is loaded from Xaman as xApp (e.g., https://xumm.app/detect/xapp:...)
       const urlParams = new URLSearchParams(window.location.search);
       
-      const ott = urlParams.get('xAppToken') || urlParams.get('ott') || urlParams.get('xApp');
+      const xAppToken = urlParams.get('xAppToken') || urlParams.get('ott') || urlParams.get('xApp');
       
-      if (ott) {
+      if (xAppToken) {
+        console.log('🔐 Detected xApp context, attempting auto-connect...');
         
         try {
-          // Call backend to resolve OTT to wallet address
-          const response = await fetch('/api/wallet/xaman/xapp-signin', {
+          // Call backend to verify xApp session and get wallet address
+          // Uses xumm.xApp.get() on backend for proper OTT verification
+          const response = await fetch('/api/wallet/xaman/xapp-auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ ott }),
+            body: JSON.stringify({ xAppToken }),
           });
 
           if (!response.ok) {
             const errorData = await response.json();
-            console.error('xApp OTT resolution failed:', errorData.error);
-            throw new Error(errorData.error || 'Failed to resolve OTT');
+            console.error('xApp authentication failed:', errorData.error);
+            throw new Error(errorData.error || 'Failed to authenticate xApp session');
           }
 
           const data = await response.json();
           
-          if (data.success && data.address) {
+          if (data.success && data.account) {
             // Auto-connect the wallet
-            setAddress(data.address);
+            setAddress(data.account);
             setProvider('xaman');
-            localStorage.setItem('walletAddress', data.address);
+            localStorage.setItem('walletAddress', data.account);
             localStorage.setItem('walletProvider', 'xaman');
             
             // Clean up URL by removing OTT parameter

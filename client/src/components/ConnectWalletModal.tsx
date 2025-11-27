@@ -356,9 +356,36 @@ export default function ConnectWalletModal({
 
   const handleOpenXaman = () => {
     if (xamanDeepLink) {
-      // Use location.href for proper mobile deep link handling
-      // window.open doesn't work for deep links on mobile devices
-      window.location.href = xamanDeepLink;
+      // Use visibilitychange to detect if app opened successfully
+      // This prevents showing a blank screen when the app isn't installed
+      let opened = false;
+      
+      const handleVisibility = () => {
+        if (document.visibilityState === 'hidden') {
+          opened = true;
+        }
+      };
+      
+      document.addEventListener('visibilitychange', handleVisibility);
+      
+      // Create a hidden link element and click it
+      // This is more reliable than window.location.href for custom schemes
+      const link = document.createElement('a');
+      link.href = xamanDeepLink;
+      link.style.display = 'none';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      // Clean up listener and show toast if app didn't open
+      setTimeout(() => {
+        document.removeEventListener('visibilitychange', handleVisibility);
+        if (!opened) {
+          // App may not be installed or deep link failed
+          // Don't show error - QR code is still visible for scanning
+          console.log('Deep link may not have opened - user can scan QR code instead');
+        }
+      }, 2500);
     }
   };
 
