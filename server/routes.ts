@@ -186,6 +186,18 @@ export async function registerRoutes(
     res.status(httpStatus).json(status);
   });
 
+  // Serve whitepaper PDF
+  app.get("/whitepaper.pdf", (_req, res) => {
+    const pdfPath = path.resolve(import.meta.dirname, "..", "public", "whitepaper.pdf");
+    if (fs.existsSync(pdfPath)) {
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", "inline; filename=whitepaper.pdf");
+      res.sendFile(pdfPath);
+    } else {
+      res.status(404).json({ error: "Whitepaper not found" });
+    }
+  });
+
   // Prometheus metrics endpoint - Exports metrics for external monitoring tools (Prometheus, Grafana)
   app.get("/metrics", async (_req, res) => {
     try {
