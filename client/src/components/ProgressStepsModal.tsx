@@ -213,7 +213,14 @@ export function ProgressStepsModal({
           }
 
           if (provider === 'xaman') {
-            // For Xaman, open the QR code modal
+            // Check if payment was handled directly in xApp (no modal needed)
+            if (result.xappHandled) {
+              console.log("✅ Payment sign request opened directly in xApp - no modal needed");
+              // Payment is being handled by xApp, polling will detect completion
+              return;
+            }
+            
+            // Not in xApp - show the QR code modal
             setXamanPayload({
               uuid: result.payloadUuid || '',
               qrUrl: result.qrUrl || '',

@@ -45,6 +45,7 @@ interface PaymentRequestResult {
   deepLink?: string;
   txHash?: string;
   error?: string;
+  xappHandled?: boolean; // True if payment was opened directly in xApp (no modal needed)
 }
 
 type WalletProviderType = "xaman" | "walletconnect" | "reown" | null;
@@ -410,6 +411,36 @@ export function WalletProvider({ children }: { children: ReactNode }) {
         }
 
         const data = await response.json();
+        
+        // Check if we're in xApp context - if so, open signing directly via SDK
+        const xummSdk = getXummSdk();
+        if (xummSdk) {
+          try {
+            const environment = await xummSdk.environment;
+            const isXappContext = !!(environment as any)?.jwt || 
+              typeof (window as any).ReactNativeWebView !== 'undefined';
+            
+            if (isXappContext && xummSdk.xapp) {
+              console.log('📱 xApp context detected - opening sign request directly via SDK');
+              
+              // Open the sign request directly in xApp
+              await xummSdk.xapp.openSignRequest({ uuid: data.uuid });
+              console.log('✅ Sign request opened in xApp');
+              
+              // Return with xappHandled flag - no modal needed
+              return {
+                success: true,
+                payloadUuid: data.uuid,
+                xappHandled: true,
+              };
+            }
+          } catch (xappError) {
+            console.warn('xApp sign request failed, falling back to QR modal:', xappError);
+            // Fall through to return QR modal data
+          }
+        }
+        
+        // Not in xApp or xApp signing failed - return QR modal data
         return {
           success: true,
           payloadUuid: data.uuid,
