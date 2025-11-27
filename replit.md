@@ -3,6 +3,8 @@
 ## Overview
 This project is a full-stack DeFi application providing a dashboard for XRP liquid staking. It enables users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform integrates smart contracts on Flare Network for its $SHIELD governance token and shXRP liquid staking vault, with FAssets protocol for cross-chain XRP bridging to Flare. The vision is to enhance DeFi accessibility and efficiency on the XRP Ledger, capitalizing on the growing liquid staking market. Key capabilities include multi-asset swaps, automated withdrawal systems, and advanced FAssets bridge reconciliation.
 
+**Dual Wallet Architecture**: The platform uses wallet recognition (not Web3Auth) to provide tailored experiences. XRPL natives (Xaman/XUMM) see XRP vaults with automated FAssets bridging, while EVM users (WalletConnect/MetaMask) see FXRP vaults with direct Flare contract access and additional swap features. This approach meets each user where they are without forcing unfamiliar paradigms.
+
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 Design preference: Modern, clean list-based layouts over grid cards for better space utilization.
@@ -69,9 +71,8 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 ## External Dependencies
 
 ### Blockchain & Wallet Integration
-- **Xaman (XUMM)**: XRP wallet integration (`xumm-sdk`).
-- **WalletConnect**: XRPL-compatible wallet connection (`@walletconnect/universal-provider`).
-- **Web3Auth**: Social login for XRP wallet creation (`@web3auth/modal`).
+- **Xaman (XUMM)**: XRP wallet integration for XRPL natives (`xumm-sdk`).
+- **WalletConnect**: EVM wallet connection for Flare users (`@walletconnect/universal-provider`).
 - **XRP Ledger (XRPL)**: Real-time balance fetching (`xrpl` library).
 
 ### UI & Data Visualization

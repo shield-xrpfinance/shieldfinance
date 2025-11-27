@@ -7,7 +7,7 @@ This project uses **ERC-4337 Account Abstraction** exclusively via **Etherspot P
 - ✅ **Gasless Transactions** - Users don't need FLR/CFLR for gas
 - ✅ **Transaction Batching** - Execute multiple operations in one UserOp
 - ✅ **Paymaster Support** - Platform sponsors all user transactions
-- ✅ **Social Login Ready** - Foundation for Web3Auth integration
+- ✅ **Dual Wallet Support** - Works with both XRPL (Xaman) and EVM (WalletConnect) wallets
 - ✅ **Enhanced Security** - Smart contract wallets with ERC-4337 validation
 
 ## Architecture
@@ -195,7 +195,7 @@ All transactions automatically retry on failure with:
 - **No FLR Required** - Platform sponsors all gas fees
 - **Faster Transactions** - Batched operations complete faster
 - **Better UX** - No need to acquire and manage FLR tokens
-- **Social Login** - Can integrate Web3Auth for Web2-like onboarding
+- **Dual Wallet Support** - Seamless experience for both XRPL and EVM users
 
 ### For Platform
 

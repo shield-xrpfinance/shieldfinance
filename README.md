@@ -5,7 +5,7 @@ A full-stack DeFi application for XRP liquid staking, providing a comprehensive 
 ## 🌟 Overview
 
 This project enables users to:
-- Connect XRP wallets via **Xaman**, **WalletConnect**, or **Web3Auth** (social login)
+- Connect wallets via **Xaman** (XRPL) or **WalletConnect/MetaMask** (EVM)
 - Deposit/withdraw **XRP**, **RLUSD**, and **USDC** into yield-generating vaults
 - Track positions with real-time APY rates and rewards
 - Monitor vault performance with detailed analytics
@@ -15,10 +15,23 @@ This project enables users to:
 
 ## ✨ Key Features
 
-### 🔐 Multi-Wallet Support
-- **Xaman (XUMM)** - Mobile wallet integration with QR code signing
-- **WalletConnect** - Universal wallet connection for XRPL-compatible wallets
-- **Web3Auth** - Social login with Google, Facebook, Twitter, Discord, or Email
+### 🔐 Dual Wallet Experience
+
+Shield Finance provides tailored experiences based on wallet type:
+
+**XRPL Natives (Xaman/XUMM)**
+- Connect with familiar XRPL wallet (QR code signing)
+- See XRP-denominated vaults only
+- Deposit XRP → Automated FAssets bridge → FXRP → Vault
+- Seamless cross-chain experience without EVM complexity
+
+**EVM Users (WalletConnect/MetaMask)**
+- Connect with Ethereum-compatible wallets
+- See FXRP vaults + access to Swap feature
+- Direct FXRP deposits to Flare contracts
+- Full access to SparkDEX trading
+
+The platform automatically detects your wallet type and shows compatible vaults.
 
 ### 💰 Vault Management
 - Multiple vault types with different risk/reward profiles
@@ -70,9 +83,8 @@ This project enables users to:
 ### Blockchain Integration
 - **XRPL Library**: `xrpl` for blockchain interactions
 - **Wallet SDKs**: 
-  - `xumm-sdk` for Xaman integration
-  - `@walletconnect/universal-provider` for WalletConnect
-  - `@web3auth/modal` for social login
+  - `xumm-sdk` for Xaman (XRPL) integration
+  - `@walletconnect/universal-provider` for WalletConnect/MetaMask (EVM)
 - **Key Management**: `@noble/secp256k1` for wallet derivation
 - **Blockchain Protocols**:
   - **SparkDEX V3**: Uniswap V2-compatible DEX on Flare Network for token swaps
@@ -114,7 +126,6 @@ ADMIN_API_KEY=your-secure-admin-api-key-min-32-chars
 XUMM_API_KEY=your-xumm-api-key
 XUMM_API_SECRET=your-xumm-api-secret
 VITE_WALLETCONNECT_PROJECT_ID=your-walletconnect-project-id
-VITE_WEB3AUTH_CLIENT_ID=your-web3auth-client-id
 
 # Blockchain Deployment (Required for smart contract deployment)
 DEPLOYER_PRIVATE_KEY=your-private-key-here
@@ -174,13 +185,6 @@ VITE_MERKLE_DISTRIBUTOR_ADDRESS=0x8b3eC671c14E44B9EC8274eA3B6884A4259Ef490
 1. Visit [WalletConnect Cloud](https://cloud.walletconnect.com)
 2. Create a new project
 3. Copy your Project ID
-
-### Web3Auth
-1. Visit [Web3Auth Dashboard](https://dashboard.web3auth.io)
-2. Create a new project
-3. Select **sapphire_devnet** for testnet or **sapphire_mainnet** for production
-4. Add your domain to the whitelist
-5. Copy your Client ID
 
 ## 🗄️ Database Schema
 
@@ -405,11 +409,10 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 - `xrpl_signTransaction` method with tx_json encoding
 - Auto-submission handling with sequence error recovery
 
-### Web3Auth
-- Social login providers: Google, Facebook, Twitter, Discord, Email
-- Browser-native secp256k1 implementation
-- HTML-based Buffer/process polyfills
-- Testnet: sapphire_devnet, Production: sapphire_mainnet
+### Wallet Type Detection
+- **Ecosystem auto-sync**: Connects XRPL wallet → shows XRPL vaults; connects EVM wallet → shows Flare vaults
+- **Manual override**: Users can browse other ecosystems when disconnected
+- **Mismatch handling**: Toast notifications guide users to connect compatible wallets
 
 ## 🛠️ Development
 
