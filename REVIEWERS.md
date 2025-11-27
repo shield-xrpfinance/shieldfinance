@@ -118,6 +118,19 @@ XRP bridging uses Flare's FAssets protocol:
 
 ---
 
+## Legacy Naming Notes
+
+The database includes a table named `escrows` (in `shared/schema.ts`) which tracks deposit/withdrawal states (pending, finished, cancelled, failed). **This is legacy naming** - the platform does NOT use XRPL EscrowCreate/EscrowFinish transactions.
+
+The actual architecture uses **FAssets bridge** for XRP → FXRP conversion:
+- User sends XRP payment to FAssets agent address
+- FDC (Flare Data Connector) verifies the payment
+- FXRP is minted and deposited to the vault
+
+The "escrows" table functions as a **deposit tracking system**, recording state transitions throughout the bridge process. Renaming was deferred to avoid breaking changes during active development.
+
+---
+
 ## For Auditors
 
 ### Contract Audit Scope
