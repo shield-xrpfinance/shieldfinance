@@ -1,7 +1,6 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Shield Finance Whitepaper v1.0
-% Bitcoin-style minimal whitepaper with math support
-% Compile with XeLaTeX or LuaLaTeX on Overleaf (or pdfLaTeX for fallback)
+% Compile with pdfLaTeX on Overleaf
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \documentclass[11pt, letterpaper]{article}
@@ -15,70 +14,28 @@
 \usepackage{tabularx}
 \usepackage{array}
 \usepackage{multirow}
-\usepackage{longtable}
 \usepackage{xcolor}
 \usepackage{tikz}
-\usetikzlibrary{shapes, arrows.meta, positioning, calc, decorations.pathreplacing, shadows, patterns}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc}
 
-% Font handling - works with pdfLaTeX, XeLaTeX, and LuaLaTeX
-\usepackage{ifxetex,ifluatex}
-\newif\ifxetexorluatex
-\ifxetex
-  \xetexorluatextrue
-\else
-  \ifluatex
-    \xetexorluatextrue
-  \else
-    \xetexorluatexfalse
-  \fi
-\fi
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
 
-\ifxetexorluatex
-  \usepackage{fontspec}
-  % Try Inter font, fallback to Latin Modern
-  \IfFontExistsTF{Inter}{
-    \setmainfont{Inter}
-  }{
-    \setmainfont{Latin Modern Roman}
-  }
-\else
-  \usepackage[T1]{fontenc}
-  \usepackage{lmodern}
-\fi
-
-% Page layout
 \usepackage[top=1in, bottom=1.2in, left=1in, right=1in]{geometry}
 
-% Multi-column layout
 \usepackage{multicol}
 \setlength{\columnsep}{0.4in}
 
-% Headers and footers
 \usepackage{fancyhdr}
-
-% Section styling
 \usepackage{titlesec}
 
-% Hyperlinks
-\usepackage{hyperref}
-\hypersetup{
-    colorlinks=true,
-    linkcolor=shieldblue,
-    urlcolor=shieldblue,
-    citecolor=shieldblue
-}
+\usepackage[hidelinks]{hyperref}
 
-% Spacing
 \usepackage{setspace}
 \usepackage{parskip}
-
-% Graphics
 \usepackage{graphicx}
-
-% Float control
 \usepackage{float}
 
-% Quotes and boxes
 \usepackage{tcolorbox}
 \tcbuselibrary{skins, breakable}
 
@@ -141,17 +98,7 @@
 \thispagestyle{empty}
 \begin{center}
 
-\vspace*{2cm}
-
-% Logo placeholder
-\begin{tikzpicture}
-    \draw[line width=3pt, shieldblue, fill=shieldlight, rounded corners=5pt] 
-        (0,0) -- (3,0) -- (3,-2) -- (1.5,-3.5) -- (0,-2) -- cycle;
-    \node[shieldblue, font=\Huge\bfseries] at (1.5,-1.3) {SHIELD};
-    \draw[shieldgold, line width=2pt] (0.5,-0.3) -- (2.5,-0.3);
-\end{tikzpicture}
-
-\vspace{1.5cm}
+\vspace*{3cm}
 
 {\Huge\bfseries\color{shieldblue} Shield Finance}
 
@@ -169,9 +116,7 @@
 
 \vspace{3cm}
 
-\begin{tikzpicture}
-    \draw[shieldblue, line width=1pt] (-4,0) -- (4,0);
-\end{tikzpicture}
+\rule{8cm}{0.5pt}
 
 \vspace{1cm}
 
@@ -180,8 +125,8 @@
 \vspace{2cm}
 
 \begin{tabular}{rl}
-    \textbf{Website} & \url{shyield.finance} \\[0.3em]
-    \textbf{dApp} & \url{app.shyield.finance} \\[0.3em]
+    \textbf{Website} & shyield.finance \\[0.3em]
+    \textbf{dApp} & app.shyield.finance \\[0.3em]
     \textbf{Twitter} & @ShieldFinanceX \\[0.3em]
     \textbf{GitHub} & github.com/shield-xrpfinance/shieldfinance
 \end{tabular}
@@ -196,7 +141,7 @@
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% ABSTRACT + KEY FACTS (Page 1)
+% ABSTRACT + KEY FACTS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section*{Abstract}
@@ -239,7 +184,7 @@ Highest Recorded Boost & +19.3\% APY (user with 2.1\% of locked SHIELD) \\
 Initial Liquidity & \$10,000 (100\% locked 12 months) \\
 LP Lock Proof & TBC (SparkDEX) \\
 SparkDEX Pool & \texttt{0x8f3...a9c2} (wFLR--SHIELD) \\
-Contracts Verified & FlareScan \checkmark \\
+Contracts Verified & FlareScan $\checkmark$ \\
 Security Audits & Hacken (in progress), Trail of Bits (Q1 2026) \\
 \bottomrule
 \end{tabular}
@@ -265,7 +210,7 @@ Security Audits & Hacken (in progress), Trail of Bits (Q1 2026) \\
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% PROBLEM STATEMENT (Pages 2-3)
+% PROBLEM STATEMENT
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Problem Statement}
@@ -368,7 +313,7 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% USER FLOW DIAGRAM
+% ARCHITECTURE
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Architecture}
@@ -379,58 +324,64 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
 
 \begin{center}
 \begin{tikzpicture}[
-    node distance=1.8cm,
+    node distance=1.5cm,
+    every node/.style={font=\small},
     box/.style={
         rectangle,
         rounded corners=5pt,
         draw=shieldblue,
         fill=shieldlight,
         line width=1pt,
-        minimum height=1cm,
-        minimum width=2.5cm,
+        minimum height=0.9cm,
+        minimum width=2.2cm,
         text centered,
         font=\small\bfseries
     },
-    arrow/.style={
+    myarrow/.style={
         ->,
-        >=Stealth,
-        line width=1.5pt,
-        shieldblue
+        >={Stealth[length=3mm]},
+        line width=1.2pt,
+        draw=shieldblue
     },
-    label/.style={
+    mylabel/.style={
         font=\footnotesize,
-        color=textgray
+        text=textgray
     }
 ]
 
-% Nodes
+% Nodes - horizontal flow
 \node[box] (xrp) {XRP};
 \node[box, right=of xrp] (xaman) {Xaman Wallet};
 \node[box, right=of xaman] (fassets) {FAssets Bridge};
 \node[box, right=of fassets] (fxrp) {FXRP};
 \node[box, right=of fxrp] (vault) {ShXRP Vault};
-\node[box, below=1.5cm of vault] (shxrp) {shXRP Token};
-\node[box, below=1.5cm of shxrp] (yield) {Yield Accrual};
 
-% Arrows
-\draw[arrow] (xrp) -- (xaman);
-\draw[arrow] (xaman) -- (fassets);
-\draw[arrow] (fassets) -- (fxrp);
-\draw[arrow] (fxrp) -- (vault);
-\draw[arrow] (vault) -- (shxrp);
-\draw[arrow] (shxrp) -- (yield);
+% Nodes - vertical flow
+\node[box, below=1.2cm of vault] (shxrp) {shXRP Token};
+\node[box, below=1.2cm of shxrp] (yield) {Yield Accrual};
+
+% Arrows - horizontal
+\draw[myarrow] (xrp) -- (xaman);
+\draw[myarrow] (xaman) -- (fassets);
+\draw[myarrow] (fassets) -- (fxrp);
+\draw[myarrow] (fxrp) -- (vault);
+
+% Arrows - vertical
+\draw[myarrow] (vault) -- (shxrp);
+\draw[myarrow] (shxrp) -- (yield);
 
 % Labels
-\node[label, above=0.1cm of xrp] {User holds};
-\node[label, above=0.1cm of xaman] {Sign tx};
-\node[label, above=0.1cm of fassets] {Cross-chain};
-\node[label, above=0.1cm of fxrp] {On Flare};
-\node[label, above=0.1cm of vault] {ERC-4626};
-\node[label, right=0.3cm of shxrp] {Liquid receipt};
-\node[label, right=0.3cm of yield] {7--13\% + Boost};
+\node[mylabel, above=0.05cm of xrp] {User holds};
+\node[mylabel, above=0.05cm of xaman] {Sign tx};
+\node[mylabel, above=0.05cm of fassets] {Cross-chain};
+\node[mylabel, above=0.05cm of fxrp] {On Flare};
+\node[mylabel, above=0.05cm of vault] {ERC-4626};
+\node[mylabel, right=0.2cm of shxrp] {Liquid receipt};
+\node[mylabel, right=0.2cm of yield] {7--13\% + Boost};
 
 % Withdraw path
-\draw[arrow, dashed] (shxrp.west) -- ++(-2,0) |- node[label, pos=0.25, above] {Instant redeem} (xrp.south);
+\draw[myarrow, dashed] (shxrp.west) -- ++(-1.5,0) |- (xrp.south);
+\node[mylabel] at (-0.5,-1.2) {Instant redeem};
 
 \end{tikzpicture}
 \end{center}
@@ -441,49 +392,63 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
 
 \begin{center}
 \begin{tikzpicture}[
-    node distance=2cm,
+    node distance=1.8cm,
+    every node/.style={font=\small},
     box/.style={
         rectangle,
         rounded corners=5pt,
         draw=shieldblue,
         fill=shieldlight,
         line width=1pt,
-        minimum height=1.2cm,
-        minimum width=3cm,
+        minimum height=1cm,
+        minimum width=2.8cm,
         text centered,
-        font=\small\bfseries
+        font=\small\bfseries,
+        align=center
     },
-    arrow/.style={
+    redarrow/.style={
         ->,
-        >=Stealth,
-        line width=1.5pt,
-        shieldblue
+        >={Stealth[length=3mm]},
+        line width=1.2pt,
+        draw=burnred
+    },
+    greenarrow/.style={
+        ->,
+        >={Stealth[length=3mm]},
+        line width=1.2pt,
+        draw=boostgreen
+    },
+    grayarrow/.style={
+        ->,
+        >={Stealth[length=3mm]},
+        line width=1.2pt,
+        draw=reservegray
     }
 ]
 
 % Center node
-\node[box, fill=shieldblue, text=white, minimum width=4cm] (revenue) {Protocol Revenue\\{\footnotesize 0.4\% fees}};
+\node[box, fill=shieldblue, text=white, minimum width=3.5cm] (revenue) {Protocol Revenue\\{\footnotesize 0.4\% fees}};
 
 % Three branches
-\node[box, fill=burnred!20, above left=1.5cm and 2cm of revenue] (burn) {50\% Burn\\{\footnotesize Buy \& burn SHIELD}};
-\node[box, fill=boostgreen!20, above right=1.5cm and 2cm of revenue] (boost) {40\% Boost\\{\footnotesize FXRP to stakers}};
-\node[box, fill=reservegray!20, below=1.5cm of revenue] (reserve) {10\% Reserves\\{\footnotesize Protocol treasury}};
+\node[box, fill=burnred!15, above left=1.2cm and 1.8cm of revenue] (burn) {50\% Burn\\{\footnotesize Buy \& burn SHIELD}};
+\node[box, fill=boostgreen!15, above right=1.2cm and 1.8cm of revenue] (boost) {40\% Boost\\{\footnotesize FXRP to stakers}};
+\node[box, fill=reservegray!15, below=1.2cm of revenue] (reserve) {10\% Reserves\\{\footnotesize Protocol treasury}};
 
-% Arrows
-\draw[arrow, burnred] (revenue) -- (burn);
-\draw[arrow, boostgreen] (revenue) -- (boost);
-\draw[arrow, reservegray] (revenue) -- (reserve);
+% Arrows from revenue
+\draw[redarrow] (revenue) -- (burn);
+\draw[greenarrow] (revenue) -- (boost);
+\draw[grayarrow] (revenue) -- (reserve);
 
-% Flywheel effect
-\node[box, right=2.5cm of boost] (stakers) {SHIELD Stakers\\{\footnotesize 30-day lock}};
-\draw[arrow, boostgreen] (boost) -- (stakers);
+% Flywheel effect - boost side
+\node[box, right=2cm of boost] (stakers) {SHIELD Stakers\\{\footnotesize 30-day lock}};
+\draw[greenarrow] (boost) -- (stakers);
 
-\node[box, below=1cm of stakers] (shares) {Extra shXRP Shares\\{\footnotesize via donateOnBehalf}};
-\draw[arrow, boostgreen] (stakers) -- (shares);
+\node[box, below=0.8cm of stakers] (shares) {Extra shXRP Shares\\{\footnotesize via donateOnBehalf}};
+\draw[greenarrow] (stakers) -- (shares);
 
 % Burn effect
-\node[box, left=1.5cm of burn] (supply) {Reduced Supply\\{\footnotesize Deflationary}};
-\draw[arrow, burnred] (burn) -- (supply);
+\node[box, left=1.2cm of burn] (supply) {Reduced Supply\\{\footnotesize Deflationary}};
+\draw[redarrow] (burn) -- (supply);
 
 \end{tikzpicture}
 \end{center}
@@ -491,7 +456,7 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% YIELD BOOST MECHANICS (Page 4)
+% YIELD BOOST MECHANICS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Yield Boost Mechanics}
@@ -596,7 +561,7 @@ When stakers call \texttt{claim()}, the FXRP is deposited via \texttt{vault.dona
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% TOKENOMICS PIE CHART
+% TOKENOMICS
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Tokenomics}
@@ -617,7 +582,7 @@ When stakers call \texttt{claim()}, the FXRP is deposited via \texttt{vault.dona
     % 10% Reserves (324 to 360 degrees)
     \fill[reservegray!70] (0,0) -- (324:\radius) arc (324:360:\radius) -- cycle;
     
-    % Labels
+    % Labels inside pie
     \node[font=\bfseries, white] at (90:1.5) {50\%};
     \node[font=\small, white] at (90:0.9) {Burn};
     
@@ -626,10 +591,15 @@ When stakers call \texttt{claim()}, the FXRP is deposited via \texttt{vault.dona
     
     \node[font=\bfseries, white] at (342:1.2) {10\%};
     
-    % Legend
-    \node[right] at (4, 1.5) {\tikz\fill[burnred!70] (0,0) rectangle (0.4,0.4); \textbf{50\% Burn} -- Buy \& burn SHIELD (deflationary)};
-    \node[right] at (4, 0.5) {\tikz\fill[boostgreen!70] (0,0) rectangle (0.4,0.4); \textbf{40\% Boost} -- FXRP to SHIELD stakers};
-    \node[right] at (4, -0.5) {\tikz\fill[reservegray!70] (0,0) rectangle (0.4,0.4); \textbf{10\% Reserves} -- Protocol treasury};
+    % Legend on the right
+    \fill[burnred!70] (4,1.5) rectangle (4.4,1.9);
+    \node[right, font=\small] at (4.5, 1.7) {\textbf{50\% Burn} -- Buy \& burn SHIELD (deflationary)};
+    
+    \fill[boostgreen!70] (4,0.5) rectangle (4.4,0.9);
+    \node[right, font=\small] at (4.5, 0.7) {\textbf{40\% Boost} -- FXRP to SHIELD stakers};
+    
+    \fill[reservegray!70] (4,-0.5) rectangle (4.4,-0.1);
+    \node[right, font=\small] at (4.5, -0.3) {\textbf{10\% Reserves} -- Protocol treasury};
     
 \end{tikzpicture}
 \end{center}
@@ -674,7 +644,7 @@ Global Boost Cap & 25\% maximum (configurable by governance) \\
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% ONE-LINER SUMMARY (Page 5)
+% SUMMARY
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \section{Summary}
@@ -756,7 +726,7 @@ No minting. No inflation. Pure revenue-share.''
 \midrule
 Hacken & In Progress & Full smart contract audit \\
 Trail of Bits & Scheduled Q1 2026 & Comprehensive security review \\
-FlareScan & Complete \checkmark & All contracts verified \\
+FlareScan & Complete $\checkmark$ & All contracts verified \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -764,9 +734,7 @@ FlareScan & Complete \checkmark & All contracts verified \\
 \vspace{3em}
 
 \begin{center}
-\begin{tikzpicture}
-    \draw[shieldblue, line width=1pt] (-6,0) -- (6,0);
-\end{tikzpicture}
+\rule{12cm}{0.5pt}
 
 \vspace{1em}
 
@@ -815,23 +783,23 @@ StakingBoost and ShXRPVault have a circular dependency solved via three-step dep
 
 \begin{center}
 \begin{tikzpicture}[
-    node distance=0.8cm,
+    node distance=0.7cm,
     box/.style={
         rectangle,
         rounded corners=3pt,
         draw=shieldblue,
         fill=shieldlight,
         line width=1pt,
-        minimum height=0.8cm,
-        minimum width=5cm,
+        minimum height=0.7cm,
+        minimum width=10cm,
         text centered,
         font=\small
     },
-    arrow/.style={
+    myarrow/.style={
         ->,
-        >=Stealth,
+        >={Stealth[length=2mm]},
         line width=1pt,
-        shieldblue
+        draw=shieldblue
     }
 ]
 
@@ -839,8 +807,8 @@ StakingBoost and ShXRPVault have a circular dependency solved via three-step dep
 \node[box, below=of step1] (step2) {\textbf{Step 2:} Deploy StakingBoost with real vault address};
 \node[box, below=of step2] (step3) {\textbf{Step 3:} Call \texttt{vault.setStakingBoost()} (one-time setter)};
 
-\draw[arrow] (step1) -- (step2);
-\draw[arrow] (step2) -- (step3);
+\draw[myarrow] (step1) -- (step2);
+\draw[myarrow] (step2) -- (step3);
 
 \end{tikzpicture}
 \end{center}
@@ -879,7 +847,7 @@ ShXRPVault & \texttt{0xeBb4a977492241B06A2423710c03BB63B2c5990e} \\
 \vspace{2em}
 
 \begin{center}
-{\footnotesize All contracts verified on FlareScan. View source code at \url{github.com/shield-xrpfinance/shieldfinance}}
+{\footnotesize All contracts verified on FlareScan. View source code at github.com/shield-xrpfinance/shieldfinance}
 \end{center}
 
 \newpage
@@ -919,9 +887,7 @@ This whitepaper is for informational purposes only and does not constitute finan
 \vspace{3em}
 
 \begin{center}
-\begin{tikzpicture}
-    \draw[shieldblue, line width=1pt] (-4,0) -- (4,0);
-\end{tikzpicture}
+\rule{8cm}{0.5pt}
 
 \vspace{2em}
 
