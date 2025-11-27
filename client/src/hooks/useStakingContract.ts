@@ -136,34 +136,43 @@ export function useStakingContract(): StakingContractHook {
 
     try {
       console.log("Getting signer from WalletConnect provider...");
-      console.log("Provider session:", walletConnectProvider.session);
-      console.log("Provider namespaces:", walletConnectProvider.session?.namespaces);
       
       const signer = await getSigner();
-      console.log("Signer obtained:", await signer.getAddress());
+      const signerAddress = await signer.getAddress();
+      console.log("Signer obtained:", signerAddress);
       
-      const shieldContract = new ethers.Contract(SHIELD_TOKEN_ADDRESS, ERC20_ABI, signer);
-      const stakingContract = new ethers.Contract(STAKING_BOOST_ADDRESS, STAKING_BOOST_ABI, signer);
+      // IMPORTANT: Use direct RPC provider for read operations to avoid WalletConnect relay issues
+      // WalletConnect's BrowserProvider routes eth_call through the relay which doesn't work for some wallets
+      const rpcProvider = getProvider();
+      const shieldReadContract = new ethers.Contract(SHIELD_TOKEN_ADDRESS, ERC20_ABI, rpcProvider);
+      
+      // Use signer-connected contracts only for write operations
+      const shieldWriteContract = new ethers.Contract(SHIELD_TOKEN_ADDRESS, ERC20_ABI, signer);
+      const stakingWriteContract = new ethers.Contract(STAKING_BOOST_ADDRESS, STAKING_BOOST_ABI, signer);
       
       const amountWei = ethers.parseEther(amount);
       console.log("Amount in wei:", amountWei.toString());
 
-      console.log("Checking current allowance...");
-      const currentAllowance = await shieldContract.allowance(evmAddress, STAKING_BOOST_ADDRESS);
+      console.log("Checking current allowance via RPC provider...");
+      const currentAllowance = await shieldReadContract.allowance(evmAddress, STAKING_BOOST_ADDRESS);
       console.log("Current allowance:", currentAllowance.toString());
       
       if (currentAllowance < amountWei) {
         console.log("Approving SHIELD tokens for staking...");
-        const approveTx = await shieldContract.approve(STAKING_BOOST_ADDRESS, amountWei);
+        const approveTx = await shieldWriteContract.approve(STAKING_BOOST_ADDRESS, amountWei);
         console.log("Approval tx submitted:", approveTx.hash);
         await approveTx.wait();
         console.log("Approval confirmed");
+        
+        // Re-verify allowance after approval using RPC provider
+        const newAllowance = await shieldReadContract.allowance(evmAddress, STAKING_BOOST_ADDRESS);
+        console.log("New allowance after approval:", newAllowance.toString());
       } else {
         console.log("Sufficient allowance already exists, skipping approval");
       }
 
       console.log("Staking SHIELD tokens...");
-      const stakeTx = await stakingContract.stake(amountWei);
+      const stakeTx = await stakingWriteContract.stake(amountWei);
       console.log("Stake tx submitted:", stakeTx.hash);
       await stakeTx.wait();
       console.log("Stake confirmed");
@@ -184,7 +193,7 @@ export function useStakingContract(): StakingContractHook {
       setIsLoading(false);
       return { success: false, error: errorMessage };
     }
-  }, [evmAddress, walletConnectProvider, getSigner]);
+  }, [evmAddress, walletConnectProvider, getSigner, getProvider]);
 
   const withdraw = useCallback(async (amount: string): Promise<{ success: boolean; txHash?: string; error?: string }> => {
     if (!evmAddress || !walletConnectProvider) {
@@ -197,12 +206,13 @@ export function useStakingContract(): StakingContractHook {
 
     try {
       const signer = await getSigner();
-      const stakingContract = new ethers.Contract(STAKING_BOOST_ADDRESS, STAKING_BOOST_ABI, signer);
+      // Use signer-connected contract for write operations
+      const stakingWriteContract = new ethers.Contract(STAKING_BOOST_ADDRESS, STAKING_BOOST_ABI, signer);
       
       const amountWei = ethers.parseEther(amount);
 
       console.log("Withdrawing staked SHIELD tokens...");
-      const withdrawTx = await stakingContract.withdraw(amountWei);
+      const withdrawTx = await stakingWriteContract.withdraw(amountWei);
       console.log("Withdraw tx submitted:", withdrawTx.hash);
       await withdrawTx.wait();
       console.log("Withdraw confirmed");
