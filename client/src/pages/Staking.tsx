@@ -10,17 +10,18 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, TrendingUp, Lock, Unlock, Clock, Info, ExternalLink, Loader2 } from "lucide-react";
+import { Shield, TrendingUp, Lock, Unlock, Clock, Info, ExternalLink, Loader2, Coins } from "lucide-react";
 import shieldLogo from "@assets/shield_logo_1763761188895.png";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ethers } from "ethers";
 
 const COSTON2_EXPLORER = "https://coston2-explorer.flare.network";
+const BASE_SHXRP_APY = 6.2;
 
 export default function Staking() {
   const { evmAddress, isConnected, isEvmConnected, walletConnectProvider } = useWallet();
   const { toast } = useToast();
-  const { shield: shieldBalance, isLoading: balancesLoading, refetch: refetchBalances } = useComprehensiveBalance();
+  const { shield: shieldBalance, isLoading: balancesLoading } = useComprehensiveBalance();
   const stakingContract = useStakingContract();
   
   const [stakeAmount, setStakeAmount] = useState("");
@@ -149,7 +150,6 @@ export default function Staking() {
         });
         setStakeAmount("");
         refetchStakeInfo();
-        refetchBalances();
       } else {
         toast({
           title: "Stake Failed",
@@ -166,7 +166,7 @@ export default function Staking() {
     } finally {
       setIsStaking(false);
     }
-  }, [stakeAmount, isEvmConnected, walletConnectProvider, shieldBalance, stakingContract, toast, refetchStakeInfo, refetchBalances]);
+  }, [stakeAmount, isEvmConnected, walletConnectProvider, shieldBalance, stakingContract, toast, refetchStakeInfo]);
 
   const handleUnstake = useCallback(async () => {
     if (!unstakeAmount || parseFloat(unstakeAmount) <= 0) {
@@ -236,7 +236,6 @@ export default function Staking() {
         });
         setUnstakeAmount("");
         refetchStakeInfo();
-        refetchBalances();
       } else {
         toast({
           title: "Unstake Failed",
@@ -253,7 +252,7 @@ export default function Staking() {
     } finally {
       setIsUnstaking(false);
     }
-  }, [unstakeAmount, isLocked, timeRemaining, isEvmConnected, walletConnectProvider, stakedBalance, stakingContract, toast, refetchStakeInfo, refetchBalances]);
+  }, [unstakeAmount, isLocked, timeRemaining, isEvmConnected, walletConnectProvider, stakedBalance, stakingContract, toast, refetchStakeInfo]);
 
   if (!isConnected) {
     return (
@@ -325,14 +324,15 @@ export default function Staking() {
       </Alert>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+          <Skeleton className="h-48 rounded-2xl" />
           <Skeleton className="h-48 rounded-2xl" />
           <Skeleton className="h-48 rounded-2xl" />
           <Skeleton className="h-48 rounded-2xl" />
           <Skeleton className="h-48 rounded-2xl" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <GlassStatsCard
             label="Your SHIELD Balance"
             value={parseFloat(shieldBalance).toFixed(4)}
@@ -349,11 +349,39 @@ export default function Staking() {
             icon={<TrendingUp className="h-6 w-6" />}
           />
           <GlassStatsCard
+            label="Effective shXRP APY"
+            value={`${(BASE_SHXRP_APY + boostPercentage).toFixed(1)}%`}
+            icon={<Coins className="h-6 w-6 text-green-500" />}
+          />
+          <GlassStatsCard
             label="Lock Status"
             value={isLocked ? timeRemaining : "Unlocked"}
             icon={isLocked ? <Lock className="h-6 w-6" /> : <Unlock className="h-6 w-6" />}
           />
         </div>
+      )}
+
+      {stakedBalance > 0 && (
+        <Card className="mb-8 backdrop-blur-md bg-gradient-to-r from-green-500/10 to-primary/10 border-green-500/30">
+          <CardContent className="pt-6">
+            <div className="flex items-center gap-4">
+              <div className="p-3 rounded-full bg-green-500/20">
+                <TrendingUp className="h-6 w-6 text-green-500" />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-semibold text-lg">Your Rewards Are Active</h3>
+                <p className="text-sm text-muted-foreground">
+                  Your {stakedBalance.toLocaleString()} SHIELD stake gives you +{boostPercentage}% APY boost. 
+                  Combined with the base {BASE_SHXRP_APY}% APY, your shXRP deposits earn <strong className="text-green-500">{(BASE_SHXRP_APY + boostPercentage).toFixed(1)}% APY</strong>.
+                </p>
+              </div>
+              <div className="text-right hidden sm:block">
+                <p className="text-xs text-muted-foreground">Rewards Accrue In</p>
+                <p className="text-lg font-bold text-green-500">shXRP Vault</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
