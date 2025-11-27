@@ -267,7 +267,7 @@ Located at `/analytics`, displays real-time metrics in three card sections:
 **Redemption Delay Alert:**
 1. Check redemption status on bridge tracking page
 2. Verify XRPL payment was received (search XRPL explorer)
-3. If payment missing, check escrow account balance
+3. If payment missing, check FAssets agent status
 4. If stuck >60min, trigger manual recovery endpoint
 
 **Bridge Failure Alert:**

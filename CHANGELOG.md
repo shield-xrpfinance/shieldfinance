@@ -329,14 +329,14 @@ All notable changes to the XRP Liquid Staking Protocol Dashboard will be documen
 
 - **Deployment Scripts**
   - `scripts/deploy-flare.ts`: Automated Flare network deployment
-  - `scripts/deploy-hooks.sh`: XRPL Hooks deployment automation
+  - `scripts/deploy-shield-10m.ts`: SHIELD token deployment
   - Deployment info saved to JSON files
   - Block explorer link generation
 
-#### XRPL Hooks
-- Rust-based escrow hook for cross-chain XRP deposits
-- WASM compilation support
-- Testnet and mainnet deployment support
+#### FAssets Bridge Integration
+- XRP → FXRP bridging via Flare FAssets protocol
+- FDC (Flare Data Connector) for payment verification
+- Collateral reservation with FAssets agents
 
 #### Documentation
 - **DEPLOYMENT_GUIDE.md**: Quick reference for all deployment commands
@@ -382,7 +382,6 @@ VITE_SHXRP_VAULT_ADDRESS
 New directories:
 ├── contracts/          # Solidity smart contracts
 ├── scripts/            # Deployment scripts
-├── hooks/              # XRPL Hooks (Rust)
 └── deployments/        # Deployment artifacts
 
 New files:
@@ -400,11 +399,11 @@ New files:
 
 ### Cross-Chain Architecture
 The platform now supports a complete cross-chain workflow:
-1. Frontend: User deposits XRP via wallet (Xaman/WalletConnect/Web3Auth)
-2. XRPL Layer: Hook locks XRP in escrow
-3. Flare Layer: Operator mints shXRP tokens
+1. Frontend: User deposits XRP via wallet (Xaman/WalletConnect)
+2. XRPL Layer: User sends XRP to FAssets agent address
+3. Flare Layer: FDC verifies payment, FXRP minted, deposited to vault
 4. Database Layer: Position tracking in PostgreSQL
-5. Withdrawal: User burns shXRP → Operator releases XRP from escrow
+5. Withdrawal: User requests withdrawal → FXRP redeemed → XRP returned
 
 ---
 
