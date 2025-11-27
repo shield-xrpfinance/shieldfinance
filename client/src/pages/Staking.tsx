@@ -1,9 +1,8 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/walletContext";
-import { useNetwork } from "@/lib/networkContext";
-import { useFlrBalance } from "@/hooks/useFlrBalance";
 import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
+import { useStakingContract, OnChainStakeInfo } from "@/hooks/useStakingContract";
 import GlassStatsCard from "@/components/GlassStatsCard";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,49 +10,44 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, TrendingUp, Lock, Unlock, Clock, Info, Coins } from "lucide-react";
+import { Shield, TrendingUp, Lock, Unlock, Clock, Info, ExternalLink, Loader2 } from "lucide-react";
 import shieldLogo from "@assets/shield_logo_1763761188895.png";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { queryClient } from "@/lib/queryClient";
+import { ethers } from "ethers";
 
-// Type for staking API response
-interface StakingApiResponse {
-  amount: string;
-  stakedAt: string;
-  unlockTime: string;
-  boostPercentage: number;
-  isLocked: boolean;
-}
+const COSTON2_EXPLORER = "https://coston2-explorer.flare.network";
 
 export default function Staking() {
-  const { evmAddress, isConnected } = useWallet();
+  const { evmAddress, isConnected, isEvmConnected, walletConnectProvider } = useWallet();
   const { toast } = useToast();
-  const { balance: flrBalance } = useFlrBalance();
-  const { shield: shieldBalance, isLoading: balancesLoading } = useComprehensiveBalance();
+  const { shield: shieldBalance, isLoading: balancesLoading, refetch: refetchBalances } = useComprehensiveBalance();
+  const stakingContract = useStakingContract();
+  
   const [stakeAmount, setStakeAmount] = useState("");
   const [unstakeAmount, setUnstakeAmount] = useState("");
+  const [isStaking, setIsStaking] = useState(false);
+  const [isUnstaking, setIsUnstaking] = useState(false);
+  const [lastTxHash, setLastTxHash] = useState<string | null>(null);
 
-  // Fetch user's staking info from real API
-  const { data: stakeInfo, isLoading } = useQuery<StakingApiResponse>({
-    queryKey: ['/api/staking', evmAddress],
-    queryFn: async () => {
-      const response = await fetch(`/api/staking/${evmAddress}`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch staking info');
-      }
-      return response.json();
-    },
-    enabled: !!evmAddress,
+  const { data: onChainStakeInfo, isLoading, refetch: refetchStakeInfo } = useQuery<OnChainStakeInfo | null>({
+    queryKey: ['staking-contract', evmAddress],
+    queryFn: () => stakingContract.getStakeInfo(),
+    enabled: !!evmAddress && isEvmConnected,
+    refetchInterval: 30000,
   });
 
-  // Calculate derived values from real API response
-  const stakedBalance = stakeInfo?.amount ? parseFloat(stakeInfo.amount) / 1e18 : 0;
-  const boostPercentage = stakeInfo?.boostPercentage || 0;
-  const unlockTime = stakeInfo?.unlockTime ? parseFloat(stakeInfo.unlockTime) : 0;
-  const isLocked = stakeInfo?.isLocked ?? false; // Use backend-validated lock status
+  const stakedBalance = onChainStakeInfo?.amount 
+    ? parseFloat(ethers.formatEther(onChainStakeInfo.amount)) 
+    : 0;
+  const boostPercentage = onChainStakeInfo?.boostBps 
+    ? Number(onChainStakeInfo.boostBps) / 100 
+    : 0;
+  const unlockTime = onChainStakeInfo?.unlockTime 
+    ? Number(onChainStakeInfo.unlockTime) 
+    : 0;
+  const isLocked = onChainStakeInfo?.isLocked ?? false;
   const timeUntilUnlock = isLocked ? unlockTime - Math.floor(Date.now() / 1000) : 0;
 
-  // Format countdown timer
   const formatTimeRemaining = (seconds: number): string => {
     if (seconds <= 0) return "Unlocked";
     const days = Math.floor(seconds / 86400);
@@ -64,7 +58,6 @@ export default function Staking() {
     return `${minutes}m`;
   };
 
-  // Live countdown timer
   const [timeRemaining, setTimeRemaining] = useState(formatTimeRemaining(timeUntilUnlock));
 
   useEffect(() => {
@@ -78,69 +71,14 @@ export default function Staking() {
       setTimeRemaining(formatTimeRemaining(remaining));
       if (remaining <= 0) {
         clearInterval(interval);
+        refetchStakeInfo();
       }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [unlockTime, isLocked]);
+  }, [unlockTime, isLocked, refetchStakeInfo]);
 
-  const stakeMutation = useMutation({
-    mutationFn: async (amount: string) => {
-      const res = await fetch("/api/staking/stake", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: evmAddress, amount }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => {
-      // Invalidate staking query to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['/api/staking', evmAddress] });
-      toast({
-        title: "Stake Successful",
-        description: "Your SHIELD tokens have been staked for 30 days",
-      });
-      setStakeAmount("");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Stake Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const unstakeMutation = useMutation({
-    mutationFn: async (amount: string) => {
-      const res = await fetch("/api/staking/unstake", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ address: evmAddress, amount }),
-      });
-      if (!res.ok) throw new Error(await res.text());
-      return res.json();
-    },
-    onSuccess: () => {
-      // Invalidate staking query to refetch updated data
-      queryClient.invalidateQueries({ queryKey: ['/api/staking', evmAddress] });
-      toast({
-        title: "Unstake Successful",
-        description: "Your SHIELD tokens have been returned",
-      });
-      setUnstakeAmount("");
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Unstake Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const handleStake = () => {
+  const handleStake = useCallback(async () => {
     if (!stakeAmount || parseFloat(stakeAmount) <= 0) {
       toast({
         title: "Invalid Amount",
@@ -149,10 +87,77 @@ export default function Staking() {
       });
       return;
     }
-    stakeMutation.mutate(stakeAmount);
-  };
 
-  const handleUnstake = () => {
+    if (!isEvmConnected || !walletConnectProvider) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect an EVM wallet (like MetaMask) via WalletConnect to stake",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const availableBalance = parseFloat(shieldBalance);
+    if (parseFloat(stakeAmount) > availableBalance) {
+      toast({
+        title: "Insufficient Balance",
+        description: `You only have ${availableBalance.toFixed(4)} SHIELD available`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsStaking(true);
+    setLastTxHash(null);
+
+    try {
+      toast({
+        title: "Staking in Progress",
+        description: "Please approve the transaction in your wallet...",
+      });
+
+      const result = await stakingContract.approveAndStake(stakeAmount);
+
+      if (result.success && result.txHash) {
+        setLastTxHash(result.txHash);
+        toast({
+          title: "Stake Successful!",
+          description: (
+            <div className="flex flex-col gap-2">
+              <span>Your SHIELD tokens have been staked for 30 days</span>
+              <a 
+                href={`${COSTON2_EXPLORER}/tx/${result.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-primary underline"
+              >
+                View transaction <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          ),
+        });
+        setStakeAmount("");
+        refetchStakeInfo();
+        refetchBalances();
+      } else {
+        toast({
+          title: "Stake Failed",
+          description: result.error || "Transaction failed",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Stake Failed",
+        description: err.message || "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStaking(false);
+    }
+  }, [stakeAmount, isEvmConnected, walletConnectProvider, shieldBalance, stakingContract, toast, refetchStakeInfo, refetchBalances]);
+
+  const handleUnstake = useCallback(async () => {
     if (!unstakeAmount || parseFloat(unstakeAmount) <= 0) {
       toast({
         title: "Invalid Amount",
@@ -161,6 +166,7 @@ export default function Staking() {
       });
       return;
     }
+
     if (isLocked) {
       toast({
         title: "Tokens Locked",
@@ -169,8 +175,74 @@ export default function Staking() {
       });
       return;
     }
-    unstakeMutation.mutate(unstakeAmount);
-  };
+
+    if (!isEvmConnected || !walletConnectProvider) {
+      toast({
+        title: "Wallet Not Connected",
+        description: "Please connect an EVM wallet via WalletConnect to unstake",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (parseFloat(unstakeAmount) > stakedBalance) {
+      toast({
+        title: "Insufficient Staked Balance",
+        description: `You only have ${stakedBalance.toFixed(4)} SHIELD staked`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUnstaking(true);
+    setLastTxHash(null);
+
+    try {
+      toast({
+        title: "Unstaking in Progress",
+        description: "Please approve the transaction in your wallet...",
+      });
+
+      const result = await stakingContract.withdraw(unstakeAmount);
+
+      if (result.success && result.txHash) {
+        setLastTxHash(result.txHash);
+        toast({
+          title: "Unstake Successful!",
+          description: (
+            <div className="flex flex-col gap-2">
+              <span>Your SHIELD tokens have been returned</span>
+              <a 
+                href={`${COSTON2_EXPLORER}/tx/${result.txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-primary underline"
+              >
+                View transaction <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          ),
+        });
+        setUnstakeAmount("");
+        refetchStakeInfo();
+        refetchBalances();
+      } else {
+        toast({
+          title: "Unstake Failed",
+          description: result.error || "Transaction failed",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Unstake Failed",
+        description: err.message || "Unknown error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUnstaking(false);
+    }
+  }, [unstakeAmount, isLocked, timeRemaining, isEvmConnected, walletConnectProvider, stakedBalance, stakingContract, toast, refetchStakeInfo, refetchBalances]);
 
   if (!isConnected) {
     return (
@@ -186,9 +258,30 @@ export default function Staking() {
     );
   }
 
+  if (!isEvmConnected) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+          <Shield className="h-16 w-16 text-muted-foreground" />
+          <h2 className="text-2xl font-semibold">EVM Wallet Required</h2>
+          <p className="text-muted-foreground text-center max-w-md">
+            SHIELD staking requires an EVM-compatible wallet connected via WalletConnect. 
+            Please disconnect and reconnect using WalletConnect with an EVM wallet (like MetaMask).
+          </p>
+          <Alert className="max-w-md border-primary/20 bg-primary/5">
+            <Info className="h-5 w-5 text-primary" />
+            <AlertDescription className="ml-2">
+              The StakingBoost contract is deployed on Flare Coston2 testnet. 
+              Make sure your wallet is connected to Coston2 (Chain ID: 114).
+            </AlertDescription>
+          </Alert>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-7xl">
-      {/* Header */}
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
           <img 
@@ -204,7 +297,14 @@ export default function Staking() {
         </p>
       </div>
 
-      {/* Info Alert */}
+      <Alert className="mb-4 border-green-500/20 bg-green-500/5 backdrop-blur-md">
+        <Info className="h-5 w-5 text-green-500" />
+        <AlertDescription className="text-base ml-2">
+          <strong>On-Chain Staking Active</strong> - Your stakes are secured by the StakingBoost smart contract 
+          on Flare Coston2 testnet. All transactions require wallet signature.
+        </AlertDescription>
+      </Alert>
+
       <Alert className="mb-8 border-primary/20 bg-primary/5 backdrop-blur-md">
         <Info className="h-5 w-5 text-primary" />
         <AlertDescription className="text-base ml-2">
@@ -213,7 +313,6 @@ export default function Staking() {
         </AlertDescription>
       </Alert>
 
-      {/* Stats Grid */}
       {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
           <Skeleton className="h-48 rounded-2xl" />
@@ -246,9 +345,7 @@ export default function Staking() {
         </div>
       )}
 
-      {/* Staking Forms */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Stake Card */}
         <Card className="backdrop-blur-md bg-card/95 border-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -270,10 +367,11 @@ export default function Staking() {
                 onChange={(e) => setStakeAmount(e.target.value)}
                 min="0"
                 step="1"
+                disabled={isStaking}
                 data-testid="input-stake-amount"
               />
               <p className="text-xs text-muted-foreground">
-                Minimum: 1 SHIELD
+                Available: {parseFloat(shieldBalance).toFixed(4)} SHIELD
               </p>
             </div>
 
@@ -306,15 +404,21 @@ export default function Staking() {
               onClick={handleStake}
               className="w-full"
               size="lg"
-              disabled={!stakeAmount || parseFloat(stakeAmount) <= 0 || stakeMutation.isPending}
+              disabled={!stakeAmount || parseFloat(stakeAmount) <= 0 || isStaking || parseFloat(stakeAmount) > parseFloat(shieldBalance)}
               data-testid="button-stake"
             >
-              {stakeMutation.isPending ? "Staking..." : "Lock for 30 Days"}
+              {isStaking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Awaiting Wallet Approval...
+                </>
+              ) : (
+                "Lock for 30 Days"
+              )}
             </Button>
           </CardContent>
         </Card>
 
-        {/* Unstake Card */}
         <Card className="backdrop-blur-md bg-card/95 border-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -337,7 +441,7 @@ export default function Staking() {
                 min="0"
                 max={stakedBalance.toString()}
                 step="1"
-                disabled={isLocked}
+                disabled={isLocked || isUnstaking}
                 data-testid="input-unstake-amount"
               />
               <p className="text-xs text-muted-foreground">
@@ -383,17 +487,43 @@ export default function Staking() {
                 !unstakeAmount || 
                 parseFloat(unstakeAmount) <= 0 || 
                 parseFloat(unstakeAmount) > stakedBalance ||
-                unstakeMutation.isPending
+                isUnstaking
               }
               data-testid="button-unstake"
             >
-              {unstakeMutation.isPending ? "Unstaking..." : "Unstake SHIELD"}
+              {isUnstaking ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Awaiting Wallet Approval...
+                </>
+              ) : (
+                "Unstake SHIELD"
+              )}
             </Button>
           </CardContent>
         </Card>
       </div>
 
-      {/* How It Works Section */}
+      {lastTxHash && (
+        <Alert className="mt-8 border-green-500/20 bg-green-500/5">
+          <Info className="h-5 w-5 text-green-500" />
+          <AlertDescription className="ml-2">
+            <div className="flex items-center gap-2">
+              <span>Last transaction:</span>
+              <a 
+                href={`${COSTON2_EXPLORER}/tx/${lastTxHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-primary underline font-mono text-sm"
+              >
+                {lastTxHash.slice(0, 10)}...{lastTxHash.slice(-8)}
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          </AlertDescription>
+        </Alert>
+      )}
+
       <Card className="mt-8 backdrop-blur-md bg-card/95 border-2">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -404,31 +534,45 @@ export default function Staking() {
         <CardContent className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
-              <h3 className="font-semibold mb-2">🔒 Lock Period</h3>
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <Lock className="h-4 w-4" /> Lock Period
+              </h3>
               <p className="text-sm text-muted-foreground">
                 Stake SHIELD for a 30-day lock period. During this time, your tokens cannot be withdrawn 
                 but continue earning boost benefits.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">📈 Boost Formula</h3>
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <TrendingUp className="h-4 w-4" /> Boost Formula
+              </h3>
               <p className="text-sm text-muted-foreground">
                 For every 100 SHIELD staked, you receive +1% APY boost on ALL your shXRP deposits. 
                 Stake 500 SHIELD = +5% APY!
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">➕ Adding More</h3>
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <Shield className="h-4 w-4" /> On-Chain Security
+              </h3>
               <p className="text-sm text-muted-foreground">
-                You can stake additional SHIELD anytime. Each stake extends the lock period by 30 days 
-                from the last deposit.
+                Your staked tokens are secured by the StakingBoost smart contract on Flare Coston2. 
+                All transactions are verifiable on the blockchain.
               </p>
             </div>
             <div>
-              <h3 className="font-semibold mb-2">💰 Economic Flywheel</h3>
+              <h3 className="font-semibold mb-2 flex items-center gap-2">
+                <ExternalLink className="h-4 w-4" /> Contract Address
+              </h3>
               <p className="text-sm text-muted-foreground">
-                Higher shXRP APY → More deposits → More SHIELD demand → Buy pressure → 
-                Deflationary tokenomics via buyback & burn.
+                <a 
+                  href={`${COSTON2_EXPLORER}/address/0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline font-mono text-xs break-all"
+                >
+                  0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4
+                </a>
               </p>
             </div>
           </div>
@@ -436,11 +580,11 @@ export default function Staking() {
           <div className="mt-6 p-4 rounded-lg bg-primary/10 border border-primary/20 backdrop-blur-md">
             <h4 className="font-semibold text-sm mb-2">Example Scenario</h4>
             <div className="space-y-1 text-sm text-muted-foreground">
-              <p>• You have 10,000 FXRP in shXRP vault earning 7% base APY</p>
-              <p>• You stake 500 SHIELD tokens</p>
-              <p>• Your boost: +5% APY (500 SHIELD / 100 = 5)</p>
-              <p>• Your total APY: 7% + 5% = <span className="text-primary font-semibold">12% APY</span></p>
-              <p>• Annual earnings increase: ~$500 additional per year!</p>
+              <p>You have 10,000 FXRP in shXRP vault earning 7% base APY</p>
+              <p>You stake 500 SHIELD tokens</p>
+              <p>Your boost: +5% APY (500 SHIELD / 100 = 5)</p>
+              <p>Your total APY: 7% + 5% = <span className="text-primary font-semibold">12% APY</span></p>
+              <p>Annual earnings increase: ~$500 additional per year!</p>
             </div>
           </div>
         </CardContent>
