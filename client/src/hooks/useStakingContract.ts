@@ -113,6 +113,23 @@ export function useStakingContract(): StakingContractHook {
       return { success: false, error: "Wallet not connected. Please connect your EVM wallet first." };
     }
 
+    // Validate that the WalletConnect session has an active EIP155 (EVM) namespace
+    const session = walletConnectProvider.session;
+    const evmAccounts = session?.namespaces?.eip155?.accounts || [];
+    console.log("WalletConnect session validation:", { 
+      hasSession: !!session, 
+      evmAccounts,
+      allNamespaces: session?.namespaces ? Object.keys(session.namespaces) : []
+    });
+    
+    if (!session || evmAccounts.length === 0) {
+      console.error("No active EVM session in WalletConnect");
+      return { 
+        success: false, 
+        error: "EVM session not found. Please disconnect and reconnect using the EVM wallet option." 
+      };
+    }
+
     setIsLoading(true);
     setError(null);
     setTxHash(null);

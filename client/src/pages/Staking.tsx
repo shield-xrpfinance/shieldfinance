@@ -114,12 +114,20 @@ export default function Staking() {
     setLastTxHash(null);
 
     try {
+      console.log("About to call approveAndStake...", { 
+        stakeAmount, 
+        stakingContractType: typeof stakingContract,
+        hasApproveAndStake: typeof stakingContract.approveAndStake
+      });
+      
       toast({
         title: "Staking in Progress",
         description: "Please approve the transaction in your wallet...",
       });
 
+      console.log("Calling approveAndStake now...");
       const result = await stakingContract.approveAndStake(stakeAmount);
+      console.log("approveAndStake returned:", result);
 
       if (result.success && result.txHash) {
         setLastTxHash(result.txHash);
