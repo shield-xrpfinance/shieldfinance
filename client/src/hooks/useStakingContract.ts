@@ -106,7 +106,10 @@ export function useStakingContract(): StakingContractHook {
   }, [evmAddress, getProvider]);
 
   const approveAndStake = useCallback(async (amount: string): Promise<{ success: boolean; txHash?: string; error?: string }> => {
+    console.log("approveAndStake called:", { amount, evmAddress, hasProvider: !!walletConnectProvider });
+    
     if (!evmAddress || !walletConnectProvider) {
+      console.error("Missing wallet connection:", { evmAddress, hasProvider: !!walletConnectProvider });
       return { success: false, error: "Wallet not connected. Please connect your EVM wallet first." };
     }
 
@@ -115,19 +118,31 @@ export function useStakingContract(): StakingContractHook {
     setTxHash(null);
 
     try {
+      console.log("Getting signer from WalletConnect provider...");
+      console.log("Provider session:", walletConnectProvider.session);
+      console.log("Provider namespaces:", walletConnectProvider.session?.namespaces);
+      
       const signer = await getSigner();
+      console.log("Signer obtained:", await signer.getAddress());
+      
       const shieldContract = new ethers.Contract(SHIELD_TOKEN_ADDRESS, ERC20_ABI, signer);
       const stakingContract = new ethers.Contract(STAKING_BOOST_ADDRESS, STAKING_BOOST_ABI, signer);
       
       const amountWei = ethers.parseEther(amount);
+      console.log("Amount in wei:", amountWei.toString());
 
+      console.log("Checking current allowance...");
       const currentAllowance = await shieldContract.allowance(evmAddress, STAKING_BOOST_ADDRESS);
+      console.log("Current allowance:", currentAllowance.toString());
+      
       if (currentAllowance < amountWei) {
         console.log("Approving SHIELD tokens for staking...");
         const approveTx = await shieldContract.approve(STAKING_BOOST_ADDRESS, amountWei);
         console.log("Approval tx submitted:", approveTx.hash);
         await approveTx.wait();
         console.log("Approval confirmed");
+      } else {
+        console.log("Sufficient allowance already exists, skipping approval");
       }
 
       console.log("Staking SHIELD tokens...");
@@ -142,6 +157,12 @@ export function useStakingContract(): StakingContractHook {
     } catch (err: any) {
       const errorMessage = err.reason || err.message || "Failed to stake";
       console.error("Staking error:", err);
+      console.error("Error details:", { 
+        code: err.code, 
+        reason: err.reason, 
+        message: err.message,
+        data: err.data
+      });
       setError(errorMessage);
       setIsLoading(false);
       return { success: false, error: errorMessage };
