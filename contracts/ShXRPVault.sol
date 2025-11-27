@@ -89,7 +89,9 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     address public immutable revenueRouter;
     
     // Staking Boost for APY enhancement (+1% per 100 SHIELD staked)
-    IStakingBoost public immutable stakingBoost;
+    // NOTE: Not immutable to allow post-deployment configuration (circular dependency solution)
+    // Can only be set once by owner after deployment
+    IStakingBoost public stakingBoost;
     
     // Fee Configuration (in basis points, 10000 = 100%)
     uint256 public constant DEPOSIT_FEE_BPS = 20;  // 0.2% deposit fee
@@ -139,6 +141,7 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     
     // Boost Donation Events
     event DonatedOnBehalf(address indexed user, uint256 fxrpAmount, uint256 sharesMinted);
+    event StakingBoostUpdated(address indexed oldBoost, address indexed newBoost);
     
     modifier onlyOperator() {
         require(operators[msg.sender] || msg.sender == owner(), "Not authorized");
@@ -151,11 +154,14 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
      * @param _name Name of the share token (e.g., "Shield XRP")
      * @param _symbol Symbol of the share token (e.g., "shXRP")
      * @param _revenueRouter Address of RevenueRouter for fee distribution
-     * @param _stakingBoost Address of StakingBoost contract for APY enhancement
+     * @param _stakingBoost Address of StakingBoost (can be address(0), set later via setStakingBoost)
      * 
      * Example deployment:
      * FXRP Mainnet: 0xAd552A648C74D49E10027AB8a618A3ad4901c5bE
      * FXRP Coston2: 0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3
+     * 
+     * Note: stakingBoost can be set to address(0) initially and configured later
+     * via setStakingBoost() to solve circular dependency during deployment.
      */
     constructor(
         IERC20 _fxrpToken,
@@ -166,14 +172,48 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     ) ERC4626(_fxrpToken) ERC20(_name, _symbol) Ownable(msg.sender) {
         require(address(_fxrpToken) != address(0), "Invalid FXRP token address");
         require(_revenueRouter != address(0), "Invalid revenue router address");
-        require(_stakingBoost != address(0), "Invalid staking boost address");
         
         revenueRouter = _revenueRouter;
-        stakingBoost = IStakingBoost(_stakingBoost);
+        
+        // StakingBoost can be address(0) initially - will be set via setStakingBoost()
+        if (_stakingBoost != address(0)) {
+            stakingBoost = IStakingBoost(_stakingBoost);
+            emit StakingBoostUpdated(address(0), _stakingBoost);
+        }
         
         // Deployer is first operator
         operators[msg.sender] = true;
         emit OperatorAdded(msg.sender);
+    }
+    
+    /**
+     * @dev Set StakingBoost contract address (one-time configuration)
+     * 
+     * Solves the circular dependency between StakingBoost and ShXRPVault:
+     * - StakingBoost needs vault address at deployment
+     * - Vault needs stakingBoost address for donateOnBehalf access control
+     * 
+     * Deployment Flow:
+     * 1. Deploy ShXRPVault with stakingBoost = address(0)
+     * 2. Deploy StakingBoost with real vault address
+     * 3. Call vault.setStakingBoost(stakingBoostAddress)
+     * 4. Now claim() → donateOnBehalf() works correctly
+     * 
+     * Security:
+     * - Only callable by owner
+     * - Can only be set once (require previous value == address(0))
+     * - Cannot be set to address(0)
+     * 
+     * @param _stakingBoost Address of StakingBoost contract
+     */
+    function setStakingBoost(address _stakingBoost) external onlyOwner {
+        require(_stakingBoost != address(0), "Invalid staking boost address");
+        require(address(stakingBoost) == address(0), "StakingBoost already set");
+        
+        address oldBoost = address(stakingBoost);
+        stakingBoost = IStakingBoost(_stakingBoost);
+        
+        emit StakingBoostUpdated(oldBoost, _stakingBoost);
     }
     
     /**

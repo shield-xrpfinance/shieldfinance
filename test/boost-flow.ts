@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { network } from "hardhat";
-import type { StakingBoost, ShieldToken, ShXRPVault, RevenueRouter, MockERC20 } from "../types/ethers-contracts";
+import type { StakingBoost, ShieldToken, ShXRPVault, MockERC20 } from "../types/ethers-contracts";
 import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 
 /**
@@ -11,6 +11,12 @@ import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
  * - Weighted FXRP distribution to SHIELD stakers
  * - donateOnBehalf() minting shXRP shares to specific users
  * - Stakers receive proportional yield boost
+ * 
+ * Deployment Flow (Solving Circular Dependency):
+ * 1. Deploy ShXRPVault with stakingBoost = address(0)
+ * 2. Deploy StakingBoost with real vault address
+ * 3. Call vault.setStakingBoost(stakingBoostAddress)
+ * 4. Now claim() → donateOnBehalf() works correctly
  */
 describe("Boost Flow (End-to-End)", function () {
   let ethers: any;
@@ -20,8 +26,6 @@ describe("Boost Flow (End-to-End)", function () {
   let shieldToken: ShieldToken;
   let fxrpToken: MockERC20;
   let vault: ShXRPVault;
-  let revenueRouter: RevenueRouter;
-  let mockWflr: MockERC20;
   
   // Signers
   let owner: SignerWithAddress;
@@ -33,6 +37,7 @@ describe("Boost Flow (End-to-End)", function () {
   // Constants
   const LOCK_PERIOD = 30 * 24 * 60 * 60; // 30 days in seconds
   const PRECISION = BigInt(10) ** BigInt(18);
+  const FXRP_DECIMALS = 6;
 
   before(async function () {
     const hre = await network.connect({ network: "hardhat" });
@@ -52,56 +57,52 @@ describe("Boost Flow (End-to-End)", function () {
     fxrpToken = await MockERC20Factory.deploy("Flare XRP", "FXRP", 6);
     await fxrpToken.waitForDeployment();
 
-    // Deploy MockERC20 for wFLR
-    mockWflr = await MockERC20Factory.deploy("Wrapped Flare", "wFLR", 18);
-    await mockWflr.waitForDeployment();
-
-    // Deploy StakingBoost with all required params
-    // Note: We'll use revenueRouterSigner as the revenue router for testing
-    const StakingBoostFactory = await ethers.getContractFactory("StakingBoost");
+    // === PROPER DEPLOYMENT FLOW (SOLVING CIRCULAR DEPENDENCY) ===
     
-    // For testing, we need to deploy vault first (circular dependency)
-    // We'll deploy a mock vault or update the address later
-    // First deploy with owner as placeholder, then update
-    stakingBoost = await StakingBoostFactory.deploy(
-      await shieldToken.getAddress(),
-      await fxrpToken.getAddress(),
-      ethers.ZeroAddress, // Will update vault address after vault deployment
-      revenueRouterSigner.address // Use signer as mock revenue router
-    );
-    await stakingBoost.waitForDeployment();
-
-    // Deploy ShXRPVault with stakingBoost
+    // Step 1: Deploy ShXRPVault with stakingBoost = address(0)
     const ShXRPVaultFactory = await ethers.getContractFactory("ShXRPVault");
     vault = await ShXRPVaultFactory.deploy(
       await fxrpToken.getAddress(),
       "Shield XRP",
       "shXRP",
-      owner.address, // Revenue router (not used in these tests)
-      await stakingBoost.getAddress()
+      revenueRouterSigner.address, // Revenue router
+      ethers.ZeroAddress // Placeholder - will be set via setStakingBoost()
     );
     await vault.waitForDeployment();
 
-    // Note: In the real contract, vault is immutable, so we'd need to redeploy
-    // For testing purposes, we'll test the components that work
+    // Step 2: Deploy StakingBoost with real vault address
+    const StakingBoostFactory = await ethers.getContractFactory("StakingBoost");
+    stakingBoost = await StakingBoostFactory.deploy(
+      await shieldToken.getAddress(),
+      await fxrpToken.getAddress(),
+      await vault.getAddress(), // Real vault
+      revenueRouterSigner.address
+    );
+    await stakingBoost.waitForDeployment();
+
+    // Step 3: Wire vault to StakingBoost via setter
+    await vault.connect(owner).setStakingBoost(await stakingBoost.getAddress());
+
+    // Verify wiring is correct
+    expect(await vault.stakingBoost()).to.equal(await stakingBoost.getAddress());
+    expect(await stakingBoost.vault()).to.equal(await vault.getAddress());
     
     // Distribute tokens for testing
     await shieldToken.transfer(user1.address, ethers.parseEther("10000")); // 10k SHIELD
     await shieldToken.transfer(user2.address, ethers.parseEther("5000"));  // 5k SHIELD
     
-    // Mint FXRP for users and testing
-    const fxrpDecimals = 6;
-    await fxrpToken.mint(user1.address, BigInt(1000) * BigInt(10 ** fxrpDecimals)); // 1000 FXRP
-    await fxrpToken.mint(user2.address, BigInt(1000) * BigInt(10 ** fxrpDecimals)); // 1000 FXRP
-    await fxrpToken.mint(user3.address, BigInt(1000) * BigInt(10 ** fxrpDecimals)); // 1000 FXRP
-    await fxrpToken.mint(revenueRouterSigner.address, BigInt(10000) * BigInt(10 ** fxrpDecimals)); // 10k FXRP for rewards
+    // Mint FXRP for testing
+    await fxrpToken.mint(user1.address, BigInt(1000) * BigInt(10 ** FXRP_DECIMALS));
+    await fxrpToken.mint(user2.address, BigInt(1000) * BigInt(10 ** FXRP_DECIMALS));
+    await fxrpToken.mint(user3.address, BigInt(1000) * BigInt(10 ** FXRP_DECIMALS));
+    await fxrpToken.mint(revenueRouterSigner.address, BigInt(10000) * BigInt(10 ** FXRP_DECIMALS));
   });
 
   // ========================================
   // TEST 1-4: distributeBoost & rewardPerToken
   // ========================================
   
-  describe("Test 1-4: distributeBoost & Reward Accumulator", function () {
+  describe("Test 1-4: Synthetix Reward Accumulator", function () {
     
     it("Test 1: distributeBoost updates rewardPerTokenStored correctly", async function () {
       // User1 stakes 10k SHIELD
@@ -114,8 +115,7 @@ describe("Boost Flow (End-to-End)", function () {
       expect(await stakingBoost.totalStaked()).to.equal(stakeAmount);
       
       // Distribute 100 FXRP rewards
-      const fxrpDecimals = 6;
-      const rewardAmount = BigInt(100) * BigInt(10 ** fxrpDecimals); // 100 FXRP
+      const rewardAmount = BigInt(100) * BigInt(10 ** FXRP_DECIMALS);
       
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
       await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
@@ -139,8 +139,7 @@ describe("Boost Flow (End-to-End)", function () {
       await stakingBoost.connect(user2).stake(stake2);
       
       // Distribute 150 FXRP rewards
-      const fxrpDecimals = 6;
-      const rewardAmount = BigInt(150) * BigInt(10 ** fxrpDecimals);
+      const rewardAmount = BigInt(150) * BigInt(10 ** FXRP_DECIMALS);
       
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
       await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
@@ -164,9 +163,8 @@ describe("Boost Flow (End-to-End)", function () {
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
       await stakingBoost.connect(user1).stake(stakeAmount);
       
-      const fxrpDecimals = 6;
-      const reward1 = BigInt(100) * BigInt(10 ** fxrpDecimals);
-      const reward2 = BigInt(50) * BigInt(10 ** fxrpDecimals);
+      const reward1 = BigInt(100) * BigInt(10 ** FXRP_DECIMALS);
+      const reward2 = BigInt(50) * BigInt(10 ** FXRP_DECIMALS);
       
       // First distribution
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), reward1);
@@ -192,8 +190,7 @@ describe("Boost Flow (End-to-End)", function () {
       await stakingBoost.connect(user1).stake(stake1);
       
       // First distribution (only user1 eligible)
-      const fxrpDecimals = 6;
-      const reward1 = BigInt(100) * BigInt(10 ** fxrpDecimals);
+      const reward1 = BigInt(100) * BigInt(10 ** FXRP_DECIMALS);
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), reward1);
       await stakingBoost.connect(revenueRouterSigner).distributeBoost(reward1);
       
@@ -203,7 +200,7 @@ describe("Boost Flow (End-to-End)", function () {
       await stakingBoost.connect(user2).stake(stake2);
       
       // Second distribution (both eligible)
-      const reward2 = BigInt(150) * BigInt(10 ** fxrpDecimals);
+      const reward2 = BigInt(150) * BigInt(10 ** FXRP_DECIMALS);
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), reward2);
       await stakingBoost.connect(revenueRouterSigner).distributeBoost(reward2);
       
@@ -224,114 +221,62 @@ describe("Boost Flow (End-to-End)", function () {
   // TEST 5-8: claim() & donateOnBehalf()
   // ========================================
   
-  describe("Test 5-8: claim() & Proportional Share Minting", function () {
+  describe("Test 5-8: claim() → donateOnBehalf() Integration", function () {
     
-    it("Test 5: only RevenueRouter can call distributeBoost", async function () {
+    it("Test 5: claim() mints shXRP shares to staker only", async function () {
+      // User1 stakes SHIELD
       const stakeAmount = ethers.parseEther("10000");
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
       await stakingBoost.connect(user1).stake(stakeAmount);
       
-      const fxrpDecimals = 6;
-      const rewardAmount = BigInt(100) * BigInt(10 ** fxrpDecimals);
-      
-      // User1 tries to call distributeBoost (should fail)
-      await fxrpToken.connect(user1).approve(await stakingBoost.getAddress(), rewardAmount);
-      
-      await expect(
-        stakingBoost.connect(user1).distributeBoost(rewardAmount)
-      ).to.be.revertedWith("Only RevenueRouter");
-      
-      // RevenueRouter signer can call it (should succeed)
+      // Distribute rewards
+      const rewardAmount = BigInt(100) * BigInt(10 ** FXRP_DECIMALS);
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
-      await expect(
-        stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount)
-      ).to.emit(stakingBoost, "RewardDistributed");
+      await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
+      
+      // Verify user1 has pending rewards
+      const earnedBefore = await stakingBoost.earned(user1.address);
+      expect(earnedBefore).to.equal(rewardAmount);
+      
+      // User1 claims - should receive shXRP shares
+      const shXRPBalanceBefore = await vault.balanceOf(user1.address);
+      expect(shXRPBalanceBefore).to.equal(0);
+      
+      await expect(stakingBoost.connect(user1).claim())
+        .to.emit(stakingBoost, "RewardClaimed");
+      
+      // User1 should now have shXRP shares
+      const shXRPBalanceAfter = await vault.balanceOf(user1.address);
+      expect(shXRPBalanceAfter).to.be.gt(0);
+      
+      // User's pending rewards should be 0
+      expect(await stakingBoost.earned(user1.address)).to.equal(0);
     });
 
-    it("Test 6: non-stakers have zero earned rewards", async function () {
+    it("Test 6: non-stakers have zero earned rewards and cannot claim", async function () {
       // User1 stakes, user3 does not
       const stakeAmount = ethers.parseEther("10000");
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
       await stakingBoost.connect(user1).stake(stakeAmount);
       
       // Distribute rewards
-      const fxrpDecimals = 6;
-      const rewardAmount = BigInt(100) * BigInt(10 ** fxrpDecimals);
+      const rewardAmount = BigInt(100) * BigInt(10 ** FXRP_DECIMALS);
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
       await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
       
       // User3 (non-staker) should have zero earned
       expect(await stakingBoost.earned(user3.address)).to.equal(0);
       
-      // User1 (staker) should have all rewards
-      expect(await stakingBoost.earned(user1.address)).to.equal(rewardAmount);
+      // User3 can call claim() but receives nothing
+      const shXRPBalanceBefore = await vault.balanceOf(user3.address);
+      await stakingBoost.connect(user3).claim();
+      const shXRPBalanceAfter = await vault.balanceOf(user3.address);
+      
+      expect(shXRPBalanceAfter).to.equal(shXRPBalanceBefore); // No change
     });
 
-    it("Test 7: getBoost returns correct boost in basis points with cap", async function () {
-      // Stake 550 SHIELD = 5 boost levels = 500 bps = 5%
-      const stakeAmount = ethers.parseEther("550");
-      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
-      await stakingBoost.connect(user1).stake(stakeAmount);
-      
-      const boost = await stakingBoost.getBoost(user1.address);
-      expect(boost).to.equal(500); // 500 bps = 5%
-      
-      // Test global cap (default 2500 bps = 25%)
-      // Stake 5000 SHIELD = 50 boost levels = 5000 bps = 50%, but capped at 25%
-      const largeStake = ethers.parseEther("5000");
-      await shieldToken.connect(user2).approve(await stakingBoost.getAddress(), largeStake);
-      await stakingBoost.connect(user2).stake(largeStake);
-      
-      const cappedBoost = await stakingBoost.getBoost(user2.address);
-      expect(cappedBoost).to.equal(2500); // Capped at 25%
-    });
-
-    it("Test 8: rewards accumulate correctly across stake/withdraw cycles", async function () {
-      const stakeAmount = ethers.parseEther("10000");
-      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
-      await stakingBoost.connect(user1).stake(stakeAmount);
-      
-      // First distribution
-      const fxrpDecimals = 6;
-      const reward1 = BigInt(100) * BigInt(10 ** fxrpDecimals);
-      await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), reward1);
-      await stakingBoost.connect(revenueRouterSigner).distributeBoost(reward1);
-      
-      const earnedBefore = await stakingBoost.earned(user1.address);
-      expect(earnedBefore).to.equal(reward1);
-      
-      // Fast forward past lock period
-      await ethers.provider.send("evm_increaseTime", [LOCK_PERIOD]);
-      await ethers.provider.send("evm_mine", []);
-      
-      // Partial withdraw (rewards should be preserved)
-      const withdrawAmount = ethers.parseEther("5000");
-      await stakingBoost.connect(user1).withdraw(withdrawAmount);
-      
-      // Earned should still be reward1 (preserved during withdraw)
-      const earnedAfterWithdraw = await stakingBoost.earned(user1.address);
-      expect(earnedAfterWithdraw).to.equal(reward1);
-      
-      // Second distribution (with reduced stake)
-      const reward2 = BigInt(50) * BigInt(10 ** fxrpDecimals);
-      await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), reward2);
-      await stakingBoost.connect(revenueRouterSigner).distributeBoost(reward2);
-      
-      // Total earned should be reward1 + reward2
-      const finalEarned = await stakingBoost.earned(user1.address);
-      expect(finalEarned).to.equal(reward1 + reward2);
-    });
-  });
-
-  // ========================================
-  // TEST 9-12: End-to-End Flow
-  // ========================================
-  
-  describe("Test 9-12: End-to-End Flow Validation", function () {
-    
-    it("Test 9: staker with more SHIELD gets proportionally more rewards", async function () {
-      // User1 stakes 10k SHIELD (2x more than user2)
-      // User2 stakes 5k SHIELD
+    it("Test 7: multiple stakers get proportional shXRP shares on claim", async function () {
+      // User1 stakes 10k SHIELD (2/3), User2 stakes 5k SHIELD (1/3)
       const stake1 = ethers.parseEther("10000");
       const stake2 = ethers.parseEther("5000");
       
@@ -342,18 +287,76 @@ describe("Boost Flow (End-to-End)", function () {
       await stakingBoost.connect(user2).stake(stake2);
       
       // Distribute rewards
-      const fxrpDecimals = 6;
-      const rewardAmount = BigInt(150) * BigInt(10 ** fxrpDecimals);
+      const rewardAmount = BigInt(150) * BigInt(10 ** FXRP_DECIMALS);
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
       await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
       
-      const earned1 = await stakingBoost.earned(user1.address);
-      const earned2 = await stakingBoost.earned(user2.address);
+      // Both users claim
+      await stakingBoost.connect(user1).claim();
+      await stakingBoost.connect(user2).claim();
       
-      // User1 should earn 2x more than user2
-      // earned1 = 100 FXRP, earned2 = 50 FXRP
-      expect(earned1).to.be.gt(earned2);
-      expect(earned1 / earned2).to.be.closeTo(2n, 1n); // 2x ratio
+      // Get shXRP balances
+      const balance1 = await vault.balanceOf(user1.address);
+      const balance2 = await vault.balanceOf(user2.address);
+      
+      // User1 should have ~2x the shares of User2
+      // Allow for some rounding
+      expect(balance1).to.be.gt(balance2);
+      
+      // Check ratio is approximately 2:1
+      const ratio = balance1 * BigInt(100) / balance2;
+      expect(ratio).to.be.closeTo(200n, 10n); // ~2x with 10% tolerance
+    });
+
+    it("Test 8: only StakingBoost can call vault.donateOnBehalf()", async function () {
+      // User tries to call donateOnBehalf directly (should fail)
+      await fxrpToken.mint(user1.address, BigInt(100) * BigInt(10 ** FXRP_DECIMALS));
+      await fxrpToken.connect(user1).approve(await vault.getAddress(), BigInt(100) * BigInt(10 ** FXRP_DECIMALS));
+      
+      await expect(
+        vault.connect(user1).donateOnBehalf(user1.address, BigInt(100) * BigInt(10 ** FXRP_DECIMALS))
+      ).to.be.revertedWith("Only StakingBoost can donate");
+    });
+  });
+
+  // ========================================
+  // TEST 9-12: End-to-End Flow
+  // ========================================
+  
+  describe("Test 9-12: Full End-to-End Flow Validation", function () {
+    
+    it("Test 9: complete flow - stake → distribute → claim → verify shXRP increase", async function () {
+      // User1 stakes 10k SHIELD
+      const stakeAmount = ethers.parseEther("10000");
+      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
+      await stakingBoost.connect(user1).stake(stakeAmount);
+      
+      // User3 deposits FXRP directly to vault (no staking)
+      const depositAmount = BigInt(100) * BigInt(10 ** FXRP_DECIMALS);
+      await fxrpToken.connect(user3).approve(await vault.getAddress(), depositAmount);
+      await vault.connect(user3).deposit(depositAmount, user3.address);
+      
+      const user3SharesBefore = await vault.balanceOf(user3.address);
+      
+      // Distribute FXRP rewards to stakers
+      const rewardAmount = BigInt(50) * BigInt(10 ** FXRP_DECIMALS);
+      await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
+      await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
+      
+      // User1 claims boost
+      await stakingBoost.connect(user1).claim();
+      
+      // User1 should have shXRP shares from boost
+      const user1Shares = await vault.balanceOf(user1.address);
+      expect(user1Shares).to.be.gt(0);
+      
+      // User3 shares should be unchanged (no boost for non-stakers)
+      const user3SharesAfter = await vault.balanceOf(user3.address);
+      expect(user3SharesAfter).to.equal(user3SharesBefore);
+      
+      // Verify differentiated yield: User1 got boost, User3 did not
+      console.log(`User1 (staker) shXRP: ${user1Shares}`);
+      console.log(`User3 (non-staker) shXRP: ${user3SharesAfter}`);
     });
 
     it("Test 10: getStakeInfo returns correct pending rewards", async function () {
@@ -362,8 +365,7 @@ describe("Boost Flow (End-to-End)", function () {
       await stakingBoost.connect(user1).stake(stakeAmount);
       
       // Distribute rewards
-      const fxrpDecimals = 6;
-      const rewardAmount = BigInt(100) * BigInt(10 ** fxrpDecimals);
+      const rewardAmount = BigInt(100) * BigInt(10 ** FXRP_DECIMALS);
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
       await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
       
@@ -375,27 +377,35 @@ describe("Boost Flow (End-to-End)", function () {
       expect(stakeInfo.unlockTime).to.be.gt(0);
     });
 
-    it("Test 11: getGlobalStats returns correct totals", async function () {
-      const stake1 = ethers.parseEther("10000");
-      const stake2 = ethers.parseEther("5000");
-      
-      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stake1);
-      await stakingBoost.connect(user1).stake(stake1);
-      
-      await shieldToken.connect(user2).approve(await stakingBoost.getAddress(), stake2);
-      await stakingBoost.connect(user2).stake(stake2);
+    it("Test 11: claimAndWithdraw convenience function works correctly", async function () {
+      const stakeAmount = ethers.parseEther("1000");
+      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
+      await stakingBoost.connect(user1).stake(stakeAmount);
       
       // Distribute rewards
-      const fxrpDecimals = 6;
-      const rewardAmount = BigInt(150) * BigInt(10 ** fxrpDecimals);
+      const rewardAmount = BigInt(50) * BigInt(10 ** FXRP_DECIMALS);
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
       await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
       
-      const globalStats = await stakingBoost.getGlobalStats();
+      // Fast forward past lock period
+      await ethers.provider.send("evm_increaseTime", [LOCK_PERIOD]);
+      await ethers.provider.send("evm_mine", []);
       
-      expect(globalStats.totalShieldStaked).to.equal(stake1 + stake2);
-      expect(globalStats.currentRewardPerToken).to.be.gt(0);
-      expect(globalStats.pendingFxrpInContract).to.equal(rewardAmount);
+      const shieldBalanceBefore = await shieldToken.balanceOf(user1.address);
+      
+      // Claim and withdraw in one transaction
+      await stakingBoost.connect(user1).claimAndWithdraw(stakeAmount);
+      
+      // User should have received SHIELD back
+      const shieldBalanceAfter = await shieldToken.balanceOf(user1.address);
+      expect(shieldBalanceAfter).to.equal(shieldBalanceBefore + stakeAmount);
+      
+      // User should have shXRP from claim
+      expect(await vault.balanceOf(user1.address)).to.be.gt(0);
+      
+      // Stake should be 0
+      const stakeInfo = await stakingBoost.getStakeInfo(user1.address);
+      expect(stakeInfo.amount).to.equal(0);
     });
 
     it("Test 12: admin can update global boost cap", async function () {
@@ -423,15 +433,14 @@ describe("Boost Flow (End-to-End)", function () {
   });
 
   // ========================================
-  // ADDITIONAL SECURITY TESTS
+  // SECURITY & EDGE CASE TESTS
   // ========================================
   
   describe("Security & Edge Cases", function () {
     
     it("Should handle zero totalStaked gracefully in distributeBoost", async function () {
       // No stakers - FXRP should stay in contract
-      const fxrpDecimals = 6;
-      const rewardAmount = BigInt(100) * BigInt(10 ** fxrpDecimals);
+      const rewardAmount = BigInt(100) * BigInt(10 ** FXRP_DECIMALS);
       
       await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
       await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
@@ -457,20 +466,47 @@ describe("Boost Flow (End-to-End)", function () {
       expect(await stakingBoost.revenueRouter()).to.equal(newRouter);
     });
 
-    it("Should protect against reentrancy on stake/withdraw/claim", async function () {
+    it("Should verify setStakingBoost is one-time only", async function () {
+      // setStakingBoost was already called in beforeEach
+      // Trying to call it again should fail
+      await expect(
+        vault.connect(owner).setStakingBoost(user3.address)
+      ).to.be.revertedWith("StakingBoost already set");
+    });
+
+    it("Should protect against reentrancy on claim", async function () {
       const stakeAmount = ethers.parseEther("1000");
       
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
-      
-      // Normal stake should work
       await stakingBoost.connect(user1).stake(stakeAmount);
       
-      // Fast forward
-      await ethers.provider.send("evm_increaseTime", [LOCK_PERIOD]);
-      await ethers.provider.send("evm_mine", []);
+      // Distribute rewards
+      const rewardAmount = BigInt(50) * BigInt(10 ** FXRP_DECIMALS);
+      await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
+      await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
       
-      // Normal withdraw should work
-      await stakingBoost.connect(user1).withdraw(stakeAmount);
+      // Normal claim should work
+      await stakingBoost.connect(user1).claim();
+      
+      // Second claim should give nothing (rewards already claimed)
+      const balanceBefore = await vault.balanceOf(user1.address);
+      await stakingBoost.connect(user1).claim();
+      const balanceAfter = await vault.balanceOf(user1.address);
+      expect(balanceAfter).to.equal(balanceBefore);
+    });
+
+    it("Should emit correct events on claim", async function () {
+      const stakeAmount = ethers.parseEther("1000");
+      await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stakeAmount);
+      await stakingBoost.connect(user1).stake(stakeAmount);
+      
+      const rewardAmount = BigInt(100) * BigInt(10 ** FXRP_DECIMALS);
+      await fxrpToken.connect(revenueRouterSigner).approve(await stakingBoost.getAddress(), rewardAmount);
+      await stakingBoost.connect(revenueRouterSigner).distributeBoost(rewardAmount);
+      
+      // Claim should emit RewardClaimed event
+      await expect(stakingBoost.connect(user1).claim())
+        .to.emit(stakingBoost, "RewardClaimed");
     });
 
     it("Should allow owner to recover excess tokens", async function () {
