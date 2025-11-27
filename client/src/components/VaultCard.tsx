@@ -9,7 +9,7 @@ import {
 import { Shield, ShieldAlert, ShieldCheck, Clock, Users, Lock, Info, TrendingUp, AlertTriangle, DollarSign } from "lucide-react";
 import { MultiAssetIcon } from "@/components/AssetIcon";
 import { useNetwork } from "@/lib/networkContext";
-import { getVaultYieldProjection } from "@/lib/demoYield";
+import { getVaultYieldProjection } from "@/lib/yieldUtils";
 import { getTooltipContent } from "@/lib/tooltipCopy";
 
 interface VaultCardProps {

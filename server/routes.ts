@@ -23,7 +23,10 @@ import { generateFDCProof } from "./utils/fdc-proof";
 
 /**
  * Admin authentication middleware for operational endpoints
- * Requires X-Admin-Key header matching hashed SESSION_SECRET
+ * Requires X-Admin-Key header matching ADMIN_API_KEY environment variable
+ * 
+ * Security: Uses a dedicated ADMIN_API_KEY separate from SESSION_SECRET
+ * to prevent session secret exposure from compromising admin endpoints.
  */
 const requireAdminAuth = (req: Request, res: Response, next: NextFunction) => {
   const providedKey = req.headers['x-admin-key'];
@@ -34,29 +37,24 @@ const requireAdminAuth = (req: Request, res: Response, next: NextFunction) => {
     });
   }
   
-  const sessionSecret = process.env.SESSION_SECRET;
-  if (!sessionSecret) {
-    console.error("SESSION_SECRET not configured");
+  const adminApiKey = process.env.ADMIN_API_KEY;
+  if (!adminApiKey) {
+    console.error("ADMIN_API_KEY not configured");
     return res.status(500).json({ error: "Server configuration error" });
   }
   
-  // Use constant-time comparison to prevent timing attacks
-  const expectedKey = crypto
-    .createHash('sha256')
-    .update(sessionSecret)
-    .digest('hex');
-  
-  // Validate hex format and length (SHA-256 produces 64 hex chars)
-  if (providedKey.length !== 64 || !/^[0-9a-f]{64}$/i.test(providedKey)) {
+  // Validate minimum key length for security (at least 32 characters)
+  if (providedKey.length < 32) {
     console.warn(`⚠️  Invalid admin key format from ${req.ip}`);
     return res.status(401).json({ error: "Unauthorized: Invalid admin key" });
   }
   
-  // Compare provided hex digest directly against expected (no double hashing)
-  if (!crypto.timingSafeEqual(
-    Buffer.from(expectedKey, 'hex'),
-    Buffer.from(providedKey.toLowerCase(), 'hex')
-  )) {
+  // Use constant-time comparison to prevent timing attacks
+  const providedBuffer = Buffer.from(providedKey);
+  const expectedBuffer = Buffer.from(adminApiKey);
+  
+  if (providedBuffer.length !== expectedBuffer.length || 
+      !crypto.timingSafeEqual(providedBuffer, expectedBuffer)) {
     console.warn(`⚠️  Unauthorized admin access attempt from ${req.ip}`);
     return res.status(401).json({ error: "Unauthorized: Invalid admin key" });
   }
