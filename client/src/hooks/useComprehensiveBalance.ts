@@ -186,8 +186,12 @@ export function useComprehensiveBalance() {
                 (async () => {
                   try {
                     const vaultContract = new ethers.Contract(vaultAddress, ERC20_ABI, provider);
-                    const balanceWei = await vaultContract.balanceOf(evmAddress);
-                    results.shxrp = ethers.formatUnits(balanceWei, 18);
+                    // Query vault decimals dynamically (ERC-4626 shares inherit vault decimals)
+                    const [balanceWei, decimals] = await Promise.all([
+                      vaultContract.balanceOf(evmAddress),
+                      vaultContract.decimals()
+                    ]);
+                    results.shxrp = ethers.formatUnits(balanceWei, decimals);
                   } catch (err: any) {
                     // Handle BAD_DATA error gracefully (contract not deployed or no balance)
                     results.shxrp = "0";

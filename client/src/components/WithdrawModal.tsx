@@ -178,13 +178,21 @@ export default function WithdrawModal({
       // Create read-only vault contract instance
       const vaultReadContract = new ethers.Contract(vaultAddress, FIRELIGHT_VAULT_ABI, rpcProvider);
       
-      // Amount in wei (shXRP shares have 18 decimals)
-      const sharesWei = ethers.parseUnits(amount, 18);
+      // Get vault decimals dynamically (ERC-4626 shares use vault's decimals)
+      const vaultDecimals = await vaultReadContract.decimals();
+      console.log("Vault decimals:", vaultDecimals);
+      
+      // Amount in wei using correct decimals
+      const sharesWei = ethers.parseUnits(amount, vaultDecimals);
+      console.log("Shares to redeem (wei):", sharesWei.toString());
       
       // Check shXRP balance using read-only RPC
       const shXRPBalance = await vaultReadContract.balanceOf(evmAddress);
+      console.log("User shXRP balance (wei):", shXRPBalance.toString());
+      console.log("User shXRP balance (formatted):", ethers.formatUnits(shXRPBalance, vaultDecimals));
+      
       if (shXRPBalance < sharesWei) {
-        throw new Error(`Insufficient shXRP balance. You have ${ethers.formatUnits(shXRPBalance, 18)} shXRP`);
+        throw new Error(`Insufficient shXRP balance. You have ${ethers.formatUnits(shXRPBalance, vaultDecimals)} shXRP`);
       }
       
       // Execute withdrawal (redeem shares for FXRP)
