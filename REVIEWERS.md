@@ -147,6 +147,12 @@ Priority files for security review:
 - Smart Account funding requires minimum 0.1 FLR for withdrawal confirmations
 - FDC proof generation has timing constraints (DA indexing + confirmation rounds)
 
+### Security Model
+
+- **Admin Endpoints**: Protected by dedicated `ADMIN_API_KEY` environment variable (separate from session management)
+- **Timing-Safe Comparison**: All secret comparisons use `crypto.timingSafeEqual()` to prevent timing attacks
+- **Minimum Key Length**: Admin keys must be at least 32 characters
+
 ---
 
 ## Questions?
