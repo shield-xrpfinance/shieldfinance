@@ -653,46 +653,49 @@ Global Boost Cap & 25\% maximum (configurable by governance) \\
 
 \section{Summary}
 
-\vspace{2em}
+\vspace{1em}
+
+\begin{tcolorbox}[
+    colback=shieldlight,
+    colframe=shieldblue,
+    boxrule=2pt,
+    arc=5pt,
+    left=15pt,
+    right=15pt,
+    top=12pt,
+    bottom=12pt
+]
 
 \begin{center}
-\begin{tcolorbox}[
-    colback=shieldblue,
-    colframe=shieldblue,
-    boxrule=0pt,
-    arc=8pt,
-    left=20pt,
-    right=20pt,
-    top=20pt,
-    bottom=20pt,
-    width=0.95\textwidth
-]
-\centering
-\color{white}
-\Large\bfseries
-
-``Every week the protocol donates FXRP bought with real revenue.
-
-\vspace{0.5em}
-
-100\% of that donation is distributed pro-rata to SHIELD lockers according to the formula:
-
-\vspace{0.5em}
-
-\normalsize
-\begin{equation*}
-\text{Boost APY} = \text{Base APY} + \left( \text{Annual Protocol Revenue} \rightarrow \text{FXRP} \right) \times \frac{\text{Your Locked SHIELD}}{\text{Total Locked SHIELD}}
-\end{equation*}
-
-\vspace{0.5em}
-
-\Large
-No minting. No inflation. Pure revenue-share.''
-
-\end{tcolorbox}
+{\large\bfseries\color{shieldblue} The Shield Finance Value Proposition}
 \end{center}
 
-\vspace{3em}
+\vspace{0.5em}
+
+Every week the protocol donates FXRP bought with real revenue. 100\% of that donation is distributed pro-rata to SHIELD lockers:
+
+\vspace{0.8em}
+
+\begin{center}
+\fbox{%
+\parbox{0.85\textwidth}{%
+\centering
+\vspace{0.5em}
+$\displaystyle \text{Your Boost} = \text{Weekly FXRP Revenue} \times \frac{\text{Your SHIELD Staked}}{\text{Total SHIELD Staked}}$
+\vspace{0.5em}
+}%
+}
+\end{center}
+
+\vspace{0.8em}
+
+\begin{center}
+{\large\bfseries\color{shieldblue} No minting. No inflation. Pure revenue-share.}
+\end{center}
+
+\end{tcolorbox}
+
+\vspace{2em}
 
 \subsection*{Key Differentiators}
 
@@ -735,7 +738,41 @@ FlareScan & Complete $\checkmark$ & All contracts verified \\
 \end{tabular}
 \end{center}
 
-\vspace{3em}
+\vspace{2em}
+
+\subsection*{Roadmap}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{} l l p{7cm} @{}}
+\toprule
+\textbf{Timeline} & \textbf{Milestone} & \textbf{Description} \\
+\midrule
+Nov 2025 & Mainnet Launch & ShXRPVault, StakingBoost, RevenueRouter deployed \\
+Dec 2025 & XRPL Smart Accounts & Gasless Flare transactions via XRPL memo encoding \\
+Q1 2026 & Multi-Strategy Yield & Kinetic lending + Firelight liquid staking integration \\
+Q1 2026 & Trail of Bits Audit & Comprehensive security review \\
+Q2 2026 & Governance & On-chain voting for protocol parameters \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{1em}
+
+\begin{tcolorbox}[
+    colback=shieldlight,
+    colframe=shieldblue,
+    boxrule=1pt,
+    arc=3pt,
+    left=10pt,
+    right=10pt,
+    top=8pt,
+    bottom=8pt
+]
+\textbf{XRPL Smart Accounts (Coming December 2025):} Execute Flare smart contract transactions directly from your XRPL wallet using encoded memo instructions. No EVM wallet required. No gas fees. Powered by Flare Data Connector (FDC) for trustless cross-chain verification.
+\end{tcolorbox}
+
+\vspace{2em}
 
 \begin{center}
 \rule{12cm}{0.5pt}
