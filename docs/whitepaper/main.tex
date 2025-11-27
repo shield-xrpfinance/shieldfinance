@@ -323,9 +323,8 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
 \vspace{0.5em}
 
 \begin{center}
+\resizebox{0.95\textwidth}{!}{%
 \begin{tikzpicture}[
-    scale=0.75,
-    transform shape,
     node distance=1.2cm,
     every node/.style={font=\small},
     box/.style={
@@ -385,7 +384,8 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
 \draw[myarrow, dashed] (shxrp.west) -- ++(-1.2,0) |- (xrp.south);
 \node[mylabel] at (-0.3,-1) {Redeem};
 
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \end{center}
 
 \vspace{1em}
@@ -393,9 +393,8 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
 \subsection*{Revenue Flywheel}
 
 \begin{center}
+\resizebox{0.95\textwidth}{!}{%
 \begin{tikzpicture}[
-    scale=0.72,
-    transform shape,
     node distance=1.4cm,
     every node/.style={font=\small},
     box/.style={
@@ -454,7 +453,8 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
 \node[box, left=1cm of burn] (supply) {Supply $\downarrow$\\{\scriptsize Deflation}};
 \draw[redarrow] (burn) -- (supply);
 
-\end{tikzpicture}
+\end{tikzpicture}%
+}
 \end{center}
 
 \newpage
