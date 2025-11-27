@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { AlertCircle, ChevronDown } from "lucide-react";
+import { AlertCircle, ChevronDown, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
@@ -59,16 +59,64 @@ export default function WithdrawModal({
   const [withdrawalId, setWithdrawalId] = useState<string>("");
   const [withdrawalError, setWithdrawalError] = useState<string | null>(null);
   
+  // On-chain balance state for Flare ecosystem
+  const [onChainBalance, setOnChainBalance] = useState<string | null>(null);
+  const [loadingBalance, setLoadingBalance] = useState(false);
+  
   const { toast } = useToast();
   const { evmAddress, address, walletConnectProvider } = useWallet();
   const { ecosystem } = useNetwork();
   const gasEstimate = "0.00008";
   const assetSymbol = asset.split(",")[0];
 
-  const totalWithdrawable = (
-    parseFloat(depositedAmount.replace(/,/g, "")) +
-    parseFloat(rewards.replace(/,/g, ""))
-  ).toFixed(2);
+  // Fetch on-chain shXRP balance when modal opens (for Flare ecosystem)
+  useEffect(() => {
+    if (!open || ecosystem !== "flare" || !evmAddress) {
+      setOnChainBalance(null);
+      return;
+    }
+
+    const fetchOnChainBalance = async () => {
+      setLoadingBalance(true);
+      try {
+        const vaultInfoRes = await apiRequest("GET", "/api/vaults/fxrp/info");
+        const vaultInfo = await vaultInfoRes.json();
+        
+        if (!vaultInfo.success || !vaultInfo.vaultAddress) {
+          console.error("Failed to fetch vault info for balance");
+          return;
+        }
+
+        const rpcProvider = new ethers.JsonRpcProvider(COSTON2_RPC);
+        const { FIRELIGHT_VAULT_ABI } = await import("@shared/flare-abis");
+        const vaultContract = new ethers.Contract(vaultInfo.vaultAddress, FIRELIGHT_VAULT_ABI, rpcProvider);
+        
+        const [balanceWei, decimals] = await Promise.all([
+          vaultContract.balanceOf(evmAddress),
+          vaultContract.decimals()
+        ]);
+        
+        const formattedBalance = ethers.formatUnits(balanceWei, decimals);
+        console.log("On-chain shXRP balance:", formattedBalance);
+        setOnChainBalance(formattedBalance);
+      } catch (err) {
+        console.error("Failed to fetch on-chain balance:", err);
+        setOnChainBalance(null);
+      } finally {
+        setLoadingBalance(false);
+      }
+    };
+
+    fetchOnChainBalance();
+  }, [open, ecosystem, evmAddress]);
+
+  // Use on-chain balance for Flare ecosystem, database amount for XRPL
+  const totalWithdrawable = ecosystem === "flare" && onChainBalance !== null
+    ? onChainBalance
+    : (
+        parseFloat(depositedAmount.replace(/,/g, "")) +
+        parseFloat(rewards.replace(/,/g, ""))
+      ).toFixed(2);
 
   const handleConfirm = () => {
     const withdrawAmount = parseFloat(amount.replace(/,/g, ""));
@@ -347,7 +395,14 @@ export default function WithdrawModal({
             </div>
             <div className="flex items-center justify-between">
               <p className="text-xs text-muted-foreground">
-                Avail: {totalWithdrawable} {assetSymbol}
+                Avail: {loadingBalance ? (
+                  <span className="inline-flex items-center gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Loading...
+                  </span>
+                ) : (
+                  `${totalWithdrawable} ${assetSymbol}`
+                )}
               </p>
               <Button
                 variant="ghost"
