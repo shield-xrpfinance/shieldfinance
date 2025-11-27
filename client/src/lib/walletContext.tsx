@@ -77,27 +77,41 @@ export function WalletProvider({ children }: { children: ReactNode }) {
       
       const xAppToken = urlParams.get('xAppToken') || urlParams.get('ott') || urlParams.get('xApp');
       
+      // Log all URL params and xApp detection status for debugging
+      console.log('🔍 xApp Detection Check:', {
+        fullUrl: window.location.href,
+        search: window.location.search,
+        xAppToken: xAppToken ? `${xAppToken.substring(0, 8)}...` : null,
+        hasReactNativeWebView: typeof (window as any).ReactNativeWebView !== 'undefined',
+        allParams: Object.fromEntries(urlParams.entries()),
+      });
+      
       if (xAppToken) {
-        console.log('🔐 Detected xApp context, attempting auto-connect...');
+        console.log('🔐 Detected xApp context, attempting auto-connect with token:', xAppToken.substring(0, 8) + '...');
         
         try {
           // Call backend to verify xApp session and get wallet address
           // Uses xumm.xApp.get() on backend for proper OTT verification
+          console.log('📡 Calling /api/wallet/xaman/xapp-auth...');
           const response = await fetch('/api/wallet/xaman/xapp-auth', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ xAppToken }),
           });
 
+          console.log('📥 xApp auth response status:', response.status);
+
           if (!response.ok) {
             const errorData = await response.json();
-            console.error('xApp authentication failed:', errorData.error);
+            console.error('❌ xApp authentication failed:', errorData);
             throw new Error(errorData.error || 'Failed to authenticate xApp session');
           }
 
           const data = await response.json();
+          console.log('📦 xApp auth response data:', { success: data.success, hasAccount: !!data.account, network: data.network });
           
           if (data.success && data.account) {
+            console.log('✅ xApp auto-connect successful! Account:', data.account);
             // Auto-connect the wallet
             setAddress(data.account);
             setProvider('xaman');
@@ -117,12 +131,14 @@ export function WalletProvider({ children }: { children: ReactNode }) {
             setIsInitialized(true);
             return;
           } else {
-            console.error('xApp OTT response missing address:', data);
+            console.error('❌ xApp OTT response missing address:', data);
           }
         } catch (error) {
-          console.error('xApp auto-signin error:', error);
+          console.error('❌ xApp auto-signin error:', error);
           // Fall through to normal localStorage restoration
         }
+      } else {
+        console.log('ℹ️ No xAppToken detected in URL - using normal wallet flow');
       }
 
       // PRIORITY 2: Restore from localStorage (normal flow)
