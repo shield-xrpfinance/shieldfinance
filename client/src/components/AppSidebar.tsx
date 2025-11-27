@@ -16,7 +16,7 @@ import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useCurrency, type Currency, getCurrencyName } from "@/lib/currencyContext";
 import { CurrencyIcon } from "@/components/CurrencyIcon";
-import { SiX, SiLinkedin, SiDiscord } from "react-icons/si";
+import { SiX, SiTelegram, SiDiscord } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -237,31 +237,44 @@ export function AppSidebar() {
               </a>
             </Button>
 
-            <div className="flex items-center justify-center gap-1 md:gap-4 pt-1 md:pt-2">
+            <div className="flex items-center justify-center gap-1 md:gap-3 pt-1 md:pt-2">
               <a 
-                href="https://twitter.com/shieldfinance" 
+                href="https://x.com/ShieldFinanceX" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-twitter"
+                title="Follow us on X"
               >
                 <SiX className="h-3 w-3 md:h-4 md:w-4" />
               </a>
               <a 
-                href="https://linkedin.com/company/shieldfinance" 
+                href="https://t.me/ShieldFinanceOfficial" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
-                data-testid="link-linkedin"
+                data-testid="link-telegram-official"
+                title="Telegram Official Channel"
               >
-                <SiLinkedin className="h-3 w-3 md:h-4 md:w-4" />
+                <SiTelegram className="h-3 w-3 md:h-4 md:w-4" />
               </a>
               <a 
-                href="https://discord.gg/shieldfinance" 
+                href="https://t.me/ShieldFinanceCommunity" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
+                data-testid="link-telegram-community"
+                title="Telegram Community Chat"
+              >
+                <SiTelegram className="h-3 w-3 md:h-4 md:w-4" />
+              </a>
+              <a 
+                href="https://discord.gg/Vzs3KbzU" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-discord"
+                title="Join our Discord"
               >
                 <SiDiscord className="h-3 w-3 md:h-4 md:w-4" />
               </a>
@@ -271,6 +284,7 @@ export function AppSidebar() {
                 rel="noopener noreferrer"
                 className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-gitbook"
+                title="Documentation"
               >
                 <BookOpen className="h-3 w-3 md:h-4 md:w-4" />
               </a>

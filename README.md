@@ -620,9 +620,10 @@ Claim airdrop: [MerkleDistributor link]
 ### Community
 
 - **Website**: https://shyield.finance
-- **Twitter**: [@ShieldFinance]
-- **Telegram**: [t.me/ShieldFinance]
-- **Discord**: [discord.gg/ShieldFinance]
+- **X (Twitter)**: https://x.com/ShieldFinanceX
+- **Telegram Official**: https://t.me/ShieldFinanceOfficial
+- **Telegram Community**: https://t.me/ShieldFinanceCommunity
+- **Discord**: https://discord.gg/Vzs3KbzU
 
 ---
 
@@ -655,6 +656,12 @@ This project is proprietary software owned by Shield Yield Vaults Ltd.
 
 - **Repository**: [github.com/shield-xrpfinance/shieldfinance](https://github.com/shield-xrpfinance/shieldfinance)
 - **Live Application**: [https://shyield.finance](https://shyield.finance)
+- **Documentation**: [shield-finance.gitbook.io](https://shield-finance.gitbook.io/shield-finance-docs/)
+- **Community**:
+  - X (Twitter): https://x.com/ShieldFinanceX
+  - Telegram Official: https://t.me/ShieldFinanceOfficial
+  - Telegram Community: https://t.me/ShieldFinanceCommunity
+  - Discord: https://discord.gg/Vzs3KbzU
 - **Block Explorers**:
   - Flare Coston2: https://coston2-explorer.flare.network
   - Flare Mainnet: https://flare-explorer.flare.network

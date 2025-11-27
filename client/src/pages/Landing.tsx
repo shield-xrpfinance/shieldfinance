@@ -1031,9 +1031,10 @@ export default function Landing() {
             <div data-testid="footer-community">
               <h4 className="font-semibold mb-4" data-testid="heading-footer-community">Community</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-twitter">Twitter</a></li>
-                <li><a href="#" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-discord">Discord</a></li>
-                <li><a href="#" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-github">GitHub</a></li>
+                <li><a href="https://x.com/ShieldFinanceX" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-twitter">X (Twitter)</a></li>
+                <li><a href="https://discord.gg/Vzs3KbzU" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-discord">Discord</a></li>
+                <li><a href="https://t.me/ShieldFinanceOfficial" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-telegram">Telegram</a></li>
+                <li><a href="https://t.me/ShieldFinanceCommunity" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-telegram-community">Telegram Community</a></li>
               </ul>
             </div>
           </div>
