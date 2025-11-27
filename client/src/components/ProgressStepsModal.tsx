@@ -111,9 +111,13 @@ export function ProgressStepsModal({
   // Start polling as soon as we have a bridgeId to detect all status transitions
   const shouldPoll = !!bridgeId && open;
   
+  // Track backend error message for failed bridges
+  const [backendErrorMessage, setBackendErrorMessage] = useState<string | null>(null);
+
   const { data: depositStatus } = useQuery<{ 
     status: string; 
     paymentRequest?: { destination: string; amountDrops: string; memo: string; network: string };
+    error?: string;
   }>({
     queryKey: ['/api/deposits', bridgeId, 'status'],
     enabled: shouldPoll,
@@ -127,6 +131,10 @@ export function ProgressStepsModal({
       if (mappedStep && mappedStep !== internalStep) {
         setInternalStep(mappedStep);
       }
+      // Capture backend error message when bridge fails
+      if (depositStatus.status === 'failed' && depositStatus.error) {
+        setBackendErrorMessage(depositStatus.error);
+      }
     }
   }, [depositStatus, internalStep]);
 
@@ -134,10 +142,11 @@ export function ProgressStepsModal({
     setInternalStep(currentStep);
   }, [currentStep]);
 
-  // Reset payment trigger flag when bridgeId changes or modal opens
+  // Reset payment trigger flag and error state when bridgeId changes or modal opens
   useEffect(() => {
     paymentTriggeredRef.current = false;
     setIsMinimized(false); // Reset minimized state when new deposit starts
+    setBackendErrorMessage(null); // Clear any previous error messages
   }, [bridgeId, open]);
 
   // Minimize modal when entering finalizing step
@@ -278,7 +287,7 @@ export function ProgressStepsModal({
               </div>
             </div>
             <p className="text-xs sm:text-sm text-muted-foreground">
-              {errorMessage || 'An error occurred while creating the bridge. Please try again.'}
+              {errorMessage || backendErrorMessage || 'An error occurred while creating the bridge. Please try again.'}
             </p>
           </div>
         ) : displayStep === 'completed' ? (
