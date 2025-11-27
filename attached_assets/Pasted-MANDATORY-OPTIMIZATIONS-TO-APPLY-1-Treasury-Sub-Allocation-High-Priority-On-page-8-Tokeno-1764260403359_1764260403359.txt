@@ -1,0 +1,33 @@
+MANDATORY OPTIMIZATIONS TO APPLY:
+
+1. Treasury Sub-Allocation (High Priority)  
+   On page 8 (Tokenomics → Revenue Allocation), immediately below the pie chart and SHIELD Token Metrics table, add a new boxed subsection exactly like this:
+
+   Reserves Breakdown (10% of protocol fees)  
+   • 50% → Security & Audits (Hacken, Trail of Bits, bug bounties)  
+   • 30% → Liquidity Incentives & Market Making  
+   • 20% → Community Grants & Protocol Development  
+   (Governance-approved; full transparency at github.com/shield-xrpfinance/shieldfinance/docs/protocol/SHIELD_TOKENOMICS.md)
+
+2. Metric Caveats (Page 2 – Key Facts table)  
+   Change the subtitle from “Key Facts (as of 01 December 2025)” to:  
+   Key Facts (Live & Historical data — updated daily at app.shyield.finance/stats)  
+   And add an asterisk footnote:  
+   * All APY figures are 30-day trailing averages as of 01 Dec 2025. Base APY derived from Flare inflation + FAssets rewards. Boost APY scales with % of SHIELD locked vs vault TVL. Past performance ≠ future results.
+
+3. Boost Cap Nuance (Page 8 + Page 6)  
+   • Page 8, Global Boost Cap row → change value to:  
+     25% maximum effective APY boost (soft cap, dynamically enforced relative to vault TVL; adjustable via on-chain governance or treasury top-up)  
+   • Page 6, after equation (4), add one new sentence:  
+     The 25% boost cap is a soft ceiling to protect long-term sustainability and may be supplemented by treasury FXRP during low-fee periods if approved by governance.
+
+4. Repo Cross-References (Multiple pages)  
+   • Page 2 (Key Facts): add line at bottom of table → See living tokenomics: github.com/shield-xrpfinance/shieldfinance/blob/main/docs/protocol/SHIELD_TOKENOMICS.md  
+   • Page 11 (Appendix): add after “Security Properties” → Detailed treasury allocation and boost mechanics maintained in repository (commit-synced with this whitepaper v1.1).
+
+5. Minor Polish & Accuracy  
+   • Fix “liq-uid” → “liquid” on page 2  
+   • Page 5 diagram: change “10% Reserves Treasury” box text to “10% Reserves → Treasury (audits, liquidity, grants)”  
+   • Page 9 Security & Audits table: add new row  
+     CertiK | Planned Q2 2026 | Full protocol & economic audit  
+   • Page 13 (Disclaimer): add final line before signature → Whitepaper v1.1 synchronized with repository commit 8f3a9c2 (08 Dec 2025)
