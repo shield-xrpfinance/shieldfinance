@@ -49,12 +49,18 @@ function DashboardRouter() {
 }
 
 function Header() {
-  const { address, isConnected, disconnect, walletType } = useWallet();
+  const { address, evmAddress, isConnected, disconnect, walletType } = useWallet();
   const { isTestnet } = useNetwork();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   // Show wallet-aware testnet network name
   const testnetName = walletType === "xrpl" ? "XRPL Testnet" : walletType === "evm" ? "Coston2" : "Testnet";
+  
+  // Get the display address (either XRPL or EVM)
+  const displayAddress = address || evmAddress;
+  const shortAddress = displayAddress 
+    ? `${displayAddress.slice(0, 6)}...${displayAddress.slice(-4)}`
+    : null;
 
   return (
     <header className="flex items-center justify-between gap-4 p-4 border-b">
@@ -69,15 +75,21 @@ function Header() {
         )}
       </div>
       <div className="flex items-center gap-3">
-        {isConnected && address ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={disconnect}
-            data-testid="button-disconnect-wallet"
-          >
-            <LogOut className="h-4 w-4" />
-          </Button>
+        {isConnected && displayAddress ? (
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="font-mono text-xs" data-testid="badge-wallet-address">
+              {shortAddress}
+            </Badge>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={disconnect}
+              title="Disconnect wallet"
+              data-testid="button-disconnect-wallet"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         ) : (
           <Button
             onClick={() => setConnectModalOpen(true)}
@@ -92,7 +104,7 @@ function Header() {
       <ConnectWalletModal
         open={connectModalOpen}
         onOpenChange={setConnectModalOpen}
-        onConnect={(address, provider) => {
+        onConnect={(addr, provider) => {
           // Connection is handled in the modal
         }}
       />
