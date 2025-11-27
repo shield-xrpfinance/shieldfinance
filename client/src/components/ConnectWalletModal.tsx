@@ -27,6 +27,7 @@ interface ConnectWalletModalProps {
 }
 
 type ConnectionStep = "select" | "xaman-qr";
+type WalletType = "xrpl" | "evm";
 
 export default function ConnectWalletModal({
   open,
@@ -124,7 +125,7 @@ export default function ConnectWalletModal({
     }
   };
 
-  const handleWalletConnect = async () => {
+  const handleWalletConnect = async (walletType: WalletType) => {
     setConnecting(true);
     
     try {
@@ -135,9 +136,12 @@ export default function ConnectWalletModal({
       }
 
       // XRPL WalletConnect chain IDs: mainnet = xrpl:0, testnet = xrpl:1
-      const chainId = isTestnet ? "xrpl:1" : "xrpl:0";
+      const xrplChainId = isTestnet ? "xrpl:1" : "xrpl:0";
       // Flare EVM chain IDs: mainnet = eip155:14, testnet (Coston2) = eip155:114
       const evmChainId = isTestnet ? "eip155:114" : "eip155:14";
+
+      // Determine which chain to request based on wallet type
+      const targetChain = walletType === "evm" ? evmChainId : xrplChainId;
 
       // Check if there's an existing session - if so, disconnect it first
       if (wcProviderRef.current?.session) {
@@ -146,10 +150,10 @@ export default function ConnectWalletModal({
         wcModalRef.current = null;
       }
 
-      // Initialize WalletConnect Modal with BOTH chains
+      // Initialize WalletConnect Modal with the selected chain
       wcModalRef.current = new WalletConnectModal({
         projectId,
-        chains: [chainId, evmChainId], // Request both XRPL and Flare chains
+        chains: [targetChain],
         themeMode: "light",
       });
 
@@ -157,8 +161,8 @@ export default function ConnectWalletModal({
       wcProviderRef.current = await UniversalProvider.init({
         projectId,
         metadata: {
-          name: "XRP Liquid Staking Protocol",
-          description: "Earn yield on your XRP, RLUSD, and USDC",
+          name: "Shield Finance",
+          description: "Earn yield on your XRP with liquid staking",
           url: window.location.origin,
           icons: [window.location.origin + "/favicon.ico"],
         },
@@ -168,10 +172,9 @@ export default function ConnectWalletModal({
 
       // Set up display_uri listener
       provider.on("display_uri", (uri: string) => {
-        // Show the WalletConnect modal with all wallet options (desktop, mobile, etc.)
         wcModalRef.current?.openModal({ 
           uri,
-          standaloneChains: [chainId, evmChainId] // Support both chains
+          standaloneChains: [targetChain]
         });
       });
 
@@ -179,7 +182,6 @@ export default function ConnectWalletModal({
       provider.on("session_delete", () => {
         disconnect();
         setConnecting(false);
-        // Clean up refs
         wcProviderRef.current = null;
         wcModalRef.current?.closeModal();
       });
@@ -187,105 +189,88 @@ export default function ConnectWalletModal({
       // Close our shadcn dialog - WalletConnect modal will handle the UI
       onOpenChange(false);
 
-      // Connect to BOTH XRPL and EVM (Flare Network) namespaces
-      // This enables multi-chain wallets like Bifrost to connect to both networks
-      await provider.connect({
-        namespaces: {
-          xrpl: {
-            methods: [
-              "xrpl_signTransaction",
-              "xrpl_submitTransaction",
-              "xrpl_getAccountInfo",
-            ],
-            chains: [chainId],
-            events: ["chainChanged", "accountsChanged"],
+      // Connect to the appropriate namespace based on wallet type
+      if (walletType === "evm") {
+        // EVM wallet connection (MetaMask, Trust Wallet, etc.)
+        await provider.connect({
+          namespaces: {
+            eip155: {
+              methods: [
+                "eth_sendTransaction",
+                "eth_signTransaction",
+                "eth_sign",
+                "personal_sign",
+                "eth_signTypedData",
+                "eth_signTypedData_v4",
+              ],
+              chains: [evmChainId],
+              events: ["chainChanged", "accountsChanged"],
+            },
           },
-          eip155: {
-            methods: [
-              "eth_sendTransaction",
-              "eth_signTransaction",
-              "eth_sign",
-              "personal_sign",
-              "eth_signTypedData",
-            ],
-            chains: [evmChainId],
-            events: ["chainChanged", "accountsChanged"],
+        });
+      } else {
+        // XRPL wallet connection (Bifrost, etc.)
+        await provider.connect({
+          namespaces: {
+            xrpl: {
+              methods: [
+                "xrpl_signTransaction",
+                "xrpl_submitTransaction",
+                "xrpl_getAccountInfo",
+              ],
+              chains: [xrplChainId],
+              events: ["chainChanged", "accountsChanged"],
+            },
           },
-        },
-      });
+        });
+      }
 
       // Close the WalletConnect modal
       wcModalRef.current.closeModal();
 
-      // Get connected accounts from BOTH namespaces
-      const xrplAccounts = provider.session?.namespaces?.xrpl?.accounts || [];
-      const evmAccounts = provider.session?.namespaces?.eip155?.accounts || [];
-      
-      // Extract addresses from CAIP-10 format
+      // Get connected accounts based on wallet type
       let xrplAddress: string | null = null;
       let evmAddress: string | null = null;
-      
-      if (xrplAccounts.length > 0) {
-        // Format: "xrpl:0:rAddress..." or "xrpl:1:rAddress..."
-        xrplAddress = xrplAccounts[0].split(":")[2];
+
+      if (walletType === "evm") {
+        const evmAccounts = provider.session?.namespaces?.eip155?.accounts || [];
+        if (evmAccounts.length > 0) {
+          // Format: "eip155:114:0x..."
+          evmAddress = evmAccounts[0].split(":")[2];
+        }
+      } else {
+        const xrplAccounts = provider.session?.namespaces?.xrpl?.accounts || [];
+        if (xrplAccounts.length > 0) {
+          // Format: "xrpl:1:rAddress..."
+          xrplAddress = xrplAccounts[0].split(":")[2];
+        }
       }
       
-      if (evmAccounts.length > 0) {
-        // Format: "eip155:14:0x..." or "eip155:114:0x..."
-        evmAddress = evmAccounts[0].split(":")[2];
-      }
-      
-      // Connect if at least one address is available (partial connection supported)
+      // Connect if address is available
       if (xrplAddress || evmAddress) {
-        // Store both addresses in the wallet context
         connect(xrplAddress, "walletconnect", evmAddress, provider);
         if (onConnect) {
           onConnect(xrplAddress || evmAddress || "", "walletconnect");
         }
         
-        // Build connection status message
-        const connectedChains = [];
-        const missingChains = [];
-        
-        if (xrplAddress) {
-          connectedChains.push("XRPL");
-        } else {
-          missingChains.push("XRPL");
-        }
-        
-        if (evmAddress) {
-          connectedChains.push("Flare");
-        } else {
-          missingChains.push("Flare");
-        }
-        
-        // Show connection success toast with partial connection warning if needed
-        const addressDisplay = xrplAddress 
-          ? `${xrplAddress.slice(0, 8)}...${xrplAddress.slice(-6)}`
-          : evmAddress
+        const chainName = walletType === "evm" ? "Flare" : "XRPL";
+        const addressDisplay = evmAddress 
           ? `${evmAddress.slice(0, 6)}...${evmAddress.slice(-4)}`
+          : xrplAddress
+          ? `${xrplAddress.slice(0, 8)}...${xrplAddress.slice(-6)}`
           : "Unknown";
         
-        if (connectedChains.length === 2) {
-          // Full multi-chain connection
-          toast({
-            title: "Wallet Connected",
-            description: `Connected to ${connectedChains.join(" + ")} (${isTestnet ? 'Testnet' : 'Mainnet'})`,
-          });
-        } else {
-          // Partial connection - warn user about missing features
-          toast({
-            title: "Partial Connection",
-            description: `Connected to ${connectedChains[0]} only. ${missingChains[0]} features will not be available.`,
-          });
-        }
+        toast({
+          title: "Wallet Connected",
+          description: `Connected to ${chainName} (${isTestnet ? 'Testnet' : 'Mainnet'}): ${addressDisplay}`,
+        });
         
         setConnecting(false);
       } else {
-        console.error("❌ No accounts found in WalletConnect session - both namespaces were rejected");
+        console.error("❌ No accounts found in WalletConnect session");
         toast({
           title: "Connection Failed",
-          description: "Your wallet did not approve any chain connections. Please try again and approve at least one chain.",
+          description: "Your wallet did not approve the connection. Please try again.",
           variant: "destructive",
         });
         setConnecting(false);
@@ -298,27 +283,11 @@ export default function ConnectWalletModal({
       wcModalRef.current?.closeModal();
       setConnecting(false);
       
-      // Demo mode fallback - use XRP Ledger address format
-      const mockAddress = "rN7n7otQDd6FczFgLdSqtcsAUxDkw6fzRH";
-      
       toast({
-        title: "Demo Mode",
-        description: "WalletConnect not configured for XRPL. Using demo connection.",
+        title: "Connection Failed",
+        description: "Failed to connect wallet. Please try again.",
+        variant: "destructive",
       });
-
-      setTimeout(() => {
-        // Note: Demo mode doesn't have a real provider instance, so pass null
-        // This means auto-payment won't work in demo mode (expected behavior)
-        connect(mockAddress, "walletconnect", null, undefined);
-        if (onConnect) {
-          onConnect(mockAddress, "walletconnect");
-        }
-        toast({
-          title: "Demo Wallet Connected",
-          description: `Connected to ${mockAddress.slice(0, 8)}...${mockAddress.slice(-6)}`,
-        });
-        setConnecting(false);
-      }, 2000);
     }
   };
 
@@ -361,6 +330,10 @@ export default function ConnectWalletModal({
 
         {step === "select" && (
           <div className="space-y-3 py-4">
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+              XRPL Wallets (for XRP deposits)
+            </div>
+            
             <Button
               variant="outline"
               className="w-full justify-start h-auto py-4"
@@ -375,16 +348,10 @@ export default function ConnectWalletModal({
                 <div className="flex-1 text-left">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-semibold">Xaman (XUMM)</p>
-                    {isTestnet && (
-                      <Badge variant="outline" className="text-xs bg-chart-4/10 text-chart-4 border-chart-4">
-                        Demo
-                      </Badge>
-                    )}
+                    <Badge variant="outline" className="text-xs">XRPL</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {isTestnet 
-                      ? "Testnet wallet connection - no real assets at risk"
-                      : "Connect with Xaman mobile wallet"}
+                    Connect with Xaman mobile wallet
                   </p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
@@ -394,9 +361,9 @@ export default function ConnectWalletModal({
             <Button
               variant="outline"
               className="w-full justify-start h-auto py-4"
-              onClick={handleWalletConnect}
+              onClick={() => handleWalletConnect("xrpl")}
               disabled={connecting}
-              data-testid="button-connect-walletconnect"
+              data-testid="button-connect-walletconnect-xrpl"
             >
               <div className="flex items-center gap-3 w-full">
                 <div className="h-10 w-10 rounded-md flex items-center justify-center">
@@ -405,16 +372,38 @@ export default function ConnectWalletModal({
                 <div className="flex-1 text-left">
                   <div className="flex items-center gap-2 mb-1">
                     <p className="font-semibold">WalletConnect</p>
-                    {isTestnet && (
-                      <Badge variant="outline" className="text-xs bg-chart-4/10 text-chart-4 border-chart-4">
-                        Demo
-                      </Badge>
-                    )}
+                    <Badge variant="outline" className="text-xs">XRPL</Badge>
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    {isTestnet
-                      ? "Demo mode - connects with testnet-compatible wallets"
-                      : "Scan QR code with any compatible wallet"}
+                    Bifrost, GemWallet, or other XRPL wallets
+                  </p>
+                </div>
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </Button>
+
+            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 mt-4 pt-4 border-t">
+              EVM Wallets (for Flare staking & swaps)
+            </div>
+
+            <Button
+              variant="outline"
+              className="w-full justify-start h-auto py-4"
+              onClick={() => handleWalletConnect("evm")}
+              disabled={connecting}
+              data-testid="button-connect-walletconnect-evm"
+            >
+              <div className="flex items-center gap-3 w-full">
+                <div className="h-10 w-10 rounded-md flex items-center justify-center">
+                  <img src={walletConnectLogo} alt="WalletConnect" className="h-10 w-10" />
+                </div>
+                <div className="flex-1 text-left">
+                  <div className="flex items-center gap-2 mb-1">
+                    <p className="font-semibold">WalletConnect</p>
+                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary">EVM</Badge>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    MetaMask, Trust Wallet, or other EVM wallets
                   </p>
                 </div>
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
