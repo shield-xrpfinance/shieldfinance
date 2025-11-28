@@ -3,6 +3,8 @@ import Shepherd from "shepherd.js";
 import "shepherd.js/dist/css/shepherd.css";
 import "@/styles/shepherd-theme.css";
 import { useWallet } from "@/lib/walletContext";
+import { useSidebar } from "@/components/ui/sidebar";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -20,7 +22,7 @@ function getTourScenario(
   return "evm-user";
 }
 
-function createTour(scenario: TourScenario, onComplete: () => void) {
+function createTour(scenario: TourScenario, onComplete: () => void, isMobile: boolean = false) {
   const tour = new Shepherd.Tour({
     useModalOverlay: true,
     defaultStepOptions: {
@@ -31,6 +33,14 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
       modalOverlayOpeningRadius: 8,
     },
   });
+  
+  // Helper to conditionally attach to elements - skip on mobile for sidebar elements
+  const getAttachTo = (selector: string, position: string) => {
+    if (isMobile && selector.includes('link-')) {
+      return undefined; // Don't attach to sidebar links on mobile
+    }
+    return { element: selector, on: position };
+  };
 
   const skipButton = {
     text: "Skip Tour",
@@ -120,7 +130,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
       title: "Step 4: Explore the App",
       text: `
         <div class="shepherd-custom-content">
-          <p>Use the sidebar to navigate:</p>
+          <p>Use the ${isMobile ? "bottom navigation" : "sidebar"} to navigate:</p>
           <ul>
             <li><strong>Dashboard</strong> - Overview of your positions</li>
             <li><strong>Vaults</strong> - Deposit & earn yield</li>
@@ -129,7 +139,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
           </ul>
         </div>
       `,
-      attachTo: { element: '[data-testid="link-vaults"]', on: "right" },
+      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-vaults"]', on: "right" } }),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -139,10 +149,10 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
       text: `
         <div class="shepherd-custom-content">
           <p>Check out our documentation and join our community!</p>
-          <p class="shepherd-hint">You can restart this tour anytime using the help button.</p>
+          <p class="shepherd-hint">You can restart this tour anytime using the ${isMobile ? "floating help button" : "help button in the sidebar"}.</p>
         </div>
       `,
-      attachTo: { element: '[data-testid="help-card"]', on: "top" },
+      ...(isMobile ? {} : { attachTo: { element: '[data-testid="help-card"]', on: "top" } }),
       buttons: [skipButton, backButton, finishButton],
     });
   } else if (scenario === "xrpl-user") {
@@ -184,7 +194,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
           <p>You'll see the current APY and can deposit your XRP to start earning.</p>
         </div>
       `,
-      attachTo: { element: '[data-testid="link-vaults"]', on: "right" },
+      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-vaults"]', on: "right" } }),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -212,7 +222,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
           <p>Withdraw anytime - your XRP stays liquid!</p>
         </div>
       `,
-      attachTo: { element: '[data-testid="link-portfolio"]', on: "right" },
+      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-portfolio"]', on: "right" } }),
       buttons: [skipButton, backButton, { text: "Got It!", action: () => tour.complete(), classes: "shepherd-button-primary" }],
     });
   } else {
@@ -255,7 +265,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
           <p>FXRP is bridged XRP on Flare Network via FAssets.</p>
         </div>
       `,
-      attachTo: { element: '[data-testid="link-vaults"]', on: "right" },
+      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-vaults"]', on: "right" } }),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -268,7 +278,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
           <p>The more SHIELD you stake, the higher your APY boost.</p>
         </div>
       `,
-      attachTo: { element: '[data-testid="link-staking"]', on: "right" },
+      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-staking"]', on: "right" } }),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -281,7 +291,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
           <p>SHIELD is our governance token that powers yield boosts.</p>
         </div>
       `,
-      attachTo: { element: '[data-testid="link-swap"]', on: "right" },
+      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-swap"]', on: "right" } }),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -294,7 +304,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
           <p class="shepherd-hint">Happy staking! You can restart this tour from the help button.</p>
         </div>
       `,
-      attachTo: { element: '[data-testid="link-portfolio"]', on: "right" },
+      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-portfolio"]', on: "right" } }),
       buttons: [skipButton, backButton, { text: "Let's Go!", action: () => tour.complete(), classes: "shepherd-button-primary" }],
     });
   }
@@ -311,8 +321,11 @@ interface ShieldTourProps {
 
 export function ShieldTour({ variant = "fixed" }: ShieldTourProps) {
   const { isConnected, walletType } = useWallet();
+  const { setOpenMobile, openMobile } = useSidebar();
+  const isMobile = useIsMobile();
   const [tourInstance, setTourInstance] = useState<ReturnType<typeof createTour> | null>(null);
   const [hasSeenTour, setHasSeenTour] = useState(true);
+  const [wasOpenMobile, setWasOpenMobile] = useState(false);
 
   useEffect(() => {
     const stored = localStorage.getItem(TOUR_STORAGE_KEY);
@@ -335,21 +348,34 @@ export function ShieldTour({ variant = "fixed" }: ShieldTourProps) {
     );
     setHasSeenTour(true);
     setTourInstance(null);
-  }, []);
+    
+    // Restore mobile sidebar state after tour
+    if (isMobile && !wasOpenMobile) {
+      setOpenMobile(false);
+    }
+  }, [isMobile, wasOpenMobile, setOpenMobile]);
 
   const startTour = useCallback(() => {
     if (tourInstance) {
       tourInstance.cancel();
     }
 
+    // On mobile, close the sidebar before starting the tour
+    // This prevents the tour from being cancelled when sidebar closes
+    if (isMobile) {
+      setWasOpenMobile(openMobile);
+      setOpenMobile(false);
+    }
+
     const scenario = getTourScenario(isConnected, walletType);
-    const tour = createTour(scenario, markTourComplete);
+    const tour = createTour(scenario, markTourComplete, isMobile);
     setTourInstance(tour);
 
+    // Give the sidebar time to close on mobile before starting
     setTimeout(() => {
       tour.start();
-    }, 500);
-  }, [isConnected, walletType, markTourComplete, tourInstance]);
+    }, isMobile ? 400 : 500);
+  }, [isConnected, walletType, markTourComplete, tourInstance, isMobile, openMobile, setOpenMobile]);
 
   useEffect(() => {
     if (!hasSeenTour) {
