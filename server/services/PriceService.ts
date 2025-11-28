@@ -56,7 +56,7 @@ const FALLBACK_PRICES: { [symbol: string]: number } = {
   ETH: 3750,
   USDT: 1.0,
   USDC: 1.0,
-  SHIELD: 0.25, // Protocol token placeholder
+  SHIELD: 0.01, // Fair Launch price
   shXRP: 2.40, // 1:1 with XRP initially
 };
 
