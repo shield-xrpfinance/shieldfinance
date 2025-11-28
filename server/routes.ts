@@ -5181,7 +5181,8 @@ export async function registerRoutes(
 
       const merkleTreeData = JSON.parse(fs.readFileSync(merkleTreePath, "utf-8"));
 
-      // Fetch live stats from faucet API (single source of truth)
+      // Fetch live stats from faucet API (single source of truth for ALL stats)
+      let totalAmount = merkleTreeData.totalAmount;
       let totalClaimed = "0";
       let claimedCount = 0;
       let remainingAmount = merkleTreeData.totalAmount;
@@ -5198,10 +5199,11 @@ export async function registerRoutes(
           const faucetStats = await faucetResponse.json();
           console.log(`[Airdrop] Fetched stats from faucet:`, faucetStats);
           
-          // Use faucet data as source of truth
+          // Use faucet data as source of truth for ALL values
+          totalAmount = faucetStats.totalAmount || merkleTreeData.totalAmount;
           totalClaimed = faucetStats.totalClaimed || "0";
           claimedCount = faucetStats.claimedCount || 0;
-          remainingAmount = faucetStats.remainingAmount || merkleTreeData.totalAmount;
+          remainingAmount = faucetStats.remainingAmount || totalAmount;
           totalEntries = faucetStats.totalEntries || merkleTreeData.totalEntries;
         } else {
           console.warn(`[Airdrop] Faucet API returned ${faucetResponse.status}, using local data`);
@@ -5212,7 +5214,7 @@ export async function registerRoutes(
 
       res.json({
         root: merkleTreeData.root,
-        totalAmount: merkleTreeData.totalAmount,
+        totalAmount,
         totalEntries,
         timestamp: merkleTreeData.timestamp,
         totalClaimed,
