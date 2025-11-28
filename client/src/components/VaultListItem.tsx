@@ -64,14 +64,14 @@ export default function VaultListItem({
 
   return (
     <Card className={`hover-elevate transition-all duration-200 border-2 ${comingSoon ? 'opacity-75' : ''}`}>
-      <div className="p-8">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
+      <div className="p-4 md:p-8">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 md:gap-6">
           {/* Left: Vault Info */}
-          <div className="flex items-center gap-4 min-w-0">
-            <MultiAssetIcon assets={asset} size={48} />
-            <div className="min-w-0">
-              <div className="flex items-center gap-3 flex-wrap">
-                <h3 className="text-2xl font-semibold" data-testid={`text-vault-name-${id}`}>
+          <div className="flex items-center gap-3 md:gap-4 min-w-0">
+            <MultiAssetIcon assets={asset} size={40} className="md:w-12 md:h-12 flex-shrink-0" />
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2 md:gap-3 flex-wrap">
+                <h3 className="text-lg md:text-2xl font-semibold truncate" data-testid={`text-vault-name-${id}`}>
                   {name}
                 </h3>
                 {comingSoon && (
@@ -135,38 +135,38 @@ export default function VaultListItem({
           </div>
 
           {/* Center: Metrics */}
-          <div className="flex flex-wrap gap-8 lg:flex-1 lg:justify-center">
+          <div className="grid grid-cols-2 md:flex md:flex-wrap gap-4 md:gap-8 lg:flex-1 lg:justify-center">
             {/* APY */}
-            <div className="text-center">
+            <div className="text-center md:text-left lg:text-center">
               <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">APY</p>
-              <p className="text-3xl font-bold tabular-nums bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent" data-testid={`text-apy-${id}`}>
+              <p className="text-xl md:text-3xl font-bold tabular-nums bg-gradient-to-r from-primary to-primary/70 bg-clip-text text-transparent" data-testid={`text-apy-${id}`}>
                 {apy}
               </p>
               {apyLabel && (
-                <p className="text-xs text-muted-foreground mt-1">{apyLabel}</p>
+                <p className="text-xs text-muted-foreground mt-1 truncate">{apyLabel}</p>
               )}
             </div>
 
             {/* TVL */}
-            <div className="text-center">
+            <div className="text-center md:text-left lg:text-center">
               <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">TVL</p>
-              <p className="text-2xl font-semibold tabular-nums" data-testid={`text-tvl-${id}`}>
+              <p className="text-lg md:text-2xl font-semibold tabular-nums" data-testid={`text-tvl-${id}`}>
                 {tvl}
               </p>
             </div>
 
             {/* Liquidity */}
-            <div className="text-center">
+            <div className="text-center md:text-left lg:text-center">
               <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Liquidity</p>
-              <p className="text-2xl font-semibold tabular-nums" data-testid={`text-liquidity-${id}`}>
+              <p className="text-lg md:text-2xl font-semibold tabular-nums" data-testid={`text-liquidity-${id}`}>
                 {liquidity}
               </p>
             </div>
 
             {/* Depositors */}
-            <div className="text-center">
+            <div className="text-center md:text-left lg:text-center">
               <p className="text-xs uppercase tracking-wide text-muted-foreground mb-1">Depositors</p>
-              <p className="text-2xl font-semibold tabular-nums" data-testid={`text-depositors-${id}`}>
+              <p className="text-lg md:text-2xl font-semibold tabular-nums" data-testid={`text-depositors-${id}`}>
                 {depositors.toLocaleString()}
               </p>
             </div>

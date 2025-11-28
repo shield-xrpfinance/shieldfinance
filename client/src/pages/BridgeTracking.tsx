@@ -624,12 +624,12 @@ export default function BridgeTracking() {
   useBridgeTracking(activeBridges.length > 0 || activeWithdrawals.length > 0, address);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+    <div className="max-w-7xl mx-auto space-y-4 md:space-y-6">
       <div>
-        <h1 className="text-3xl font-bold" data-testid="text-page-title">
+        <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-page-title">
           Bridge Tracking
         </h1>
-        <p className="text-muted-foreground mt-1" data-testid="text-page-subtitle">
+        <p className="text-sm md:text-base text-muted-foreground mt-1" data-testid="text-page-subtitle">
           Monitor your XRP to FXRP bridge operations in real-time
         </p>
       </div>

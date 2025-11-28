@@ -491,27 +491,27 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="space-y-12">
-      <div className="space-y-3">
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground text-base">
+    <div className="space-y-6 md:space-y-12">
+      <div className="space-y-2 md:space-y-3">
+        <h1 className="text-2xl md:text-3xl font-bold tracking-tight">Dashboard</h1>
+        <p className="text-sm md:text-base text-muted-foreground">
           Overview of your liquid staking protocol performance
         </p>
       </div>
 
-      <Card className="relative rounded-2xl border-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 overflow-hidden hover-elevate transition-all duration-200">
-        <div className="absolute top-6 left-6 rounded-xl bg-primary/20 p-4 backdrop-blur-sm">
+      <Card className="relative rounded-2xl border-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-4 md:p-8 overflow-hidden hover-elevate transition-all duration-200">
+        <div className="absolute top-4 left-4 md:top-6 md:left-6 rounded-xl bg-primary/20 p-3 md:p-4 backdrop-blur-sm">
           <div className="relative">
             <div className="absolute inset-0 rounded-xl bg-primary/30 blur-xl" />
             <div className="relative text-primary">
-              <Wallet className="h-6 w-6" />
+              <Wallet className="h-5 w-5 md:h-6 md:w-6" />
             </div>
           </div>
         </div>
         
-        <div className="mt-24 space-y-6">
-          <div className="space-y-3">
-            <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
+        <div className="mt-16 md:mt-24 space-y-4 md:space-y-6">
+          <div className="space-y-2 md:space-y-3">
+            <p className="text-xs md:text-sm font-medium text-muted-foreground uppercase tracking-wide">
               Portfolio Overview
             </p>
             {comprehensiveBalances.isLoading ? (
@@ -520,7 +520,7 @@ export default function Dashboard() {
               <div className="space-y-3">
                 <div className="space-y-1 pb-2 border-b border-border/50">
                   <p className="text-xs text-muted-foreground">Total Value ({currency})</p>
-                  <p className="text-3xl font-bold tabular-nums" data-testid="text-total-usd-value">
+                  <p className="text-2xl md:text-3xl font-bold tabular-nums" data-testid="text-total-usd-value">
                     {getCurrencySymbol(currency)}{convertToSelectedCurrency(comprehensiveBalances.totalUsd, currency).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                   </p>
                 </div>
@@ -619,35 +619,35 @@ export default function Dashboard() {
             )}
           </div>
 
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border/50">
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Average APY</p>
-              <p className="text-2xl font-bold tabular-nums" data-testid="stats-value-average-apy">8.2%</p>
+          <div className="grid grid-cols-3 gap-2 md:gap-4 pt-4 border-t border-border/50 overflow-hidden">
+            <div className="space-y-1 md:space-y-2 min-w-0">
+              <p className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wide truncate">Avg APY</p>
+              <p className="text-lg md:text-2xl font-bold tabular-nums" data-testid="stats-value-average-apy">8.2%</p>
               <div className="flex items-center gap-1">
-                <TrendingUp className="h-4 w-4 text-chart-2" />
-                <span className="text-sm font-medium text-chart-2">+0.8%</span>
+                <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-chart-2 flex-shrink-0" />
+                <span className="text-xs md:text-sm font-medium text-chart-2">+0.8%</span>
               </div>
             </div>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Active Vaults</p>
-              <p className="text-2xl font-bold tabular-nums" data-testid="stats-value-active-vaults">12</p>
+            <div className="space-y-1 md:space-y-2 min-w-0">
+              <p className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wide truncate">Vaults</p>
+              <p className="text-lg md:text-2xl font-bold tabular-nums" data-testid="stats-value-active-vaults">12</p>
             </div>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Stakers</p>
-              <p className="text-2xl font-bold tabular-nums" data-testid="stats-value-total-stakers">3,421</p>
+            <div className="space-y-1 md:space-y-2 min-w-0">
+              <p className="text-[10px] md:text-xs text-muted-foreground uppercase tracking-wide truncate">Stakers</p>
+              <p className="text-lg md:text-2xl font-bold tabular-nums" data-testid="stats-value-total-stakers">3,421</p>
               <div className="flex items-center gap-1">
-                <TrendingUp className="h-4 w-4 text-chart-2" />
-                <span className="text-sm font-medium text-chart-2">+5.2%</span>
+                <TrendingUp className="h-3 w-3 md:h-4 md:w-4 text-chart-2 flex-shrink-0" />
+                <span className="text-xs md:text-sm font-medium text-chart-2">+5.2%</span>
               </div>
             </div>
           </div>
         </div>
       </Card>
 
-      <div className="space-y-6">
-        <div className="space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Featured Vaults</h2>
-          <p className="text-muted-foreground">
+      <div className="space-y-4 md:space-y-6">
+        <div className="space-y-1 md:space-y-2">
+          <h2 className="text-xl md:text-3xl font-bold tracking-tight">Featured Vaults</h2>
+          <p className="text-sm md:text-base text-muted-foreground">
             High-performing vaults for your XRP liquid staking
           </p>
         </div>

@@ -76,10 +76,10 @@ export default function Transactions() {
   });
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-4 md:space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Transaction History</h1>
-        <p className="text-muted-foreground mt-2">
+        <h1 className="text-2xl md:text-3xl font-bold">Transaction History</h1>
+        <p className="text-sm md:text-base text-muted-foreground mt-1 md:mt-2">
           View all your staking activity and transaction history
         </p>
       </div>
@@ -87,14 +87,14 @@ export default function Transactions() {
       {summaryLoading ? (
         <TransactionStatsSkeleton />
       ) : (
-        <div className="grid gap-6 md:grid-cols-3">
+        <div className="grid gap-3 md:gap-6 md:grid-cols-3">
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Deposits</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6 md:pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Deposits</CardTitle>
               <ArrowDownCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold font-mono tabular-nums" data-testid="text-total-deposits">
+            <CardContent className="px-4 pb-4 md:px-6 md:pb-6">
+              <div className="text-xl md:text-3xl font-bold font-mono tabular-nums" data-testid="text-total-deposits">
                 {parseFloat(summary?.totalDeposits || "0").toLocaleString()} XRP
               </div>
               <p className="text-xs text-muted-foreground mt-1">
@@ -104,12 +104,12 @@ export default function Transactions() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Withdrawals</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6 md:pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Withdrawals</CardTitle>
               <ArrowUpCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold font-mono tabular-nums" data-testid="text-total-withdrawals">
+            <CardContent className="px-4 pb-4 md:px-6 md:pb-6">
+              <div className="text-xl md:text-3xl font-bold font-mono tabular-nums" data-testid="text-total-withdrawals">
                 {parseFloat(summary?.totalWithdrawals || "0").toLocaleString()} XRP
               </div>
               <p className="text-xs text-muted-foreground mt-1">
@@ -119,12 +119,12 @@ export default function Transactions() {
           </Card>
 
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total Rewards Claimed</CardTitle>
+            <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-4 md:p-6 md:pb-2">
+              <CardTitle className="text-xs md:text-sm font-medium">Total Rewards Claimed</CardTitle>
               <Gift className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
-            <CardContent>
-              <div className="text-3xl font-bold font-mono tabular-nums text-chart-2" data-testid="text-total-claimed">
+            <CardContent className="px-4 pb-4 md:px-6 md:pb-6">
+              <div className="text-xl md:text-3xl font-bold font-mono tabular-nums text-chart-2" data-testid="text-total-claimed">
                 +{parseFloat(summary?.totalRewards || "0").toLocaleString()} XRP
               </div>
               <p className="text-xs text-muted-foreground mt-1">

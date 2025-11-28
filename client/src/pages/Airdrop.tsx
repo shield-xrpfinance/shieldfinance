@@ -205,38 +205,38 @@ export default function Airdrop() {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4 md:space-y-6">
       {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-lg border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8">
-        <div className="absolute top-4 left-4 rounded-lg bg-primary/20 p-3 backdrop-blur-sm">
+      <div className="relative overflow-hidden rounded-lg border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-4 md:p-8">
+        <div className="absolute top-3 left-3 md:top-4 md:left-4 rounded-lg bg-primary/20 p-2 md:p-3 backdrop-blur-sm">
           <div className="relative">
             <div className="absolute inset-0 rounded-lg bg-primary/30 blur-xl" />
-            <Gift className="relative h-8 w-8 text-primary" />
+            <Gift className="relative h-6 w-6 md:h-8 md:w-8 text-primary" />
           </div>
         </div>
 
-        <div className="ml-16">
-          <h1 className="text-3xl font-bold">$SHIELD Airdrop</h1>
-          <p className="text-muted-foreground mt-2">
+        <div className="ml-12 md:ml-16">
+          <h1 className="text-2xl md:text-3xl font-bold">$SHIELD Airdrop</h1>
+          <p className="text-sm md:text-base text-muted-foreground mt-1 md:mt-2">
             Claim your share of 2,000,000 SHIELD tokens
           </p>
         </div>
 
         {rootData && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+          <div className="mt-4 md:mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-3 md:p-4">
               <p className="text-xs text-muted-foreground">Total Allocation</p>
-              <p className="text-2xl font-bold font-mono">
+              <p className="text-lg md:text-2xl font-bold font-mono">
                 {Number(rootData.totalAmount).toLocaleString()} SHIELD
               </p>
             </div>
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-3 md:p-4">
               <p className="text-xs text-muted-foreground">Eligible Addresses</p>
-              <p className="text-2xl font-bold font-mono">{rootData.totalEntries.toLocaleString()}</p>
+              <p className="text-lg md:text-2xl font-bold font-mono">{rootData.totalEntries.toLocaleString()}</p>
             </div>
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-3 md:p-4">
               <p className="text-xs text-muted-foreground">Value per Address</p>
-              <p className="text-2xl font-bold font-mono">
+              <p className="text-lg md:text-2xl font-bold font-mono">
                 {(Number(rootData.totalAmount) / rootData.totalEntries).toLocaleString()} SHIELD
               </p>
             </div>
@@ -287,7 +287,7 @@ export default function Airdrop() {
       )}
 
       {/* Main Claim Card */}
-      <Card className="p-8">
+      <Card className="p-4 md:p-8">
         {!isConnected ? (
           <div className="text-center space-y-4">
             <div className="flex justify-center">
