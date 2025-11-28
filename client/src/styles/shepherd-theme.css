@@ -1,6 +1,6 @@
 /* Shield Finance Shepherd.js Theme */
-/* Dark glassmorphism design with cyan/primary accents */
-/* Scoped to .shield-tour-step for specificity over default theme */
+/* Aligned with design_guidelines.md - Material Design + DeFi patterns */
+/* Uses CSS variables from index.css for theme consistency */
 
 .shepherd-element.shield-tour-step {
   z-index: 10000 !important;
@@ -10,73 +10,68 @@
   z-index: 9999 !important;
 }
 
-/* Main tooltip container - dark glassmorphism */
+/* Main tooltip container - uses card styling from design system */
 .shield-tour-step .shepherd-content {
-  background: rgba(15, 23, 42, 0.97);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(6, 182, 212, 0.35);
-  border-radius: 16px;
-  box-shadow: 
-    0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 25px 60px rgba(0, 0, 0, 0.6),
-    0 0 50px rgba(6, 182, 212, 0.12);
-  max-width: 420px;
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  max-width: 400px;
   overflow: hidden;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
 }
 
-/* Header section - dark with gradient accent */
+/* Header section - clean with primary accent */
 .shield-tour-step .shepherd-header {
-  background: linear-gradient(180deg, rgba(6, 182, 212, 0.15) 0%, rgba(6, 182, 212, 0.05) 100%);
-  padding: 20px 24px 14px 24px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: hsl(var(--muted));
+  padding: 1rem 1.5rem 0.75rem 1.5rem;
+  border-bottom: 1px solid hsl(var(--border));
   display: flex;
   align-items: center;
   justify-content: space-between;
 }
 
 .shield-tour-step .shepherd-title {
-  color: #ffffff;
-  font-size: 20px;
-  font-weight: 700;
+  color: hsl(var(--foreground));
+  font-size: 1.125rem;
+  font-weight: 600;
   margin: 0;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
   letter-spacing: -0.01em;
 }
 
 /* Cancel/close button */
 .shield-tour-step .shepherd-cancel-icon {
-  color: rgba(255, 255, 255, 0.5);
-  font-size: 28px;
+  color: hsl(var(--muted-foreground));
+  font-size: 1.5rem;
   font-weight: 300;
   opacity: 1;
-  transition: all 0.2s;
-  width: 32px;
-  height: 32px;
+  transition: color 0.15s ease;
+  width: 2rem;
+  height: 2rem;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
+  border-radius: 0.375rem;
   background: transparent;
 }
 
 .shield-tour-step .shepherd-cancel-icon:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.1);
+  color: hsl(var(--foreground));
+  background: hsl(var(--accent));
 }
 
 /* Content/text section */
 .shield-tour-step .shepherd-text {
-  color: rgba(255, 255, 255, 0.92);
-  padding: 18px 24px 22px 24px;
-  font-size: 15px;
-  line-height: 1.7;
+  color: hsl(var(--foreground));
+  padding: 1rem 1.5rem 1.25rem 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
   background: transparent;
 }
 
 .shield-tour-step .shepherd-text p {
-  color: rgba(255, 255, 255, 0.92);
-  margin: 0 0 12px 0;
+  color: hsl(var(--muted-foreground));
+  margin: 0 0 0.75rem 0;
 }
 
 .shield-tour-step .shepherd-text p:last-child {
@@ -84,8 +79,8 @@
 }
 
 .shield-tour-step .shepherd-custom-content p {
-  margin: 0 0 12px 0;
-  color: rgba(255, 255, 255, 0.92);
+  margin: 0 0 0.75rem 0;
+  color: hsl(var(--muted-foreground));
 }
 
 .shield-tour-step .shepherd-custom-content p:last-child {
@@ -93,232 +88,223 @@
 }
 
 .shield-tour-step .shepherd-custom-content ul {
-  margin: 12px 0;
-  padding-left: 24px;
+  margin: 0.75rem 0;
+  padding-left: 1.25rem;
 }
 
 .shield-tour-step .shepherd-custom-content li {
-  margin: 6px 0;
-  color: rgba(255, 255, 255, 0.88);
+  margin: 0.375rem 0;
+  color: hsl(var(--muted-foreground));
 }
 
 .shield-tour-step .shepherd-custom-content strong {
-  color: #22d3ee;
+  color: hsl(var(--primary));
   font-weight: 600;
 }
 
 .shield-tour-step .shepherd-hint {
-  color: rgba(255, 255, 255, 0.55);
-  font-size: 13px;
-  font-style: italic;
-  margin-top: 16px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  color: hsl(var(--muted-foreground));
+  font-size: 0.75rem;
+  font-style: normal;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid hsl(var(--border));
 }
 
 /* Footer/buttons section */
 .shield-tour-step .shepherd-footer {
-  padding: 16px 24px 20px 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  background: rgba(0, 0, 0, 0.25);
+  padding: 0.75rem 1.5rem 1rem 1.5rem;
+  border-top: 1px solid hsl(var(--border));
+  background: hsl(var(--muted) / 0.5);
   display: flex;
   justify-content: flex-end;
-  gap: 10px;
+  gap: 0.5rem;
 }
 
-/* Button base styles */
+/* Button base styles - matches shadcn Button */
 .shield-tour-step .shepherd-button {
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 600;
-  padding: 10px 20px;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  padding: 0.5rem 1rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.15s ease, opacity 0.15s ease;
   border: none;
   text-transform: none;
+  min-height: 2.25rem;
 }
 
-/* Primary button (Next, Finish, etc.) */
+/* Primary button (Next, Finish, etc.) - matches Button default variant */
 .shield-tour-step .shepherd-button-primary,
 .shield-tour-step .shepherd-button:not(.shepherd-button-secondary) {
-  background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%);
-  color: #ffffff;
-  box-shadow: 0 4px 14px rgba(6, 182, 212, 0.35);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
 }
 
 .shield-tour-step .shepherd-button-primary:hover,
 .shield-tour-step .shepherd-button:not(.shepherd-button-secondary):hover {
-  background: linear-gradient(135deg, #22d3ee 0%, #06b6d4 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(6, 182, 212, 0.45);
+  background: hsl(var(--primary) / 0.9);
 }
 
 .shield-tour-step .shepherd-button-primary:active,
 .shield-tour-step .shepherd-button:not(.shepherd-button-secondary):active {
-  transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(6, 182, 212, 0.3);
+  background: hsl(var(--primary) / 0.85);
 }
 
-/* Secondary button (Back, Skip, etc.) */
+/* Secondary button (Back, Skip, etc.) - matches Button outline variant */
 .shield-tour-step .shepherd-button-secondary {
-  background: rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: transparent;
+  color: hsl(var(--foreground));
+  border: 1px solid hsl(var(--border));
 }
 
 .shield-tour-step .shepherd-button-secondary:hover {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
-  border-color: rgba(255, 255, 255, 0.28);
-  transform: translateY(-1px);
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
 }
 
 /* Arrow pointing to element */
 .shield-tour-step .shepherd-arrow,
 .shield-tour-step .shepherd-arrow::before {
-  background: rgba(15, 23, 42, 0.97);
+  background: hsl(var(--card));
 }
 
 .shield-tour-step[data-popper-placement^="top"] .shepherd-arrow::before {
-  border-bottom: 1px solid rgba(6, 182, 212, 0.35);
-  border-right: 1px solid rgba(6, 182, 212, 0.35);
+  border-bottom: 1px solid hsl(var(--border));
+  border-right: 1px solid hsl(var(--border));
 }
 
 .shield-tour-step[data-popper-placement^="bottom"] .shepherd-arrow::before {
-  border-top: 1px solid rgba(6, 182, 212, 0.35);
-  border-left: 1px solid rgba(6, 182, 212, 0.35);
+  border-top: 1px solid hsl(var(--border));
+  border-left: 1px solid hsl(var(--border));
 }
 
 .shield-tour-step[data-popper-placement^="left"] .shepherd-arrow::before {
-  border-top: 1px solid rgba(6, 182, 212, 0.35);
-  border-right: 1px solid rgba(6, 182, 212, 0.35);
+  border-top: 1px solid hsl(var(--border));
+  border-right: 1px solid hsl(var(--border));
 }
 
 .shield-tour-step[data-popper-placement^="right"] .shepherd-arrow::before {
-  border-bottom: 1px solid rgba(6, 182, 212, 0.35);
-  border-left: 1px solid rgba(6, 182, 212, 0.35);
+  border-bottom: 1px solid hsl(var(--border));
+  border-left: 1px solid hsl(var(--border));
 }
 
-/* Modal overlay - darker for better focus */
+/* Modal overlay - subtle darkening */
 .shepherd-modal-overlay-container.shepherd-modal-is-visible {
-  opacity: 0.85;
+  opacity: 0.6;
 }
 
 /* Progress indicator */
 .shield-tour-step .shepherd-progress {
-  background: rgba(255, 255, 255, 0.12);
-  height: 4px;
-  border-radius: 2px;
-  margin: 0 24px 16px 24px;
+  background: hsl(var(--muted));
+  height: 0.25rem;
+  border-radius: 0.125rem;
+  margin: 0 1.5rem 1rem 1.5rem;
   overflow: hidden;
 }
 
 .shield-tour-step .shepherd-progress-bar {
-  background: linear-gradient(90deg, #06b6d4 0%, #22d3ee 100%);
+  background: hsl(var(--primary));
   height: 100%;
-  border-radius: 2px;
+  border-radius: 0.125rem;
   transition: width 0.3s ease;
 }
 
 /* Mobile responsive */
 @media (max-width: 640px) {
   .shield-tour-step .shepherd-content {
-    max-width: calc(100vw - 24px);
-    margin: 0 12px;
-    border-radius: 14px;
+    max-width: calc(100vw - 2rem);
+    margin: 0 1rem;
   }
 
   .shield-tour-step .shepherd-header {
-    padding: 16px 18px 12px 18px;
+    padding: 0.875rem 1rem 0.625rem 1rem;
   }
 
   .shield-tour-step .shepherd-title {
-    font-size: 18px;
+    font-size: 1rem;
   }
 
   .shield-tour-step .shepherd-text {
-    padding: 14px 18px 18px 18px;
-    font-size: 14px;
+    padding: 0.875rem 1rem 1rem 1rem;
+    font-size: 0.8125rem;
   }
 
   .shield-tour-step .shepherd-footer {
-    padding: 14px 18px 16px 18px;
+    padding: 0.75rem 1rem;
     flex-wrap: wrap;
   }
 
   .shield-tour-step .shepherd-button {
-    padding: 10px 16px;
-    font-size: 13px;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.8125rem;
     flex: 1;
-    min-width: 80px;
+    min-width: 5rem;
     text-align: center;
   }
 }
 
-/* Animation for step transitions */
+/* Simple fade animation */
 .shepherd-element.shield-tour-step {
-  animation: shepherd-fade-in 0.25s ease-out;
+  animation: shepherd-fade-in 0.2s ease-out;
 }
 
 @keyframes shepherd-fade-in {
   from {
     opacity: 0;
-    transform: translateY(10px) scale(0.98);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
   }
 }
 
-/* Highlighted element glow effect */
+/* Highlighted element - subtle outline matching primary color */
 .shepherd-target-click-disabled {
   pointer-events: none;
 }
 
 .shepherd-enabled.shepherd-target {
-  outline: 2px solid rgba(6, 182, 212, 0.6);
-  outline-offset: 6px;
-  border-radius: 10px;
-  box-shadow: 0 0 35px rgba(6, 182, 212, 0.25);
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 4px;
+  border-radius: 0.375rem;
 }
 
-/* Step indicator badge for custom content */
+/* Step indicator badge */
 .shield-tour-step .shepherd-step-indicator {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  background: rgba(6, 182, 212, 0.18);
-  color: #22d3ee;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 4px 10px;
-  border-radius: 20px;
-  margin-bottom: 8px;
+  gap: 0.375rem;
+  background: hsl(var(--primary) / 0.1);
+  color: hsl(var(--primary));
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.25rem 0.625rem;
+  border-radius: 1rem;
+  margin-bottom: 0.5rem;
 }
 
-/* Feature highlight box for custom content */
+/* Feature highlight box */
 .shield-tour-step .shepherd-feature-box {
-  background: rgba(6, 182, 212, 0.12);
-  border: 1px solid rgba(6, 182, 212, 0.25);
-  border-radius: 10px;
-  padding: 12px 16px;
-  margin: 12px 0;
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.375rem;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
 }
 
 .shield-tour-step .shepherd-feature-box p {
   margin: 0;
-  color: rgba(255, 255, 255, 0.92);
+  color: hsl(var(--foreground));
 }
 
-/* Keyboard shortcut hint for custom content */
+/* Keyboard shortcut hint */
 .shield-tour-step .shepherd-kbd {
   display: inline-block;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 4px;
-  padding: 2px 6px;
-  font-family: monospace;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
+  background: hsl(var(--muted));
+  border: 1px solid hsl(var(--border));
+  border-radius: 0.25rem;
+  padding: 0.125rem 0.375rem;
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+  font-size: 0.75rem;
+  color: hsl(var(--muted-foreground));
 }
