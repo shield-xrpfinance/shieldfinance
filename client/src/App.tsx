@@ -8,7 +8,7 @@ import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { TestnetBanner } from "@/components/TestnetBanner";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
-import { ShieldTour } from "@/components/ShieldTour";
+import { ControlCenter } from "@/components/ControlCenter";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import { CurrencyProvider } from "@/lib/currencyContext";
@@ -45,7 +45,11 @@ function DashboardRouter() {
   );
 }
 
-function Header() {
+interface HeaderProps {
+  onConnectWallet: () => void;
+}
+
+function Header({ onConnectWallet }: HeaderProps) {
   const { address, evmAddress, isConnected } = useWallet();
   
   // Get the display address (either XRPL or EVM)
@@ -65,6 +69,11 @@ function Header() {
             {shortAddress}
           </Badge>
         )}
+      </div>
+
+      {/* Right side - Control Center for all screen sizes */}
+      <div className="flex items-center gap-2">
+        <ControlCenter onConnectWallet={onConnectWallet} />
       </div>
     </header>
   );
@@ -135,9 +144,9 @@ function DashboardLayout() {
           <CurrencyProvider>
             <SidebarProvider style={style as React.CSSProperties}>
               <div className="flex h-screen w-full">
-                <AppSidebar onConnectWallet={() => setConnectModalOpen(true)} />
+                <AppSidebar />
                 <div className="flex flex-col flex-1">
-                  <Header />
+                  <Header onConnectWallet={() => setConnectModalOpen(true)} />
                   <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
                     <div className="max-w-7xl mx-auto">
                       <TestnetBanner />
@@ -147,7 +156,6 @@ function DashboardLayout() {
                 </div>
               </div>
               <MobileBottomNav />
-              <ShieldTour />
               <ConnectWalletModal
                 open={connectModalOpen}
                 onOpenChange={setConnectModalOpen}

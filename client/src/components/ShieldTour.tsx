@@ -253,7 +253,11 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
   return tour;
 }
 
-export function ShieldTour() {
+interface ShieldTourProps {
+  variant?: "fixed" | "inline";
+}
+
+export function ShieldTour({ variant = "fixed" }: ShieldTourProps) {
   const { isConnected, walletType } = useWallet();
   const [tourInstance, setTourInstance] = useState<ReturnType<typeof createTour> | null>(null);
   const [hasSeenTour, setHasSeenTour] = useState(true);
@@ -312,6 +316,24 @@ export function ShieldTour() {
     };
   }, [tourInstance]);
 
+  // Inline variant renders differently - used in sidebar
+  if (variant === "inline") {
+    return (
+      <Button
+        variant="ghost"
+        size="sm"
+        className="w-full justify-start gap-2 text-muted-foreground hover:text-foreground"
+        onClick={startTour}
+        title="Start guided tour"
+        data-testid="button-help-tour"
+      >
+        <HelpCircle className="h-4 w-4" />
+        <span>Take a Tour</span>
+      </Button>
+    );
+  }
+
+  // Fixed variant - floating button (default)
   return (
     <Button
       variant="outline"
