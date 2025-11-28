@@ -10,13 +10,14 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Vault, Wallet, History, BarChart3, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles } from "lucide-react";
+import { LayoutDashboard, Vault, Wallet, History, BarChart3, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles, Settings2 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useCurrency, type Currency, getCurrencyName } from "@/lib/currencyContext";
 import { CurrencyIcon } from "@/components/CurrencyIcon";
 import { ShieldLogo } from "@/components/ShieldLogo";
+import { ControlCenter } from "@/components/ControlCenter";
 import { SiX, SiTelegram, SiDiscord } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -76,7 +77,11 @@ const menuItems = [
   },
 ];
 
-export function AppSidebar() {
+interface AppSidebarProps {
+  onConnectWallet: () => void;
+}
+
+export function AppSidebar({ onConnectWallet }: AppSidebarProps) {
   const [location] = useLocation();
   const { network, isTestnet, toggleNetwork } = useNetwork();
   const { currency, setCurrency } = useCurrency();
@@ -201,7 +206,13 @@ export function AppSidebar() {
         ✓ Consistent spacing: gap-2/gap-4, space-y-4 throughout
         ✓ Button sizing: Removed explicit height, using size="sm" variant
       */}
-      <SidebarFooter className="p-2 md:p-6">
+      <SidebarFooter className="p-2 md:p-6 space-y-3">
+        {/* Control Center Button */}
+        <div className="flex items-center justify-between px-2">
+          <span className="text-xs font-medium text-muted-foreground">Settings</span>
+          <ControlCenter onConnectWallet={onConnectWallet} />
+        </div>
+
         <div className="relative rounded-lg border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-3 md:p-6 overflow-hidden" data-testid="help-card">
           <div className="absolute top-4 left-4 rounded-lg bg-primary/20 p-2 backdrop-blur-sm hidden md:block">
             <div className="relative">

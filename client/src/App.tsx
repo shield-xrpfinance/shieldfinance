@@ -9,7 +9,6 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { TestnetBanner } from "@/components/TestnetBanner";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { ShieldTour } from "@/components/ShieldTour";
-import { ControlCenter } from "@/components/ControlCenter";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import { CurrencyProvider } from "@/lib/currencyContext";
@@ -47,12 +46,7 @@ function DashboardRouter() {
 }
 
 function Header() {
-  const { address, evmAddress, isConnected, disconnect, walletType } = useWallet();
-  const { isTestnet } = useNetwork();
-  const [connectModalOpen, setConnectModalOpen] = useState(false);
-
-  // Show wallet-aware testnet network name
-  const testnetName = walletType === "xrpl" ? "XRPL Testnet" : walletType === "evm" ? "Coston2" : "Testnet";
+  const { address, evmAddress, isConnected } = useWallet();
   
   // Get the display address (either XRPL or EVM)
   const displayAddress = address || evmAddress;
@@ -72,19 +66,6 @@ function Header() {
           </Badge>
         )}
       </div>
-
-      {/* Right side - Control Center for all screen sizes */}
-      <div className="flex items-center gap-2">
-        <ControlCenter onConnectWallet={() => setConnectModalOpen(true)} />
-      </div>
-      
-      <ConnectWalletModal
-        open={connectModalOpen}
-        onOpenChange={setConnectModalOpen}
-        onConnect={(addr, provider) => {
-          // Connection is handled in the modal
-        }}
-      />
     </header>
   );
 }
@@ -137,6 +118,8 @@ function WalletDisconnectHandler() {
 }
 
 function DashboardLayout() {
+  const [connectModalOpen, setConnectModalOpen] = useState(false);
+  
   const style = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
@@ -152,7 +135,7 @@ function DashboardLayout() {
           <CurrencyProvider>
             <SidebarProvider style={style as React.CSSProperties}>
               <div className="flex h-screen w-full">
-                <AppSidebar />
+                <AppSidebar onConnectWallet={() => setConnectModalOpen(true)} />
                 <div className="flex flex-col flex-1">
                   <Header />
                   <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
@@ -165,6 +148,11 @@ function DashboardLayout() {
               </div>
               <MobileBottomNav />
               <ShieldTour />
+              <ConnectWalletModal
+                open={connectModalOpen}
+                onOpenChange={setConnectModalOpen}
+                onConnect={() => {}}
+              />
             </SidebarProvider>
           </CurrencyProvider>
         </WalletProvider>
