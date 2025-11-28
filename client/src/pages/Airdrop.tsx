@@ -263,13 +263,28 @@ export default function Airdrop() {
         </Alert>
       )}
 
-      {/* Testnet Warning */}
+      {/* Testnet Mode - Faucet Link */}
       {isTestnet && (
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Airdrop claims are only available on <strong>Flare Mainnet</strong>. Please
-            switch networks using the sidebar toggle.
+        <Alert className="border-orange-500 bg-orange-500/10">
+          <Coins className="h-4 w-4 text-orange-500" />
+          <AlertDescription className="flex flex-col gap-2">
+            <span>
+              <span className="font-semibold">Testnet Mode:</span> Airdrop claims are only available on Flare Mainnet.
+            </span>
+            <span>
+              Need test tokens to explore the platform? Visit our{" "}
+              <a
+                href="https://faucet.shyield.finance/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold underline hover:text-orange-500"
+                data-testid="link-faucet"
+              >
+                Testnet Faucet
+                <ExternalLink className="h-3 w-3" />
+              </a>{" "}
+              to get free test SHIELD and FLR tokens.
+            </span>
           </AlertDescription>
         </Alert>
       )}
