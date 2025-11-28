@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Settings2, Moon, Sun, Wallet, LogOut, Beaker, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Moon, Sun, Wallet, LogOut, Beaker, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -29,13 +29,22 @@ export function MobileControlCenter({ onConnectWallet }: MobileControlCenterProp
   
   const testnetName = walletType === "xrpl" ? "XRPL Testnet" : walletType === "evm" ? "Coston2" : "Testnet";
   
-  // Theme state
-  const [theme, setTheme] = useState<"light" | "dark">(() => {
-    if (typeof window !== "undefined") {
-      return document.documentElement.classList.contains("dark") ? "dark" : "light";
+  // Theme state - sync with document on open
+  const [theme, setTheme] = useState<"light" | "dark">("light");
+  
+  // Sync theme when control center opens
+  useEffect(() => {
+    if (open) {
+      const currentTheme = document.documentElement.classList.contains("dark") ? "dark" : "light";
+      setTheme(currentTheme);
     }
-    return "light";
-  });
+  }, [open]);
+  
+  // Also sync on mount
+  useEffect(() => {
+    const currentTheme = document.documentElement.classList.contains("dark") ? "dark" : "light";
+    setTheme(currentTheme);
+  }, []);
   
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
@@ -88,7 +97,11 @@ export function MobileControlCenter({ onConnectWallet }: MobileControlCenterProp
                 <Button
                   variant={ecosystem === "xrpl" ? "default" : "outline"}
                   size="lg"
-                  onClick={() => !isConnected && setEcosystem("xrpl")}
+                  onClick={() => {
+                    if (!isConnected) {
+                      setEcosystem("xrpl");
+                    }
+                  }}
                   disabled={isConnected}
                   className="h-14 text-base font-medium"
                   data-testid="control-center-xrpl"
@@ -98,7 +111,11 @@ export function MobileControlCenter({ onConnectWallet }: MobileControlCenterProp
                 <Button
                   variant={ecosystem === "flare" ? "default" : "outline"}
                   size="lg"
-                  onClick={() => !isConnected && setEcosystem("flare")}
+                  onClick={() => {
+                    if (!isConnected) {
+                      setEcosystem("flare");
+                    }
+                  }}
                   disabled={isConnected}
                   className="h-14 text-base font-medium"
                   data-testid="control-center-flare"
