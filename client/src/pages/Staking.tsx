@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { Shield, TrendingUp, Lock, Unlock, Clock, Info, ExternalLink, Loader2, Coins } from "lucide-react";
-import shieldLogo from "@assets/shield_logo_1763761188895.png";
+import { useShieldLogo } from "@/components/ShieldLogo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ethers } from "ethers";
 
@@ -19,6 +19,7 @@ const COSTON2_EXPLORER = "https://coston2-explorer.flare.network";
 const BASE_SHXRP_APY = 6.2;
 
 export default function Staking() {
+  const shieldLogo = useShieldLogo();
   const { evmAddress, isConnected, isEvmConnected, walletConnectProvider } = useWallet();
   const { toast } = useToast();
   const { shield: shieldBalance, isLoading: balancesLoading } = useComprehensiveBalance();

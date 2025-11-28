@@ -16,6 +16,7 @@ import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useCurrency, type Currency, getCurrencyName } from "@/lib/currencyContext";
 import { CurrencyIcon } from "@/components/CurrencyIcon";
+import { ShieldLogo } from "@/components/ShieldLogo";
 import { SiX, SiTelegram, SiDiscord } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
@@ -84,11 +85,9 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarHeader className="p-6">
         <div className="flex items-center gap-2">
-          <img 
-            src="/shield-logo.png" 
-            alt="Shield Finance" 
-            className="h-8 w-8 object-contain hover-elevate transition-transform"
-            data-testid="logo-sidebar"
+          <ShieldLogo 
+            size={32}
+            className="hover-elevate transition-transform"
           />
           <div>
             <h2 className="font-bold text-lg">Shield Finance</h2>

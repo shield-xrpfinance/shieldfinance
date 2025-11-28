@@ -29,7 +29,7 @@ import {
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
 import { IPhoneMockup } from "@/components/IPhoneMockup";
-import shieldLogo from "@assets/shield_logo_1763761188895.png";
+import { useShieldLogo } from "@/components/ShieldLogo";
 import flareLogo from "@assets/flare-network-logo.svg";
 import xrpLogo from "@assets/XRP-Ledger---Horizontal---Black_1763817099433.png";
 import xamanLogo from "@assets/xaman-logo.svg";
@@ -37,6 +37,7 @@ import walletConnectLogo from "@assets/walletconnect-logo-wc.svg";
 import portfolioScreenshot from "@assets/IMG_2708_1763820959453.jpeg";
 
 export default function Landing() {
+  const shieldLogo = useShieldLogo();
   const heroAnimation = useScrollAnimation();
   const partnersAnimation = useScrollAnimation();
   const featuresAnimation = useScrollAnimation();

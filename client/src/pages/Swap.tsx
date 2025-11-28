@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowDownUp, TrendingUp, Info, Sparkles, Shield, AlertTriangle, ExternalLink, Loader2, Coins } from "lucide-react";
-import shieldLogo from "@assets/shield_logo_1763761188895.png";
+import { useShieldLogo } from "@/components/ShieldLogo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import GlassStatsCard from "@/components/GlassStatsCard";
 import confetti from "canvas-confetti";
@@ -47,6 +47,7 @@ const COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc";
 const COSTON2_CHAIN_ID = 114;
 
 export default function Swap() {
+  const shieldLogo = useShieldLogo();
   const { evmAddress, isEvmConnected, walletConnectProvider } = useWallet();
   const { isTestnet, network } = useNetwork();
   const { toast } = useToast();
