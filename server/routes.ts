@@ -5051,7 +5051,7 @@ export async function registerRoutes(
       // Checksum the address
       const checksummedAddress = ethers.getAddress(address);
 
-      // FIRST: Check on-chain claim status (single source of truth)
+      // FIRST: Check on-chain claim status
       let hasClaimed = false;
       const distributorAddress = process.env.VITE_MERKLE_DISTRIBUTOR_ADDRESS;
       
@@ -5067,7 +5067,7 @@ export async function registerRoutes(
         }
       }
 
-      // If already claimed on-chain, they're not eligible (regardless of Merkle tree)
+      // If already claimed on-chain, they're not eligible
       if (hasClaimed) {
         return res.json({
           eligible: false,
@@ -5076,7 +5076,34 @@ export async function registerRoutes(
         });
       }
 
-      // Load merkle tree data to check eligibility
+      // Fetch eligibility from faucet API (single source of truth)
+      try {
+        const faucetResponse = await fetch(`https://faucet.shyield.finance/api/airdrop/check/${checksummedAddress}`, {
+          method: "GET",
+          headers: { "Accept": "application/json" },
+          signal: AbortSignal.timeout(5000),
+        });
+
+        if (faucetResponse.ok) {
+          const faucetData = await faucetResponse.json();
+          console.log(`[Airdrop] Faucet eligibility check for ${checksummedAddress}:`, faucetData);
+          
+          // Return faucet data directly (it's the source of truth)
+          return res.json({
+            eligible: faucetData.eligible,
+            claimed: faucetData.claimed || false,
+            amount: faucetData.amount,
+            proof: faucetData.proof || [],
+            message: faucetData.message,
+          });
+        } else {
+          console.warn(`[Airdrop] Faucet API returned ${faucetResponse.status}, falling back to local data`);
+        }
+      } catch (faucetError) {
+        console.warn("[Airdrop] Failed to fetch from faucet API, falling back to local data:", faucetError);
+      }
+
+      // Fallback: Load local merkle tree data
       const merkleTreePath = path.join(process.cwd(), "data/merkle-tree.json");
       
       if (!fs.existsSync(merkleTreePath)) {
