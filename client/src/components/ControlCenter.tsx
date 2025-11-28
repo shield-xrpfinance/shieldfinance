@@ -81,14 +81,14 @@ export function ControlCenter({ onConnectWallet }: ControlCenterProps) {
       <Sheet open={open} onOpenChange={setOpen}>
         <SheetContent 
           side="top" 
-          className="rounded-b-2xl bg-background/95 backdrop-blur-xl border-b border-primary/20"
+          className="rounded-b-2xl bg-background/95 backdrop-blur-xl border-b border-primary/20 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:max-w-sm sm:border-x sm:border-primary/20"
         >
           <SheetHeader className="sr-only">
             <SheetTitle>Control Center</SheetTitle>
             <SheetDescription>Quick settings and wallet controls</SheetDescription>
           </SheetHeader>
           
-          <div className="space-y-6 pt-2">
+          <div className="space-y-5 pt-2">
             {/* Network Ecosystem Toggle */}
             <div className="space-y-2">
               <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">Network</span>
