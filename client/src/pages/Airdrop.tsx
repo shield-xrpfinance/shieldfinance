@@ -62,12 +62,19 @@ export default function Airdrop() {
     enabled: !!evmAddress && isEvmConnected,
   });
 
-  // Set hasClaimed from API response (backend now checks on-chain status)
+  // Derive hasClaimed directly from API response (backend checks on-chain status)
+  // Always sync with API response to handle wallet switching correctly
   useEffect(() => {
-    if (eligibility?.claimed) {
-      setHasClaimed(true);
-    }
+    setHasClaimed(Boolean(eligibility?.claimed));
   }, [eligibility]);
+
+  // Reset state when wallet disconnects or changes
+  useEffect(() => {
+    if (!isEvmConnected) {
+      setHasClaimed(false);
+      setClaimTxHash(null);
+    }
+  }, [isEvmConnected, evmAddress]);
 
   const handleClaim = async () => {
     if (!evmAddress || !eligibility || !eligibility.proof || !walletConnectProvider) {

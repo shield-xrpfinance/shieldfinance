@@ -5034,7 +5034,10 @@ export async function registerRoutes(
    * Check if an address is eligible for SHIELD airdrop
    * GET /api/airdrop/check/:address
    * 
-   * Returns: { eligible: boolean, claimed?: boolean, amount?: string, proof?: string[] }
+   * Returns: { eligible: boolean, claimed: boolean, amount?: string, proof?: string[], message?: string }
+   * 
+   * Priority: On-chain claim status is the single source of truth.
+   * If claimed on-chain, eligible=false regardless of Merkle tree status.
    */
   app.get("/api/airdrop/check/:address", async (req: Request, res: Response) => {
     try {
@@ -5048,25 +5051,7 @@ export async function registerRoutes(
       // Checksum the address
       const checksummedAddress = ethers.getAddress(address);
 
-      // Load merkle tree data
-      const merkleTreePath = path.join(process.cwd(), "data/merkle-tree.json");
-      
-      if (!fs.existsSync(merkleTreePath)) {
-        return res.status(500).json({ error: "Airdrop data not available" });
-      }
-
-      const merkleTreeData = JSON.parse(fs.readFileSync(merkleTreePath, "utf-8"));
-
-      // Find user's entry in merkle tree
-      const userEntry = merkleTreeData.entries.find(
-        (entry: any) => entry.address.toLowerCase() === checksummedAddress.toLowerCase()
-      );
-
-      if (!userEntry) {
-        return res.json({ eligible: false, claimed: false });
-      }
-
-      // Check on-chain claim status from MerkleDistributor contract
+      // FIRST: Check on-chain claim status (single source of truth)
       let hasClaimed = false;
       const distributorAddress = process.env.VITE_MERKLE_DISTRIBUTOR_ADDRESS;
       
@@ -5082,16 +5067,38 @@ export async function registerRoutes(
         }
       }
 
-      // If already claimed on-chain, they're not eligible to claim again
+      // If already claimed on-chain, they're not eligible (regardless of Merkle tree)
       if (hasClaimed) {
         return res.json({
           eligible: false,
           claimed: true,
-          amount: userEntry.amount,
           message: "You have already claimed your SHIELD tokens",
         });
       }
 
+      // Load merkle tree data to check eligibility
+      const merkleTreePath = path.join(process.cwd(), "data/merkle-tree.json");
+      
+      if (!fs.existsSync(merkleTreePath)) {
+        return res.status(500).json({ error: "Airdrop data not available" });
+      }
+
+      const merkleTreeData = JSON.parse(fs.readFileSync(merkleTreePath, "utf-8"));
+
+      // Find user's entry in merkle tree
+      const userEntry = merkleTreeData.entries.find(
+        (entry: any) => entry.address.toLowerCase() === checksummedAddress.toLowerCase()
+      );
+
+      if (!userEntry) {
+        return res.json({ 
+          eligible: false, 
+          claimed: false,
+          message: "This address is not eligible for the airdrop",
+        });
+      }
+
+      // Eligible and not yet claimed
       res.json({
         eligible: true,
         claimed: false,
