@@ -413,88 +413,88 @@ export default function ConnectWalletModal({
         )}
 
         {step === "select" && (
-          <div className="space-y-3 py-4">
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+          <div className="space-y-2 sm:space-y-3 py-2 sm:py-4">
+            <div className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 sm:mb-2">
               XRPL Wallets (for XRP deposits)
             </div>
             
             <Button
               variant="outline"
-              className="w-full justify-start h-auto py-4"
+              className="w-full justify-start h-auto py-2.5 sm:py-4"
               onClick={handleXamanConnect}
               disabled={connecting}
               data-testid="button-connect-xaman"
             >
-              <div className="flex items-center gap-3 w-full">
-                <div className="h-10 w-10 rounded-lg overflow-hidden flex items-center justify-center">
-                  <img src={xamanIcon} alt="Xaman" className="h-10 w-10" />
+              <div className="flex items-center gap-2 sm:gap-3 w-full min-w-0">
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <img src={xamanIcon} alt="Xaman" className="h-8 w-8 sm:h-10 sm:w-10" />
                 </div>
-                <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-semibold">Xaman (XUMM)</p>
-                    <Badge variant="outline" className="text-xs">XRPL</Badge>
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center gap-1 sm:gap-2 mb-0.5 flex-wrap">
+                    <p className="font-semibold text-sm sm:text-base">Xaman</p>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">XRPL</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                     Connect with Xaman mobile wallet
                   </p>
                 </div>
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 hidden sm:block" />
               </div>
             </Button>
 
             <Button
               variant="outline"
-              className="w-full justify-start h-auto py-4"
+              className="w-full justify-start h-auto py-2.5 sm:py-4"
               onClick={() => handleWalletConnect("xrpl")}
               disabled={connecting}
               data-testid="button-connect-walletconnect-xrpl"
             >
-              <div className="flex items-center gap-3 w-full">
-                <div className="h-10 w-10 rounded-lg overflow-hidden flex items-center justify-center">
-                  <img src={walletConnectLogo} alt="WalletConnect" className="h-10 w-10" />
+              <div className="flex items-center gap-2 sm:gap-3 w-full min-w-0">
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <img src={walletConnectLogo} alt="WalletConnect" className="h-8 w-8 sm:h-10 sm:w-10" />
                 </div>
-                <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-semibold">Other XRPL Wallets</p>
-                    <Badge variant="outline" className="text-xs">WalletConnect</Badge>
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center gap-1 sm:gap-2 mb-0.5 flex-wrap">
+                    <p className="font-semibold text-sm sm:text-base">Other XRPL</p>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5">WalletConnect</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                     Bifrost, GemWallet, CrossMark & more
                   </p>
                 </div>
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 hidden sm:block" />
               </div>
             </Button>
 
-            <div className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2 mt-4 pt-4 border-t">
-              EVM Wallets (for Flare staking & swaps)
+            <div className="text-[10px] sm:text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1 sm:mb-2 mt-3 sm:mt-4 pt-3 sm:pt-4 border-t">
+              EVM Wallets (for Flare staking)
             </div>
 
             <Button
               variant="outline"
-              className="w-full justify-start h-auto py-4"
+              className="w-full justify-start h-auto py-2.5 sm:py-4"
               onClick={() => handleWalletConnect("evm")}
               disabled={connecting}
               data-testid="button-connect-walletconnect-evm"
             >
-              <div className="flex items-center gap-3 w-full">
-                <div className="h-10 w-10 rounded-lg overflow-hidden flex items-center justify-center">
-                  <img src={walletConnectLogo} alt="WalletConnect" className="h-10 w-10" />
+              <div className="flex items-center gap-2 sm:gap-3 w-full min-w-0">
+                <div className="h-8 w-8 sm:h-10 sm:w-10 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  <img src={walletConnectLogo} alt="WalletConnect" className="h-8 w-8 sm:h-10 sm:w-10" />
                 </div>
-                <div className="flex-1 text-left">
-                  <div className="flex items-center gap-2 mb-1">
-                    <p className="font-semibold">EVM Wallets</p>
-                    <Badge variant="outline" className="text-xs bg-primary/10 text-primary border-primary">Flare</Badge>
+                <div className="flex-1 text-left min-w-0">
+                  <div className="flex items-center gap-1 sm:gap-2 mb-0.5 flex-wrap">
+                    <p className="font-semibold text-sm sm:text-base">EVM Wallets</p>
+                    <Badge variant="outline" className="text-[10px] sm:text-xs h-4 sm:h-5 px-1 sm:px-1.5 bg-primary/10 text-primary border-primary">Flare</Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                     MetaMask, Trust Wallet, Rabby & more
                   </p>
                 </div>
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <ExternalLink className="h-4 w-4 text-muted-foreground flex-shrink-0 hidden sm:block" />
               </div>
             </Button>
 
-            <div className="text-xs text-muted-foreground text-center border-t pt-4 mt-2">
+            <div className="text-[10px] sm:text-xs text-muted-foreground text-center border-t pt-3 sm:pt-4 mt-2">
               Non-custodial wallet connections only
               {isTestnet && " • Testnet Mode Active"}
             </div>
@@ -502,18 +502,21 @@ export default function ConnectWalletModal({
         )}
 
         {step === "xaman-qr" && (
-          <div className="space-y-4 py-4">
-            <div className="flex flex-col items-center justify-center space-y-4">
+          <div className="space-y-3 sm:space-y-4 py-2 sm:py-4">
+            <div className="flex flex-col items-center justify-center space-y-3 sm:space-y-4">
               {qrCodeUrl && qrCodeUrl !== "demo" ? (
-                <div className="p-4 bg-white rounded-lg">
+                <div className="p-3 sm:p-4 bg-white rounded-lg">
                   {qrCodeUrl.startsWith("http") ? (
-                    <img src={qrCodeUrl} alt="Xaman QR Code" className="w-64 h-64" />
+                    <img src={qrCodeUrl} alt="Xaman QR Code" className="w-48 h-48 sm:w-64 sm:h-64" />
                   ) : (
-                    <QRCodeSVG value={qrCodeUrl} size={256} level="H" />
+                    <QRCodeSVG value={qrCodeUrl} size={192} level="H" className="sm:hidden" />
+                  )}
+                  {qrCodeUrl && !qrCodeUrl.startsWith("http") && (
+                    <QRCodeSVG value={qrCodeUrl} size={256} level="H" className="hidden sm:block" />
                   )}
                 </div>
               ) : (
-                <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
+                <div className="w-48 h-48 sm:w-64 sm:h-64 bg-muted rounded-lg flex items-center justify-center">
                   <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
                 </div>
               )}
