@@ -35,6 +35,10 @@ interface AirdropRoot {
   totalAmount: string;
   totalEntries: number;
   timestamp: string;
+  totalClaimed: string;
+  remainingAmount: string;
+  claimedCount: number;
+  eligibleCount: number;
 }
 
 export default function Airdrop() {
@@ -195,22 +199,34 @@ export default function Airdrop() {
         </div>
 
         {rootData && (
-          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
             <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
               <p className="text-xs text-muted-foreground">Total Allocation</p>
-              <p className="text-2xl font-bold font-mono">
-                {Number(rootData.totalAmount).toLocaleString()} SHIELD
+              <p className="text-2xl font-bold font-mono" data-testid="text-total-allocation">
+                {Number(rootData.totalAmount).toLocaleString()}
               </p>
+              <p className="text-xs text-muted-foreground">SHIELD</p>
             </div>
             <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
-              <p className="text-xs text-muted-foreground">Eligible Addresses</p>
-              <p className="text-2xl font-bold font-mono">{rootData.totalEntries.toLocaleString()}</p>
+              <p className="text-xs text-muted-foreground">Remaining</p>
+              <p className="text-2xl font-bold font-mono text-green-500" data-testid="text-remaining-amount">
+                {Number(rootData.remainingAmount || rootData.totalAmount).toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground">SHIELD</p>
             </div>
             <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
-              <p className="text-xs text-muted-foreground">Value per Address</p>
-              <p className="text-2xl font-bold font-mono">
-                {(Number(rootData.totalAmount) / rootData.totalEntries).toLocaleString()} SHIELD
+              <p className="text-xs text-muted-foreground">Claimed</p>
+              <p className="text-2xl font-bold font-mono text-orange-500" data-testid="text-total-claimed">
+                {Number(rootData.totalClaimed || 0).toLocaleString()}
               </p>
+              <p className="text-xs text-muted-foreground">SHIELD</p>
+            </div>
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+              <p className="text-xs text-muted-foreground">Claimants</p>
+              <p className="text-2xl font-bold font-mono" data-testid="text-claimed-count">
+                {rootData.claimedCount || 0} / {rootData.totalEntries}
+              </p>
+              <p className="text-xs text-muted-foreground">addresses</p>
             </div>
           </div>
         )}

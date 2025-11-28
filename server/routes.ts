@@ -5164,10 +5164,10 @@ export async function registerRoutes(
   });
 
   /**
-   * Get merkle root for airdrop
+   * Get airdrop statistics with live on-chain data
    * GET /api/airdrop/root
    * 
-   * Returns: { root: string, totalAmount: string, totalEntries: number }
+   * Returns: { root, totalAmount, totalEntries, totalClaimed, remainingAmount, claimedCount }
    */
   app.get("/api/airdrop/root", async (req: Request, res: Response) => {
     try {
@@ -5180,11 +5180,51 @@ export async function registerRoutes(
 
       const merkleTreeData = JSON.parse(fs.readFileSync(merkleTreePath, "utf-8"));
 
+      // Fetch on-chain statistics from MerkleDistributor
+      let totalClaimed = "0";
+      let claimedCount = 0;
+      const distributorAddress = process.env.VITE_MERKLE_DISTRIBUTOR_ADDRESS;
+
+      if (distributorAddress && distributorAddress !== "0x...") {
+        try {
+          const provider = new ethers.JsonRpcProvider("https://coston2-api.flare.network/ext/C/rpc");
+          const distributorAbi = [
+            "function totalClaimed() external view returns (uint256)",
+            "function hasClaimed(address account) external view returns (bool)",
+          ];
+          const contract = new ethers.Contract(distributorAddress, distributorAbi, provider);
+          
+          // Get total claimed amount
+          const claimedBigInt = await contract.totalClaimed();
+          totalClaimed = ethers.formatUnits(claimedBigInt, 18);
+
+          // Count how many addresses have claimed
+          const claimChecks = await Promise.all(
+            merkleTreeData.entries.map((entry: any) => 
+              contract.hasClaimed(entry.address).catch(() => false)
+            )
+          );
+          claimedCount = claimChecks.filter(Boolean).length;
+
+          console.log(`[Airdrop Stats] Total claimed: ${totalClaimed} SHIELD, Claimed count: ${claimedCount}/${merkleTreeData.totalEntries}`);
+        } catch (onChainError) {
+          console.warn("[Airdrop] Failed to fetch on-chain stats:", onChainError);
+        }
+      }
+
+      const totalAmountNum = Number(merkleTreeData.totalAmount);
+      const totalClaimedNum = Number(totalClaimed);
+      const remainingAmount = (totalAmountNum - totalClaimedNum).toString();
+
       res.json({
         root: merkleTreeData.root,
         totalAmount: merkleTreeData.totalAmount,
         totalEntries: merkleTreeData.totalEntries,
         timestamp: merkleTreeData.timestamp,
+        totalClaimed,
+        remainingAmount,
+        claimedCount,
+        eligibleCount: merkleTreeData.totalEntries - claimedCount,
       });
     } catch (error) {
       console.error("Merkle root retrieval error:", error);
