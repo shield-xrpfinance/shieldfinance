@@ -11,6 +11,7 @@ import { YieldService } from "./services/YieldService";
 import type { FlareClient } from "./utils/flare-client";
 import type { MetricsService } from "./services/MetricsService";
 import type { AlertingService } from "./services/AlertingService";
+import { VaultDataService } from "./services/VaultDataService";
 import { db } from "./db";
 import { fxrpToXrpRedemptions } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -172,6 +173,18 @@ export async function registerRoutes(
   metricsService?: MetricsService,
   alertingService?: AlertingService
 ): Promise<Server> {
+  // Initialize VaultDataService for live on-chain data
+  let vaultDataService: VaultDataService | undefined;
+  if (flareClient) {
+    vaultDataService = new VaultDataService({
+      storage,
+      flareClient
+    });
+    vaultDataService.initialize().catch(err => 
+      console.warn("VaultDataService initialization warning:", err)
+    );
+  }
+
   // Health check endpoints (must be first for fast startup verification)
   
   // Liveness probe - Always returns 200 OK if server is running
@@ -322,25 +335,28 @@ export async function registerRoutes(
   // Global rate limiting for all API routes (100 requests per minute per IP)
   app.use("/api", globalRateLimiter);
 
-  // Get all vaults
+  // Get all vaults with live on-chain data
   app.get("/api/vaults", async (_req, res) => {
     try {
+      // Use VaultDataService for enriched vaults with on-chain TVL, price, etc.
+      if (vaultDataService && vaultDataService.isReady()) {
+        const enrichedVaults = await vaultDataService.getEnrichedVaults();
+        return res.json(enrichedVaults);
+      }
+      
+      // Fallback: try basic enrichment with flareClient if VaultDataService not ready
       const vaults = await storage.getVaults();
       
-      // Enrich with live contract data if flareClient is available
-      // Note: P0 features (depositLimit, paused) require updated contract deployment
       if (flareClient && vaults.length > 0) {
         try {
           const vaultAddress = getVaultAddress();
           const vaultContract = flareClient.getShXRPVault(vaultAddress) as any;
           
-          // Try to fetch P0 security state from contract (may not be deployed yet)
           const [depositLimitRaw, paused] = await Promise.all([
             vaultContract.depositLimit().catch(() => null),
             vaultContract.paused().catch(() => null)
           ]);
           
-          // Only add P0 fields if methods exist on contract
           if (depositLimitRaw !== null && paused !== null) {
             const enrichedVaults = vaults.map((vault, index) => {
               if (index === 0) {
@@ -354,26 +370,24 @@ export async function registerRoutes(
               }
               return { ...vault, contractAddress: vaultAddress };
             });
-            res.json(enrichedVaults);
+            return res.json(enrichedVaults);
           } else {
-            // P0 methods not available on this contract deployment
             const enrichedVaults = vaults.map((vault) => ({
               ...vault,
               contractAddress: vaultAddress
             }));
-            res.json(enrichedVaults);
+            return res.json(enrichedVaults);
           }
         } catch (contractError) {
-          // Silently fall back to vaults without P0 data but still include contract address
           const vaultAddress = getVaultAddress();
           const enrichedVaults = vaults.map((vault) => ({
             ...vault,
             contractAddress: vaultAddress
           }));
-          res.json(enrichedVaults);
+          return res.json(enrichedVaults);
         }
       } else {
-        res.json(vaults);
+        return res.json(vaults);
       }
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch vaults" });
@@ -3789,11 +3803,28 @@ export async function registerRoutes(
     }
   });
 
-  // Get protocol overview analytics
+  // Get protocol overview analytics with live on-chain TVL
   app.get("/api/analytics/overview", async (_req, res) => {
     try {
       const overview = await storage.getProtocolOverview();
-      res.json(overview);
+      
+      // Enrich with live on-chain data if available
+      if (vaultDataService && vaultDataService.isReady()) {
+        try {
+          const liveTvl = await vaultDataService.getLiveTVL();
+          const liveApy = await vaultDataService.getLiveAPY();
+          return res.json({
+            ...overview,
+            tvl: liveTvl,
+            avgApy: liveApy,
+            isLive: true
+          });
+        } catch (liveError) {
+          console.warn("Failed to get live data, using database fallback:", liveError);
+        }
+      }
+      
+      res.json({ ...overview, isLive: false });
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch protocol overview" });
     }

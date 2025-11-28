@@ -18,6 +18,13 @@ export interface FlareClientConfig {
   enablePaymaster?: boolean;
 }
 
+export interface VaultMetrics {
+  totalAssets: string;
+  totalSupply: string;
+  pricePerShare: string;
+  utilization: number;
+}
+
 /**
  * FlareClient - Smart Account Implementation for BRIDGING ONLY
  * 
@@ -232,7 +239,7 @@ export class FlareClient {
     }
     
     console.log(`   ✅ Smart Account funded: ${tx.hash}`);
-    console.log(`   Gas used: ${receipt.gasUsed} (${ethers.formatEther(receipt.gasUsed * (receipt.gasPrice || 0n))} FLR)`);
+    console.log(`   Gas used: ${receipt.gasUsed} (${ethers.formatEther(receipt.gasUsed * (receipt.gasPrice || BigInt(0)))} FLR)`);
     
     // Verify new balance
     const newBalance = await this.provider.getBalance(smartAccountAddress);
@@ -255,5 +262,76 @@ export class FlareClient {
   async getOperatorEOABalance(): Promise<bigint> {
     const wallet = new ethers.Wallet(this.operatorPrivateKey);
     return await this.provider.getBalance(wallet.address);
+  }
+
+  /**
+   * Returns the current network ("mainnet" | "coston2")
+   */
+  getNetwork(): "mainnet" | "coston2" {
+    return this.network;
+  }
+
+  /**
+   * Returns the JsonRpcProvider for external use
+   */
+  getProvider(): ethers.JsonRpcProvider {
+    return this.provider;
+  }
+
+  /**
+   * Returns a read-only ethers.Contract connected to provider (no signer needed)
+   * for querying ERC-4626 vault data
+   * 
+   * @param address - The vault contract address
+   * @returns Read-only ethers.Contract instance
+   */
+  getVaultReadContract(address: string): ethers.Contract {
+    return new ethers.Contract(address, FIRELIGHT_VAULT_ABI, this.provider);
+  }
+
+  /**
+   * Fetches vault metrics from an ERC-4626 vault contract
+   * 
+   * @param vaultAddress - The vault contract address
+   * @returns VaultMetrics with totalAssets, totalSupply, pricePerShare, and utilization
+   *          Returns null if RPC calls fail
+   */
+  async getVaultMetrics(vaultAddress: string): Promise<VaultMetrics | null> {
+    try {
+      const vault = this.getVaultReadContract(vaultAddress);
+      const DECIMALS = 6;
+
+      const zero = BigInt(0);
+      const [totalAssets, totalSupply, depositLimit] = await Promise.all([
+        vault.totalAssets() as Promise<bigint>,
+        vault.totalSupply() as Promise<bigint>,
+        vault.depositLimit().catch(() => zero) as Promise<bigint>,
+      ]);
+
+      let pricePerShare: string;
+      if (totalSupply === zero) {
+        pricePerShare = "1.000000";
+      } else {
+        const oneShare = BigInt(10 ** DECIMALS);
+        const assetsPerShare = await vault.convertToAssets(oneShare) as bigint;
+        pricePerShare = ethers.formatUnits(assetsPerShare, DECIMALS);
+      }
+
+      let utilization = 0;
+      if (depositLimit > zero) {
+        const multiplier = BigInt(10000);
+        utilization = Number((totalAssets * multiplier) / depositLimit) / 100;
+      }
+
+      return {
+        totalAssets: ethers.formatUnits(totalAssets, DECIMALS),
+        totalSupply: ethers.formatUnits(totalSupply, DECIMALS),
+        pricePerShare,
+        utilization,
+      };
+    } catch (error) {
+      console.error(`Failed to fetch vault metrics for ${vaultAddress}:`, error);
+      return null;
+    }
   }
 }
