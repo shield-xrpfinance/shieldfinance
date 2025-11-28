@@ -11,8 +11,9 @@ import { YieldService } from "./services/YieldService";
 import type { FlareClient } from "./utils/flare-client";
 import type { MetricsService } from "./services/MetricsService";
 import type { AlertingService } from "./services/AlertingService";
-import { VaultDataService } from "./services/VaultDataService";
+import { VaultDataService, setVaultDataService } from "./services/VaultDataService";
 import { getPriceService } from "./services/PriceService";
+import { getPositionService } from "./services/PositionService";
 import { db } from "./db";
 import { fxrpToXrpRedemptions } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -181,6 +182,8 @@ export async function registerRoutes(
       storage,
       flareClient
     });
+    // Register as singleton for PositionService to use
+    setVaultDataService(vaultDataService);
     vaultDataService.initialize().catch(err => 
       console.warn("VaultDataService initialization warning:", err)
     );
@@ -1650,6 +1653,67 @@ export async function registerRoutes(
     }
   });
 
+  /**
+   * GET /api/positions/enriched
+   * Get positions with on-chain balance verification and USD values
+   * Reconciles database positions with on-chain shXRP balances
+   * NOTE: Must be defined BEFORE /api/positions to match correctly
+   */
+  app.get("/api/positions/enriched", async (req, res) => {
+    try {
+      const walletAddress = req.query.walletAddress as string;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "walletAddress query parameter required" });
+      }
+
+      const positionService = getPositionService();
+      const summary = await positionService.getEnrichedPositions(walletAddress);
+      
+      res.json({
+        success: true,
+        ...summary
+      });
+    } catch (error) {
+      console.error("Failed to get enriched positions:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: "Failed to fetch enriched positions" 
+      });
+    }
+  });
+
+  /**
+   * POST /api/positions/discover
+   * Discover on-chain positions that don't exist in database
+   * Creates position records for shXRP balances without database entries
+   * NOTE: Must be defined BEFORE /api/positions to match correctly
+   */
+  app.post("/api/positions/discover", async (req, res) => {
+    try {
+      const { walletAddress } = req.body;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "walletAddress required in request body" });
+      }
+
+      const positionService = getPositionService();
+      const result = await positionService.discoverOnChainPositions(walletAddress);
+      
+      res.json({
+        success: true,
+        discovered: result.discovered,
+        positions: result.positions,
+        message: result.discovered > 0 
+          ? `Discovered ${result.discovered} on-chain position(s)` 
+          : "No new positions discovered"
+      });
+    } catch (error) {
+      console.error("Failed to discover positions:", error);
+      res.status(500).json({ error: "Failed to discover positions" });
+    }
+  });
+
   // Get all positions (optionally filtered by wallet address)
   app.get("/api/positions", async (req, res) => {
     try {
@@ -1658,6 +1722,35 @@ export async function registerRoutes(
       res.json(positions);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch positions" });
+    }
+  });
+
+  /**
+   * POST /api/positions/:id/reconcile
+   * Force reconcile a position with on-chain data
+   * Updates database if discrepancy found (FXRP vaults only)
+   */
+  app.post("/api/positions/:id/reconcile", async (req, res) => {
+    try {
+      const positionService = getPositionService();
+      const result = await positionService.reconcilePosition(req.params.id);
+      
+      if (!result.success) {
+        return res.status(404).json({ error: "Position not found or reconciliation failed" });
+      }
+      
+      res.json({
+        success: true,
+        position: result.position,
+        onChainBalance: result.onChainBalance,
+        updated: result.updated,
+        message: result.updated 
+          ? "Position updated with on-chain balance" 
+          : "Position is in sync with on-chain data"
+      });
+    } catch (error) {
+      console.error("Failed to reconcile position:", error);
+      res.status(500).json({ error: "Failed to reconcile position" });
     }
   });
 

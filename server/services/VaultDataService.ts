@@ -212,4 +212,46 @@ export class VaultDataService {
     this.metricsCache = null;
     this.enrichedVaultsCache = null;
   }
+
+  /**
+   * Get the vault address (public accessor)
+   */
+  getVaultAddressPublic(): string {
+    return this.getVaultAddress();
+  }
+
+  /**
+   * Get the provider from FlareClient
+   */
+  getFlareProvider() {
+    return this.config.flareClient.getProvider();
+  }
+}
+
+// Singleton instance
+let vaultDataServiceInstance: VaultDataService | null = null;
+
+export function setVaultDataService(service: VaultDataService): void {
+  vaultDataServiceInstance = service;
+}
+
+export function getVaultDataService(): VaultDataService | null {
+  return vaultDataServiceInstance;
+}
+
+// Helper functions for external use
+export function getVaultAddress(): string {
+  const service = getVaultDataService();
+  if (!service) {
+    // Fallback to environment variable
+    const addr = process.env.VITE_SHXRP_VAULT_ADDRESS;
+    return addr || "0x0000000000000000000000000000000000000000";
+  }
+  return service.getVaultAddressPublic();
+}
+
+export function getProvider() {
+  const service = getVaultDataService();
+  if (!service) return null;
+  return service.getFlareProvider();
 }

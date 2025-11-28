@@ -152,10 +152,41 @@ export const ERC20_ABI = [
 /**
  * ERC-4626 Tokenized Vault Standard ABI
  * 
- * Used by Firelight Launch Vault for FXRP → stXRP staking
+ * Generic ERC-4626 vault interface for shXRP and other vaults
  * Specification: https://eips.ethereum.org/EIPS/eip-4626
+ */
+export const ERC4626_ABI = [
+  // ERC-20 base functions
+  ...ERC20_ABI,
+  
+  // ERC-4626 vault functions
+  "function asset() view returns (address)",
+  "function totalAssets() view returns (uint256)",
+  "function convertToShares(uint256 assets) view returns (uint256 shares)",
+  "function convertToAssets(uint256 shares) view returns (uint256 assets)",
+  "function maxDeposit(address receiver) view returns (uint256)",
+  "function maxMint(address receiver) view returns (uint256)",
+  "function maxWithdraw(address owner) view returns (uint256)",
+  "function maxRedeem(address owner) view returns (uint256)",
+  "function previewDeposit(uint256 assets) view returns (uint256 shares)",
+  "function previewMint(uint256 shares) view returns (uint256 assets)",
+  "function previewWithdraw(uint256 assets) view returns (uint256 shares)",
+  "function previewRedeem(uint256 shares) view returns (uint256 assets)",
+  "function deposit(uint256 assets, address receiver) returns (uint256 shares)",
+  "function mint(uint256 shares, address receiver) returns (uint256 assets)",
+  "function withdraw(uint256 assets, address receiver, address owner) returns (uint256 shares)",
+  "function redeem(uint256 shares, address receiver, address owner) returns (uint256 assets)",
+  
+  // ERC-4626 events
+  "event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)",
+  "event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)"
+] as const;
+
+/**
+ * Firelight Launch Vault ABI (extends ERC-4626)
  * 
- * ERC-4626 extends ERC-20 with vault-specific functions
+ * Used by Firelight Launch Vault for FXRP → stXRP staking
+ * Adds custom functions for min deposit, deposit limit, and paused state
  */
 export const FIRELIGHT_VAULT_ABI = [
   // ==================== ERC-20 Functions (inherited) ====================
