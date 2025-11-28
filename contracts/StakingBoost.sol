@@ -35,11 +35,20 @@ interface IShXRPVault {
  * 3. User calls claim() → earned FXRP sent to vault.donateOnBehalf() → shXRP minted to user
  * 4. User withdraws SHIELD → 30-day lock enforced, rewards settled first
  * 
- * Security:
- * - ReentrancyGuard on all state-changing functions
+ * Security (Audit Fixes Applied):
+ * - ReentrancyGuard on all state-changing functions including recoverTokens
  * - Only RevenueRouter can call distributeBoost()
  * - Only this contract can call vault.donateOnBehalf()
  * - 30-day lock period on staked SHIELD
+ * - Owner CANNOT withdraw FXRP owed to stakers (only excess FXRP)
+ * - Fee-on-transfer tokens are detected and rejected
+ * - Zero-address validation on all constructor parameters
+ * - Orphaned FXRP (distributed when totalStaked=0) is stored in pendingRewards
+ * 
+ * Token Assumptions (Documented per Audit):
+ * - SHIELD and FXRP must be standard ERC-20 tokens
+ * - Fee-on-transfer tokens are NOT supported (will revert)
+ * - Rebasing tokens are NOT supported
  */
 contract StakingBoost is ReentrancyGuard, Ownable {
     using SafeERC20 for IERC20;
@@ -72,6 +81,14 @@ contract StakingBoost is ReentrancyGuard, Ownable {
     
     /// @notice Unclaimed FXRP rewards for user
     mapping(address => uint256) public rewards;
+    
+    /// @notice FXRP rewards distributed when no stakers existed (orphaned)
+    /// @dev These will be folded into rewardPerTokenStored when staking resumes
+    uint256 public pendingOrphanedRewards;
+    
+    /// @notice Running total of all unclaimed rewards across all users
+    /// @dev Used to calculate "excess" FXRP that owner can recover
+    uint256 public totalUnclaimedRewards;
     
     // ========================================
     // STAKING STATE
@@ -109,6 +126,8 @@ contract StakingBoost is ReentrancyGuard, Ownable {
     event RewardClaimed(address indexed user, uint256 fxrpAmount, uint256 sharesMinted);
     event RevenueRouterUpdated(address indexed oldRouter, address indexed newRouter);
     event GlobalBoostCapUpdated(uint256 oldCap, uint256 newCap);
+    event OrphanedRewardsDistributed(uint256 amount, uint256 newRewardPerToken);
+    event TokensRecovered(address indexed token, address indexed to, uint256 amount);
     
     // ========================================
     // MODIFIERS
@@ -124,6 +143,9 @@ contract StakingBoost is ReentrancyGuard, Ownable {
      * 
      * This ensures rewards are always calculated correctly even if
      * user stakes/withdraws between reward distributions.
+     * 
+     * Note: totalUnclaimedRewards is NOT updated here - it's tracked
+     * globally in distributeBoost() and decremented in claim().
      */
     modifier updateReward(address account) {
         if (account != address(0)) {
@@ -148,6 +170,8 @@ contract StakingBoost is ReentrancyGuard, Ownable {
      * @param _fxrpToken Address of FXRP token
      * @param _vault Address of ShXRPVault
      * @param _revenueRouter Address of RevenueRouter (can be updated later)
+     * 
+     * AUDIT FIX: Added zero-address validation for _revenueRouter
      */
     constructor(
         address _shieldToken,
@@ -158,6 +182,7 @@ contract StakingBoost is ReentrancyGuard, Ownable {
         require(_shieldToken != address(0), "Invalid SHIELD address");
         require(_fxrpToken != address(0), "Invalid FXRP address");
         require(_vault != address(0), "Invalid vault address");
+        require(_revenueRouter != address(0), "Invalid revenue router address");
         
         shieldToken = IERC20(_shieldToken);
         fxrpToken = IERC20(_fxrpToken);
@@ -174,6 +199,8 @@ contract StakingBoost is ReentrancyGuard, Ownable {
      * 
      * updateReward modifier settles any pending rewards before staking.
      * 
+     * AUDIT FIX: Added fee-on-transfer token detection
+     * 
      * @param amount Amount of SHIELD to stake
      */
     function stake(uint256 amount) external nonReentrant updateReward(msg.sender) {
@@ -181,8 +208,17 @@ contract StakingBoost is ReentrancyGuard, Ownable {
         
         Stake storage userStake = stakes[msg.sender];
         
-        // Transfer tokens from user
+        // AUDIT FIX: Check for fee-on-transfer tokens by comparing balances
+        uint256 balanceBefore = shieldToken.balanceOf(address(this));
         shieldToken.safeTransferFrom(msg.sender, address(this), amount);
+        uint256 received = shieldToken.balanceOf(address(this)) - balanceBefore;
+        require(received == amount, "Fee-on-transfer tokens not supported");
+        
+        // If this is the first stake after orphaned rewards accumulated, distribute them
+        if (totalStaked == 0 && pendingOrphanedRewards > 0) {
+            // Will be distributed proportionally to this first staker
+            // They get all orphaned rewards since they're the only staker
+        }
         
         // Update stake
         userStake.amount += amount;
@@ -191,6 +227,19 @@ contract StakingBoost is ReentrancyGuard, Ownable {
         }
         
         totalStaked += amount;
+        
+        // AUDIT FIX: Fold in orphaned rewards now that we have stakers
+        if (pendingOrphanedRewards > 0) {
+            uint256 orphanedAmount = pendingOrphanedRewards;
+            pendingOrphanedRewards = 0;
+            
+            // AUDIT FIX: Track orphaned rewards as liabilities when folded in
+            totalUnclaimedRewards += orphanedAmount;
+            
+            uint256 rewardIncrease = (orphanedAmount * PRECISION) / totalStaked;
+            rewardPerTokenStored += rewardIncrease;
+            emit OrphanedRewardsDistributed(orphanedAmount, rewardPerTokenStored);
+        }
         
         emit Staked(msg.sender, amount);
     }
@@ -236,18 +285,31 @@ contract StakingBoost is ReentrancyGuard, Ownable {
      * - Adds to cumulative rewardPerTokenStored
      * - No loops, O(1) gas regardless of staker count
      * 
+     * AUDIT FIX: Added fee-on-transfer detection
+     * AUDIT FIX: Orphaned FXRP now stored in pendingOrphanedRewards instead of being lost
+     * AUDIT FIX: totalUnclaimedRewards is incremented here to prevent owner drain
+     * 
      * @param fxrpAmount Amount of FXRP to distribute
      */
     function distributeBoost(uint256 fxrpAmount) external onlyRevenueRouter nonReentrant {
         require(fxrpAmount > 0, "Cannot distribute 0");
         
-        // Transfer FXRP from RevenueRouter
+        // AUDIT FIX: Check for fee-on-transfer tokens by comparing balances
+        uint256 balanceBefore = fxrpToken.balanceOf(address(this));
         fxrpToken.safeTransferFrom(msg.sender, address(this), fxrpAmount);
+        uint256 received = fxrpToken.balanceOf(address(this)) - balanceBefore;
+        require(received == fxrpAmount, "Fee-on-transfer tokens not supported");
         
-        // If no stakers, FXRP stays in contract (can be recovered by owner)
+        // AUDIT FIX: If no stakers, store FXRP in pendingOrphanedRewards bucket
+        // It will be distributed when staking resumes
         if (totalStaked == 0) {
+            pendingOrphanedRewards += fxrpAmount;
             return;
         }
+        
+        // AUDIT FIX: Track distributed rewards as liabilities BEFORE stakers interact
+        // This prevents owner from draining freshly distributed rewards
+        totalUnclaimedRewards += fxrpAmount;
         
         // Update cumulative reward per token
         // Formula: rewardPerToken += (fxrpAmount * 1e18) / totalStaked
@@ -267,8 +329,10 @@ contract StakingBoost is ReentrancyGuard, Ownable {
      * Flow:
      * 1. Calculate earned rewards using Synthetix formula
      * 2. Reset user's pending rewards to 0
-     * 3. Approve FXRP to vault
+     * 3. Approve FXRP to vault using safe pattern
      * 4. Call vault.donateOnBehalf() to mint shXRP to user
+     * 
+     * AUDIT FIX: Uses SafeERC20 safeIncreaseAllowance pattern
      * 
      * This is the key function that makes SHIELD staking valuable:
      * Only stakers receive the boost as shXRP shares.
@@ -280,11 +344,18 @@ contract StakingBoost is ReentrancyGuard, Ownable {
             // Reset pending rewards
             rewards[msg.sender] = 0;
             
-            // Approve vault to pull FXRP
-            fxrpToken.approve(address(vault), reward);
+            // Decrease total unclaimed rewards
+            totalUnclaimedRewards -= reward;
+            
+            // AUDIT FIX: Use SafeERC20 pattern - reset to 0 first, then approve
+            // This handles non-standard tokens like USDT that require zero-reset
+            fxrpToken.forceApprove(address(vault), reward);
             
             // Donate FXRP on behalf of user → mints shXRP shares to user
             uint256 sharesMinted = vault.donateOnBehalf(msg.sender, reward);
+            
+            // Reset approval after use for safety
+            fxrpToken.forceApprove(address(vault), 0);
             
             emit RewardClaimed(msg.sender, reward, sharesMinted);
         }
@@ -296,6 +367,8 @@ contract StakingBoost is ReentrancyGuard, Ownable {
      * Claims all pending rewards first, then withdraws specified amount.
      * Useful for users who want to exit completely.
      * 
+     * AUDIT FIX: Uses SafeERC20 safeIncreaseAllowance pattern
+     * 
      * @param withdrawAmount Amount of SHIELD to withdraw (after claim)
      */
     function claimAndWithdraw(uint256 withdrawAmount) external nonReentrant updateReward(msg.sender) {
@@ -303,8 +376,15 @@ contract StakingBoost is ReentrancyGuard, Ownable {
         uint256 reward = rewards[msg.sender];
         if (reward > 0) {
             rewards[msg.sender] = 0;
-            fxrpToken.approve(address(vault), reward);
+            
+            // Decrease total unclaimed rewards
+            totalUnclaimedRewards -= reward;
+            
+            // AUDIT FIX: Use SafeERC20 forceApprove pattern
+            fxrpToken.forceApprove(address(vault), reward);
             uint256 sharesMinted = vault.donateOnBehalf(msg.sender, reward);
+            fxrpToken.forceApprove(address(vault), 0);
+            
             emit RewardClaimed(msg.sender, reward, sharesMinted);
         }
         
@@ -395,15 +475,38 @@ contract StakingBoost is ReentrancyGuard, Ownable {
      * @return totalShieldStaked Total SHIELD staked
      * @return currentRewardPerToken Current reward per token
      * @return pendingFxrpInContract FXRP balance in contract
+     * @return orphanedRewards FXRP waiting to be distributed when stakers return
+     * @return unclaimedRewardsTotal Total rewards owed to stakers
      */
     function getGlobalStats() external view returns (
         uint256 totalShieldStaked,
         uint256 currentRewardPerToken,
-        uint256 pendingFxrpInContract
+        uint256 pendingFxrpInContract,
+        uint256 orphanedRewards,
+        uint256 unclaimedRewardsTotal
     ) {
         totalShieldStaked = totalStaked;
         currentRewardPerToken = rewardPerTokenStored;
         pendingFxrpInContract = fxrpToken.balanceOf(address(this));
+        orphanedRewards = pendingOrphanedRewards;
+        unclaimedRewardsTotal = totalUnclaimedRewards;
+    }
+    
+    /**
+     * @dev Calculate the excess FXRP that can be recovered by owner
+     * @return Amount of FXRP that exceeds all obligations
+     * 
+     * AUDIT FIX: This ensures owner can ONLY recover truly excess FXRP,
+     * not rewards owed to stakers.
+     */
+    function getRecoverableFxrp() public view returns (uint256) {
+        uint256 balance = fxrpToken.balanceOf(address(this));
+        uint256 reserved = totalUnclaimedRewards + pendingOrphanedRewards;
+        
+        if (balance > reserved) {
+            return balance - reserved;
+        }
+        return 0;
     }
     
     // ========================================
@@ -433,16 +536,23 @@ contract StakingBoost is ReentrancyGuard, Ownable {
     }
     
     /**
-     * @dev Emergency recovery of stuck tokens (excluding staked SHIELD)
+     * @dev Emergency recovery of stuck tokens (excluding staked SHIELD and owed FXRP)
      * 
-     * Use case: If FXRP accumulates when totalStaked = 0
+     * AUDIT FIX: Added nonReentrant modifier
+     * AUDIT FIX: For FXRP, only allows recovery of EXCESS FXRP (balance - reserved)
+     * This prevents owner from draining rewards owed to stakers.
+     * 
+     * Use cases:
+     * - Recover accidentally sent tokens
+     * - Recover excess FXRP after accounting reconciliation
      * 
      * @param token Token to recover
      * @param to Recipient address
      * @param amount Amount to recover
      */
-    function recoverTokens(address token, address to, uint256 amount) external onlyOwner {
+    function recoverTokens(address token, address to, uint256 amount) external onlyOwner nonReentrant {
         require(to != address(0), "Invalid recipient");
+        require(amount > 0, "Amount must be > 0");
         
         // Cannot recover staked SHIELD
         if (token == address(shieldToken)) {
@@ -450,6 +560,14 @@ contract StakingBoost is ReentrancyGuard, Ownable {
             require(amount <= excess, "Cannot recover staked SHIELD");
         }
         
+        // AUDIT FIX: For FXRP, can only recover excess beyond what's owed to stakers
+        if (token == address(fxrpToken)) {
+            uint256 recoverable = getRecoverableFxrp();
+            require(amount <= recoverable, "Cannot recover FXRP owed to stakers");
+        }
+        
         IERC20(token).safeTransfer(to, amount);
+        
+        emit TokensRecovered(token, to, amount);
     }
 }

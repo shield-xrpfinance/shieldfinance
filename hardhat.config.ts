@@ -6,13 +6,26 @@ import "@nomicfoundation/hardhat-ethers";
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxMochaEthers],
   solidity: {
-    version: "0.8.20",
-    settings: {
-      optimizer: {
-        enabled: true,
-        runs: 200,
+    compilers: [
+      {
+        version: "0.8.20",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
       },
-    },
+      {
+        version: "0.8.10",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    ],
   },
   mocha: {
     require: ["ts-node/register"],
