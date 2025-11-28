@@ -211,9 +211,12 @@ export function AppSidebar() {
           </div>
           
           <div className="mt-0 md:mt-16 space-y-2 md:space-y-4">
-            <div className="hidden md:block">
-              <h3 className="font-semibold text-sm md:text-base" data-testid="text-help-title">Need help?</h3>
-              <p className="text-xs text-muted-foreground" data-testid="text-help-subtitle">Please check our docs</p>
+            <div className="text-center md:text-left">
+              <h3 className="font-semibold text-xs md:text-base flex items-center justify-center md:justify-start gap-1.5" data-testid="text-help-title">
+                <HelpCircle className="h-3.5 w-3.5 md:hidden text-primary" />
+                Need help?
+              </h3>
+              <p className="text-[10px] md:text-xs text-muted-foreground" data-testid="text-help-subtitle">Check our docs</p>
             </div>
             
             <Button 
@@ -236,7 +239,7 @@ export function AppSidebar() {
               </a>
             </Button>
 
-            <div className="flex items-center justify-center gap-1 md:gap-3 pt-1 md:pt-2">
+            <div className="flex items-center justify-center gap-1.5 md:gap-3 pt-1 md:pt-2">
               <a 
                 href="https://x.com/ShieldFinanceX" 
                 target="_blank" 
@@ -245,7 +248,7 @@ export function AppSidebar() {
                 data-testid="link-twitter"
                 title="Follow us on X"
               >
-                <SiX className="h-3 w-3 md:h-4 md:w-4" />
+                <SiX className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
               <a 
                 href="https://t.me/ShieldFinanceOfficial" 
@@ -255,7 +258,7 @@ export function AppSidebar() {
                 data-testid="link-telegram-official"
                 title="Telegram Official Channel"
               >
-                <SiTelegram className="h-3 w-3 md:h-4 md:w-4" />
+                <SiTelegram className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
               <a 
                 href="https://t.me/ShieldFinanceCommunity" 
@@ -265,7 +268,7 @@ export function AppSidebar() {
                 data-testid="link-telegram-community"
                 title="Telegram Community Chat"
               >
-                <SiTelegram className="h-3 w-3 md:h-4 md:w-4" />
+                <SiTelegram className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
               <a 
                 href="https://discord.gg/Vzs3KbzU" 
@@ -275,7 +278,7 @@ export function AppSidebar() {
                 data-testid="link-discord"
                 title="Join our Discord"
               >
-                <SiDiscord className="h-3 w-3 md:h-4 md:w-4" />
+                <SiDiscord className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
               <a 
                 href="https://shield-finance.gitbook.io/shield-finance-docs/" 
@@ -285,7 +288,7 @@ export function AppSidebar() {
                 data-testid="link-gitbook"
                 title="Documentation"
               >
-                <BookOpen className="h-3 w-3 md:h-4 md:w-4" />
+                <BookOpen className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
             </div>
 
