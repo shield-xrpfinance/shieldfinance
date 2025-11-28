@@ -13,11 +13,11 @@ import { useNetwork } from "@/lib/networkContext";
 import { useWallet } from "@/lib/walletContext";
 import { Separator } from "@/components/ui/separator";
 
-interface MobileControlCenterProps {
+interface ControlCenterProps {
   onConnectWallet: () => void;
 }
 
-export function MobileControlCenter({ onConnectWallet }: MobileControlCenterProps) {
+export function ControlCenter({ onConnectWallet }: ControlCenterProps) {
   const [open, setOpen] = useState(false);
   const { ecosystem, setEcosystem, isTestnet } = useNetwork();
   const { address, evmAddress, isConnected, disconnect, walletType } = useWallet();
@@ -73,7 +73,6 @@ export function MobileControlCenter({ onConnectWallet }: MobileControlCenterProp
         variant="ghost"
         size="icon"
         onClick={() => setOpen(true)}
-        className="md:hidden"
         data-testid="button-control-center"
       >
         <ChevronDown className="h-5 w-5" />
