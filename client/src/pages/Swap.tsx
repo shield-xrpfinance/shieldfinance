@@ -624,32 +624,33 @@ export default function Swap() {
   }
 
   return (
-    <div className="max-w-7xl">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
       {/* Header */}
-      <div className="mb-4 md:mb-8">
-        <h1 className="text-2xl md:text-4xl font-bold mb-1 md:mb-2 flex items-center gap-2 md:gap-3">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
           <img 
             src={shieldLogo} 
             alt="Shield Finance" 
-            className="h-8 w-8 md:h-10 md:w-10"
+            className="h-10 w-10"
             data-testid="logo-swap-header"
           />
           Swap $SHIELD
         </h1>
-        <p className="text-sm md:text-lg text-muted-foreground">
+        <p className="text-muted-foreground text-lg">
           Buy $SHIELD instantly and stake for APY boosts on your shXRP deposits
         </p>
       </div>
 
       {/* Info Alert */}
-      <Alert className="mb-4 md:mb-8 border-primary/20 bg-primary/5 backdrop-blur-md">
-        <Info className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
-        <AlertDescription className="text-xs md:text-base ml-1 md:ml-2">
-          <strong>Why buy $SHIELD?</strong> 100 $SHIELD = +1% APY. Burns supply through fees!
+      <Alert className="mb-8 border-primary/20 bg-primary/5 backdrop-blur-md">
+        <Info className="h-5 w-5 text-primary" />
+        <AlertDescription className="text-base ml-2">
+          <strong>Why buy $SHIELD?</strong> Stake 100 $SHIELD = +1% APY on all your shXRP positions.
+          Every swap helps burn supply through trading fees, making $SHIELD deflationary! 🔥
         </AlertDescription>
       </Alert>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         {/* Swap Card */}
         <div className="lg:col-span-2">
           <Card className="backdrop-blur-md bg-card/95 border-2">

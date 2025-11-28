@@ -291,46 +291,48 @@ export default function Staking() {
   }
 
   return (
-    <div className="max-w-7xl">
-      <div className="mb-4 md:mb-8">
-        <h1 className="text-2xl md:text-4xl font-bold mb-1 md:mb-2 flex items-center gap-2 md:gap-3">
+    <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="mb-8">
+        <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
           <img 
             src={shieldLogo} 
             alt="Shield Finance" 
-            className="h-8 w-8 md:h-10 md:w-10"
+            className="h-10 w-10"
             data-testid="logo-staking-header"
           />
           SHIELD Staking
         </h1>
-        <p className="text-sm md:text-lg text-muted-foreground">
+        <p className="text-muted-foreground text-lg">
           Stake SHIELD tokens to boost your shXRP APY rewards
         </p>
       </div>
 
-      <Alert className="mb-3 md:mb-4 border-green-500/20 bg-green-500/5 backdrop-blur-md">
-        <Info className="h-4 w-4 md:h-5 md:w-5 text-green-500 flex-shrink-0" />
-        <AlertDescription className="text-xs md:text-base ml-1 md:ml-2">
-          <strong>On-Chain Staking Active</strong> - Stakes secured by StakingBoost contract on Flare Coston2.
+      <Alert className="mb-4 border-green-500/20 bg-green-500/5 backdrop-blur-md">
+        <Info className="h-5 w-5 text-green-500" />
+        <AlertDescription className="text-base ml-2">
+          <strong>On-Chain Staking Active</strong> - Your stakes are secured by the StakingBoost smart contract 
+          on Flare Coston2 testnet. All transactions require wallet signature.
         </AlertDescription>
       </Alert>
 
-      <Alert className="mb-4 md:mb-8 border-primary/20 bg-primary/5 backdrop-blur-md">
-        <Info className="h-4 w-4 md:h-5 md:w-5 text-primary flex-shrink-0" />
-        <AlertDescription className="text-xs md:text-base ml-1 md:ml-2">
-          <strong>Boost Formula:</strong> 100 SHIELD = +1% APY. Example: 500 SHIELD = +5% boost!
+      <Alert className="mb-8 border-primary/20 bg-primary/5 backdrop-blur-md">
+        <Info className="h-5 w-5 text-primary" />
+        <AlertDescription className="text-base ml-2">
+          <strong>Boost Formula:</strong> Stake 100 SHIELD = +1% APY on all your shXRP deposits. 
+          Example: 500 SHIELD staked = +5% APY boost!
         </AlertDescription>
       </Alert>
 
       {isLoading ? (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-6 mb-4 md:mb-8">
-          <Skeleton className="h-32 md:h-48 rounded-2xl" />
-          <Skeleton className="h-32 md:h-48 rounded-2xl" />
-          <Skeleton className="h-32 md:h-48 rounded-2xl" />
-          <Skeleton className="h-32 md:h-48 rounded-2xl" />
-          <Skeleton className="h-32 md:h-48 rounded-2xl col-span-2 md:col-span-1" />
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
+          <Skeleton className="h-48 rounded-2xl" />
         </div>
       ) : (
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-3 md:gap-6 mb-4 md:mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
           <GlassStatsCard
             label="Your SHIELD Balance"
             value={parseFloat(shieldBalance).toFixed(4)}

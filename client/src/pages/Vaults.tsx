@@ -686,16 +686,16 @@ export default function Vaults() {
   }
 
   return (
-    <div className="space-y-4 md:space-y-8">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight mb-1 md:mb-2">Vaults</h1>
-        <p className="text-sm md:text-base text-muted-foreground">
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Vaults</h1>
+        <p className="text-muted-foreground">
           Browse and deposit into high-yield XRP vaults
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-3 md:gap-4">
-        <div className="relative flex-1 min-w-0">
+      <div className="flex flex-col sm:flex-row gap-4">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search vaults..."
@@ -706,7 +706,7 @@ export default function Vaults() {
           />
         </div>
         <Select value={sortBy} onValueChange={setSortBy}>
-          <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-sort">
+          <SelectTrigger className="w-full sm:w-[200px]" data-testid="select-sort">
             <SelectValue placeholder="Sort by" />
           </SelectTrigger>
           <SelectContent>
@@ -729,14 +729,14 @@ export default function Vaults() {
 
       {/* Active Vaults Section */}
       {filteredVaults.filter((vault) => !vault.comingSoon).length > 0 && (
-        <div className="space-y-4 md:space-y-6">
-          <div className="space-y-1 md:space-y-2">
-            <h2 className="text-xl md:text-3xl font-bold tracking-tight">Active Vaults</h2>
-            <p className="text-sm md:text-base text-muted-foreground">
+        <div className="space-y-6">
+          <div className="space-y-2">
+            <h2 className="text-3xl font-bold tracking-tight">Active Vaults</h2>
+            <p className="text-muted-foreground">
               Earn yield on your XRP with our liquid staking vaults
             </p>
           </div>
-          <div className="space-y-4 md:space-y-6">
+          <div className="space-y-6">
             {filteredVaults
               .filter((vault) => !vault.comingSoon)
               .map((vault) => (

@@ -13,7 +13,6 @@ import { NetworkSwitcher } from "@/components/NetworkSwitcher";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import { CurrencyProvider } from "@/lib/currencyContext";
-import { XAppProvider, useXApp } from "@/lib/xAppContext";
 import { ReownProvider } from "@/lib/ReownProvider";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { Button } from "@/components/ui/button";
@@ -52,7 +51,6 @@ function DashboardRouter() {
 function Header() {
   const { address, evmAddress, isConnected, disconnect, walletType } = useWallet();
   const { isTestnet } = useNetwork();
-  const { isXApp } = useXApp();
   const [connectModalOpen, setConnectModalOpen] = useState(false);
 
   // Show wallet-aware testnet network name
@@ -65,49 +63,43 @@ function Header() {
     : null;
 
   return (
-    <header className="flex items-center justify-between gap-2 p-3 md:p-4 border-b min-w-0 overflow-hidden">
-      <div className="flex items-center gap-2 md:gap-3 min-w-0 flex-shrink">
-        {!isXApp && <SidebarTrigger data-testid="button-sidebar-toggle" />}
-        {!isXApp && <NetworkSwitcher />}
+    <header className="flex items-center justify-between gap-4 p-4 border-b">
+      <div className="flex items-center gap-3">
+        <SidebarTrigger data-testid="button-sidebar-toggle" />
+        <NetworkSwitcher />
         {isTestnet && (
-          <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4 gap-1 whitespace-nowrap text-xs" data-testid="badge-testnet-status">
-            <Beaker className="h-3 w-3 flex-shrink-0" />
-            <span className="hidden sm:inline">{testnetName}</span>
-            <span className="sm:hidden">Test</span>
+          <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4 gap-1" data-testid="badge-testnet-status">
+            <Beaker className="h-3 w-3" />
+            {testnetName}
           </Badge>
         )}
       </div>
-      <div className="flex items-center gap-2 md:gap-3 flex-shrink-0">
+      <div className="flex items-center gap-3">
         {isConnected && displayAddress ? (
-          <div className="flex items-center gap-1 md:gap-2">
-            <Badge variant="secondary" className="font-mono text-xs max-w-[120px] truncate" data-testid="badge-wallet-address">
+          <div className="flex items-center gap-2">
+            <Badge variant="secondary" className="font-mono text-xs" data-testid="badge-wallet-address">
               {shortAddress}
             </Badge>
-            {!isXApp && (
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={disconnect}
-                title="Disconnect wallet"
-                data-testid="button-disconnect-wallet"
-              >
-                <LogOut className="h-4 w-4" />
-              </Button>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={disconnect}
+              title="Disconnect wallet"
+              data-testid="button-disconnect-wallet"
+            >
+              <LogOut className="h-4 w-4" />
+            </Button>
           </div>
-        ) : !isXApp && (
+        ) : (
           <Button
             onClick={() => setConnectModalOpen(true)}
-            size="sm"
-            className="whitespace-nowrap"
             data-testid="button-connect-wallet"
           >
-            <Wallet className="h-4 w-4 mr-1 md:mr-2" />
-            <span className="hidden sm:inline">Connect Wallet</span>
-            <span className="sm:hidden">Connect</span>
+            <Wallet className="h-4 w-4 mr-2" />
+            Connect Wallet
           </Button>
         )}
-        {!isXApp && <ThemeToggle />}
+        <ThemeToggle />
       </div>
       <ConnectWalletModal
         open={connectModalOpen}
@@ -167,8 +159,7 @@ function WalletDisconnectHandler() {
   return null;
 }
 
-function DashboardLayoutInner() {
-  const { isXApp } = useXApp();
+function DashboardLayout() {
   const style = {
     "--sidebar-width": "20rem",
     "--sidebar-width-icon": "4rem",
@@ -176,39 +167,31 @@ function DashboardLayoutInner() {
   };
 
   return (
-    <SidebarProvider style={style as React.CSSProperties}>
-      <div className="flex h-screen w-full overflow-hidden">
-        {!isXApp && <AppSidebar />}
-        <div className="flex flex-col flex-1 min-w-0">
-          <Header />
-          <main className="flex-1 overflow-auto p-3 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
-            <div className="max-w-7xl mx-auto">
-              <TestnetBanner />
-              <DashboardRouter />
-            </div>
-          </main>
-        </div>
-      </div>
-      {!isXApp && <MobileBottomNav />}
-    </SidebarProvider>
-  );
-}
-
-function DashboardLayout() {
-  return (
-    <XAppProvider>
-      <ReownProvider>
-        <NetworkProvider>
-          <WalletProvider>
-            <EcosystemSync />
-            <WalletDisconnectHandler />
-            <CurrencyProvider>
-              <DashboardLayoutInner />
-            </CurrencyProvider>
-          </WalletProvider>
-        </NetworkProvider>
-      </ReownProvider>
-    </XAppProvider>
+    <ReownProvider>
+      <NetworkProvider>
+        <WalletProvider>
+          <EcosystemSync />
+          <WalletDisconnectHandler />
+          <CurrencyProvider>
+            <SidebarProvider style={style as React.CSSProperties}>
+              <div className="flex h-screen w-full">
+                <AppSidebar />
+                <div className="flex flex-col flex-1">
+                  <Header />
+                  <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
+                    <div className="max-w-7xl mx-auto">
+                      <TestnetBanner />
+                      <DashboardRouter />
+                    </div>
+                  </main>
+                </div>
+              </div>
+              <MobileBottomNav />
+            </SidebarProvider>
+          </CurrencyProvider>
+        </WalletProvider>
+      </NetworkProvider>
+    </ReownProvider>
   );
 }
 
