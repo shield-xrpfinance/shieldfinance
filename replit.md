@@ -30,7 +30,8 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Smart Accounts**: ERC-4337 account abstraction using Etherspot Prime SDK for gasless transactions.
 - **Automated Systems**: FAssets bridge reconciliation (automated and manual recovery), automated withdrawal system (async processing, ENS resolution, XRPL payment detection, FDC proof generation), deposit watchdog, and withdrawal retry services.
 - **UX Enhancements**: Multi-step progress modals, deposit cancellation, real-time portfolio updates with on-chain balance verification for FXRP vaults, wallet-type-aware vault filtering, ecosystem-based network switching, and consolidated position display with aggregated rewards.
-- **Wallet Architecture**: Dual-ecosystem wallet support with three provider types: `xaman` (native XRPL SDK), `walletconnect` (XRPL via WalletConnect), and `reown` (EVM via Reown AppKit). Wallet type derived from connected addresses (evmAddress → "evm", address → "xrpl"). Header displays connected address with disconnect button. Dark-themed Reown modal with custom CSS overrides.
+- **Wallet Architecture**: Dual-ecosystem wallet support with three provider types: `xaman` (native XRPL SDK with xApp integration), `walletconnect` (XRPL via WalletConnect), and `reown` (EVM via Reown AppKit). Wallet type derived from connected addresses (evmAddress → "evm", address → "xrpl"). Header displays connected address with disconnect button. Dark-themed Reown modal with custom CSS overrides.
+- **Xaman xApp Integration**: Streamlined xApp experience when opened within Xaman wallet - auto-connect via `xumm.user.account`, deposit auto-sign via `xumm.xapp.openSignRequest()`, xApp context detection (JWT/OTT/ReactNativeWebView), and `xumm.xapp.ready()` loader dismissal. Note: Claim/withdraw flows currently fall back to QR modal pending backend updates.
 - **Security & Controls**: P0 vault controls (deposit limits, pausable emergency controls), minimum deposits, transparent accounting, double-mint prevention, idempotency, crash recovery, wallet-scoped transaction security, and FDC proof generation lock.
 - **Multi-Asset Swap**: Full swap feature with SparkDEX V3 router, real-time quotes, and approval flows.
 - **Analytics & Monitoring**: Revenue transparency analytics, testnet monitoring & alerting system (metrics collection, alerts for delays/failures, API endpoints, real-time dashboard, Prometheus endpoint).
@@ -75,7 +76,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 ## External Dependencies
 
 ### Blockchain & Wallet Integration
-- **Xaman (XUMM)**: XRPL wallet integration via native SDK with QR code flow.
+- **Xaman (XUMM)**: XRPL wallet integration via native SDK. Browser mode uses QR code flow; xApp mode provides auto-connect (`xumm.user.account`) and auto-sign (`xumm.xapp.openSignRequest()`).
 - **Reown AppKit v2+**: Modern EVM wallet connection (MetaMask, Trust Wallet, Rabby) with dark theme, replacing legacy WalletConnect for EVM.
 - **WalletConnect (XRPL)**: For other XRPL wallets (Bifrost, GemWallet, CrossMark) via WalletConnect protocol.
 - **XRP Ledger (XRPL)**: Real-time balance fetching.

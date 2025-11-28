@@ -1,39 +1,54 @@
 # Wallet Integration
 
-Shield Yield Vaults supports multiple wallet connection methods for maximum flexibility.
+Shield Yield Vaults supports multiple wallet connection methods for maximum flexibility across both XRPL and EVM ecosystems.
 
 ## Supported Wallets
 
-### Xaman (XUMM) - Recommended
+### XRPL Wallets
+
+#### Xaman (XUMM) - Recommended
 
 **Why Xaman?**
 - Native XRP Ledger wallet
-- QR code transaction signing
+- QR code transaction signing (browser)
+- **xApp integration** with auto-connect (in-app)
 - Mobile and desktop support
 - Best security for XRPL transactions
 
 **Features:**
 - Real-time balance fetching
-- Transaction signing with QR codes
+- Transaction signing with QR codes or native xApp signing
 - Network detection (mainnet/testnet)
 - Deep linking support
+- **Auto-connect when opened as xApp**
+- **Auto-sign via `xumm.xapp.openSignRequest()`**
 
-### WalletConnect
+#### Other XRPL Wallets (via WalletConnect)
+
+**Supported:**
+- Bifrost Wallet
+- GemWallet
+- CrossMark
+- Other WalletConnect-compatible XRPL wallets
+
+### EVM Wallets (via Reown AppKit)
 
 **Supported Wallets:**
 - MetaMask
 - Trust Wallet
+- Rabby Wallet
 - Rainbow Wallet
 - And 100+ more
 
 **Features:**
-- Multi-chain support
-- Mobile app connection
-- Session management
+- Flare Network support (mainnet + Coston2 testnet)
+- Dark-themed modal
+- Session persistence
+- Multi-chain switching
 
 ## Connection Flow
 
-### Xaman Connection
+### Xaman Connection (Browser Mode)
 
 1. User clicks "Connect Wallet"
 2. Backend creates Xaman SignIn payload
@@ -43,13 +58,27 @@ Shield Yield Vaults supports multiple wallet connection methods for maximum flex
 6. Frontend polls for signature
 7. Wallet address retrieved and stored
 
-### WalletConnect Connection
+### Xaman Connection (xApp Mode) ✨
+
+When Shield Finance is opened **inside Xaman wallet** as an xApp:
+
+1. User opens Shield Finance xApp in Xaman
+2. SDK automatically detects xApp context (JWT/OTT token)
+3. **Auto-connect**: User account retrieved via `xumm.user.account`
+4. **No QR scan needed** - wallet is instantly connected
+5. `xumm.xapp.ready()` notifies Xaman to hide loader
+6. Deposit transactions use native signing via `xumm.xapp.openSignRequest()`
+
+> **Note:** Deposit flows use native xApp signing. Claim and withdrawal flows currently fall back to QR modal signing pending backend updates.
+
+### EVM Connection (Reown AppKit)
 
 1. User clicks "Connect Wallet"
-2. WalletConnect modal appears
+2. Reown AppKit modal appears (dark theme)
 3. User selects wallet provider
 4. Approves connection in wallet
 5. Address stored in frontend context
+6. Network switched to Flare if needed
 
 ## Wallet Context
 
