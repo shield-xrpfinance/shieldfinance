@@ -7,7 +7,7 @@ import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const TOUR_STORAGE_KEY = "shield-tour-completed";
-const TOUR_VERSION = "1.0";
+const TOUR_VERSION = "1.1";
 
 type TourScenario = "new-user" | "xrpl-user" | "evm-user";
 
@@ -85,11 +85,29 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
     });
 
     tour.addStep({
-      id: "network-toggle",
-      title: "Step 2: Choose Your Network",
+      id: "control-panel",
+      title: "Step 2: Control Panel",
       text: `
         <div class="shepherd-custom-content">
-          <p>Toggle between <strong>Mainnet</strong> and <strong>Testnet</strong>.</p>
+          <p>Access the <strong>Control Panel</strong> to manage your experience:</p>
+          <ul>
+            <li><strong>Network</strong> - Switch between XRPL and Flare ecosystems</li>
+            <li><strong>Theme</strong> - Toggle light or dark mode</li>
+            <li><strong>Wallet</strong> - Connect or disconnect your wallet</li>
+          </ul>
+          <p class="shepherd-hint">Disconnect your wallet to switch between networks.</p>
+        </div>
+      `,
+      attachTo: { element: '[data-testid="button-control-center"]', on: "bottom" },
+      buttons: [skipButton, backButton, nextButton],
+    });
+
+    tour.addStep({
+      id: "network-toggle",
+      title: "Step 3: Quick Network Toggle",
+      text: `
+        <div class="shepherd-custom-content">
+          <p>Quickly switch between <strong>Mainnet</strong> and <strong>Testnet</strong> here.</p>
           <p class="shepherd-hint">We recommend starting on Testnet to practice with test tokens before using real funds.</p>
         </div>
       `,
@@ -99,7 +117,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
 
     tour.addStep({
       id: "sidebar-nav",
-      title: "Step 3: Explore the App",
+      title: "Step 4: Explore the App",
       text: `
         <div class="shepherd-custom-content">
           <p>Use the sidebar to navigate:</p>
@@ -138,6 +156,23 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       buttons: [skipButton, { text: "Show Me!", action: () => tour.next(), classes: "shepherd-button-primary" }],
+    });
+
+    tour.addStep({
+      id: "xrpl-control-panel",
+      title: "Control Panel",
+      text: `
+        <div class="shepherd-custom-content">
+          <p>Access the <strong>Control Panel</strong> anytime to:</p>
+          <ul>
+            <li>Switch between Mainnet and Testnet</li>
+            <li>Toggle light or dark theme</li>
+            <li>Disconnect or reconnect your wallet</li>
+          </ul>
+        </div>
+      `,
+      attachTo: { element: '[data-testid="button-control-center"]', on: "bottom" },
+      buttons: [skipButton, backButton, nextButton],
     });
 
     tour.addStep({
@@ -192,6 +227,23 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       buttons: [skipButton, { text: "Show Me!", action: () => tour.next(), classes: "shepherd-button-primary" }],
+    });
+
+    tour.addStep({
+      id: "evm-control-panel",
+      title: "Control Panel",
+      text: `
+        <div class="shepherd-custom-content">
+          <p>Access the <strong>Control Panel</strong> anytime to:</p>
+          <ul>
+            <li>Switch between Mainnet and Testnet</li>
+            <li>Toggle light or dark theme</li>
+            <li>Disconnect or reconnect your wallet</li>
+          </ul>
+        </div>
+      `,
+      attachTo: { element: '[data-testid="button-control-center"]', on: "bottom" },
+      buttons: [skipButton, backButton, nextButton],
     });
 
     tour.addStep({
