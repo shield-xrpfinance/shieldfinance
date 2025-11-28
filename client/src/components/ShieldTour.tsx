@@ -9,7 +9,7 @@ import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const TOUR_STORAGE_KEY = "shield-tour-completed";
-const TOUR_VERSION = "1.1";
+const TOUR_VERSION = "1.2";
 
 type TourScenario = "new-user" | "xrpl-user" | "evm-user";
 
@@ -22,7 +22,14 @@ function getTourScenario(
   return "evm-user";
 }
 
-function createTour(scenario: TourScenario, onComplete: () => void, isMobile: boolean = false) {
+interface TourOptions {
+  isMobile: boolean;
+  setOpenMobile: (open: boolean) => void;
+}
+
+function createTour(scenario: TourScenario, onComplete: () => void, options: TourOptions) {
+  const { isMobile, setOpenMobile } = options;
+  
   const tour = new Shepherd.Tour({
     useModalOverlay: true,
     defaultStepOptions: {
@@ -34,12 +41,40 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
     },
   });
   
-  // Helper to conditionally attach to elements - skip on mobile for sidebar elements
-  const getAttachTo = (selector: string, position: string) => {
-    if (isMobile && selector.includes('link-')) {
-      return undefined; // Don't attach to sidebar links on mobile
+  type PopperPlacement = "top" | "bottom" | "left" | "right" | "top-start" | "top-end" | "bottom-start" | "bottom-end" | "left-start" | "left-end" | "right-start" | "right-end";
+  
+  // Helper to create beforeShowPromise that opens sidebar on mobile for sidebar elements
+  const getSidebarStepConfig = (selector: string, position: PopperPlacement) => {
+    if (isMobile) {
+      return {
+        attachTo: { element: selector, on: position as PopperPlacement },
+        beforeShowPromise: () => {
+          return new Promise<void>((resolve) => {
+            setOpenMobile(true);
+            // Wait for sidebar animation to complete
+            setTimeout(resolve, 350);
+          });
+        },
+      };
     }
-    return { element: selector, on: position };
+    return {
+      attachTo: { element: selector, on: position as PopperPlacement },
+    };
+  };
+  
+  // Helper to close sidebar on mobile for non-sidebar steps
+  const getNonSidebarStepConfig = () => {
+    if (isMobile) {
+      return {
+        beforeShowPromise: () => {
+          return new Promise<void>((resolve) => {
+            setOpenMobile(false);
+            setTimeout(resolve, 150);
+          });
+        },
+      };
+    }
+    return {};
   };
 
   const skipButton = {
@@ -77,6 +112,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p class="shepherd-hint">This quick tour will show you around. You can skip anytime.</p>
         </div>
       `,
+      ...getNonSidebarStepConfig(),
       buttons: [skipButton, { text: "Let's Go!", action: () => tour.next(), classes: "shepherd-button-primary" }],
     });
 
@@ -90,7 +126,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p><strong>EVM Users:</strong> Use MetaMask, Rabby, or any Web3 wallet</p>
         </div>
       `,
-      attachTo: { element: '[data-testid="button-connect-wallet"]', on: "bottom" },
+      ...getSidebarStepConfig('[data-testid="button-connect-wallet"]', "bottom"),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -108,6 +144,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p class="shepherd-hint">Disconnect your wallet to switch between networks.</p>
         </div>
       `,
+      ...getNonSidebarStepConfig(),
       attachTo: { element: '[data-testid="button-control-center"]', on: "bottom" },
       buttons: [skipButton, backButton, nextButton],
     });
@@ -121,7 +158,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p class="shepherd-hint">We recommend starting on Testnet to practice with test tokens before using real funds.</p>
         </div>
       `,
-      attachTo: { element: '[data-testid="network-toggle"]', on: "right" },
+      ...getSidebarStepConfig('[data-testid="network-toggle"]', "right"),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -130,7 +167,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
       title: "Step 4: Explore the App",
       text: `
         <div class="shepherd-custom-content">
-          <p>Use the ${isMobile ? "bottom navigation" : "sidebar"} to navigate:</p>
+          <p>Use the sidebar menu to navigate:</p>
           <ul>
             <li><strong>Dashboard</strong> - Overview of your positions</li>
             <li><strong>Vaults</strong> - Deposit & earn yield</li>
@@ -139,7 +176,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           </ul>
         </div>
       `,
-      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-vaults"]', on: "right" } }),
+      ...getSidebarStepConfig('[data-testid="link-vaults"]', "right"),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -149,10 +186,10 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
       text: `
         <div class="shepherd-custom-content">
           <p>Check out our documentation and join our community!</p>
-          <p class="shepherd-hint">You can restart this tour anytime using the ${isMobile ? "floating help button" : "help button in the sidebar"}.</p>
+          <p class="shepherd-hint">You can restart this tour anytime using the help button.</p>
         </div>
       `,
-      ...(isMobile ? {} : { attachTo: { element: '[data-testid="help-card"]', on: "top" } }),
+      ...getSidebarStepConfig('[data-testid="help-card"]', "top"),
       buttons: [skipButton, backButton, finishButton],
     });
   } else if (scenario === "xrpl-user") {
@@ -165,6 +202,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p>Let's show you how to earn yield on your XRP.</p>
         </div>
       `,
+      ...getNonSidebarStepConfig(),
       buttons: [skipButton, { text: "Show Me!", action: () => tour.next(), classes: "shepherd-button-primary" }],
     });
 
@@ -181,6 +219,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           </ul>
         </div>
       `,
+      ...getNonSidebarStepConfig(),
       attachTo: { element: '[data-testid="button-control-center"]', on: "bottom" },
       buttons: [skipButton, backButton, nextButton],
     });
@@ -194,7 +233,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p>You'll see the current APY and can deposit your XRP to start earning.</p>
         </div>
       `,
-      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-vaults"]', on: "right" } }),
+      ...getSidebarStepConfig('[data-testid="link-vaults"]', "right"),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -210,6 +249,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p class="shepherd-hint">Your shXRP grows in value as rewards accrue!</p>
         </div>
       `,
+      ...getNonSidebarStepConfig(),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -222,7 +262,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p>Withdraw anytime - your XRP stays liquid!</p>
         </div>
       `,
-      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-portfolio"]', on: "right" } }),
+      ...getSidebarStepConfig('[data-testid="link-portfolio"]', "right"),
       buttons: [skipButton, backButton, { text: "Got It!", action: () => tour.complete(), classes: "shepherd-button-primary" }],
     });
   } else {
@@ -236,6 +276,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p>Let's show you how to maximize your FXRP yield.</p>
         </div>
       `,
+      ...getNonSidebarStepConfig(),
       buttons: [skipButton, { text: "Show Me!", action: () => tour.next(), classes: "shepherd-button-primary" }],
     });
 
@@ -252,6 +293,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           </ul>
         </div>
       `,
+      ...getNonSidebarStepConfig(),
       attachTo: { element: '[data-testid="button-control-center"]', on: "bottom" },
       buttons: [skipButton, backButton, nextButton],
     });
@@ -265,7 +307,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p>FXRP is bridged XRP on Flare Network via FAssets.</p>
         </div>
       `,
-      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-vaults"]', on: "right" } }),
+      ...getSidebarStepConfig('[data-testid="link-vaults"]', "right"),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -278,7 +320,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p>The more SHIELD you stake, the higher your APY boost.</p>
         </div>
       `,
-      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-staking"]', on: "right" } }),
+      ...getSidebarStepConfig('[data-testid="link-staking"]', "right"),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -291,7 +333,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p>SHIELD is our governance token that powers yield boosts.</p>
         </div>
       `,
-      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-swap"]', on: "right" } }),
+      ...getSidebarStepConfig('[data-testid="link-swap"]', "right"),
       buttons: [skipButton, backButton, nextButton],
     });
 
@@ -304,7 +346,7 @@ function createTour(scenario: TourScenario, onComplete: () => void, isMobile: bo
           <p class="shepherd-hint">Happy staking! You can restart this tour from the help button.</p>
         </div>
       `,
-      ...(isMobile ? {} : { attachTo: { element: '[data-testid="link-portfolio"]', on: "right" } }),
+      ...getSidebarStepConfig('[data-testid="link-portfolio"]', "right"),
       buttons: [skipButton, backButton, { text: "Let's Go!", action: () => tour.complete(), classes: "shepherd-button-primary" }],
     });
   }
@@ -368,7 +410,7 @@ export function ShieldTour({ variant = "fixed" }: ShieldTourProps) {
     }
 
     const scenario = getTourScenario(isConnected, walletType);
-    const tour = createTour(scenario, markTourComplete, isMobile);
+    const tour = createTour(scenario, markTourComplete, { isMobile, setOpenMobile });
     setTourInstance(tour);
 
     // Give the sidebar time to close on mobile before starting
