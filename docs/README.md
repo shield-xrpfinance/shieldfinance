@@ -48,6 +48,14 @@ Start with [REVIEWERS.md](../REVIEWERS.md) for a structured overview of the code
 
 ---
 
+## Legal
+
+- [Privacy Policy](legal/privacy-policy.md) - How we handle your data
+- [Terms of Service](legal/terms-of-service.md) - Rules of using the protocol
+- [Cookie Policy](legal/cookie-policy.md) - Our minimal cookie approach
+
+---
+
 ## Complete Documentation Index
 
 See [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) for the full documentation guide.
