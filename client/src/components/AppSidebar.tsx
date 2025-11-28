@@ -231,7 +231,7 @@ export function AppSidebar() {
               data-testid="button-documentation"
             >
               <a 
-                href="https://shield-finance.gitbook.io/shield-finance-docs/" 
+                href="https://docs.shyield.finance" 
                 target="_blank" 
                 rel="noopener noreferrer"
               >
@@ -285,11 +285,11 @@ export function AppSidebar() {
                 <SiDiscord className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
               <a 
-                href="https://shield-finance.gitbook.io/shield-finance-docs/" 
+                href="https://docs.shyield.finance" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
-                data-testid="link-gitbook"
+                data-testid="link-docs"
                 title="Documentation"
               >
                 <BookOpen className="h-3.5 w-3.5 md:h-4 md:w-4" />
