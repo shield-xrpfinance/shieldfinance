@@ -27,6 +27,7 @@ import type { PaymentRequest } from "@shared/schema";
 import { calculateLotRounding, type LotRoundingResult, LOT_SIZE } from "@shared/lotRounding";
 import { apiRequest } from "@/lib/queryClient";
 import { ethers } from "ethers";
+import { useWalletClient, useSwitchChain } from "wagmi";
 
 const COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc";
 
@@ -89,6 +90,10 @@ export default function DepositModal({
   const { network, ecosystem } = useNetwork();
   const { toast } = useToast();
   const gasEstimate = "0.00012";
+  
+  // Wagmi hooks for Reown AppKit transaction signing
+  const { data: walletClient } = useWalletClient();
+  const { switchChainAsync } = useSwitchChain();
 
   // Determine primary deposit asset
   const depositAsset = depositAssets && depositAssets.length > 0 ? depositAssets[0] : "XRP";
@@ -218,7 +223,9 @@ export default function DepositModal({
   };
 
   const handleFlareDeposit = async (amounts: { [key: string]: string }) => {
-    console.log("🟢 handleFlareDeposit called", { amounts, evmAddress, walletConnectProvider });
+    const isReown = provider === "reown";
+    console.log("🟢 handleFlareDeposit called", { amounts, evmAddress, provider, isReown, hasWalletClient: !!walletClient, hasWalletConnectProvider: !!walletConnectProvider });
+    
     if (!evmAddress) {
       console.log("❌ No EVM address");
       toast({
@@ -229,61 +236,108 @@ export default function DepositModal({
       return;
     }
 
-    if (!walletConnectProvider) {
-      toast({
-        title: "WalletConnect Required",
-        description: "Please connect via WalletConnect to sign transactions.",
-        variant: "destructive",
+    // Check for appropriate provider based on wallet type
+    if (isReown) {
+      if (!walletClient) {
+        toast({
+          title: "Wallet Not Ready",
+          description: "Please wait for your wallet to connect, or try reconnecting.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      if (!walletConnectProvider) {
+        toast({
+          title: "WalletConnect Required",
+          description: "Please connect via WalletConnect to sign transactions.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Validate WalletConnect session has EVM namespace
+      const session = walletConnectProvider.session;
+      const evmAccounts = session?.namespaces?.eip155?.accounts || [];
+      console.log("WalletConnect session validation:", { 
+        hasSession: !!session, 
+        evmAccounts,
+        allNamespaces: session?.namespaces ? Object.keys(session.namespaces) : []
       });
-      return;
-    }
-
-    // Validate WalletConnect session has EVM namespace
-    const session = walletConnectProvider.session;
-    const evmAccounts = session?.namespaces?.eip155?.accounts || [];
-    console.log("WalletConnect session validation:", { 
-      hasSession: !!session, 
-      evmAccounts,
-      allNamespaces: session?.namespaces ? Object.keys(session.namespaces) : []
-    });
-    
-    if (!session || evmAccounts.length === 0) {
-      console.error("No active EVM session in WalletConnect");
-      toast({
-        title: "EVM Session Not Found",
-        description: "Please disconnect and reconnect using an EVM wallet.",
-        variant: "destructive",
-      });
-      return;
+      
+      if (!session || evmAccounts.length === 0) {
+        console.error("No active EVM session in WalletConnect");
+        toast({
+          title: "EVM Session Not Found",
+          description: "Please disconnect and reconnect using an EVM wallet.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setProcessingPayment(true);
     console.log("⏳ Processing payment started");
     
-    try {
-      // Ensure wallet is on Coston2 network
-      console.log("Ensuring wallet is on Coston2 for deposit...");
-      try {
-        await walletConnectProvider.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x72' }], // 114 in hex
+    // Helper function to send transaction via appropriate provider
+    const sendTransaction = async (to: string, data: string): Promise<string> => {
+      if (isReown && walletClient) {
+        console.log("Sending transaction via Wagmi/Reown...");
+        const hash = await walletClient.sendTransaction({
+          to: to as `0x${string}`,
+          data: data as `0x${string}`,
+          account: evmAddress as `0x${string}`,
+          chain: walletClient.chain,
         });
-        console.log("Chain switch successful");
-      } catch (switchError: any) {
-        console.log("Chain switch error:", switchError.code, switchError.message);
-        if (switchError.code === 4902 || switchError.message?.includes('chain')) {
-          console.log("Attempting to add Coston2 network to wallet...");
+        return hash;
+      } else if (walletConnectProvider) {
+        console.log("Sending transaction via WalletConnect...");
+        const hash = await walletConnectProvider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: evmAddress,
+            to,
+            data,
+          }],
+        }) as string;
+        return hash;
+      }
+      throw new Error("No wallet provider available");
+    };
+    
+    try {
+      // Ensure wallet is on Coston2 network (chainId 114)
+      console.log("Ensuring wallet is on Coston2 for deposit...");
+      if (isReown && switchChainAsync) {
+        try {
+          await switchChainAsync({ chainId: 114 });
+          console.log("Chain switch successful via Wagmi");
+        } catch (switchError: any) {
+          console.log("Chain switch error:", switchError.message);
+        }
+      } else if (walletConnectProvider) {
+        try {
           await walletConnectProvider.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: '0x72',
-              chainName: 'Flare Coston2 Testnet',
-              nativeCurrency: { name: 'Coston2 Flare', symbol: 'C2FLR', decimals: 18 },
-              rpcUrls: [COSTON2_RPC],
-              blockExplorerUrls: ['https://coston2-explorer.flare.network'],
-            }],
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x72' }], // 114 in hex
           });
-          console.log("Network added successfully");
+          console.log("Chain switch successful via WalletConnect");
+        } catch (switchError: any) {
+          console.log("Chain switch error:", switchError.code, switchError.message);
+          if (switchError.code === 4902 || switchError.message?.includes('chain')) {
+            console.log("Attempting to add Coston2 network to wallet...");
+            await walletConnectProvider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x72',
+                chainName: 'Flare Coston2 Testnet',
+                nativeCurrency: { name: 'Coston2 Flare', symbol: 'C2FLR', decimals: 18 },
+                rpcUrls: [COSTON2_RPC],
+                blockExplorerUrls: ['https://coston2-explorer.flare.network'],
+              }],
+            });
+            console.log("Network added successfully");
+          }
         }
       }
 
@@ -336,15 +390,7 @@ export default function DepositModal({
         const erc20Iface = new ethers.Interface(ERC20_ABI);
         const approveData = erc20Iface.encodeFunctionData("approve", [vaultAddress, amountWei]);
         
-        console.log("Sending approve transaction via WalletConnect...");
-        approveTxHash = await walletConnectProvider.request({
-          method: 'eth_sendTransaction',
-          params: [{
-            from: evmAddress,
-            to: fxrpTokenAddress,
-            data: approveData,
-          }],
-        }) as string;
+        approveTxHash = await sendTransaction(fxrpTokenAddress, approveData);
         console.log("Approval tx submitted:", approveTxHash);
         
         toast({
@@ -378,15 +424,7 @@ export default function DepositModal({
       const vaultIface = new ethers.Interface(FIRELIGHT_VAULT_ABI);
       const depositData = vaultIface.encodeFunctionData("deposit", [amountWei, evmAddress]);
       
-      console.log("Sending deposit transaction via WalletConnect...");
-      const depositTxHash = await walletConnectProvider.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          from: evmAddress,
-          to: vaultAddress,
-          data: depositData,
-        }],
-      }) as string;
+      const depositTxHash = await sendTransaction(vaultAddress, depositData);
       console.log("Deposit tx submitted:", depositTxHash);
       
       toast({
