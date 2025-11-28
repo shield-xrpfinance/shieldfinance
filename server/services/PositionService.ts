@@ -6,6 +6,7 @@
  * 2. Verifies on-chain shXRP balance from vault contract
  * 3. Calculates real-time USD values using PriceService (asset-specific)
  * 4. Returns enriched position data with verification status
+ * 5. Includes pending bridges as "pending positions" for unified lifecycle tracking
  * 
  * IMPORTANT: For EVM wallets with FXRP vault positions:
  * - The on-chain balance represents TOTAL vault shares for the wallet
@@ -19,6 +20,74 @@ import { getPriceService } from "./PriceService";
 import { getVaultAddress, getProvider } from "./VaultDataService";
 import { ERC4626_ABI } from "@shared/flare-abis";
 import type { Position } from "@shared/schema";
+
+// Position lifecycle stages that combine bridge and vault states
+export type PositionLifecycleStage = 
+  | "signing"
+  | "awaiting_payment"
+  | "bridging"
+  | "minting"
+  | "earning"
+  | "failed"
+  | "cancelled";
+
+/**
+ * Maps bridge status to unified position lifecycle stage
+ */
+export function mapBridgeStatusToLifecycleStage(bridgeStatus: string): PositionLifecycleStage {
+  switch (bridgeStatus) {
+    case "pending":
+    case "reserving_collateral":
+      return "signing";
+    case "awaiting_payment":
+      return "awaiting_payment";
+    case "bridging":
+    case "xrpl_confirmed":
+    case "generating_proof":
+    case "fdc_timeout":
+    case "proof_generated":
+    case "fdc_proof_generated":
+      return "bridging";
+    case "minting":
+    case "vault_minting":
+      return "minting";
+    case "vault_minted":
+    case "completed":
+      return "earning";
+    case "vault_mint_failed":
+    case "failed":
+      return "failed";
+    case "cancelled":
+      return "cancelled";
+    default:
+      return "bridging";
+  }
+}
+
+/**
+ * Calculate progress percentage for a bridge operation
+ */
+export function calculateBridgeProgress(bridgeStatus: string): number {
+  const progressMap: Record<string, number> = {
+    "pending": 5,
+    "reserving_collateral": 10,
+    "awaiting_payment": 15,
+    "bridging": 20,
+    "xrpl_confirmed": 40,
+    "generating_proof": 50,
+    "fdc_timeout": 55,
+    "proof_generated": 60,
+    "fdc_proof_generated": 70,
+    "minting": 80,
+    "vault_minting": 90,
+    "vault_minted": 100,
+    "completed": 100,
+    "vault_mint_failed": 0,
+    "failed": 0,
+    "cancelled": 0,
+  };
+  return progressMap[bridgeStatus] ?? 25;
+}
 
 interface EnrichedPosition extends Position {
   onChainBalance: string;
@@ -36,10 +105,46 @@ interface EnrichedPosition extends Position {
     asset: string;
     apy: string;
   } | null;
+  // Unified lifecycle tracking
+  lifecycleStage: PositionLifecycleStage;
+  progress: number; // 0-100
+}
+
+// Health metric for position/bridge status
+interface PositionHealthMetric {
+  label: string;
+  value: string;
+  status: "success" | "pending" | "error" | "neutral";
+  txHash?: string;
+}
+
+// Pending activity represents an in-progress bridge that will become a position
+interface PendingActivity {
+  id: string;
+  type: "bridge";
+  walletAddress: string;
+  vaultId: string | null;
+  amount: string;
+  fxrpExpected: string;
+  usdValue: number;
+  lifecycleStage: PositionLifecycleStage;
+  progress: number;
+  bridgeStatus: string;
+  createdAt: string;
+  errorMessage?: string;
+  xrplTxHash?: string;
+  flareTxHash?: string;
+  metrics: PositionHealthMetric[];
+  vault: {
+    name: string;
+    asset: string;
+    apy: string;
+  } | null;
 }
 
 interface PositionSummary {
   positions: EnrichedPosition[];
+  pendingActivities: PendingActivity[];
   totalValue: number;
   totalRewards: number;
   totalRewardsUsd: number;
@@ -183,8 +288,14 @@ class PositionService {
         usdValue: positionAmount * assetPrice,
         rewardsUsd: positionRewards * assetPrice,
         vault: vaultInfo,
+        // Active positions are always "earning" state
+        lifecycleStage: position.status === "active" ? "earning" : "cancelled",
+        progress: position.status === "active" ? 100 : 0,
       };
     });
+
+    // Fetch pending bridges for this wallet and convert to pending activities
+    const pendingActivities = await this.fetchPendingActivities(walletAddress, prices, vaultInfoMap);
 
     // Calculate totals with proper asset prices
     const totalValue = enrichedPositions.reduce((sum, p) => sum + p.usdValue, 0);
@@ -193,6 +304,7 @@ class PositionService {
 
     return {
       positions: enrichedPositions,
+      pendingActivities,
       totalValue,
       totalRewards,
       totalRewardsUsd,
@@ -201,6 +313,97 @@ class PositionService {
       totalDbFxrpBalance: totalDbFxrpBalance.toFixed(6),
       lastUpdated: Date.now(),
     };
+  }
+
+  /**
+   * Fetch pending bridges for a wallet and convert to PendingActivity format
+   */
+  private async fetchPendingActivities(
+    walletAddress: string,
+    prices: Record<string, number>,
+    vaultInfoMap: Map<string, { name: string; asset: string; apy: string }>
+  ): Promise<PendingActivity[]> {
+    try {
+      // Fetch active bridges for this wallet (pending, in-progress, not completed/cancelled/failed)
+      const bridges = await storage.getBridgesByWallet(walletAddress);
+      
+      // Filter to only include in-progress bridges (not completed, cancelled, or failed)
+      const activeBridges = bridges.filter(bridge => {
+        const bridgeStatus = bridge.status;
+        return bridgeStatus && 
+          bridgeStatus !== "completed" && 
+          bridgeStatus !== "vault_minted" && 
+          bridgeStatus !== "cancelled" && 
+          bridgeStatus !== "failed";
+      });
+      
+      // Get XRP vault info for bridges
+      const vaults = await storage.getVaults();
+      const xrpVault = vaults.find(v => v.asset === "XRP");
+      const vaultInfo = xrpVault ? {
+        name: xrpVault.name,
+        asset: xrpVault.asset,
+        apy: xrpVault.apy,
+      } : null;
+      
+      return activeBridges.map(bridge => {
+        const xrpAmount = parseFloat(bridge.xrpAmount) || 0;
+        const fxrpExpected = parseFloat(bridge.fxrpExpected) || 0;
+        const assetPrice = prices['XRP'] || 0;
+        const bridgeStatus = bridge.status;
+        const lifecycleStage = mapBridgeStatusToLifecycleStage(bridgeStatus);
+        const progress = calculateBridgeProgress(bridgeStatus);
+        
+        // Build health metrics based on bridge state
+        const metrics: PositionHealthMetric[] = [
+          {
+            label: "XRP Payment",
+            value: bridge.xrplTxHash ? "Confirmed" : "Pending",
+            status: bridge.xrplTxHash ? "success" : "pending",
+            txHash: bridge.xrplTxHash || undefined,
+          },
+          {
+            label: "Bridge Status",
+            value: bridgeStatus.replace(/_/g, " "),
+            status: lifecycleStage === "failed" ? "error" : 
+                   lifecycleStage === "earning" ? "success" : "pending",
+          },
+        ];
+        
+        // Add vault minting status if relevant
+        if (["minting", "vault_minting", "vault_minted", "vault_mint_failed"].includes(bridgeStatus)) {
+          metrics.push({
+            label: "Vault Shares",
+            value: bridge.vaultMintTxHash ? "Minted" : "Minting",
+            status: bridge.vaultMintTxHash ? "success" : 
+                   bridgeStatus === "vault_mint_failed" ? "error" : "pending",
+            txHash: bridge.vaultMintTxHash || undefined,
+          });
+        }
+        
+        return {
+          id: bridge.id,
+          type: "bridge" as const,
+          walletAddress: bridge.walletAddress,
+          vaultId: bridge.vaultId || null,
+          amount: xrpAmount.toFixed(6),
+          fxrpExpected: fxrpExpected.toFixed(6),
+          usdValue: xrpAmount * assetPrice,
+          lifecycleStage,
+          progress,
+          bridgeStatus,
+          createdAt: bridge.createdAt?.toISOString() || new Date().toISOString(),
+          errorMessage: bridge.errorMessage || undefined,
+          xrplTxHash: bridge.xrplTxHash || undefined,
+          flareTxHash: bridge.flareTxHash || undefined,
+          metrics,
+          vault: vaultInfo,
+        };
+      });
+    } catch (error) {
+      console.warn('Failed to fetch pending activities:', error);
+      return [];
+    }
   }
 
   /**
@@ -338,4 +541,4 @@ export function getPositionService(): PositionService {
 }
 
 export { PositionService };
-export type { EnrichedPosition, PositionSummary };
+export type { EnrichedPosition, PositionSummary, PendingActivity, PositionHealthMetric };

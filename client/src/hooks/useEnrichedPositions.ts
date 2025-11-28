@@ -5,19 +5,39 @@
  * - Database positions with on-chain balance verification
  * - Real-time USD values from PriceService
  * - Discrepancy detection for FXRP vault positions
+ * - Pending bridge activities for unified position lifecycle tracking
  * 
  * Benefits:
  * - Single API call for position + price + verification data
  * - Proper caching (15s on server, 30s in React Query)
  * - Works for both EVM and XRPL wallets
+ * - Shows pending deposits immediately after signing
  */
 
 import { useQuery, useQueryClient } from "@tanstack/react-query";
+
+// Position lifecycle stages that combine bridge and vault states
+export type PositionLifecycleStage = 
+  | "signing"
+  | "awaiting_payment"
+  | "bridging"
+  | "minting"
+  | "earning"
+  | "failed"
+  | "cancelled";
 
 interface VaultInfo {
   name: string;
   asset: string;
   apy: string;
+}
+
+// Health metric for position/bridge status
+interface PositionHealthMetric {
+  label: string;
+  value: string;
+  status: "success" | "pending" | "error" | "neutral";
+  txHash?: string;
 }
 
 interface EnrichedPosition {
@@ -38,11 +58,35 @@ interface EnrichedPosition {
   usdValue: number;
   rewardsUsd: number;
   vault: VaultInfo | null;
+  // Unified lifecycle tracking
+  lifecycleStage: PositionLifecycleStage;
+  progress: number;
+}
+
+// Pending activity represents an in-progress bridge that will become a position
+interface PendingActivity {
+  id: string;
+  type: "bridge";
+  walletAddress: string;
+  vaultId: string | null;
+  amount: string;
+  fxrpExpected: string;
+  usdValue: number;
+  lifecycleStage: PositionLifecycleStage;
+  progress: number;
+  bridgeStatus: string;
+  createdAt: string;
+  errorMessage?: string;
+  xrplTxHash?: string;
+  flareTxHash?: string;
+  metrics: PositionHealthMetric[];
+  vault: VaultInfo | null;
 }
 
 interface PositionSummary {
   success: boolean;
   positions: EnrichedPosition[];
+  pendingActivities: PendingActivity[];
   totalValue: number;
   totalRewards: number;
   totalRewardsUsd: number;
@@ -130,4 +174,4 @@ export function formatPositionForTable(position: EnrichedPosition) {
   };
 }
 
-export type { EnrichedPosition, PositionSummary, VaultInfo };
+export type { EnrichedPosition, PositionSummary, VaultInfo, PendingActivity, PositionHealthMetric };

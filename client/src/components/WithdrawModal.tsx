@@ -24,6 +24,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { ethers } from "ethers";
+import { useWalletClient, useSwitchChain } from "wagmi";
 
 const COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc";
 
@@ -64,10 +65,14 @@ export default function WithdrawModal({
   const [loadingBalance, setLoadingBalance] = useState(false);
   
   const { toast } = useToast();
-  const { evmAddress, address, walletConnectProvider } = useWallet();
+  const { evmAddress, address, walletConnectProvider, provider: walletProvider } = useWallet();
   const { ecosystem } = useNetwork();
   const gasEstimate = "0.00008";
   const assetSymbol = asset.split(",")[0];
+  
+  // Wagmi hooks for Reown AppKit transaction signing
+  const { data: walletClient } = useWalletClient();
+  const { switchChainAsync } = useSwitchChain();
 
   // Fetch on-chain shXRP balance when modal opens (for Flare ecosystem)
   useEffect(() => {
@@ -152,6 +157,9 @@ export default function WithdrawModal({
   };
 
   const handleFlareWithdrawal = async () => {
+    const isReown = walletProvider === "reown";
+    console.log("🟢 handleFlareWithdrawal called", { evmAddress, walletProvider, isReown, hasWalletClient: !!walletClient, hasWalletConnectProvider: !!walletConnectProvider });
+    
     if (!evmAddress) {
       toast({
         title: "EVM Wallet Required",
@@ -161,49 +169,96 @@ export default function WithdrawModal({
       return;
     }
 
-    if (!walletConnectProvider) {
-      toast({
-        title: "WalletConnect Required",
-        description: "Please connect via WalletConnect to sign transactions.",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Check for appropriate provider based on wallet type
+    if (isReown) {
+      if (!walletClient) {
+        toast({
+          title: "Wallet Not Ready",
+          description: "Please wait for your wallet to connect, or try reconnecting.",
+          variant: "destructive",
+        });
+        return;
+      }
+    } else {
+      if (!walletConnectProvider) {
+        toast({
+          title: "WalletConnect Required",
+          description: "Please connect via WalletConnect to sign transactions.",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // Validate WalletConnect session has EVM namespace
-    const session = walletConnectProvider.session;
-    const evmAccounts = session?.namespaces?.eip155?.accounts || [];
-    if (!session || evmAccounts.length === 0) {
-      toast({
-        title: "EVM Session Not Found",
-        description: "Please disconnect and reconnect using an EVM wallet.",
-        variant: "destructive",
-      });
-      return;
+      // Validate WalletConnect session has EVM namespace
+      const session = walletConnectProvider.session;
+      const evmAccounts = session?.namespaces?.eip155?.accounts || [];
+      if (!session || evmAccounts.length === 0) {
+        toast({
+          title: "EVM Session Not Found",
+          description: "Please disconnect and reconnect using an EVM wallet.",
+          variant: "destructive",
+        });
+        return;
+      }
     }
 
     setProcessingWithdrawal(true);
     
+    // Helper function to send transaction via appropriate provider
+    const sendTransaction = async (to: string, data: string): Promise<string> => {
+      if (isReown && walletClient) {
+        console.log("Sending transaction via Wagmi/Reown...");
+        const hash = await walletClient.sendTransaction({
+          to: to as `0x${string}`,
+          data: data as `0x${string}`,
+          account: evmAddress as `0x${string}`,
+          chain: walletClient.chain,
+        });
+        return hash;
+      } else if (walletConnectProvider) {
+        console.log("Sending transaction via WalletConnect...");
+        const hash = await walletConnectProvider.request({
+          method: 'eth_sendTransaction',
+          params: [{
+            from: evmAddress,
+            to,
+            data,
+          }],
+        }) as string;
+        return hash;
+      }
+      throw new Error("No wallet provider available");
+    };
+    
     try {
       // Ensure wallet is on Coston2 network
       console.log("Ensuring wallet is on Coston2 for withdrawal...");
-      try {
-        await walletConnectProvider.request({
-          method: 'wallet_switchEthereumChain',
-          params: [{ chainId: '0x72' }], // 114 in hex
-        });
-      } catch (switchError: any) {
-        if (switchError.code === 4902 || switchError.message?.includes('chain')) {
+      if (isReown && switchChainAsync) {
+        try {
+          await switchChainAsync({ chainId: 114 });
+          console.log("Chain switch successful via Wagmi");
+        } catch (switchError: any) {
+          console.log("Chain switch error:", switchError.message);
+        }
+      } else if (walletConnectProvider) {
+        try {
           await walletConnectProvider.request({
-            method: 'wallet_addEthereumChain',
-            params: [{
-              chainId: '0x72',
-              chainName: 'Flare Coston2 Testnet',
-              nativeCurrency: { name: 'Coston2 Flare', symbol: 'C2FLR', decimals: 18 },
-              rpcUrls: [COSTON2_RPC],
-              blockExplorerUrls: ['https://coston2-explorer.flare.network'],
-            }],
+            method: 'wallet_switchEthereumChain',
+            params: [{ chainId: '0x72' }], // 114 in hex
           });
+        } catch (switchError: any) {
+          if (switchError.code === 4902 || switchError.message?.includes('chain')) {
+            await walletConnectProvider.request({
+              method: 'wallet_addEthereumChain',
+              params: [{
+                chainId: '0x72',
+                chainName: 'Flare Coston2 Testnet',
+                nativeCurrency: { name: 'Coston2 Flare', symbol: 'C2FLR', decimals: 18 },
+                rpcUrls: [COSTON2_RPC],
+                blockExplorerUrls: ['https://coston2-explorer.flare.network'],
+              }],
+            });
+          }
         }
       }
 
@@ -257,16 +312,7 @@ export default function WithdrawModal({
         evmAddress   // Owner of shares is user's address
       ]);
       
-      // Send transaction via WalletConnect directly
-      console.log("Sending redeem transaction via WalletConnect...");
-      const withdrawTxHash = await walletConnectProvider.request({
-        method: 'eth_sendTransaction',
-        params: [{
-          from: evmAddress,
-          to: vaultAddress,
-          data: redeemData,
-        }],
-      });
+      const withdrawTxHash = await sendTransaction(vaultAddress, redeemData);
       console.log("Withdraw tx submitted:", withdrawTxHash);
       
       toast({
