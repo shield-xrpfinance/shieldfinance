@@ -5164,14 +5164,15 @@ export async function registerRoutes(
   });
 
   /**
-   * Get airdrop statistics with live on-chain data
+   * Get airdrop statistics from faucet API (single source of truth)
    * GET /api/airdrop/root
    * 
+   * Fetches live stats from faucet.shyield.finance to ensure main app and faucet stay in sync.
    * Returns: { root, totalAmount, totalEntries, totalClaimed, remainingAmount, claimedCount }
    */
   app.get("/api/airdrop/root", async (req: Request, res: Response) => {
     try {
-      // Load merkle tree data
+      // Load local merkle tree data for root hash
       const merkleTreePath = path.join(process.cwd(), "data/merkle-tree.json");
       
       if (!fs.existsSync(merkleTreePath)) {
@@ -5180,51 +5181,44 @@ export async function registerRoutes(
 
       const merkleTreeData = JSON.parse(fs.readFileSync(merkleTreePath, "utf-8"));
 
-      // Fetch on-chain statistics from MerkleDistributor
+      // Fetch live stats from faucet API (single source of truth)
       let totalClaimed = "0";
       let claimedCount = 0;
-      const distributorAddress = process.env.VITE_MERKLE_DISTRIBUTOR_ADDRESS;
+      let remainingAmount = merkleTreeData.totalAmount;
+      let totalEntries = merkleTreeData.totalEntries;
 
-      if (distributorAddress && distributorAddress !== "0x...") {
-        try {
-          const provider = new ethers.JsonRpcProvider("https://coston2-api.flare.network/ext/C/rpc");
-          const distributorAbi = [
-            "function totalClaimed() external view returns (uint256)",
-            "function hasClaimed(address account) external view returns (bool)",
-          ];
-          const contract = new ethers.Contract(distributorAddress, distributorAbi, provider);
+      try {
+        const faucetResponse = await fetch("https://faucet.shyield.finance/api/airdrop/stats", {
+          method: "GET",
+          headers: { "Accept": "application/json" },
+          signal: AbortSignal.timeout(5000), // 5 second timeout
+        });
+
+        if (faucetResponse.ok) {
+          const faucetStats = await faucetResponse.json();
+          console.log(`[Airdrop] Fetched stats from faucet:`, faucetStats);
           
-          // Get total claimed amount
-          const claimedBigInt = await contract.totalClaimed();
-          totalClaimed = ethers.formatUnits(claimedBigInt, 18);
-
-          // Count how many addresses have claimed
-          const claimChecks = await Promise.all(
-            merkleTreeData.entries.map((entry: any) => 
-              contract.hasClaimed(entry.address).catch(() => false)
-            )
-          );
-          claimedCount = claimChecks.filter(Boolean).length;
-
-          console.log(`[Airdrop Stats] Total claimed: ${totalClaimed} SHIELD, Claimed count: ${claimedCount}/${merkleTreeData.totalEntries}`);
-        } catch (onChainError) {
-          console.warn("[Airdrop] Failed to fetch on-chain stats:", onChainError);
+          // Use faucet data as source of truth
+          totalClaimed = faucetStats.totalClaimed || "0";
+          claimedCount = faucetStats.claimedCount || 0;
+          remainingAmount = faucetStats.remainingAmount || merkleTreeData.totalAmount;
+          totalEntries = faucetStats.totalEntries || merkleTreeData.totalEntries;
+        } else {
+          console.warn(`[Airdrop] Faucet API returned ${faucetResponse.status}, using local data`);
         }
+      } catch (faucetError) {
+        console.warn("[Airdrop] Failed to fetch from faucet API, using local data:", faucetError);
       }
-
-      const totalAmountNum = Number(merkleTreeData.totalAmount);
-      const totalClaimedNum = Number(totalClaimed);
-      const remainingAmount = (totalAmountNum - totalClaimedNum).toString();
 
       res.json({
         root: merkleTreeData.root,
         totalAmount: merkleTreeData.totalAmount,
-        totalEntries: merkleTreeData.totalEntries,
+        totalEntries,
         timestamp: merkleTreeData.timestamp,
         totalClaimed,
         remainingAmount,
         claimedCount,
-        eligibleCount: merkleTreeData.totalEntries - claimedCount,
+        eligibleCount: totalEntries - claimedCount,
       });
     } catch (error) {
       console.error("Merkle root retrieval error:", error);
