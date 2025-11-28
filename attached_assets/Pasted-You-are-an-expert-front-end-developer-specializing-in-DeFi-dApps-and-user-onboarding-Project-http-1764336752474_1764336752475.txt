@@ -1,0 +1,49 @@
+You are an expert front-end developer specializing in DeFi dApps and user onboarding.
+
+Project: https://shyield.finance/app  
+GitHub repo: https://github.com/shield-xrpfinance/shieldfinance  
+Whitepaper: https://shyield.finance/whitepaper.pdf
+
+Task: Create a complete, production-ready plan and code to add a skippable, visual, step-by-step guided tour (tooltip walkthrough) for first-time DeFi users when they open https://shyield.finance/app for the first time.
+
+Requirements:
+
+1. The tour must be fully skippable at any moment ("Skip tour" + "×" button).
+2. If the user completes or skips it, never show again (use localStorage flag).
+3. Use one of the following modern, lightweight libraries (choose the best one):
+   - Shepherd.js (preferred because it’s beautiful and actively maintained)
+   - Driver.js
+   - Intro.js
+   - Or pure CSS + React if you prefer no extra dependency
+
+4. The tour must have FOUR different scenarios/paths that auto-detect the user’s situation and show only the relevant one:
+   Scenario 1 → Testnet user (wallet on testnet or no wallet yet)
+   Scenario 2 → Mainnet (Coming Soon) → show a short "Mainnet is launching soon" modal + quick overview
+   Scenario 3 → XRPL-only user (EVMOS/Flare not connected, only XRPL/Ethereum chains)
+   Scenario 4 → Flare user (Flare network connected)
+
+5. Make it extremely beginner-friendly. Explain in very simple language what each button does:
+   - Connect Wallet
+   - Switch network (if needed)
+   - Deposit / Supply
+   - Choose strategy (Conservative / Balanced / Aggressive)
+   - Confirm transaction
+   - View dashboard / yields
+   - Withdraw, etc.
+
+6. Design must be beautiful and on-brand with ShYield (dark mode, cyan/blue accents, clean sans-serif).
+
+7. Output everything I need:
+   Part 1 – Detailed implementation plan (where to put the code, how to detect network/wallet status)
+   Part 2 – Exact package to install (e.g. npm i shepherd.js tether @shepherd/pro vX.X.X)
+   Part 3 – Complete reusable React component (e.g. <ShYieldTour />) that starts automatically on first visit
+   Part 4 – All tour steps (title, text, attachTo element selectors, buttons) for each of the 4 scenarios
+   Part 5 – CSS overrides to match ShYield design perfectly
+   Part 6 – How to integrate it into the existing repo (probably in src/components/Tour.tsx and call it from App.tsx or Layout.tsx)
+
+Bonus points:
+- Add a small "Need help?" floating button that can re-trigger the tour any time
+- Progress indicator (Step 1 of 8)
+- Mobile-responsive (works great on phone)
+
+Give me everything ready to copy-paste and run. Prefer TypeScript + Vite/React (current stack of the repo).
