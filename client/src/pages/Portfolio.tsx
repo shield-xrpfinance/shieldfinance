@@ -13,12 +13,14 @@ import XamanSigningModal from "@/components/XamanSigningModal";
 import EmptyState from "@/components/EmptyState";
 import ConnectWalletEmptyState from "@/components/ConnectWalletEmptyState";
 import { PortfolioStatsSkeleton, PortfolioTableSkeleton } from "@/components/skeletons/PortfolioSkeleton";
-import { TrendingUp, Coins, Gift, Package, AlertCircle, ExternalLink } from "lucide-react";
+import { PositionHealthCard, type PositionActivity } from "@/components/PositionHealthCard";
+import { TrendingUp, Coins, Gift, Package, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useLocation } from "wouter";
 import { usePortfolioPolling } from "@/hooks/usePortfolioPolling";
+import { useEnrichedPositions, type PendingActivity } from "@/hooks/useEnrichedPositions";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ethers } from "ethers";
 
@@ -133,6 +135,35 @@ export default function Portfolio() {
   // Enable polling when there are active withdrawals
   const walletAddr = address || evmAddress;
   usePortfolioPolling(hasActiveWithdrawals, walletAddr);
+
+  // Fetch enriched positions with pending activities (faster polling for pending deposits)
+  const { data: enrichedData, isLoading: enrichedLoading } = useEnrichedPositions(walletAddr, {
+    refreshInterval: 10000, // 10 second refresh for pending activities
+    enabled: !!walletAddr,
+  });
+  
+  // Extract pending activities (in-progress bridges) for display
+  const pendingActivities = enrichedData?.pendingActivities || [];
+  const hasPendingDeposits = pendingActivities.length > 0;
+  
+  // Convert pending activities to PositionActivity format for PositionHealthCard
+  const pendingDepositsForCard: PositionActivity[] = pendingActivities.map((pa: PendingActivity) => {
+    const assetSymbol = pa.vault?.asset || "XRP";
+    const amount = parseFloat(pa.amount) || 0;
+    return {
+      id: pa.id,
+      type: "bridge" as const,
+      stage: pa.lifecycleStage,
+      vaultName: pa.vault?.name || "XRP Liquid Staking",
+      asset: assetSymbol,
+      amount: `${amount.toFixed(4)} ${assetSymbol}`,
+      amountUsd: `$${(pa.usdValue || 0).toFixed(2)}`,
+      createdAt: pa.createdAt,
+      metrics: pa.metrics || [],
+      progress: pa.progress || 0,
+      errorMessage: pa.errorMessage,
+    };
+  });
 
   const getVaultById = (vaultId: string) => vaults.find((v) => v.id === vaultId);
 
@@ -673,6 +704,30 @@ export default function Portfolio() {
             </Button>
           </AlertDescription>
         </Alert>
+      )}
+
+      {/* Pending Deposits Section */}
+      {hasPendingDeposits && (
+        <div className="space-y-4" data-testid="section-pending-deposits">
+          <div className="flex items-center gap-2">
+            <h2 className="text-2xl font-semibold">Pending Deposits</h2>
+            <Badge variant="outline" className="text-primary bg-primary/10 border-0" data-testid="badge-pending-count">
+              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+              {pendingDepositsForCard.length} in progress
+            </Badge>
+          </div>
+          <p className="text-sm text-muted-foreground -mt-2">
+            Your deposits are being processed. Click to expand for real-time status updates.
+          </p>
+          <div className="space-y-3">
+            {pendingDepositsForCard.map((activity) => (
+              <PositionHealthCard
+                key={activity.id}
+                activity={activity}
+              />
+            ))}
+          </div>
+        </div>
       )}
 
       <div className="space-y-4">

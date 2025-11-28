@@ -401,7 +401,9 @@ class PositionService {
         };
       });
     } catch (error) {
-      console.warn('Failed to fetch pending activities:', error);
+      // Log with more context for debugging, but don't fail the main request
+      console.error('[PositionService] Failed to fetch pending activities for wallet:', walletAddress);
+      console.error('[PositionService] Error details:', error instanceof Error ? error.message : error);
       return [];
     }
   }
