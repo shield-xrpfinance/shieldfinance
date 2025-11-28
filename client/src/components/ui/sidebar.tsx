@@ -41,6 +41,8 @@ type SidebarContextProps = {
   setOpenMobile: (open: boolean) => void
   isMobile: boolean
   toggleSidebar: () => void
+  mobileSidebarLocked: boolean
+  setMobileSidebarLocked: (locked: boolean) => void
 }
 
 const SidebarContext = React.createContext<SidebarContextProps | null>(null)
@@ -69,6 +71,7 @@ function SidebarProvider({
 }) {
   const isMobile = useIsMobile()
   const [openMobile, setOpenMobile] = React.useState(false)
+  const [mobileSidebarLocked, setMobileSidebarLocked] = React.useState(false)
 
   // This is the internal state of the sidebar.
   // We use openProp and setOpenProp for control from outside the component.
@@ -123,8 +126,10 @@ function SidebarProvider({
       openMobile,
       setOpenMobile,
       toggleSidebar,
+      mobileSidebarLocked,
+      setMobileSidebarLocked,
     }),
-    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+    [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar, mobileSidebarLocked]
   )
 
   return (
@@ -164,7 +169,16 @@ function Sidebar({
   variant?: "sidebar" | "floating" | "inset"
   collapsible?: "offcanvas" | "icon" | "none"
 }) {
-  const { isMobile, state, openMobile, setOpenMobile } = useSidebar()
+  const { isMobile, state, openMobile, setOpenMobile, mobileSidebarLocked } = useSidebar()
+  
+  // Guard onOpenChange to respect the lock (for guided tours)
+  const handleOpenChange = React.useCallback((open: boolean) => {
+    // If locked and trying to close, ignore the request
+    if (mobileSidebarLocked && !open) {
+      return
+    }
+    setOpenMobile(open)
+  }, [mobileSidebarLocked, setOpenMobile])
 
   if (collapsible === "none") {
     return (
@@ -183,7 +197,7 @@ function Sidebar({
 
   if (isMobile) {
     return (
-      <Sheet open={openMobile} onOpenChange={setOpenMobile} modal={false} {...props}>
+      <Sheet open={openMobile} onOpenChange={handleOpenChange} modal={false} {...props}>
         <SheetContent
           data-sidebar="sidebar"
           data-slot="sidebar"

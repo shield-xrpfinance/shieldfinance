@@ -9,7 +9,7 @@ import { HelpCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const TOUR_STORAGE_KEY = "shield-tour-completed";
-const TOUR_VERSION = "1.2";
+const TOUR_VERSION = "1.3";
 
 type TourScenario = "new-user" | "xrpl-user" | "evm-user";
 
@@ -25,10 +25,11 @@ function getTourScenario(
 interface TourOptions {
   isMobile: boolean;
   setOpenMobile: (open: boolean) => void;
+  setMobileSidebarLocked: (locked: boolean) => void;
 }
 
 function createTour(scenario: TourScenario, onComplete: () => void, options: TourOptions) {
-  const { isMobile, setOpenMobile } = options;
+  const { isMobile, setOpenMobile, setMobileSidebarLocked } = options;
   
   const tour = new Shepherd.Tour({
     useModalOverlay: true,
@@ -43,13 +44,15 @@ function createTour(scenario: TourScenario, onComplete: () => void, options: Tou
   
   type PopperPlacement = "top" | "bottom" | "left" | "right" | "top-start" | "top-end" | "bottom-start" | "bottom-end" | "left-start" | "left-end" | "right-start" | "right-end";
   
-  // Helper to create beforeShowPromise that opens sidebar on mobile for sidebar elements
+  // Helper to create beforeShowPromise that opens and locks sidebar on mobile for sidebar elements
   const getSidebarStepConfig = (selector: string, position: PopperPlacement) => {
     if (isMobile) {
       return {
         attachTo: { element: selector, on: position as PopperPlacement },
         beforeShowPromise: () => {
           return new Promise<void>((resolve) => {
+            // Lock the sidebar to prevent it from closing
+            setMobileSidebarLocked(true);
             setOpenMobile(true);
             // Wait for sidebar animation to complete
             setTimeout(resolve, 350);
@@ -62,12 +65,14 @@ function createTour(scenario: TourScenario, onComplete: () => void, options: Tou
     };
   };
   
-  // Helper to close sidebar on mobile for non-sidebar steps
+  // Helper to unlock and close sidebar on mobile for non-sidebar steps
   const getNonSidebarStepConfig = () => {
     if (isMobile) {
       return {
         beforeShowPromise: () => {
           return new Promise<void>((resolve) => {
+            // Unlock and close the sidebar
+            setMobileSidebarLocked(false);
             setOpenMobile(false);
             setTimeout(resolve, 150);
           });
@@ -363,7 +368,7 @@ interface ShieldTourProps {
 
 export function ShieldTour({ variant = "fixed" }: ShieldTourProps) {
   const { isConnected, walletType } = useWallet();
-  const { setOpenMobile, openMobile } = useSidebar();
+  const { setOpenMobile, openMobile, setMobileSidebarLocked } = useSidebar();
   const isMobile = useIsMobile();
   const [tourInstance, setTourInstance] = useState<ReturnType<typeof createTour> | null>(null);
   const [hasSeenTour, setHasSeenTour] = useState(true);
@@ -391,11 +396,14 @@ export function ShieldTour({ variant = "fixed" }: ShieldTourProps) {
     setHasSeenTour(true);
     setTourInstance(null);
     
-    // Restore mobile sidebar state after tour
-    if (isMobile && !wasOpenMobile) {
-      setOpenMobile(false);
+    // Unlock and restore mobile sidebar state after tour
+    if (isMobile) {
+      setMobileSidebarLocked(false);
+      if (!wasOpenMobile) {
+        setOpenMobile(false);
+      }
     }
-  }, [isMobile, wasOpenMobile, setOpenMobile]);
+  }, [isMobile, wasOpenMobile, setOpenMobile, setMobileSidebarLocked]);
 
   const startTour = useCallback(() => {
     if (tourInstance) {
@@ -403,21 +411,21 @@ export function ShieldTour({ variant = "fixed" }: ShieldTourProps) {
     }
 
     // On mobile, close the sidebar before starting the tour
-    // This prevents the tour from being cancelled when sidebar closes
     if (isMobile) {
       setWasOpenMobile(openMobile);
+      setMobileSidebarLocked(false);
       setOpenMobile(false);
     }
 
     const scenario = getTourScenario(isConnected, walletType);
-    const tour = createTour(scenario, markTourComplete, { isMobile, setOpenMobile });
+    const tour = createTour(scenario, markTourComplete, { isMobile, setOpenMobile, setMobileSidebarLocked });
     setTourInstance(tour);
 
     // Give the sidebar time to close on mobile before starting
     setTimeout(() => {
       tour.start();
     }, isMobile ? 400 : 500);
-  }, [isConnected, walletType, markTourComplete, tourInstance, isMobile, openMobile, setOpenMobile]);
+  }, [isConnected, walletType, markTourComplete, tourInstance, isMobile, openMobile, setOpenMobile, setMobileSidebarLocked]);
 
   useEffect(() => {
     if (!hasSeenTour) {
