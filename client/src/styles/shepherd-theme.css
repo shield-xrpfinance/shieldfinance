@@ -1,0 +1,240 @@
+/* Shield Finance Shepherd.js Theme */
+/* Dark mode with cyan/primary accents */
+
+.shepherd-element {
+  z-index: 10000 !important;
+}
+
+.shepherd-modal-overlay-container {
+  z-index: 9999 !important;
+}
+
+/* Main tooltip container */
+.shepherd-content {
+  background: hsl(var(--card));
+  border: 1px solid hsl(var(--border));
+  border-radius: 12px;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+  max-width: 400px;
+}
+
+/* Header section */
+.shepherd-header {
+  background: transparent;
+  padding: 16px 20px 8px 20px;
+  border-bottom: none;
+}
+
+.shepherd-title {
+  color: hsl(var(--foreground));
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Cancel/close button */
+.shepherd-cancel-icon {
+  color: hsl(var(--muted-foreground));
+  font-size: 24px;
+  font-weight: 300;
+  opacity: 0.7;
+  transition: all 0.2s;
+}
+
+.shepherd-cancel-icon:hover {
+  color: hsl(var(--foreground));
+  opacity: 1;
+}
+
+/* Content/text section */
+.shepherd-text {
+  color: hsl(var(--foreground));
+  padding: 8px 20px 16px 20px;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.shepherd-custom-content p {
+  margin: 0 0 8px 0;
+  color: hsl(var(--foreground));
+}
+
+.shepherd-custom-content p:last-child {
+  margin-bottom: 0;
+}
+
+.shepherd-custom-content ul {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.shepherd-custom-content li {
+  margin: 4px 0;
+  color: hsl(var(--foreground));
+}
+
+.shepherd-custom-content strong {
+  color: hsl(var(--primary));
+  font-weight: 600;
+}
+
+.shepherd-hint {
+  color: hsl(var(--muted-foreground)) !important;
+  font-size: 13px;
+  font-style: italic;
+  margin-top: 12px !important;
+  padding-top: 8px;
+  border-top: 1px solid hsl(var(--border));
+}
+
+/* Footer/buttons section */
+.shepherd-footer {
+  padding: 12px 20px 16px 20px;
+  border-top: none;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* Button base styles */
+.shepherd-button {
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+/* Primary button (Next, Finish, etc.) */
+.shepherd-button-primary {
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+}
+
+.shepherd-button-primary:hover {
+  background: hsl(var(--primary) / 0.9);
+  transform: translateY(-1px);
+}
+
+.shepherd-button-primary:active {
+  transform: translateY(0);
+}
+
+/* Secondary button (Back, Skip, etc.) */
+.shepherd-button-secondary {
+  background: transparent;
+  color: hsl(var(--muted-foreground));
+  border: 1px solid hsl(var(--border));
+}
+
+.shepherd-button-secondary:hover {
+  background: hsl(var(--accent));
+  color: hsl(var(--accent-foreground));
+  border-color: hsl(var(--accent));
+}
+
+/* Arrow pointing to element */
+.shepherd-arrow,
+.shepherd-arrow::before {
+  background: hsl(var(--card));
+}
+
+.shepherd-element[data-popper-placement^="top"] .shepherd-arrow::before {
+  border-bottom: 1px solid hsl(var(--border));
+  border-right: 1px solid hsl(var(--border));
+}
+
+.shepherd-element[data-popper-placement^="bottom"] .shepherd-arrow::before {
+  border-top: 1px solid hsl(var(--border));
+  border-left: 1px solid hsl(var(--border));
+}
+
+.shepherd-element[data-popper-placement^="left"] .shepherd-arrow::before {
+  border-top: 1px solid hsl(var(--border));
+  border-right: 1px solid hsl(var(--border));
+}
+
+.shepherd-element[data-popper-placement^="right"] .shepherd-arrow::before {
+  border-bottom: 1px solid hsl(var(--border));
+  border-left: 1px solid hsl(var(--border));
+}
+
+/* Modal overlay */
+.shepherd-modal-overlay-container .shepherd-modal-overlay-container--visible {
+  opacity: 0.75;
+}
+
+/* Progress indicator (if using) */
+.shepherd-progress {
+  background: hsl(var(--muted));
+  height: 4px;
+  border-radius: 2px;
+  margin: 0 20px 12px 20px;
+}
+
+.shepherd-progress-bar {
+  background: hsl(var(--primary));
+  height: 100%;
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+
+/* Mobile responsive */
+@media (max-width: 640px) {
+  .shepherd-content {
+    max-width: calc(100vw - 32px);
+    margin: 0 16px;
+  }
+
+  .shepherd-header {
+    padding: 14px 16px 6px 16px;
+  }
+
+  .shepherd-title {
+    font-size: 16px;
+  }
+
+  .shepherd-text {
+    padding: 6px 16px 14px 16px;
+    font-size: 13px;
+  }
+
+  .shepherd-footer {
+    padding: 10px 16px 14px 16px;
+    flex-wrap: wrap;
+  }
+
+  .shepherd-button {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+}
+
+/* Animation for step transitions */
+.shepherd-element {
+  animation: shepherd-fade-in 0.2s ease-out;
+}
+
+@keyframes shepherd-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Highlighted element glow effect */
+.shepherd-target-click-disabled {
+  pointer-events: none;
+}
+
+.shepherd-enabled.shepherd-target {
+  outline: 2px solid hsl(var(--primary) / 0.5) !important;
+  outline-offset: 4px;
+  border-radius: 8px;
+}

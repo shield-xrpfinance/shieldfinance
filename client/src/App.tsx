@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { TestnetBanner } from "@/components/TestnetBanner";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
+import { ShieldTour } from "@/components/ShieldTour";
 import { NetworkSwitcher } from "@/components/NetworkSwitcher";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
@@ -187,6 +188,7 @@ function DashboardLayout() {
                 </div>
               </div>
               <MobileBottomNav />
+              <ShieldTour />
             </SidebarProvider>
           </CurrencyProvider>
         </WalletProvider>
