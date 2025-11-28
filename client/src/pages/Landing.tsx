@@ -240,8 +240,8 @@ export default function Landing() {
               <a href="#security" className="text-sm text-gray-600 hover:text-gray-900 hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-security">
                 Security
               </a>
-              <a href="https://blog.shieldfinance.io" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 hover:text-gray-900 hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-blog">
-                Blog
+              <a href="https://docs.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 hover:text-gray-900 hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-docs">
+                Docs
               </a>
             </nav>
             <Link href="/app">
@@ -1024,9 +1024,9 @@ export default function Landing() {
             <div data-testid="footer-resources">
               <h4 className="font-semibold mb-4" data-testid="heading-footer-resources">Resources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
-                <li><a href="#" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-documentation">Documentation</a></li>
-                <li><a href="#" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-api">API</a></li>
-                <li><a href="#" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-support">Support</a></li>
+                <li><a href="https://docs.shyield.finance" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-documentation">Documentation</a></li>
+                <li><a href="https://shyield.finance/whitepaper.pdf" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-whitepaper">Whitepaper</a></li>
+                <li><a href="https://discord.gg/Vzs3KbzU" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-support">Support</a></li>
               </ul>
             </div>
             <div data-testid="footer-community">
