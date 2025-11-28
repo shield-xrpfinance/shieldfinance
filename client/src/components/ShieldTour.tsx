@@ -81,7 +81,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       attachTo: { element: '[data-testid="button-connect-wallet"]', on: "bottom" },
-      buttons: [backButton, nextButton],
+      buttons: [skipButton, backButton, nextButton],
     });
 
     tour.addStep({
@@ -94,7 +94,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       attachTo: { element: '[data-testid="network-toggle"]', on: "right" },
-      buttons: [backButton, nextButton],
+      buttons: [skipButton, backButton, nextButton],
     });
 
     tour.addStep({
@@ -112,7 +112,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       attachTo: { element: '[data-testid="link-vaults"]', on: "right" },
-      buttons: [backButton, nextButton],
+      buttons: [skipButton, backButton, nextButton],
     });
 
     tour.addStep({
@@ -125,7 +125,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       attachTo: { element: '[data-testid="help-card"]', on: "top" },
-      buttons: [backButton, finishButton],
+      buttons: [skipButton, backButton, finishButton],
     });
   } else if (scenario === "xrpl-user") {
     tour.addStep({
@@ -150,7 +150,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       attachTo: { element: '[data-testid="link-vaults"]', on: "right" },
-      buttons: [backButton, nextButton],
+      buttons: [skipButton, backButton, nextButton],
     });
 
     tour.addStep({
@@ -165,7 +165,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
           <p class="shepherd-hint">Your shXRP grows in value as rewards accrue!</p>
         </div>
       `,
-      buttons: [backButton, nextButton],
+      buttons: [skipButton, backButton, nextButton],
     });
 
     tour.addStep({
@@ -178,7 +178,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       attachTo: { element: '[data-testid="link-portfolio"]', on: "right" },
-      buttons: [backButton, { text: "Got It!", action: () => tour.complete(), classes: "shepherd-button-primary" }],
+      buttons: [skipButton, backButton, { text: "Got It!", action: () => tour.complete(), classes: "shepherd-button-primary" }],
     });
   } else {
     // EVM user
@@ -204,7 +204,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       attachTo: { element: '[data-testid="link-vaults"]', on: "right" },
-      buttons: [backButton, nextButton],
+      buttons: [skipButton, backButton, nextButton],
     });
 
     tour.addStep({
@@ -217,7 +217,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       attachTo: { element: '[data-testid="link-staking"]', on: "right" },
-      buttons: [backButton, nextButton],
+      buttons: [skipButton, backButton, nextButton],
     });
 
     tour.addStep({
@@ -230,7 +230,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       attachTo: { element: '[data-testid="link-swap"]', on: "right" },
-      buttons: [backButton, nextButton],
+      buttons: [skipButton, backButton, nextButton],
     });
 
     tour.addStep({
@@ -243,7 +243,7 @@ function createTour(scenario: TourScenario, onComplete: () => void) {
         </div>
       `,
       attachTo: { element: '[data-testid="link-portfolio"]', on: "right" },
-      buttons: [backButton, { text: "Let's Go!", action: () => tour.complete(), classes: "shepherd-button-primary" }],
+      buttons: [skipButton, backButton, { text: "Let's Go!", action: () => tour.complete(), classes: "shepherd-button-primary" }],
     });
   }
 
