@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 export function MobileBottomNav() {
   const [location] = useLocation();
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, openMobile } = useSidebar();
 
   const navItems = [
     { icon: Home, label: "Dashboard", url: "/app" },
@@ -13,6 +13,10 @@ export function MobileBottomNav() {
     { icon: Wallet, label: "Portfolio", url: "/app/portfolio" },
     { icon: ArrowLeftRight, label: "Swap", url: "/app/swap" },
   ];
+
+  if (openMobile) {
+    return null;
+  }
 
   return (
     <div 
