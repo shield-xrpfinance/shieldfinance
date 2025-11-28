@@ -22,7 +22,11 @@ import type { Position } from "@shared/schema";
 
 interface EnrichedPosition extends Position {
   onChainBalance: string;
-  balanceVerified: boolean;
+  // balanceVerified tri-state:
+  // - true: on-chain verification succeeded (FXRP vault)
+  // - false: on-chain verification failed (FXRP vault)
+  // - null: verification not applicable (XRPL positions, non-FXRP EVM vaults)
+  balanceVerified: boolean | null;
   discrepancy: string | null;
   usdValue: number;
   rewards: string;
@@ -103,13 +107,30 @@ class PositionService {
       }
     }
 
-    // Calculate total FXRP balance from database for comparison
+    // Pre-fetch vault metadata for all positions to enable proper filtering
+    const vaultInfoMap: Map<string, { name: string; asset: string; apy: string }> = new Map();
+    for (const position of positions) {
+      try {
+        const vault = await storage.getVault(position.vaultId);
+        if (vault) {
+          vaultInfoMap.set(position.vaultId, {
+            name: vault.name,
+            asset: vault.asset,
+            apy: vault.apy,
+          });
+        }
+      } catch (e) {
+        console.warn(`Failed to get vault for position ${position.id}:`, e);
+      }
+    }
+
+    // Calculate total FXRP balance from database - ONLY positions in FXRP vaults
     const totalDbFxrpBalance = positions
       .filter(p => p.status === 'active')
       .reduce((sum, p) => {
-        // We need to check if this is an FXRP vault position
-        // For now, sum all EVM wallet positions as FXRP
-        if (isEvmWallet) {
+        const vaultInfo = vaultInfoMap.get(p.vaultId);
+        // Only sum FXRP vault positions (not all EVM positions)
+        if (vaultInfo?.asset === 'FXRP') {
           return sum + (parseFloat(p.amount) || 0);
         }
         return sum;
@@ -117,7 +138,7 @@ class PositionService {
 
     const onChainBalanceNum = parseFloat(onChainBalance) || 0;
     
-    // Calculate global discrepancy for all FXRP positions combined
+    // Calculate global discrepancy for FXRP positions combined
     let globalFxrpDiscrepancy: string | null = null;
     if (isEvmWallet && onChainVerified) {
       const diff = onChainBalanceNum - totalDbFxrpBalance;
@@ -126,50 +147,44 @@ class PositionService {
       }
     }
 
-    const enrichedPositions: EnrichedPosition[] = await Promise.all(
-      positions.map(async (position) => {
-        // Get vault info
-        let vaultInfo = null;
-        try {
-          const vault = await storage.getVault(position.vaultId);
-          if (vault) {
-            vaultInfo = {
-              name: vault.name,
-              asset: vault.asset,
-              apy: vault.apy,
-            };
-          }
-        } catch (e) {
-          console.warn(`Failed to get vault for position ${position.id}:`, e);
-        }
+    const enrichedPositions: EnrichedPosition[] = positions.map((position) => {
+      // Get vault info from pre-fetched map
+      const vaultInfo = vaultInfoMap.get(position.vaultId) || null;
 
-        const positionAmount = parseFloat(position.amount) || 0;
-        const positionRewards = parseFloat(position.rewards) || 0;
-        const asset = vaultInfo?.asset || 'XRP';
-        
-        // Get asset-specific price (default to XRP if unknown)
-        const assetPrice = prices[asset] || prices['XRP'] || 0;
-        
-        // For FXRP vaults (EVM), the individual position doesn't have its own discrepancy
-        // because shares are fungible - we only show global discrepancy at summary level
-        // Individual positions are "verified" if we successfully fetched on-chain balance
-        const isFxrpPosition = isEvmWallet && vaultInfo?.asset === 'FXRP';
-        
-        return {
-          ...position,
-          // For FXRP positions, show proportional on-chain balance (position's share of total)
-          onChainBalance: isFxrpPosition && onChainVerified && totalDbFxrpBalance > 0
-            ? ((positionAmount / totalDbFxrpBalance) * onChainBalanceNum).toFixed(6)
-            : position.amount,
-          balanceVerified: isFxrpPosition ? onChainVerified : false,
-          // Individual position discrepancy only makes sense for single-position case
-          discrepancy: isFxrpPosition && onChainVerified ? globalFxrpDiscrepancy : null,
-          usdValue: positionAmount * assetPrice,
-          rewardsUsd: positionRewards * assetPrice,
-          vault: vaultInfo,
-        };
-      })
-    );
+      const positionAmount = parseFloat(position.amount) || 0;
+      const positionRewards = parseFloat(position.rewards) || 0;
+      const asset = vaultInfo?.asset || 'XRP';
+      
+      // Get asset-specific price (default to XRP if unknown)
+      const assetPrice = prices[asset] || prices['XRP'] || 0;
+      
+      // Determine if this is an FXRP vault position
+      const isFxrpPosition = vaultInfo?.asset === 'FXRP';
+      
+      // balanceVerified:
+      // - FXRP positions on EVM: true if on-chain verification succeeded
+      // - Non-FXRP EVM positions: null (not applicable - different vault)
+      // - XRPL positions: null (verification not supported for XRPL)
+      let balanceVerifiedStatus: boolean | null = null;
+      if (isFxrpPosition && isEvmWallet) {
+        balanceVerifiedStatus = onChainVerified;
+      }
+      
+      return {
+        ...position,
+        // For FXRP positions, show proportional on-chain balance (position's share of total)
+        onChainBalance: isFxrpPosition && onChainVerified && totalDbFxrpBalance > 0
+          ? ((positionAmount / totalDbFxrpBalance) * onChainBalanceNum).toFixed(6)
+          : position.amount,
+        // Keep null for non-FXRP positions (not applicable)
+        balanceVerified: balanceVerifiedStatus,
+        // Individual position discrepancy only makes sense for single-position case
+        discrepancy: isFxrpPosition && onChainVerified ? globalFxrpDiscrepancy : null,
+        usdValue: positionAmount * assetPrice,
+        rewardsUsd: positionRewards * assetPrice,
+        vault: vaultInfo,
+      };
+    });
 
     // Calculate totals with proper asset prices
     const totalValue = enrichedPositions.reduce((sum, p) => sum + p.usdValue, 0);
