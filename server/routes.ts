@@ -5034,7 +5034,7 @@ export async function registerRoutes(
    * Check if an address is eligible for SHIELD airdrop
    * GET /api/airdrop/check/:address
    * 
-   * Returns: { eligible: boolean, amount?: string, proof?: string[] }
+   * Returns: { eligible: boolean, claimed?: boolean, amount?: string, proof?: string[] }
    */
   app.get("/api/airdrop/check/:address", async (req: Request, res: Response) => {
     try {
@@ -5063,11 +5063,38 @@ export async function registerRoutes(
       );
 
       if (!userEntry) {
-        return res.json({ eligible: false });
+        return res.json({ eligible: false, claimed: false });
+      }
+
+      // Check on-chain claim status from MerkleDistributor contract
+      let hasClaimed = false;
+      const distributorAddress = process.env.VITE_MERKLE_DISTRIBUTOR_ADDRESS;
+      
+      if (distributorAddress && distributorAddress !== "0x...") {
+        try {
+          const provider = new ethers.JsonRpcProvider("https://coston2-api.flare.network/ext/C/rpc");
+          const distributorAbi = ["function hasClaimed(address account) external view returns (bool)"];
+          const contract = new ethers.Contract(distributorAddress, distributorAbi, provider);
+          hasClaimed = await contract.hasClaimed(checksummedAddress);
+          console.log(`[Airdrop] On-chain claim check for ${checksummedAddress}: claimed=${hasClaimed}`);
+        } catch (onChainError) {
+          console.warn("[Airdrop] Failed to check on-chain claim status:", onChainError);
+        }
+      }
+
+      // If already claimed on-chain, they're not eligible to claim again
+      if (hasClaimed) {
+        return res.json({
+          eligible: false,
+          claimed: true,
+          amount: userEntry.amount,
+          message: "You have already claimed your SHIELD tokens",
+        });
       }
 
       res.json({
         eligible: true,
+        claimed: false,
         amount: userEntry.amount,
         proof: userEntry.proof,
       });

@@ -24,8 +24,10 @@ import ConnectWalletModal from "@/components/ConnectWalletModal";
 
 interface AirdropEligibility {
   eligible: boolean;
+  claimed?: boolean;
   amount?: string;
   proof?: string[];
+  message?: string;
 }
 
 interface AirdropRoot {
@@ -60,55 +62,18 @@ export default function Airdrop() {
     enabled: !!evmAddress && isEvmConnected,
   });
 
-  // Check if user already claimed (on-chain check)
+  // Set hasClaimed from API response (backend now checks on-chain status)
   useEffect(() => {
-    async function checkClaimStatus() {
-      if (!evmAddress || !isEvmConnected || !walletConnectProvider || isTestnet) return;
-
-      try {
-        // MerkleDistributor contract address (set after deployment)
-        const distributorAddress = import.meta.env.VITE_MERKLE_DISTRIBUTOR_ADDRESS;
-        if (!distributorAddress || distributorAddress === "0x...") {
-          return;
-        }
-
-        const distributorAbi = [
-          "function hasClaimed(address account) external view returns (bool)",
-        ];
-
-        // Create ethers provider from WalletConnect
-        const ethersProvider = new ethers.BrowserProvider(walletConnectProvider);
-        
-        const contract = new ethers.Contract(
-          distributorAddress,
-          distributorAbi,
-          ethersProvider
-        );
-
-        const claimed = await contract.hasClaimed(evmAddress);
-        setHasClaimed(claimed);
-      } catch (error) {
-        console.error("Error checking claim status:", error);
-      }
+    if (eligibility?.claimed) {
+      setHasClaimed(true);
     }
-
-    checkClaimStatus();
-  }, [evmAddress, isEvmConnected, walletConnectProvider, isTestnet]);
+  }, [eligibility]);
 
   const handleClaim = async () => {
     if (!evmAddress || !eligibility || !eligibility.proof || !walletConnectProvider) {
       toast({
         title: "Cannot claim",
         description: "Please connect your wallet with Flare Network support (e.g., Bifrost) to claim.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (isTestnet) {
-      toast({
-        title: "Mainnet Only",
-        description: "Switch to Flare Mainnet to claim your airdrop.",
         variant: "destructive",
       });
       return;
