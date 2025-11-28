@@ -3,7 +3,7 @@ import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { ethers } from "ethers";
 import { ERC20_ABI } from "@/lib/sparkdex";
-import { useFtsoPrice } from "./useFtsoPrice";
+import { usePrices } from "./usePrices";
 import { getAssetAddress, getAssetDecimals, type Network } from "@shared/assetConfig";
 
 /**
@@ -34,7 +34,7 @@ export interface ComprehensiveBalances {
 export function useComprehensiveBalance() {
   const { address, evmAddress, isConnected, isEvmConnected } = useWallet();
   const { network } = useNetwork();
-  const ftsoPrices = useFtsoPrice();
+  const { data: pricesData } = usePrices(['XRP', 'FLR', 'FXRP', 'SHIELD', 'USDT'], 30000);
   
   // Memoize the JsonRpcProvider to avoid creating new instances on every refresh
   const provider = useMemo(() => {
@@ -308,18 +308,24 @@ export function useComprehensiveBalance() {
         // Wait for all balance fetches to complete (with timeouts guaranteed)
         await Promise.all(promises);
 
-        // Calculate USD values using FTSO prices
-        const flrUsd = parseFloat(results.flr) * ftsoPrices.flrUsd;
-        const xrpUsd = parseFloat(results.xrp) * ftsoPrices.xrpUsd;
+        // Calculate USD values using backend price service
+        const flrPrice = pricesData?.prices?.FLR || 0;
+        const xrpPrice = pricesData?.prices?.XRP || 0;
+        const shieldPrice = pricesData?.prices?.SHIELD || 0;
+        const usdtPrice = pricesData?.prices?.USDT || 1; // USDT is stable at $1
+        
+        const flrUsd = parseFloat(results.flr) * flrPrice;
+        const xrpUsd = parseFloat(results.xrp) * xrpPrice;
         // shXRP tracks XRP 1:1 (vault shares backed by FXRP which is backed by XRP)
-        const shxrpUsd = parseFloat(results.shxrp) * ftsoPrices.xrpUsd;
+        const shxrpUsd = parseFloat(results.shxrp) * xrpPrice;
         // WFLR tracks FLR 1:1
-        const wflrUsd = parseFloat(results.wflr) * ftsoPrices.flrUsd;
+        const wflrUsd = parseFloat(results.wflr) * flrPrice;
         // FXRP tracks XRP 1:1 (FAssets wraps XRP on Flare)
-        const fxrpUsd = parseFloat(results.fxrp) * ftsoPrices.xrpUsd;
-        // SHIELD and USDT prices would need SparkDEX/Oracle integration - for now set to 0
-        const shieldUsd = 0;
-        const usdtUsd = 0;
+        const fxrpUsd = parseFloat(results.fxrp) * xrpPrice;
+        // SHIELD price from backend
+        const shieldUsd = parseFloat(results.shield) * shieldPrice;
+        // USDT is stable at ~$1
+        const usdtUsd = parseFloat(results.usdt) * usdtPrice;
         const totalUsd = flrUsd + xrpUsd + shxrpUsd + wflrUsd + fxrpUsd + shieldUsd + usdtUsd;
 
         setBalances({
@@ -350,7 +356,7 @@ export function useComprehensiveBalance() {
     // Refresh balances every 15 seconds
     const interval = setInterval(fetchBalances, 15000);
     return () => clearInterval(interval);
-  }, [address, evmAddress, isConnected, isEvmConnected, network, ftsoPrices.flrUsd, ftsoPrices.xrpUsd, ftsoPrices.lastUpdate, provider]);
+  }, [address, evmAddress, isConnected, isEvmConnected, network, pricesData?.timestamp, provider]);
 
   return balances;
 }

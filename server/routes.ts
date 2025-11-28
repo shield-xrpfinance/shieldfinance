@@ -12,6 +12,7 @@ import type { FlareClient } from "./utils/flare-client";
 import type { MetricsService } from "./services/MetricsService";
 import type { AlertingService } from "./services/AlertingService";
 import { VaultDataService } from "./services/VaultDataService";
+import { getPriceService } from "./services/PriceService";
 import { db } from "./db";
 import { fxrpToXrpRedemptions } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
@@ -404,6 +405,105 @@ export async function registerRoutes(
       res.json(vault);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch vault" });
+    }
+  });
+
+  // ============================================================
+  // PRICE API ENDPOINTS
+  // ============================================================
+
+  /**
+   * GET /api/prices
+   * Get prices for multiple tokens
+   * Query params: symbols=XRP,FLR,FXRP (comma-separated)
+   */
+  app.get("/api/prices", async (req, res) => {
+    try {
+      const priceService = getPriceService();
+      if (!priceService.isReady()) {
+        await priceService.initialize();
+      }
+
+      const symbolsParam = req.query.symbols as string;
+      const symbols = symbolsParam 
+        ? symbolsParam.split(',').map(s => s.trim().toUpperCase())
+        : ['XRP', 'FLR', 'FXRP', 'SHIELD'];
+
+      const priceMap = await priceService.getPrices(symbols);
+      
+      const prices: { [key: string]: number } = {};
+      priceMap.forEach((price, symbol) => {
+        prices[symbol] = price;
+      });
+
+      res.json({
+        success: true,
+        prices,
+        timestamp: Date.now(),
+        source: 'priceService'
+      });
+    } catch (error) {
+      console.error("Failed to fetch prices:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch prices"
+      });
+    }
+  });
+
+  /**
+   * GET /api/prices/stats
+   * Get price service cache statistics
+   * NOTE: Must be defined BEFORE /api/prices/:symbol to avoid matching as a symbol
+   */
+  app.get("/api/prices/stats", async (_req, res) => {
+    try {
+      const priceService = getPriceService();
+      if (!priceService.isReady()) {
+        await priceService.initialize();
+      }
+
+      const stats = priceService.getCacheStats();
+      res.json({
+        success: true,
+        ...stats
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch price stats"
+      });
+    }
+  });
+
+  /**
+   * GET /api/prices/:symbol
+   * Get price for a specific token
+   */
+  app.get("/api/prices/:symbol", async (req, res) => {
+    try {
+      const priceService = getPriceService();
+      if (!priceService.isReady()) {
+        await priceService.initialize();
+      }
+
+      const symbol = req.params.symbol.toUpperCase();
+      const price = await priceService.getPrice(symbol);
+      const cached = priceService.getAllCachedPrices()[symbol];
+
+      res.json({
+        success: true,
+        symbol,
+        price,
+        source: cached?.source || 'unknown',
+        timestamp: cached?.timestamp || Date.now()
+      });
+    } catch (error) {
+      console.error(`Failed to fetch price for ${req.params.symbol}:`, error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch price"
+      });
     }
   });
 
