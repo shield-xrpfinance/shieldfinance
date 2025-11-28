@@ -56,8 +56,12 @@ export default function ConnectWalletModal({
   const { address: reownAddress, isConnected: isReownConnected } = useAppKitAccount();
   const { disconnect: reownDisconnect } = useDisconnect();
   
+  // Track if we've already set the disconnect function to prevent infinite loops
+  const disconnectFnSetRef = useRef(false);
+  
   useEffect(() => {
-    if (reownDisconnect) {
+    if (reownDisconnect && !disconnectFnSetRef.current) {
+      disconnectFnSetRef.current = true;
       setDisconnectReown(reownDisconnect);
     }
   }, [reownDisconnect, setDisconnectReown]);
