@@ -11,6 +11,7 @@ import { TestnetBanner } from "@/components/TestnetBanner";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { ShieldTour } from "@/components/ShieldTour";
 import { NetworkSwitcher } from "@/components/NetworkSwitcher";
+import { MobileControlCenter } from "@/components/MobileControlCenter";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import { CurrencyProvider } from "@/lib/currencyContext";
@@ -64,44 +65,57 @@ function Header() {
     : null;
 
   return (
-    <header className="flex items-center justify-between gap-4 p-4 border-b">
+    <header className="flex items-center justify-between gap-2 p-3 md:p-4 border-b">
+      {/* Left side - Sidebar trigger only on mobile, with network on desktop */}
       <div className="flex items-center gap-3">
         <SidebarTrigger data-testid="button-sidebar-toggle" />
-        <NetworkSwitcher />
-        {isTestnet && (
-          <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4 gap-1" data-testid="badge-testnet-status">
-            <Beaker className="h-3 w-3" />
-            {testnetName}
-          </Badge>
-        )}
-      </div>
-      <div className="flex items-center gap-3">
-        {isConnected && displayAddress ? (
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="font-mono text-xs" data-testid="badge-wallet-address">
-              {shortAddress}
+        {/* Desktop: Show network switcher and testnet badge */}
+        <div className="hidden md:flex items-center gap-3">
+          <NetworkSwitcher />
+          {isTestnet && (
+            <Badge variant="outline" className="bg-chart-4/10 text-chart-4 border-chart-4 gap-1" data-testid="badge-testnet-status">
+              <Beaker className="h-3 w-3" />
+              {testnetName}
             </Badge>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={disconnect}
-              title="Disconnect wallet"
-              data-testid="button-disconnect-wallet"
-            >
-              <LogOut className="h-4 w-4" />
-            </Button>
-          </div>
-        ) : (
-          <Button
-            onClick={() => setConnectModalOpen(true)}
-            data-testid="button-connect-wallet"
-          >
-            <Wallet className="h-4 w-4 mr-2" />
-            Connect Wallet
-          </Button>
-        )}
-        <ThemeToggle />
+          )}
+        </div>
       </div>
+
+      {/* Right side - Control center on mobile, full controls on desktop */}
+      <div className="flex items-center gap-2 md:gap-3">
+        {/* Mobile: Control Center dropdown */}
+        <MobileControlCenter onConnectWallet={() => setConnectModalOpen(true)} />
+        
+        {/* Desktop: Full wallet controls */}
+        <div className="hidden md:flex items-center gap-3">
+          {isConnected && displayAddress ? (
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="font-mono text-xs" data-testid="badge-wallet-address">
+                {shortAddress}
+              </Badge>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={disconnect}
+                title="Disconnect wallet"
+                data-testid="button-disconnect-wallet"
+              >
+                <LogOut className="h-4 w-4" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              onClick={() => setConnectModalOpen(true)}
+              data-testid="button-connect-wallet"
+            >
+              <Wallet className="h-4 w-4 mr-2" />
+              Connect Wallet
+            </Button>
+          )}
+          <ThemeToggle />
+        </div>
+      </div>
+      
       <ConnectWalletModal
         open={connectModalOpen}
         onOpenChange={setConnectModalOpen}
