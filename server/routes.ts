@@ -3997,7 +3997,7 @@ export async function registerRoutes(
     }
   });
 
-  // Get protocol overview analytics with live on-chain TVL
+  // Get protocol overview analytics with live on-chain TVL and stakers
   app.get("/api/analytics/overview", async (_req, res) => {
     try {
       const overview = await storage.getProtocolOverview();
@@ -4005,12 +4005,16 @@ export async function registerRoutes(
       // Enrich with live on-chain data if available
       if (vaultDataService && vaultDataService.isReady()) {
         try {
-          const liveTvl = await vaultDataService.getLiveTVL();
-          const liveApy = await vaultDataService.getLiveAPY();
+          const [liveTvl, liveApy, liveStakers] = await Promise.all([
+            vaultDataService.getLiveTVL(),
+            vaultDataService.getLiveAPY(),
+            analyticsService.getUniqueStakers()
+          ]);
           return res.json({
             ...overview,
             tvl: liveTvl,
             avgApy: liveApy,
+            totalStakers: liveStakers,
             isLive: true
           });
         } catch (liveError) {

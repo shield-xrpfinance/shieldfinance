@@ -22,6 +22,7 @@ const SHIELD_PRICE_USD = 0.01;
 const XRP_PRICE_USD = 2.10;
 const FXRP_DECIMALS = 6;
 const WFLR_DECIMALS = 18;
+// Coston2 RPC strictly limits to 30 blocks per getLogs query; use 29 for inclusive range safety
 const MAX_BLOCKS_PER_QUERY = 29;
 
 export interface FeeEvent {
@@ -276,6 +277,69 @@ class AnalyticsService {
       return blockNumber > 0;
     } catch {
       return false;
+    }
+  }
+
+  private stakersCache: {
+    count?: number;
+    lastFetch?: number;
+  } = {};
+  private readonly STAKERS_CACHE_TTL_MS = 300_000; // 5 minutes
+
+  /**
+   * Get unique stakers count from on-chain Deposit events
+   * Queries Deposit events and counts unique owner addresses
+   * Cached for 5 minutes to reduce RPC load
+   */
+  async getUniqueStakers(): Promise<number> {
+    const now = Date.now();
+    if (this.stakersCache.count !== undefined && 
+        this.stakersCache.lastFetch && 
+        (now - this.stakersCache.lastFetch) < this.STAKERS_CACHE_TTL_MS) {
+      return this.stakersCache.count;
+    }
+
+    try {
+      const currentBlock = await this.provider.getBlockNumber();
+      // Use 500 blocks (about 4 minutes of blocks on Coston2) for fast queries
+      // With 29 blocks per query and 500 total, ~18 RPC calls needed (~3-4 seconds)
+      // Caching (5 min TTL) ensures we don't hammer the RPC
+      const blocksToScan = 500;
+      const startBlock = Math.max(0, currentBlock - blocksToScan);
+      
+      console.log(`[AnalyticsService] Querying unique stakers from block ${startBlock} to ${currentBlock}`);
+      
+      const depositFilter = this.vaultContract.filters.Deposit();
+      
+      const depositEvents = await this.queryWithPagination(
+        this.vaultContract,
+        depositFilter,
+        startBlock,
+        currentBlock,
+        (log) => ({
+          owner: log.args[1] as string,
+        })
+      );
+
+      const uniqueOwners = new Set<string>();
+      for (const event of depositEvents) {
+        if (event.owner) {
+          uniqueOwners.add(event.owner.toLowerCase());
+        }
+      }
+
+      const count = uniqueOwners.size;
+      this.stakersCache.count = count;
+      this.stakersCache.lastFetch = now;
+
+      console.log(`[AnalyticsService] Found ${count} unique stakers from ${depositEvents.length} deposit events`);
+      return count;
+    } catch (error) {
+      console.error("[AnalyticsService] Error fetching unique stakers:", error);
+      if (this.stakersCache.count !== undefined) {
+        return this.stakersCache.count;
+      }
+      return 0;
     }
   }
 }
