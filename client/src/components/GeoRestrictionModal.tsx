@@ -89,48 +89,49 @@ export function GeoRestrictionModal() {
 
   return (
     <AlertDialog open={shouldShowUAEModal}>
-      <AlertDialogContent className="max-w-lg" data-testid="modal-geo-restriction">
-        <AlertDialogHeader>
+      <AlertDialogContent className="max-w-lg max-h-[90vh] flex flex-col" data-testid="modal-geo-restriction">
+        <AlertDialogHeader className="flex-shrink-0">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg">
+            <div className="p-2 bg-amber-100 dark:bg-amber-900/30 rounded-lg flex-shrink-0">
               <ShieldAlert className="h-6 w-6 text-amber-600 dark:text-amber-400" />
             </div>
             <AlertDialogTitle className="text-xl">
               Geographic Restriction Notice
             </AlertDialogTitle>
           </div>
+        </AlertDialogHeader>
+        <div className="flex-1 overflow-y-auto pr-2">
           <AlertDialogDescription asChild>
-            <div className="space-y-4 text-left">
+            <div className="space-y-3 text-left">
               <p className="text-sm text-muted-foreground">
                 We have detected that you may be accessing Shield Finance from the 
                 United Arab Emirates (UAE).
               </p>
               
-              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-4 space-y-2">
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3 space-y-1">
                 <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
                   Regulatory Compliance Notice
                 </p>
                 <p className="text-xs text-amber-700 dark:text-amber-300">
-                  Shield Finance is not currently licensed as a Virtual Asset Service Provider 
-                  (VASP) under Dubai's Virtual Assets Regulatory Authority (VARA). Front-end 
-                  access is restricted for UAE IP addresses pending licensing.
+                  Shield Finance is not currently licensed as a VASP under Dubai's VARA. 
+                  Front-end access is restricted for UAE IPs pending licensing.
                 </p>
               </div>
 
-              <div className="text-xs text-muted-foreground space-y-2">
+              <div className="text-xs text-muted-foreground space-y-1">
                 <p>
-                  <strong>By proceeding, you acknowledge that:</strong>
+                  <strong>By proceeding, you acknowledge:</strong>
                 </p>
-                <ul className="list-disc list-inside space-y-1 ml-2">
-                  <li>You are solely responsible for compliance with local regulations</li>
-                  <li>Smart contract interactions remain permissionless per blockchain design</li>
+                <ul className="list-disc list-inside space-y-0.5 ml-1">
+                  <li>You are responsible for local regulation compliance</li>
+                  <li>Smart contracts remain permissionless by design</li>
                   <li>This service is not directed at UAE residents</li>
-                  <li>You should seek independent legal advice for UAE operations</li>
+                  <li>Seek independent legal advice for UAE operations</li>
                 </ul>
               </div>
 
               <p className="text-xs text-muted-foreground">
-                For more information about VARA regulations, visit{" "}
+                More info:{" "}
                 <a 
                   href="https://vara.ae" 
                   target="_blank" 
@@ -142,8 +143,8 @@ export function GeoRestrictionModal() {
               </p>
             </div>
           </AlertDialogDescription>
-        </AlertDialogHeader>
-        <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+        </div>
+        <AlertDialogFooter className="flex-col sm:flex-row gap-2 flex-shrink-0 pt-4 border-t mt-4">
           <Button 
             variant="outline" 
             onClick={handleGoBack}
@@ -157,7 +158,7 @@ export function GeoRestrictionModal() {
             className="w-full sm:w-auto"
             data-testid="button-geo-acknowledge"
           >
-            I Acknowledge & Accept Responsibility
+            I Acknowledge & Accept
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>
