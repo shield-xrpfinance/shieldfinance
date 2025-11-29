@@ -22,6 +22,7 @@ const SHIELD_PRICE_USD = 0.01;
 const XRP_PRICE_USD = 2.10;
 const FXRP_DECIMALS = 6;
 const WFLR_DECIMALS = 18;
+const MAX_BLOCKS_PER_QUERY = 29;
 
 export interface FeeEvent {
   feeType: string;
@@ -81,47 +82,67 @@ class AnalyticsService {
     );
   }
 
-  async queryFeeEvents(fromBlock: number = 0, toBlock: number | "latest" = "latest"): Promise<FeeEvent[]> {
-    try {
-      const filter = this.vaultContract.filters.FeeTransferred();
-      const events = await this.vaultContract.queryFilter(filter, fromBlock, toBlock);
+  private async queryWithPagination<T>(
+    contract: ethers.Contract,
+    filter: ethers.DeferredTopicFilter,
+    fromBlock: number,
+    toBlock: number,
+    mapper: (event: ethers.EventLog) => T
+  ): Promise<T[]> {
+    const results: T[] = [];
+    let currentFrom = fromBlock;
+    
+    while (currentFrom <= toBlock) {
+      const currentTo = Math.min(currentFrom + MAX_BLOCKS_PER_QUERY, toBlock);
       
-      return events.map(event => {
-        const log = event as ethers.EventLog;
-        return {
-          feeType: log.args[0] as string,
-          amount: log.args[1] as bigint,
-          recipient: log.args[2] as string,
-          blockNumber: log.blockNumber,
-          transactionHash: log.transactionHash,
-        };
-      });
-    } catch (error) {
-      console.error("Error querying FeeTransferred events:", error);
-      return [];
+      try {
+        const events = await contract.queryFilter(filter, currentFrom, currentTo);
+        for (const event of events) {
+          results.push(mapper(event as ethers.EventLog));
+        }
+      } catch (error) {
+        console.error(`Error querying blocks ${currentFrom}-${currentTo}:`, error);
+      }
+      
+      currentFrom = currentTo + 1;
     }
+    
+    return results;
   }
 
-  async queryRevenueDistributions(fromBlock: number = 0, toBlock: number | "latest" = "latest"): Promise<RevenueDistributionEvent[]> {
-    try {
-      const filter = this.revenueRouterContract.filters.RevenueDistributed();
-      const events = await this.revenueRouterContract.queryFilter(filter, fromBlock, toBlock);
-      
-      return events.map(event => {
-        const log = event as ethers.EventLog;
-        return {
-          wflrTotal: log.args[0] as bigint,
-          shieldBurned: log.args[1] as bigint,
-          fxrpToStakers: log.args[2] as bigint,
-          reserves: log.args[3] as bigint,
-          blockNumber: log.blockNumber,
-          transactionHash: log.transactionHash,
-        };
-      });
-    } catch (error) {
-      console.error("Error querying RevenueDistributed events:", error);
-      return [];
-    }
+  async queryFeeEvents(fromBlock: number, toBlock: number): Promise<FeeEvent[]> {
+    const filter = this.vaultContract.filters.FeeTransferred();
+    return this.queryWithPagination(
+      this.vaultContract,
+      filter,
+      fromBlock,
+      toBlock,
+      (log) => ({
+        feeType: log.args[0] as string,
+        amount: log.args[1] as bigint,
+        recipient: log.args[2] as string,
+        blockNumber: log.blockNumber,
+        transactionHash: log.transactionHash,
+      })
+    );
+  }
+
+  async queryRevenueDistributions(fromBlock: number, toBlock: number): Promise<RevenueDistributionEvent[]> {
+    const filter = this.revenueRouterContract.filters.RevenueDistributed();
+    return this.queryWithPagination(
+      this.revenueRouterContract,
+      filter,
+      fromBlock,
+      toBlock,
+      (log) => ({
+        wflrTotal: log.args[0] as bigint,
+        shieldBurned: log.args[1] as bigint,
+        fxrpToStakers: log.args[2] as bigint,
+        reserves: log.args[3] as bigint,
+        blockNumber: log.blockNumber,
+        transactionHash: log.transactionHash,
+      })
+    );
   }
 
   async getRevenueTransparencyData(forceRefresh: boolean = false): Promise<RevenueTransparencyData> {
@@ -132,11 +153,12 @@ class AnalyticsService {
 
     try {
       const currentBlock = await this.provider.getBlockNumber();
-      const startBlock = Math.max(0, currentBlock - 50000);
+      const blocksToScan = 1000;
+      const startBlock = Math.max(0, currentBlock - blocksToScan);
       
       const [feeEvents, distributionEvents] = await Promise.all([
-        this.queryFeeEvents(startBlock),
-        this.queryRevenueDistributions(startBlock)
+        this.queryFeeEvents(startBlock, currentBlock),
+        this.queryRevenueDistributions(startBlock, currentBlock)
       ]);
 
       let totalFees = BigInt(0);
@@ -206,27 +228,28 @@ class AnalyticsService {
   }> {
     try {
       const currentBlock = await this.provider.getBlockNumber();
-      const startBlock = Math.max(0, currentBlock - 50000);
+      const blocksToScan = 1000;
+      const startBlock = Math.max(0, currentBlock - blocksToScan);
       
       const depositFilter = this.vaultContract.filters.Deposit();
       const withdrawFilter = this.vaultContract.filters.Withdraw();
       
       const [depositEvents, withdrawEvents] = await Promise.all([
-        this.vaultContract.queryFilter(depositFilter, startBlock),
-        this.vaultContract.queryFilter(withdrawFilter, startBlock)
+        this.queryWithPagination(this.vaultContract, depositFilter, startBlock, currentBlock, 
+          (log) => ({ assets: log.args[2] as bigint })),
+        this.queryWithPagination(this.vaultContract, withdrawFilter, startBlock, currentBlock,
+          (log) => ({ assets: log.args[3] as bigint }))
       ]);
 
       let totalDeposits = BigInt(0);
       let totalWithdraws = BigInt(0);
 
       for (const event of depositEvents) {
-        const log = event as ethers.EventLog;
-        totalDeposits += log.args[2] as bigint;
+        totalDeposits += event.assets;
       }
 
       for (const event of withdrawEvents) {
-        const log = event as ethers.EventLog;
-        totalWithdraws += log.args[3] as bigint;
+        totalWithdraws += event.assets;
       }
 
       const depositsUsd = Number(totalDeposits) / (10 ** FXRP_DECIMALS) * XRP_PRICE_USD;
