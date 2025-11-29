@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Link } from "wouter";
@@ -24,7 +24,10 @@ import {
   Cpu,
   RefreshCw,
   Eye,
-  BarChart3
+  BarChart3,
+  Menu,
+  X,
+  ExternalLink
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
@@ -50,6 +53,17 @@ export default function Landing() {
   const valueAnimation = useScrollAnimation();
   const ctaAnimation = useScrollAnimation();
   const metrics = useAnalyticsMetrics();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleMobileNavClick = (href: string) => {
+    setMobileMenuOpen(false);
+    if (href.startsWith('#')) {
+      const element = document.querySelector(href);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
 
   useEffect(() => {
     document.title = "Shield Finance - XRP Liquid Staking Protocol | 100% Gasless with Smart Accounts";
@@ -247,14 +261,104 @@ export default function Landing() {
                 Blog
               </a>
             </nav>
-            <Link href="/app">
-              <Button data-testid="button-launch-app" className="transition-all">
-                Launch App
-                <ArrowRight className="ml-2 h-4 w-4" />
+            <div className="flex items-center gap-2">
+              {/* Mobile hamburger menu button */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="md:hidden text-gray-700"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                data-testid="button-mobile-menu"
+              >
+                {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
               </Button>
-            </Link>
+              <Link href="/app">
+                <Button data-testid="button-launch-app" className="transition-all">
+                  <span className="hidden sm:inline">Launch App</span>
+                  <span className="sm:hidden">App</span>
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
+        
+        {/* Mobile Navigation Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden bg-white border-t border-gray-100 shadow-lg" data-testid="mobile-menu">
+            <nav className="flex flex-col py-4 px-4 space-y-1">
+              <a 
+                href="#features" 
+                onClick={() => handleMobileNavClick('#features')}
+                className="flex items-center gap-3 text-gray-700 hover:text-gray-900 hover:bg-gray-50 px-4 py-3 rounded-lg transition-all"
+                data-testid="link-mobile-features"
+              >
+                <Sparkles className="h-5 w-5 text-primary" />
+                <span className="font-medium">Features</span>
+              </a>
+              <a 
+                href="#how-it-works" 
+                onClick={() => handleMobileNavClick('#how-it-works')}
+                className="flex items-center gap-3 text-gray-700 hover:text-gray-900 hover:bg-gray-50 px-4 py-3 rounded-lg transition-all"
+                data-testid="link-mobile-how-it-works"
+              >
+                <Zap className="h-5 w-5 text-primary" />
+                <span className="font-medium">How It Works</span>
+              </a>
+              <a 
+                href="#security" 
+                onClick={() => handleMobileNavClick('#security')}
+                className="flex items-center gap-3 text-gray-700 hover:text-gray-900 hover:bg-gray-50 px-4 py-3 rounded-lg transition-all"
+                data-testid="link-mobile-security"
+              >
+                <Lock className="h-5 w-5 text-primary" />
+                <span className="font-medium">Security</span>
+              </a>
+              
+              <div className="border-t border-gray-100 my-2" />
+              
+              <a 
+                href="https://docs.shyield.finance" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-between text-gray-700 hover:text-gray-900 hover:bg-gray-50 px-4 py-3 rounded-lg transition-all"
+                data-testid="link-mobile-docs"
+              >
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Documentation</span>
+                </div>
+                <ExternalLink className="h-4 w-4 text-gray-400" />
+              </a>
+              <a 
+                href="https://blog.shyield.finance" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-between text-gray-700 hover:text-gray-900 hover:bg-gray-50 px-4 py-3 rounded-lg transition-all"
+                data-testid="link-mobile-blog"
+              >
+                <div className="flex items-center gap-3">
+                  <Quote className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Blog</span>
+                </div>
+                <ExternalLink className="h-4 w-4 text-gray-400" />
+              </a>
+              <a 
+                href="https://discord.gg/Vzs3KbzU" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-between text-gray-700 hover:text-gray-900 hover:bg-gray-50 px-4 py-3 rounded-lg transition-all"
+                data-testid="link-mobile-discord"
+              >
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Discord</span>
+                </div>
+                <ExternalLink className="h-4 w-4 text-gray-400" />
+              </a>
+            </nav>
+          </div>
+        )}
       </header>
 
       {/* Hero Section with Animated Gradient Background */}
