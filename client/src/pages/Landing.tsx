@@ -455,7 +455,7 @@ export default function Landing() {
                 </Button>
               </Link>
               <a href="https://faucet.shyield.finance/" target="_blank" rel="noopener noreferrer">
-                <Button size="lg" variant="outline" data-testid="button-hero-faucet" className="transition-all hover:scale-105 border-primary/50 text-white hover:bg-primary/10">
+                <Button size="lg" variant="outline" data-testid="button-hero-faucet" className="transition-all hover:scale-105 border-primary/50 text-white">
                   <Droplets className="mr-2 h-5 w-5" />
                   Get Test Tokens
                 </Button>
