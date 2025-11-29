@@ -89,6 +89,34 @@ export class TestnetAutomationService {
     }
   }
 
+  private async waitForAccountActivation(address: string, maxAttempts = 10): Promise<void> {
+    this.log(`⏳ Waiting for account ${address} to activate on ledger...`);
+    
+    const client = await this.ensureXrplConnected();
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        await client.request({
+          command: "account_info",
+          account: address,
+          ledger_index: "validated",
+        });
+        this.log(`✅ Account ${address} is now active`);
+        return;
+      } catch (error: any) {
+        if (error.data?.error === "actNotFound") {
+          if (attempt < maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        } else {
+          throw error;
+        }
+      }
+    }
+    
+    this.log(`⚠️ Account activation check timed out, proceeding anyway...`);
+  }
+
   private async getVaultAddress(): Promise<string> {
     if (this.vaultAddress) {
       return this.vaultAddress;
@@ -203,6 +231,9 @@ export class TestnetAutomationService {
         duration: `${Date.now() - startTime}ms`,
       });
 
+      // Wait for account to be activated on ledger (faucet has ~2-5s delay)
+      await this.waitForAccountActivation(address);
+
       return wallet;
     } catch (error) {
       this.log("❌ Failed to fund wallet from faucet", { error: String(error) });
@@ -244,6 +275,12 @@ export class TestnetAutomationService {
       }
 
       const prepared = await client.autofill(payment);
+      
+      // Increase LastLedgerSequence buffer to prevent timeout during network latency
+      // Default autofill uses current + 4, we use current + 20 (~80 seconds)
+      const currentLedger = await client.getLedgerIndex();
+      prepared.LastLedgerSequence = currentLedger + 20;
+      
       const signed = wallet.sign(prepared);
       const result = await client.submitAndWait(signed.tx_blob);
 
