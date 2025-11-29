@@ -29,7 +29,8 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Separation of Concerns**: Monorepo structure (`/client`, `/server`, `/shared`).
 - **Smart Accounts**: ERC-4337 account abstraction using Etherspot Prime SDK for gasless transactions.
 - **Automated Systems**: FAssets bridge reconciliation (automated and manual recovery), automated withdrawal system (async processing, ENS resolution, XRPL payment detection, FDC proof generation), deposit watchdog, and withdrawal retry services.
-- **UX Enhancements**: Multi-step progress modals, deposit cancellation, real-time portfolio updates with on-chain balance verification for FXRP vaults, wallet-type-aware vault filtering, ecosystem-based network switching, and consolidated position display with aggregated rewards.
+- **UX Enhancements**: Multi-step progress modals, deposit cancellation, real-time portfolio updates with on-chain balance verification for FXRP vaults, wallet-type-aware vault filtering, ecosystem-based network switching, consolidated position display with aggregated rewards, and guided tour (v1.3) with mobile sidebar lock mechanism.
+- **Guided Tour**: Shepherd.js-based onboarding tour with scenario-based flows (new-user, xrpl-user, evm-user). Mobile sidebar lock mechanism prevents Radix Sheet auto-close during tour steps via `mobileSidebarLocked` state in SidebarContext. Tour opens/locks sidebar for menu steps (Vaults, Staking, Swap, Portfolio), unlocks for non-sidebar steps, and releases lock on complete/cancel.
 - **Wallet Architecture**: Dual-ecosystem wallet support with three provider types: `xaman` (native XRPL SDK with xApp integration), `walletconnect` (XRPL via WalletConnect), and `reown` (EVM via Reown AppKit). Wallet type derived from connected addresses (evmAddress → "evm", address → "xrpl"). Header displays connected address with disconnect button. Dark-themed Reown modal with custom CSS overrides.
 - **Xaman xApp Integration**: Streamlined xApp experience when opened within Xaman wallet - auto-connect via `xumm.user.account`, deposit auto-sign via `xumm.xapp.openSignRequest()`, xApp context detection (JWT/OTT/ReactNativeWebView), and `xumm.xapp.ready()` loader dismissal. Note: Claim/withdraw flows currently fall back to QR modal pending backend updates.
 - **Security & Controls**: P0 vault controls (deposit limits, pausable emergency controls), minimum deposits, transparent accounting, double-mint prevention, idempotency, crash recovery, wallet-scoped transaction security, and FDC proof generation lock.
@@ -86,6 +87,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Recharts**: For APY trends and analytics.
 - **Radix UI**: Headless UI component primitives.
 - **Lucide React**: Icon library.
+- **Shepherd.js**: Interactive guided tour library for user onboarding.
 
 ### Development & Deployment
 - **Drizzle ORM**: Database schema management.
