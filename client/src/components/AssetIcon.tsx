@@ -1,8 +1,8 @@
-import xrpLogo from "@assets/xrp.148c3b50_1762588566535.png";
-import usdcLogo from "@assets/usdc-icon.5f31fb80_1762588566536.png";
-import rlusdLogo from "@assets/rlusd-icon.d10ce925_1762588566536.png";
+import xrpLogo from "@assets/xrp.svg";
+import usdcLogo from "@assets/usdc.svg";
+import rlusdLogo from "@assets/rlusd.svg";
 import flrLogo from "@assets/flr.svg";
-import fxrpLogo from "@assets/fxrp-logo.png";
+import fxrpLogo from "@assets/fxrp.svg";
 import { getAssetDisplayName, type AssetKey } from "@shared/assetConfig";
 import { useNetwork } from "@/lib/networkContext";
 import { useShieldLogo } from "@/components/ShieldLogo";

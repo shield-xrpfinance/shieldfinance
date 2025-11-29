@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 60">
+  <defs>
+    <linearGradient id="flareGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#E62058"/>
+      <stop offset="100%" stop-color="#FF6B6B"/>
+    </linearGradient>
+  </defs>
+  <circle cx="30" cy="30" r="25" fill="url(#flareGrad)"/>
+  <path d="M30 12l4 8h-8l4-8zm-10 10h20l-10 20-10-20z" fill="#fff"/>
+  <text x="70" y="38" font-family="Inter, system-ui, sans-serif" font-size="24" font-weight="600" fill="currentColor">Flare</text>
+</svg>

@@ -1,5 +1,5 @@
 interface IPhoneMockupProps {
-  screenshot: string;
+  screenshot?: string;
   alt?: string;
   className?: string;
 }
@@ -22,13 +22,30 @@ export function IPhoneMockup({ screenshot, alt = "Mobile app screenshot", classN
             {/* Notch */}
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[40%] h-[4.5%] bg-black rounded-b-3xl z-20" />
             
-            {/* Screenshot */}
-            <img 
-              src={screenshot} 
-              alt={alt}
-              className="w-full h-full object-cover object-top"
-              data-testid="img-iphone-screenshot"
-            />
+            {/* Screenshot or placeholder */}
+            {screenshot ? (
+              <img 
+                src={screenshot} 
+                alt={alt}
+                className="w-full h-full object-cover object-top"
+                data-testid="img-iphone-screenshot"
+              />
+            ) : (
+              <div 
+                className="w-full h-full bg-gradient-to-br from-primary/20 via-background to-primary/10 flex items-center justify-center"
+                data-testid="img-iphone-screenshot"
+              >
+                <div className="text-center p-6">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-primary/20 flex items-center justify-center">
+                    <svg className="w-8 h-8 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm font-medium text-foreground/80">Shield Finance</p>
+                  <p className="text-xs text-muted-foreground mt-1">Mobile Portfolio</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
         
