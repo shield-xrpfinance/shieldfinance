@@ -24,6 +24,7 @@ import { readinessRegistry } from "./services/ReadinessRegistry";
 import crypto from "crypto";
 import { generateFDCProof } from "./utils/fdc-proof";
 import { globalRateLimiter, strictRateLimiter } from "./middleware/rateLimiter";
+import { analyticsService } from "./services/AnalyticsService";
 
 /**
  * Admin authentication middleware for operational endpoints
@@ -4063,38 +4064,23 @@ export async function registerRoutes(
     }
   });
 
-  // Get revenue transparency metrics (Convex-style)
+  /**
+   * GET /api/analytics/revenue-transparency
+   * 
+   * Real-time revenue transparency metrics from on-chain events (Coston2 testnet)
+   * 
+   * Data sources:
+   * - FeeTransferred events from ShXRPVault (deposit/withdrawal fees)
+   * - RevenueDistributed events from RevenueRouter (SHIELD burns, staker rewards)
+   * 
+   * Metrics cached for 1 minute to reduce RPC calls
+   */
   app.get("/api/analytics/revenue-transparency", async (_req, res) => {
     try {
-      // TODO: Once contracts are deployed on Flare mainnet, replace with real aggregated data from:
-      // 1. FeeTransferred events from ShXRPVault contract:
-      //    - Sum all deposit/withdrawal fees to get totalFeesCollected
-      // 2. RevenueDistributed events from RevenueRouter contract:
-      //    - Sum shieldBurned field from all events to get totalShieldBurned
-      //    - Calculate burnedAmountUsd (50% of fees converted to SHIELD and burned)
-      // 3. Staking boost calculations from ShXRPVault:
-      //    - Track previewRedeemWithBoost bonus amounts to get extraYieldDistributed
-      //
-      // Implementation notes:
-      // - Create burn_events table to track RevenueDistributed events
-      // - Create fee_events table to track FeeTransferred events
-      // - Add storage methods: getBurnEventsSummary(), getFeesSummary(), getStakingBoostSummary()
-      // - Query contract events via ethers.js event listeners or The Graph indexer
-      
-      // Placeholder data (contracts not yet deployed per replit.md)
-      const revenueData = {
-        // Hero metrics
-        totalFeesCollected: "2847000",      // Sum of all FeeTransferred events (USD)
-        totalShieldBurned: "317000",        // Sum of shieldBurned from RevenueDistributed events
-        totalShieldBurnedUsd: "126800",     // USD value of burned SHIELD tokens
-        extraYieldDistributed: "425000",    // Extra yield from staking boost (USD)
-        
-        // Breakdown cards
-        burnedAmountUsd: "1423500",         // 50% of fees used for buyback-burn (USD)
-      };
-      
+      const revenueData = await analyticsService.getRevenueTransparencyData();
       res.json(revenueData);
     } catch (error) {
+      console.error("Failed to fetch revenue transparency:", error);
       res.status(500).json({ error: "Failed to fetch revenue transparency" });
     }
   });
@@ -4184,29 +4170,17 @@ export async function registerRoutes(
   /**
    * GET /api/analytics/revenue-stats
    * 
-   * Alias endpoint for revenue transparency metrics
-   * Redirects to /api/analytics/revenue-transparency for consistency
+   * Alias endpoint for revenue transparency metrics (uses same on-chain data source)
    * 
    * This endpoint exists for dashboard compatibility and matches the naming convention
    * of other analytics endpoints (vault-metrics, bridge-status, revenue-stats)
    */
   app.get("/api/analytics/revenue-stats", async (_req, res) => {
     try {
-      // Reuse the same logic as revenue-transparency endpoint
-      // Placeholder data (contracts not yet deployed per replit.md)
-      const revenueData = {
-        // Hero metrics
-        totalFeesCollected: "2847000",      // Sum of all FeeTransferred events (USD)
-        totalShieldBurned: "317000",        // Sum of shieldBurned from RevenueDistributed events
-        totalShieldBurnedUsd: "126800",     // USD value of burned SHIELD tokens
-        extraYieldDistributed: "425000",    // Extra yield from staking boost (USD)
-        
-        // Breakdown cards
-        burnedAmountUsd: "1423500",         // 50% of fees used for buyback-burn (USD)
-      };
-      
+      const revenueData = await analyticsService.getRevenueTransparencyData();
       res.json(revenueData);
     } catch (error) {
+      console.error("Failed to fetch revenue stats:", error);
       res.status(500).json({ error: "Failed to fetch revenue stats" });
     }
   });
