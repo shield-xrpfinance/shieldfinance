@@ -1,0 +1,22 @@
+# REPLIT PROMPT – Generate VARA-Compliant Shield Finance Whitepaper v1.3 PDF
+# Paste into new Replit (Node.js/Python) and Run – Outputs 20+ page institutional PDF + MD
+
+You are a VARA-certified blockchain compliance expert and technical writer. Generate a 20+ page PDF titled:
+
+"Shield Finance – Whitepaper v1.3 – December 2025 (Mainnet Edition) – VARA Compliance Disclosure"
+
+Match EXACT visual style/fonts/spacing/colors/headers/footers of original v1.2 images. Expand to institutional depth: Detailed sections, citations, risks.
+
+Core Structure (Replace v1.2 entirely):
+- **Page 1 (Cover)**: As prompt, but add "VARA-Aligned Disclosures Included" footer.
+- **Page 2 (Abstract & Metrics)**: As prompt, but add [1] citations (e.g., Flare FTSOv2 for APY: https://flare.network/docs/ftso-v2). Update audits: "Hacken (Dec 2025, full report: [link]), Asfalia (passed), Trail of Bits (Q1 2026)".
+- **Pages 3-5: Protocol Architecture**: Detail shXRP mint/burn, FAssets bridge (3-5 day finality risks), revenue router (40% boosts).
+- **Pages 6-8: Institutional Safeguards**: ERC-4626/SafeERC20/ReentrancyGuard; add VARA: AML/CFT framework (MLRO, transaction monitoring, quarterly reports); cyber policies (multi-sig, cold storage, annual audits).
+- **Pages 9-12: Tokenomics & Governance**: Fixed 10M SHIELD; vesting (20% treasury: 24-month linear); VARA classification (utility VA, no securities); STR integration.
+- **Pages 13-15: Roadmap & Risks**: Q4 2025 mainnet; risks (oracle downtime, TVL volatility, FAssets caps); VARA disclaimer: "Not a regulated offering; geo-blocked in Dubai pending VASP license."
+- **Pages 16-20: Research/Compliance Appendix**: Flare links; VARA Rulebooks (v2.0, 2025: whitepaper reqs, AED 3M DeFi capital); 50-page equiv. risk disclosure (stress-tests, redemption); full audit excerpts.
+- **Every Page Footer**: "Shield Finance – Institutional-Grade LST for XRP on Flare – Compliant with VARA 2025 Standards (Non-UAE Targeted)"
+
+Technical: Use markdown-pdf/puppeteer; <5MB; output whitepaper-v1.3.pdf + .md. Include VARA warning: "Seek legal advice for UAE ops."
+
+Generate now – no commentary.
