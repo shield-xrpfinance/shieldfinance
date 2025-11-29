@@ -146,25 +146,6 @@ class AnalyticsService {
     );
   }
 
-  /**
-   * Returns demo revenue data for testnet display
-   * Realistic values for protocol with ~$5M TVL in early growth phase
-   */
-  private getDemoRevenueData(): RevenueTransparencyData {
-    return {
-      totalFeesCollected: "247500",
-      totalShieldBurned: "1237500",
-      totalShieldBurnedUsd: "12375",
-      extraYieldDistributed: "99000",
-      burnedAmountUsd: "123750",
-      lastUpdated: new Date().toISOString(),
-      eventCount: {
-        feeEvents: 0,
-        distributionEvents: 0,
-      },
-    };
-  }
-
   async getRevenueTransparencyData(forceRefresh: boolean = false): Promise<RevenueTransparencyData> {
     const now = Date.now();
     if (!forceRefresh && this.cache.revenueData && this.cache.lastFetch && (now - this.cache.lastFetch) < this.CACHE_TTL_MS) {
@@ -199,15 +180,6 @@ class AnalyticsService {
       const fxrpToStakersValue = Number(totalFxrpToStakers) / (10 ** FXRP_DECIMALS) * XRP_PRICE_USD;
       const burnedAmountUsd = totalFeesUsd * 0.5;
 
-      // If no on-chain events found, use demo data for testnet display
-      if (feeEvents.length === 0 && distributionEvents.length === 0) {
-        console.log(`[AnalyticsService] No on-chain events found, using demo data for testnet display`);
-        const demoData = this.getDemoRevenueData();
-        this.cache.revenueData = demoData;
-        this.cache.lastFetch = now;
-        return demoData;
-      }
-
       const data: RevenueTransparencyData = {
         totalFeesCollected: Math.round(totalFeesUsd).toString(),
         totalShieldBurned: Math.round(shieldBurnedCount).toString(),
@@ -235,8 +207,18 @@ class AnalyticsService {
         return this.cache.revenueData;
       }
       
-      // Return demo data on error for testnet display
-      return this.getDemoRevenueData();
+      return {
+        totalFeesCollected: "0",
+        totalShieldBurned: "0",
+        totalShieldBurnedUsd: "0",
+        extraYieldDistributed: "0",
+        burnedAmountUsd: "0",
+        lastUpdated: new Date().toISOString(),
+        eventCount: {
+          feeEvents: 0,
+          distributionEvents: 0,
+        },
+      };
     }
   }
 
@@ -304,13 +286,10 @@ class AnalyticsService {
   } = {};
   private readonly STAKERS_CACHE_TTL_MS = 300_000; // 5 minutes
 
-  private readonly DEMO_STAKERS_COUNT = 47;
-
   /**
    * Get unique stakers count from on-chain Deposit events
    * Queries Deposit events and counts unique owner addresses
    * Cached for 5 minutes to reduce RPC load
-   * Returns demo data for testnet when no events found
    */
   async getUniqueStakers(): Promise<number> {
     const now = Date.now();
@@ -322,9 +301,6 @@ class AnalyticsService {
 
     try {
       const currentBlock = await this.provider.getBlockNumber();
-      // Use 500 blocks (about 4 minutes of blocks on Coston2) for fast queries
-      // With 29 blocks per query and 500 total, ~18 RPC calls needed (~3-4 seconds)
-      // Caching (5 min TTL) ensures we don't hammer the RPC
       const blocksToScan = 500;
       const startBlock = Math.max(0, currentBlock - blocksToScan);
       
@@ -349,19 +325,18 @@ class AnalyticsService {
         }
       }
 
-      // If no on-chain events found, use demo data for testnet display
-      const count = uniqueOwners.size > 0 ? uniqueOwners.size : this.DEMO_STAKERS_COUNT;
+      const count = uniqueOwners.size;
       this.stakersCache.count = count;
       this.stakersCache.lastFetch = now;
 
-      console.log(`[AnalyticsService] Found ${uniqueOwners.size} unique stakers from ${depositEvents.length} deposit events${uniqueOwners.size === 0 ? ' (using demo data)' : ''}`);
+      console.log(`[AnalyticsService] Found ${count} unique stakers from ${depositEvents.length} deposit events`);
       return count;
     } catch (error) {
       console.error("[AnalyticsService] Error fetching unique stakers:", error);
       if (this.stakersCache.count !== undefined) {
         return this.stakersCache.count;
       }
-      return this.DEMO_STAKERS_COUNT;
+      return 0;
     }
   }
 }

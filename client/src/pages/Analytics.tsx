@@ -101,132 +101,69 @@ export default function Analytics() {
         </p>
       </div>
 
-      {/* Revenue Transparency Hero Section - Convex Style */}
-      <div className="space-y-6">
-        {/* Main Hero Card with Massive Numbers */}
-        <Card className="bg-shield-dark border-primary/20 backdrop-blur-md overflow-hidden">
-          <CardContent className="p-8 md:p-12">
-            {revenueLoading ? (
-              <div className="space-y-8">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-              </div>
-            ) : (
-              <div className="space-y-8 text-center">
-                {/* Total Platform Revenue */}
-                <div data-testid="revenue-hero-platform-revenue">
-                  <div className="text-base font-semibold text-muted-foreground-light uppercase tracking-wide mb-2 flex items-center justify-center gap-2">
-                    Total Platform Revenue Generated
-                    <button
-                      type="button"
-                      onClick={() => setRevenueModalOpen(true)}
-                      className="hover-elevate active-elevate-2 rounded-full p-1 transition-all"
-                      data-testid="button-revenue-info"
-                      aria-label="View revenue breakdown"
-                    >
-                      <Info className="h-4 w-4 text-primary" />
-                    </button>
-                  </div>
-                  <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-primary">
-                    ${(parseFloat(revenueData?.totalFeesCollected || "0") / 1000000).toFixed(2)}m
-                  </div>
-                </div>
-
-                {/* Total SHIELD Burned */}
-                <div data-testid="revenue-hero-shield-burned">
-                  <div className="text-base font-semibold text-muted-foreground-light uppercase tracking-wide mb-2">
-                    Total $SHIELD Burned Forever
-                  </div>
-                  <div className="flex items-center justify-center gap-3">
-                    <Flame className="h-8 w-8 md:h-10 md:w-10 text-primary" />
-                    <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-shield-foreground">
-                      {parseFloat(revenueData?.totalShieldBurned || "0").toLocaleString()}
-                    </div>
-                    <span className="text-3xl md:text-4xl font-bold text-primary">$SHIELD</span>
-                  </div>
-                  <div className="text-lg md:text-xl text-primary/80 font-medium mt-2">
-                    (${(parseFloat(revenueData?.totalShieldBurnedUsd || "0") / 1000).toFixed(1)}k)
-                  </div>
-                </div>
-
-                {/* Extra Yield Distributed */}
-                <div data-testid="revenue-hero-extra-yield">
-                  <div className="text-base font-semibold text-muted-foreground-light uppercase tracking-wide mb-2">
-                    Extra Yield Distributed to Stakers
-                  </div>
-                  <div className="text-5xl md:text-6xl lg:text-7xl font-bold font-mono tabular-nums text-primary">
-                    ${(parseFloat(revenueData?.extraYieldDistributed || "0") / 1000000).toFixed(2)}m
-                  </div>
+      {/* Revenue Transparency Section */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              Revenue Transparency
+              <button
+                type="button"
+                onClick={() => setRevenueModalOpen(true)}
+                className="hover-elevate active-elevate-2 rounded-full p-1 transition-all"
+                data-testid="button-revenue-info"
+                aria-label="View revenue breakdown"
+              >
+                <Info className="h-4 w-4 text-muted-foreground" />
+              </button>
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Live on-chain data from Coston2 testnet
+            </p>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {revenueLoading ? (
+            <div className="grid gap-4 md:grid-cols-3">
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+              <Skeleton className="h-20 w-full" />
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-3">
+              {/* Total Fees Collected */}
+              <div className="p-4 rounded-md bg-muted/50" data-testid="revenue-fees-collected">
+                <div className="text-sm text-muted-foreground mb-1">Total Fees Collected</div>
+                <div className="text-2xl font-bold font-mono tabular-nums">
+                  ${parseFloat(revenueData?.totalFeesCollected || "0").toLocaleString()}
                 </div>
               </div>
-            )}
-          </CardContent>
-        </Card>
 
-        {/* Three Breakdown Cards */}
-        <div className="grid gap-6 md:grid-cols-3">
-          {/* Total Fees Collected */}
-          <Card className="bg-card/50 backdrop-blur-md border-primary/10">
-            <CardHeader>
-              <CardTitle className="text-base font-medium text-foreground">
-                Total Fees Collected
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {revenueLoading ? (
-                <Skeleton className="h-10 w-full" />
-              ) : (
-                <div className="text-3xl md:text-4xl font-bold font-mono tabular-nums" data-testid="revenue-fees-collected">
-                  ${(parseFloat(revenueData?.totalFeesCollected || "0") / 1000000).toFixed(2)}m
+              {/* SHIELD Burned */}
+              <div className="p-4 rounded-md bg-muted/50" data-testid="revenue-shield-burned">
+                <div className="text-sm text-muted-foreground mb-1 flex items-center gap-1">
+                  <Flame className="h-3 w-3" />
+                  SHIELD Burned (50%)
                 </div>
-              )}
-            </CardContent>
-          </Card>
+                <div className="text-2xl font-bold font-mono tabular-nums">
+                  {parseFloat(revenueData?.totalShieldBurned || "0").toLocaleString()}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  ${parseFloat(revenueData?.totalShieldBurnedUsd || "0").toLocaleString()} USD
+                </div>
+              </div>
 
-          {/* Burned Amount */}
-          <Card className="bg-card/50 backdrop-blur-md border-primary/10">
-            <CardHeader>
-              <CardTitle className="text-base font-medium text-foreground">
-                Burned: 50% of Fees
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {revenueLoading ? (
-                <Skeleton className="h-10 w-full" />
-              ) : (
-                <div data-testid="revenue-burned-amount">
-                  <div className="text-3xl md:text-4xl font-bold font-mono tabular-nums flex items-center gap-2">
-                    <Flame className="h-6 w-6 text-primary" />
-                    ${(parseFloat(revenueData?.burnedAmountUsd || "0") / 1000000).toFixed(2)}m
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-2">
-                    → $SHIELD Burned Forever
-                  </div>
+              {/* Extra Yield Distributed */}
+              <div className="p-4 rounded-md bg-muted/50" data-testid="revenue-extra-yield">
+                <div className="text-sm text-muted-foreground mb-1">Extra Yield to Stakers</div>
+                <div className="text-2xl font-bold font-mono tabular-nums">
+                  ${parseFloat(revenueData?.extraYieldDistributed || "0").toLocaleString()}
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Extra Yield Paid */}
-          <Card className="bg-card/50 backdrop-blur-md border-primary/10">
-            <CardHeader>
-              <CardTitle className="text-base font-medium text-foreground">
-                Extra Yield Paid to Stakers
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              {revenueLoading ? (
-                <Skeleton className="h-10 w-full" />
-              ) : (
-                <div className="text-3xl md:text-4xl font-bold font-mono tabular-nums" data-testid="revenue-extra-yield-paid">
-                  ${(parseFloat(revenueData?.extraYieldDistributed || "0") / 1000000).toFixed(2)}m
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* System Monitoring Dashboard */}
       <MonitoringDashboard />
@@ -485,31 +422,31 @@ export default function Analytics() {
 
       {/* Revenue Breakdown Modal */}
       <Dialog open={revenueModalOpen} onOpenChange={setRevenueModalOpen}>
-        <DialogContent className="max-w-2xl bg-shield-dark border-primary/20 backdrop-blur-md" aria-describedby="revenue-breakdown-description">
+        <DialogContent className="max-w-2xl" aria-describedby="revenue-breakdown-description">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold text-primary">
-              How SHIELD Creates Value for Users
+            <DialogTitle className="text-xl font-bold">
+              How SHIELD Creates Value
             </DialogTitle>
-            <DialogDescription id="revenue-breakdown-description" className="sr-only">
-              Detailed breakdown of Shield Finance's revenue distribution model, including platform fees, buyback-burn mechanism, protocol reserves, and staking boost rewards
+            <DialogDescription id="revenue-breakdown-description">
+              Revenue distribution model: 50% buyback-burn, 50% reserves
             </DialogDescription>
           </DialogHeader>
           
           <div className="space-y-6 mt-4" data-testid="revenue-breakdown-modal">
             {/* Platform Fees */}
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-shield-foreground flex items-center gap-2">
-                <DollarSign className="h-5 w-5 text-primary" />
-                Platform Fees Collected
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <DollarSign className="h-4 w-4 text-muted-foreground" />
+                Platform Fees (0.2%)
               </h3>
-              <p className="text-sm text-muted-foreground-light">
-                Shield Finance charges a minimal 0.2% fee on deposits and withdrawals to the shXRP vault.
+              <p className="text-sm text-muted-foreground">
+                Charged on deposits and withdrawals to the shXRP vault.
               </p>
-              <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
+              <div className="bg-muted/50 rounded-md p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground-light">Total Fees Collected</span>
-                  <span className="text-xl font-bold font-mono tabular-nums text-primary">
-                    ${(parseFloat(revenueData?.totalFeesCollected || "0") / 1000000).toFixed(2)}m
+                  <span className="text-sm text-muted-foreground">Total Collected</span>
+                  <span className="text-lg font-bold font-mono tabular-nums">
+                    ${parseFloat(revenueData?.totalFeesCollected || "0").toLocaleString()}
                   </span>
                 </div>
               </div>
@@ -517,82 +454,70 @@ export default function Analytics() {
 
             {/* Revenue Split */}
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-shield-foreground flex items-center gap-2">
-                <Flame className="h-5 w-5 text-primary" />
-                Revenue Distribution (50/50 Split)
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <Flame className="h-4 w-4 text-muted-foreground" />
+                Revenue Distribution
               </h3>
-              <p className="text-sm text-muted-foreground-light">
-                100% of platform fees are distributed to create ecosystem value:
-              </p>
-              <div className="grid gap-3 mt-3">
-                <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Flame className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium text-muted-foreground-light">50% Buyback & Burn</span>
-                    </div>
-                    <span className="text-lg font-bold font-mono tabular-nums text-primary">
-                      ${(parseFloat(revenueData?.burnedAmountUsd || "0") / 1000000).toFixed(2)}m
+              <div className="grid gap-3">
+                <div className="bg-muted/50 rounded-md p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium">50% Buyback & Burn</span>
+                    <span className="font-bold font-mono tabular-nums">
+                      ${parseFloat(revenueData?.burnedAmountUsd || "0").toLocaleString()}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground-light">
-                    Swapped to $SHIELD via SparkDEX V3 and burned forever, creating deflationary pressure
+                  <p className="text-xs text-muted-foreground">
+                    Swapped to SHIELD via SparkDEX and burned forever
                   </p>
                 </div>
-                <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <Vault className="h-4 w-4 text-primary" />
-                      <span className="text-sm font-medium text-muted-foreground-light">50% Protocol Reserves</span>
-                    </div>
-                    <span className="text-lg font-bold font-mono tabular-nums text-primary">
-                      ${(parseFloat(revenueData?.totalFeesCollected || "0") / 2000000).toFixed(2)}m
+                <div className="bg-muted/50 rounded-md p-4">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-medium">50% Protocol Reserves</span>
+                    <span className="font-bold font-mono tabular-nums">
+                      ${(parseFloat(revenueData?.totalFeesCollected || "0") / 2).toLocaleString()}
                     </span>
                   </div>
-                  <p className="text-xs text-muted-foreground-light">
-                    Accumulated for protocol development, security audits, and future expansions
+                  <p className="text-xs text-muted-foreground">
+                    For development, audits, and expansion
                   </p>
                 </div>
               </div>
             </div>
 
-            {/* Staking Boost Extra Yield */}
+            {/* Staking Boost */}
             <div className="space-y-2">
-              <h3 className="text-lg font-semibold text-shield-foreground flex items-center gap-2">
-                <TrendingUp className="h-5 w-5 text-primary" />
-                Staking Boost Extra Yield
+              <h3 className="text-base font-semibold flex items-center gap-2">
+                <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                Staking Boost Rewards
               </h3>
-              <p className="text-sm text-muted-foreground-light">
-                Users who stake 100+ $SHIELD tokens receive bonus APY on their shXRP positions (+1% per 100 SHIELD).
+              <p className="text-sm text-muted-foreground">
+                SHIELD stakers receive extra yield on shXRP positions.
               </p>
-              <div className="bg-primary/5 rounded-md p-4 border border-primary/10 backdrop-blur-sm">
+              <div className="bg-muted/50 rounded-md p-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground-light">Extra Yield Distributed</span>
-                  <span className="text-xl font-bold font-mono tabular-nums text-primary">
-                    ${(parseFloat(revenueData?.extraYieldDistributed || "0") / 1000000).toFixed(2)}m
+                  <span className="text-sm text-muted-foreground">Extra Yield Distributed</span>
+                  <span className="text-lg font-bold font-mono tabular-nums">
+                    ${parseFloat(revenueData?.extraYieldDistributed || "0").toLocaleString()}
                   </span>
                 </div>
-                <p className="text-xs text-muted-foreground-light mt-2">
-                  This additional yield is paid directly to SHIELD stakers on top of their base shXRP APY
-                </p>
               </div>
             </div>
 
-            {/* Total Ecosystem Value */}
-            <div className="border-t border-primary/20 pt-4">
-              <div className="bg-primary/5 rounded-md p-4 border border-primary/20">
+            {/* Total Burned */}
+            <div className="border-t pt-4">
+              <div className="bg-muted/50 rounded-md p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <div className="text-sm font-medium text-muted-foreground-light">Total SHIELD Tokens Burned</div>
-                    <p className="text-xs text-muted-foreground-light mt-1">Permanently removed from supply</p>
+                    <div className="text-sm font-medium">SHIELD Tokens Burned</div>
+                    <p className="text-xs text-muted-foreground">Permanently removed from supply</p>
                   </div>
                   <div className="text-right">
-                    <div className="text-2xl font-bold font-mono tabular-nums text-shield-foreground flex items-center gap-2">
-                      <Flame className="h-6 w-6 text-primary" />
+                    <div className="text-xl font-bold font-mono tabular-nums flex items-center gap-2">
+                      <Flame className="h-5 w-5 text-orange-500" />
                       {parseFloat(revenueData?.totalShieldBurned || "0").toLocaleString()}
                     </div>
-                    <div className="text-sm text-primary/80">
-                      ${(parseFloat(revenueData?.totalShieldBurnedUsd || "0") / 1000).toFixed(1)}k USD
+                    <div className="text-sm text-muted-foreground">
+                      ${parseFloat(revenueData?.totalShieldBurnedUsd || "0").toLocaleString()} USD
                     </div>
                   </div>
                 </div>
