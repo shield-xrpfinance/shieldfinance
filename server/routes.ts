@@ -4069,6 +4069,63 @@ export async function registerRoutes(
     }
   });
 
+  // =========================================================================
+  // YIELD OPTIMIZATION ENDPOINTS
+  // =========================================================================
+
+  /**
+   * GET /api/yield/strategies
+   * 
+   * Returns all available yield optimization strategies with allocations
+   * Strategies are dynamically calculated based on current vault data
+   */
+  app.get("/api/yield/strategies", async (_req, res) => {
+    try {
+      const strategies = await yieldOptimizerService.getOptimizationStrategies();
+      res.json(strategies);
+    } catch (error) {
+      console.error("Failed to fetch yield strategies:", error);
+      res.status(500).json({ error: "Failed to fetch yield strategies" });
+    }
+  });
+
+  /**
+   * GET /api/yield/strategies/:id
+   * 
+   * Returns a specific yield optimization strategy by ID
+   */
+  app.get("/api/yield/strategies/:id", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const strategy = await yieldOptimizerService.getStrategyById(id);
+      
+      if (!strategy) {
+        return res.status(404).json({ error: "Strategy not found" });
+      }
+      
+      res.json(strategy);
+    } catch (error) {
+      console.error("Failed to fetch yield strategy:", error);
+      res.status(500).json({ error: "Failed to fetch yield strategy" });
+    }
+  });
+
+  /**
+   * GET /api/yield/market-conditions
+   * 
+   * Returns current market conditions and recommended strategy
+   * Helps users make informed decisions about yield optimization
+   */
+  app.get("/api/yield/market-conditions", async (_req, res) => {
+    try {
+      const conditions = await yieldOptimizerService.getMarketConditions();
+      res.json(conditions);
+    } catch (error) {
+      console.error("Failed to fetch market conditions:", error);
+      res.status(500).json({ error: "Failed to fetch market conditions" });
+    }
+  });
+
   /**
    * GET /api/analytics/revenue-transparency
    * 
