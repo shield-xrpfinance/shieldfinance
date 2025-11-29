@@ -34,7 +34,8 @@ import {
   PartyPopper,
   BadgeCheck,
   Activity,
-  Droplets
+  Droplets,
+  Vote
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
@@ -269,6 +270,9 @@ export default function Landing() {
               <a href="https://blog.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 hover:text-gray-900 hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-blog">
                 Blog
               </a>
+              <a href="https://vote.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-sm text-gray-600 hover:text-gray-900 hover-elevate px-3 py-2 rounded-md transition-all" data-testid="link-nav-governance">
+                Governance
+              </a>
             </nav>
             <div className="flex items-center gap-2">
               {/* Mobile hamburger menu button */}
@@ -362,6 +366,19 @@ export default function Landing() {
                 <div className="flex items-center gap-3">
                   <Users className="h-5 w-5 text-primary" />
                   <span className="font-medium">Discord</span>
+                </div>
+                <ExternalLink className="h-4 w-4 text-gray-400" />
+              </a>
+              <a 
+                href="https://vote.shyield.finance" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-between text-gray-700 hover:text-gray-900 hover:bg-gray-50 px-4 py-3 rounded-lg transition-all"
+                data-testid="link-mobile-governance"
+              >
+                <div className="flex items-center gap-3">
+                  <Vote className="h-5 w-5 text-primary" />
+                  <span className="font-medium">Governance</span>
                 </div>
                 <ExternalLink className="h-4 w-4 text-gray-400" />
               </a>
@@ -1358,6 +1375,7 @@ export default function Landing() {
                 <li><a href="https://docs.shyield.finance" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-documentation">Documentation</a></li>
                 <li><a href="https://blog.shyield.finance" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-blog">Blog</a></li>
                 <li><a href="https://shyield.finance/whitepaper.pdf" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-whitepaper">Whitepaper</a></li>
+                <li><a href="https://vote.shyield.finance" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-governance">Governance</a></li>
                 <li><a href="https://discord.gg/Vzs3KbzU" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-support">Support</a></li>
               </ul>
             </div>

@@ -10,7 +10,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Vault, Wallet, History, BarChart3, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles, Zap } from "lucide-react";
+import { LayoutDashboard, Vault, Wallet, History, BarChart3, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles, Zap, Vote } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
@@ -298,6 +298,16 @@ export function AppSidebar() {
                 title="Documentation"
               >
                 <BookOpen className="h-3.5 w-3.5 md:h-4 md:w-4" />
+              </a>
+              <a 
+                href="https://vote.shyield.finance" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
+                data-testid="link-governance"
+                title="Governance Portal"
+              >
+                <Vote className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
             </div>
 
