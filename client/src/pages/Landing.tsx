@@ -27,7 +27,13 @@ import {
   BarChart3,
   Menu,
   X,
-  ExternalLink
+  ExternalLink,
+  Smartphone,
+  Wallet,
+  Compass,
+  PartyPopper,
+  BadgeCheck,
+  Activity
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
@@ -43,6 +49,7 @@ export default function Landing() {
   const shieldLogo = useShieldLogo();
   const heroAnimation = useScrollAnimation();
   const partnersAnimation = useScrollAnimation();
+  const latestUpdatesAnimation = useScrollAnimation();
   const featuresAnimation = useScrollAnimation();
   const whyUsAnimation = useScrollAnimation();
   const technicalAnimation = useScrollAnimation();
@@ -50,6 +57,7 @@ export default function Landing() {
   const mobileExperienceAnimation = useScrollAnimation();
   const platformIntelligenceAnimation = useScrollAnimation();
   const securityAnimation = useScrollAnimation();
+  const airdropAnimation = useScrollAnimation();
   const valueAnimation = useScrollAnimation();
   const ctaAnimation = useScrollAnimation();
   const metrics = useAnalyticsMetrics();
@@ -66,18 +74,18 @@ export default function Landing() {
   };
 
   useEffect(() => {
-    document.title = "Shield Finance - XRP Liquid Staking Protocol | 100% Gasless with Smart Accounts";
+    document.title = "Shield Finance - XRP Liquid Staking Protocol | Security Audited & Live on Testnet";
     
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
       metaDescription.setAttribute(
         "content",
-        "Stake your XRP and earn rewards while maintaining liquidity with Shield Finance. 100% gasless deposits via ERC-4337 Smart Accounts with automated recovery systems. Testnet launching soon."
+        "Stake your XRP and earn rewards with Shield Finance. Security audited smart contracts, Xaman xApp integration, dual XRPL/EVM wallet support, and 100% gasless deposits. Live on Coston2 testnet."
       );
     } else {
       const meta = document.createElement('meta');
       meta.name = 'description';
-      meta.content = 'Stake your XRP and earn rewards while maintaining liquidity with Shield Finance. 100% gasless deposits via ERC-4337 Smart Accounts with automated recovery systems. Testnet launching soon.';
+      meta.content = 'Stake your XRP and earn rewards with Shield Finance. Security audited smart contracts, Xaman xApp integration, dual XRPL/EVM wallet support, and 100% gasless deposits. Live on Coston2 testnet.';
       document.head.appendChild(meta);
     }
 
@@ -498,6 +506,97 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Latest Updates Section - Post Security Audit Features */}
+      <section ref={latestUpdatesAnimation.ref} className="py-24" data-testid="section-latest-updates">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className={`text-center mb-16 ${latestUpdatesAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-chart-2/10 border border-chart-2/20 mb-6" data-testid="badge-updates">
+              <BadgeCheck className="h-4 w-4 text-chart-2" />
+              <span className="text-sm font-semibold text-chart-2" data-testid="text-updates-badge">Security Audited</span>
+            </div>
+            <h2 className="text-3xl lg:text-4xl font-bold mb-4" data-testid="heading-updates">
+              What's New
+            </h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto" data-testid="text-updates-subtitle">
+              Latest features and improvements since completing our security audit
+            </p>
+          </div>
+
+          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${latestUpdatesAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }}>
+            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-xapp">
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Smartphone className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2" data-testid="title-update-xapp">Xaman xApp Integration</h3>
+              <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-xapp">
+                Seamless mobile experience with auto-connect and one-tap deposit signing directly within the Xaman wallet app
+              </p>
+              <div className="text-xs text-primary font-medium" data-testid="badge-update-xapp">Native SDK Integration</div>
+            </Card>
+
+            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-wallets">
+              <div className="h-12 w-12 rounded-lg bg-chart-2/10 flex items-center justify-center mb-4">
+                <Wallet className="h-6 w-6 text-chart-2" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2" data-testid="title-update-wallets">Dual Wallet Support</h3>
+              <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-wallets">
+                Connect with XRPL wallets (Xaman, Bifrost) or EVM wallets (MetaMask, Trust Wallet) via Reown AppKit v2
+              </p>
+              <div className="text-xs text-chart-2 font-medium" data-testid="badge-update-wallets">XRPL + EVM Ecosystems</div>
+            </Card>
+
+            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-tour">
+              <div className="h-12 w-12 rounded-lg bg-chart-3/10 flex items-center justify-center mb-4">
+                <Compass className="h-6 w-6 text-chart-3" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2" data-testid="title-update-tour">Interactive Guided Tour</h3>
+              <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-tour">
+                Personalized onboarding experience that guides new users through the platform with scenario-based flows
+              </p>
+              <div className="text-xs text-chart-3 font-medium" data-testid="badge-update-tour">New User Friendly</div>
+            </Card>
+
+            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-airdrop">
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <PartyPopper className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2" data-testid="title-update-airdrop">SHIELD Token Airdrop</h3>
+              <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-airdrop">
+                Check eligibility and claim your SHIELD tokens. Fair Launch price set at $0.01 with on-chain Merkle verification
+              </p>
+              <Link href="/app/airdrop">
+                <Button variant="outline" size="sm" className="mt-2" data-testid="button-check-airdrop">
+                  Check Eligibility
+                  <ArrowRight className="ml-2 h-3 w-3" />
+                </Button>
+              </Link>
+            </Card>
+
+            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-realtime">
+              <div className="h-12 w-12 rounded-lg bg-chart-2/10 flex items-center justify-center mb-4">
+                <Activity className="h-6 w-6 text-chart-2" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2" data-testid="title-update-realtime">Real-Time On-Chain Data</h3>
+              <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-realtime">
+                Live TVL, APY tracking, and position verification directly from smart contracts with on-chain balance checks
+              </p>
+              <div className="text-xs text-chart-2 font-medium" data-testid="badge-update-realtime">Live Contract Data</div>
+            </Card>
+
+            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-swap">
+              <div className="h-12 w-12 rounded-lg bg-chart-3/10 flex items-center justify-center mb-4">
+                <RefreshCw className="h-6 w-6 text-chart-3" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2" data-testid="title-update-swap">Multi-Asset Swap</h3>
+              <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-swap">
+                Swap between tokens with real-time quotes and approval flows powered by SparkDEX V3 router
+              </p>
+              <div className="text-xs text-chart-3 font-medium" data-testid="badge-update-swap">SparkDEX Integration</div>
+            </Card>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section with Glassmorphism */}
       <section id="features" ref={featuresAnimation.ref} className="py-24" data-testid="section-features">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -525,9 +624,9 @@ export default function Landing() {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                 <Lock className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-2" data-testid="title-feature-security">Secure & Audited</h3>
+              <h3 className="text-lg font-semibold mb-2" data-testid="title-feature-security">Security Audited</h3>
               <p className="text-sm text-muted-foreground" data-testid="text-feature-security">
-                Smart contracts audited by leading security firms, ensuring your assets are safe
+                Completed comprehensive security audit with all critical fixes deployed. OpenZeppelin standards.
               </p>
             </Card>
 
@@ -783,40 +882,40 @@ export default function Landing() {
           <div className={`grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center transition-opacity duration-500 ${mobileExperienceAnimation.isVisible ? 'animate-fade-in-up opacity-100' : 'opacity-100'}`}>
             <div className="order-2 lg:order-1 flex flex-col gap-4">
               <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 border border-primary/20 w-fit" data-testid="badge-mobile">
-                <Sparkles className="h-3 w-3 text-primary" />
-                <span className="text-xs font-semibold text-primary" data-testid="text-mobile-badge">Mobile First Design</span>
+                <Smartphone className="h-3 w-3 text-primary" />
+                <span className="text-xs font-semibold text-primary" data-testid="text-mobile-badge">Xaman xApp Native</span>
               </div>
               <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold" data-testid="heading-mobile-experience">
-                Manage Your Portfolio On The Go
+                Seamless Mobile Staking
               </h2>
               <p className="text-base sm:text-lg text-muted-foreground" data-testid="text-mobile-subtitle">
-                Access your liquid staking positions anytime, anywhere with our mobile-optimized dashboard.
+                Open Shield Finance directly in Xaman wallet for the smoothest XRP staking experience with auto-connect and one-tap signing.
               </p>
               <div className="flex flex-col gap-3 sm:gap-4">
                 <div className="flex items-start gap-3" data-testid="mobile-feature-realtime">
                   <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold mb-1 text-sm sm:text-base" data-testid="title-mobile-realtime">Real-Time Portfolio Tracking</h4>
+                    <h4 className="font-semibold mb-1 text-sm sm:text-base" data-testid="title-mobile-realtime">Auto-Connect in xApp</h4>
                     <p className="text-xs sm:text-sm text-muted-foreground" data-testid="text-mobile-realtime">
-                      Monitor your total value, individual positions, and live APY updates instantly
+                      When opened in Xaman, your wallet connects automatically — no QR codes or manual setup needed
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3" data-testid="mobile-feature-multiasset">
                   <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold mb-1 text-sm sm:text-base" data-testid="title-mobile-multiasset">Multi-Asset Support</h4>
+                    <h4 className="font-semibold mb-1 text-sm sm:text-base" data-testid="title-mobile-multiasset">One-Tap Deposit Signing</h4>
                     <p className="text-xs sm:text-sm text-muted-foreground" data-testid="text-mobile-multiasset">
-                      View all your assets including FLR, WFLR, and XRP in one unified interface
+                      Deposit XRP with a single tap — transactions open directly in Xaman for instant approval
                     </p>
                   </div>
                 </div>
                 <div className="flex items-start gap-3" data-testid="mobile-feature-performance">
                   <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0 mt-0.5" />
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold mb-1 text-sm sm:text-base" data-testid="title-mobile-performance">Performance Metrics</h4>
+                    <h4 className="font-semibold mb-1 text-sm sm:text-base" data-testid="title-mobile-performance">Real-Time Portfolio Tracking</h4>
                     <p className="text-xs sm:text-sm text-muted-foreground" data-testid="text-mobile-performance">
-                      Track active vaults and total stakers across the platform
+                      Monitor your positions, pending deposits, and bridge activity with live on-chain data
                     </p>
                   </div>
                 </div>
@@ -917,11 +1016,15 @@ export default function Landing() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${securityAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
             <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-chart-2/10 border border-chart-2/20 mb-6" data-testid="badge-security-audit">
+                <BadgeCheck className="h-4 w-4 text-chart-2" />
+                <span className="text-sm font-semibold text-chart-2" data-testid="text-audit-badge">Audit Complete</span>
+              </div>
               <h2 className="text-3xl lg:text-4xl font-bold mb-6" data-testid="heading-security">
                 Security First Approach
               </h2>
               <p className="text-lg text-muted-foreground mb-8" data-testid="text-security-subtitle">
-                Your assets are protected by industry-leading security measures and best practices.
+                Comprehensive security audit completed with all critical findings resolved. Your assets are protected by industry-leading measures.
               </p>
               <div className="space-y-4">
                 <div className="flex items-start gap-3" data-testid="security-item-opensource">
@@ -965,6 +1068,10 @@ export default function Landing() {
             <div className="relative">
               <Card className="p-8 glassmorphic transition-all hover:scale-105" data-testid="card-security-status">
                 <div className="space-y-6">
+                  <div className="flex items-center justify-between pb-4 border-b border-border/50" data-testid="status-audit">
+                    <span className="text-sm text-muted-foreground" data-testid="label-audit-status">Security Audit</span>
+                    <span className="text-sm font-semibold text-chart-2" data-testid="value-audit-status">✓ Completed</span>
+                  </div>
                   <div className="flex items-center justify-between pb-4 border-b border-border/50" data-testid="status-contract">
                     <span className="text-sm text-muted-foreground" data-testid="label-contract-status">Contract Standard</span>
                     <span className="text-sm font-semibold text-chart-2" data-testid="value-contract-status">✓ ERC-4626</span>
@@ -980,6 +1087,92 @@ export default function Landing() {
                   <div className="flex items-center justify-between" data-testid="status-monitoring">
                     <span className="text-sm text-muted-foreground" data-testid="label-monitoring-status">24/7 Monitoring</span>
                     <span className="text-sm font-semibold text-chart-2" data-testid="value-monitoring-status">✓ Enabled</span>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* SHIELD Token & Airdrop Section */}
+      <section ref={airdropAnimation.ref} className="py-24" data-testid="section-airdrop">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className={`grid grid-cols-1 lg:grid-cols-2 gap-12 items-center ${airdropAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+            <div>
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20 mb-6" data-testid="badge-fair-launch">
+                <PartyPopper className="h-4 w-4 text-primary" />
+                <span className="text-sm font-semibold text-primary" data-testid="text-fair-launch-badge">Fair Launch</span>
+              </div>
+              <h2 className="text-3xl lg:text-4xl font-bold mb-6" data-testid="heading-airdrop">
+                SHIELD Token Airdrop
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8" data-testid="text-airdrop-subtitle">
+                Claim your SHIELD tokens and participate in protocol governance. Fair Launch price set at $0.01 per token.
+              </p>
+              <div className="space-y-4">
+                <div className="flex items-start gap-3" data-testid="airdrop-item-eligibility">
+                  <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold mb-1" data-testid="title-airdrop-eligibility">Check Eligibility</h4>
+                    <p className="text-sm text-muted-foreground" data-testid="text-airdrop-eligibility">
+                      Connect your wallet to verify if you qualify for the SHIELD token airdrop
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3" data-testid="airdrop-item-merkle">
+                  <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold mb-1" data-testid="title-airdrop-merkle">On-Chain Verification</h4>
+                    <p className="text-sm text-muted-foreground" data-testid="text-airdrop-merkle">
+                      Claims verified through MerkleDistributor smart contract for transparent distribution
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-3" data-testid="airdrop-item-governance">
+                  <CheckCircle2 className="h-6 w-6 text-primary shrink-0 mt-0.5" />
+                  <div>
+                    <h4 className="font-semibold mb-1" data-testid="title-airdrop-governance">Governance Rights</h4>
+                    <p className="text-sm text-muted-foreground" data-testid="text-airdrop-governance">
+                      SHIELD holders can participate in protocol decisions and earn staking boost rewards
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <div className="mt-8">
+                <Link href="/app/airdrop">
+                  <Button size="lg" className="group" data-testid="button-claim-airdrop">
+                    Check Your Allocation
+                    <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                  </Button>
+                </Link>
+              </div>
+            </div>
+            <div className="relative">
+              <Card className="p-8 glassmorphic" data-testid="card-token-details">
+                <div className="text-center mb-8">
+                  <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
+                    <Shield className="h-10 w-10 text-primary" />
+                  </div>
+                  <h3 className="text-2xl font-bold mb-2" data-testid="title-token-name">$SHIELD</h3>
+                  <p className="text-muted-foreground text-sm" data-testid="text-token-subtitle">Governance Token</p>
+                </div>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between pb-4 border-b border-border/50" data-testid="token-fair-launch">
+                    <span className="text-sm text-muted-foreground" data-testid="label-fair-launch-price">Fair Launch Price</span>
+                    <span className="text-sm font-semibold text-primary" data-testid="value-fair-launch-price">$0.01</span>
+                  </div>
+                  <div className="flex items-center justify-between pb-4 border-b border-border/50" data-testid="token-boost">
+                    <span className="text-sm text-muted-foreground" data-testid="label-staking-boost">Staking Boost</span>
+                    <span className="text-sm font-semibold text-chart-2" data-testid="value-staking-boost">Up to 25%</span>
+                  </div>
+                  <div className="flex items-center justify-between pb-4 border-b border-border/50" data-testid="token-lock">
+                    <span className="text-sm text-muted-foreground" data-testid="label-lock-period">Lock Period</span>
+                    <span className="text-sm font-semibold" data-testid="value-lock-period">30 Days</span>
+                  </div>
+                  <div className="flex items-center justify-between" data-testid="token-network">
+                    <span className="text-sm text-muted-foreground" data-testid="label-network">Network</span>
+                    <span className="text-sm font-semibold" data-testid="value-network">Flare Network</span>
                   </div>
                 </div>
               </Card>
@@ -1126,6 +1319,7 @@ export default function Landing() {
                 <li><a href="#features" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-features">Features</a></li>
                 <li><a href="#how-it-works" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-how-it-works">How It Works</a></li>
                 <li><a href="#security" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-security">Security</a></li>
+                <li><Link href="/app/airdrop" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-airdrop">Airdrop</Link></li>
               </ul>
             </div>
             <div data-testid="footer-resources">
