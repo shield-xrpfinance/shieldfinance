@@ -731,13 +731,8 @@ export default function Vaults() {
     setXamanPayload(null);
   };
 
-  // Show empty state if wallet not connected
-  if (!isConnected) {
-    return <ConnectWalletEmptyState />;
-  }
-
-  // Show loading skeleton only when connected and loading
-  if (isLoading && isConnected) {
+  // Show loading skeleton while loading vaults
+  if (isLoading) {
     return (
       <div className="space-y-8">
         <div>
