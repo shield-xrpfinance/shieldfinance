@@ -1,7 +1,7 @@
 # XRP Liquid Staking Protocol Dashboard
 
 ## Whitepaper
-[Whitepaper v1.3 (PDF)](https://shyield.finance/whitepaper.pdf) — December 2025 Mainnet Edition. VARA-compliant documentation including Institutional Safeguards, audit citations (Hacken Dec 2025, Trail of Bits Q1 2026), realistic APY ranges (5-8% base), and regulatory risk disclosures. Local copy at `public/whitepaper.pdf`, source at `docs/whitepaper/main.tex`.
+[Whitepaper v1.3 (PDF)](https://shyield.finance/whitepaper.pdf) — November 2025 (Testnet Live – Mainnet December 2025). VARA-compliant documentation including Institutional Safeguards, audit citations (Asfalia complete Nov 2025, Hacken in progress, Trail of Bits Q1 2026), realistic APY ranges (5-8% base), and regulatory risk disclosures. Local copy at `public/whitepaper.pdf`, source at `docs/whitepaper/main.tex`.
 
 ## Overview
 This project is a full-stack DeFi application providing a dashboard for XRP liquid staking. It enables users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform integrates smart contracts on Flare Network for its $SHIELD governance token and shXRP liquid staking vault, with FAssets protocol for cross-chain XRP bridging to Flare. The vision is to enhance DeFi accessibility and efficiency on the XRP Ledger, capitalizing on the growing liquid staking market. It features a dual wallet architecture providing tailored experiences for XRPL (Xaman/XUMM) and EVM (Reown AppKit/MetaMask) users, showing XRP or FXRP vaults respectively.
