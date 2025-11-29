@@ -194,8 +194,13 @@ export default function Vaults() {
       // XRPL ecosystem shows XRP vaults only
       return allVaults.filter(vault => vault.asset === "XRP");
     } else if (ecosystem === "flare") {
-      // Flare ecosystem shows FXRP vaults only
-      return allVaults.filter(vault => vault.asset === "FXRP");
+      // Flare ecosystem shows FXRP + RWA + Tokenized Securities
+      // (all Flare-based assets including real-world assets)
+      return allVaults.filter(vault => 
+        vault.asset === "FXRP" || 
+        vault.assetType === "rwa" || 
+        vault.assetType === "tokenized_security"
+      );
     }
     
     return allVaults;
