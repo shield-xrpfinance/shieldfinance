@@ -353,37 +353,56 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getApyHistory(days: number = 180): Promise<Array<{ date: string; stable: number; high: number; maximum: number }>> {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
     const allVaults = await this.getVaults();
     
     const stableVaults = allVaults.filter(v => v.riskLevel === "low");
     const highVaults = allVaults.filter(v => v.riskLevel === "medium");
     const maxVaults = allVaults.filter(v => v.riskLevel === "high");
     
-    const avgStable = stableVaults.reduce((sum, v) => sum + parseFloat(v.apy), 0) / (stableVaults.length || 1);
-    const avgHigh = highVaults.reduce((sum, v) => sum + parseFloat(v.apy), 0) / (highVaults.length || 1);
-    const avgMax = maxVaults.reduce((sum, v) => sum + parseFloat(v.apy), 0) / (maxVaults.length || 1);
+    const avgStable = stableVaults.length > 0 
+      ? stableVaults.reduce((sum, v) => sum + parseFloat(v.apy), 0) / stableVaults.length 
+      : 0;
+    const avgHigh = highVaults.length > 0 
+      ? highVaults.reduce((sum, v) => sum + parseFloat(v.apy), 0) / highVaults.length 
+      : 0;
+    const avgMax = maxVaults.length > 0 
+      ? maxVaults.reduce((sum, v) => sum + parseFloat(v.apy), 0) / maxVaults.length 
+      : 0;
 
-    return months.map((month, i) => ({
+    // Generate last 6 months based on current date
+    const now = new Date();
+    const months: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toLocaleDateString('en-US', { month: 'short' }));
+    }
+
+    // Return current APY values for each month (testnet just launched, so values are consistent)
+    return months.map((month) => ({
       date: month,
-      stable: parseFloat((avgStable + (Math.random() - 0.5) * 1).toFixed(1)),
-      high: parseFloat((avgHigh + (Math.random() - 0.5) * 2).toFixed(1)),
-      maximum: parseFloat((avgMax + (Math.random() - 0.5) * 3).toFixed(1)),
+      stable: parseFloat(avgStable.toFixed(1)),
+      high: parseFloat(avgHigh.toFixed(1)),
+      maximum: parseFloat(avgMax.toFixed(1)),
     }));
   }
 
   async getTvlHistory(days: number = 180): Promise<Array<{ date: string; value: number }>> {
-    const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun"];
-    const overview = await this.getProtocolOverview();
-    const currentTvl = parseFloat(overview.tvl);
+    const allVaults = await this.getVaults();
+    const totalTvl = allVaults.reduce((sum, v) => sum + parseFloat(v.tvl), 0);
     
-    return months.map((month, i) => {
-      const factor = 0.6 + (i / months.length) * 0.4;
-      return {
-        date: month,
-        value: Math.round(currentTvl * factor),
-      };
-    });
+    // Generate last 6 months based on current date
+    const now = new Date();
+    const months: string[] = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      months.push(d.toLocaleDateString('en-US', { month: 'short' }));
+    }
+
+    // Return current TVL for most recent month (testnet launch)
+    return months.map((month, i) => ({
+      date: month,
+      value: i === months.length - 1 ? Math.round(totalTvl) : 0,
+    }));
   }
 
   async getVaultDistribution(): Promise<Array<{ name: string; percentage: number }>> {
