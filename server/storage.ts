@@ -91,7 +91,7 @@ export class DatabaseStorage implements IStorage {
       return;
     }
 
-    const vaultData = [
+    const vaultData: InsertVault[] = [
       {
         name: "Shield XRP",
         asset: "XRP",
