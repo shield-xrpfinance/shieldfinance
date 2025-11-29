@@ -281,9 +281,13 @@ export default function Vaults() {
     }
     
     // Compute depositAssets from vault.asset (backend returns asset field, not depositAssets)
-    const depositAssets = vault.asset === "FXRP" ? ["FXRP"] : ["XRP"];
+    // RWA and tokenized securities use their specific asset (e.g., T-BILLS, GOLD, SPX-TOKEN)
+    // Crypto vaults use either FXRP or XRP
+    const depositAssets = vault.assetType === 'rwa' || vault.assetType === 'tokenized_security' 
+      ? [vault.asset] 
+      : (vault.asset === "FXRP" ? ["FXRP"] : ["XRP"]);
     
-    console.log(`🔄 Opening deposit modal for ${vault.name}: vault.asset="${vault.asset}", depositAssets=${JSON.stringify(depositAssets)}`);
+    console.log(`🔄 Opening deposit modal for ${vault.name}: vault.asset="${vault.asset}", assetType="${vault.assetType}", depositAssets=${JSON.stringify(depositAssets)}`);
     
     setSelectedVault({ 
       id: vault.id, 
@@ -291,6 +295,7 @@ export default function Vaults() {
       apy: vault.apy,
       apyLabel: vault.apyLabel,
       depositAssets: depositAssets,
+      assetType: vault.assetType,
     });
     setDepositModalOpen(true);
   };
@@ -318,27 +323,36 @@ export default function Vaults() {
       .filter((amt) => amt && parseFloat(amt.replace(/,/g, "")) > 0)
       .reduce((sum, amt) => sum + parseFloat(amt.replace(/,/g, "")), 0);
 
-    // MOST RELIABLE CHECK: Use what the user actually entered (the key in amounts object)
-    // This survives network toggles and any state issues
+    // Determine if this is a Flare-based deposit (FXRP, RWA, or tokenized securities)
+    // vs an XRPL-native deposit (XRP only)
     const depositAsset = Object.keys(amounts)[0];
-    const isFXRPDeposit = depositAsset === "FXRP";
+    const isFlareBasedDeposit = depositAsset === "FXRP" || 
+      selectedVault.assetType === "rwa" || 
+      selectedVault.assetType === "tokenized_security";
     
-    console.log(`🔄 Deposit: vault="${selectedVault.name}", depositAsset="${depositAsset}", selectedVault.depositAssets=${JSON.stringify(selectedVault.depositAssets)}, walletType="${walletType}", isFXRPDeposit=${isFXRPDeposit}`);
+    console.log(`🔄 Deposit: vault="${selectedVault.name}", depositAsset="${depositAsset}", assetType="${selectedVault.assetType}", walletType="${walletType}", isFlareBasedDeposit=${isFlareBasedDeposit}`);
 
     // CRITICAL: Validate wallet compatibility before proceeding
-    if (isFXRPDeposit && walletType !== "evm") {
+    // Flare-based vaults (FXRP, RWA, Tokenized Securities) require EVM wallet
+    // XRP vaults require XRPL wallet
+    if (isFlareBasedDeposit && walletType !== "evm") {
+      const vaultTypeLabel = selectedVault.assetType === 'rwa' 
+        ? 'Real World Asset' 
+        : selectedVault.assetType === 'tokenized_security' 
+          ? 'Tokenized Security' 
+          : 'FXRP';
       toast({
-        title: "Incompatible Wallet",
-        description: "FXRP deposits require an EVM wallet (like BiFrost). Please connect a compatible wallet or switch to the XRPL ecosystem.",
+        title: "EVM Wallet Required",
+        description: `${vaultTypeLabel} vaults are on Flare Network and require an EVM wallet (like MetaMask or Rabby). Please connect an EVM wallet to deposit.`,
         variant: "destructive",
       });
       return;
     }
     
-    if (!isFXRPDeposit && walletType !== "xrpl") {
+    if (!isFlareBasedDeposit && walletType !== "xrpl") {
       toast({
-        title: "Incompatible Wallet",
-        description: "XRP deposits require an XRPL wallet (like Xaman). Please connect a compatible wallet or switch to the Flare ecosystem.",
+        title: "XRPL Wallet Required",
+        description: "XRP deposits require an XRPL wallet (like Xaman). Please connect an XRPL wallet to deposit.",
         variant: "destructive",
       });
       return;
