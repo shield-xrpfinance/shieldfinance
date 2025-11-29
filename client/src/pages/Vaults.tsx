@@ -184,27 +184,18 @@ export default function Vaults() {
 
   // Filter vaults based on selected ecosystem (users can switch between XRPL and Flare)
   // Show all vaults when no wallet connected so users can browse
+  // Both ecosystems see expanded view since we handle bridging for XRPL users
   const ecosystemFilteredVaults = useMemo(() => {
     if (!isConnected) {
       // No wallet connected - show all vaults so users can browse
       return allVaults;
     }
     
-    if (ecosystem === "xrpl") {
-      // XRPL ecosystem shows XRP vaults only
-      return allVaults.filter(vault => vault.asset === "XRP");
-    } else if (ecosystem === "flare") {
-      // Flare ecosystem shows FXRP + RWA + Tokenized Securities
-      // (all Flare-based assets including real-world assets)
-      return allVaults.filter(vault => 
-        vault.asset === "FXRP" || 
-        vault.assetType === "rwa" || 
-        vault.assetType === "tokenized_security"
-      );
-    }
-    
+    // Both XRPL and EVM wallets see all vaults (XRP, FXRP, RWA, Tokenized Securities)
+    // XRPL users can bridge to access Flare-based vaults
+    // Deposit compatibility is handled at the vault level
     return allVaults;
-  }, [allVaults, isConnected, ecosystem]);
+  }, [allVaults, isConnected]);
 
   // Filter by asset category (crypto, rwa, tokenized_security)
   const categoryFilteredVaults = useMemo(() => {
