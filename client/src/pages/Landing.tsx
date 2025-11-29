@@ -45,6 +45,7 @@ import flareLogo from "@assets/flr.svg";
 import xrpLogo from "@assets/xrp.148c3b50_1762588566535.png";
 import xamanLogo from "@assets/xaman-wallet-icon.svg";
 import walletConnectLogo from "@assets/walletconnect-logo.svg";
+import mobileScreenshot from "@assets/IMG_2860_1764436010804.jpg";
 
 export default function Landing() {
   const shieldLogo = useShieldLogo();
@@ -970,7 +971,7 @@ export default function Landing() {
             </div>
             <div className={`order-1 lg:order-2 flex justify-center px-4 sm:px-0 transition-opacity duration-500 ${mobileExperienceAnimation.isVisible ? 'animate-fade-in-up opacity-100' : 'opacity-100'}`} style={{ animationDelay: '0.1s' }} data-testid="container-mobile-mockup">
               <IPhoneMockup 
-                screenshot={shieldLogo} 
+                screenshot={mobileScreenshot} 
                 alt="Shield Finance mobile portfolio interface"
                 className="transition-transform hover:scale-105"
               />
