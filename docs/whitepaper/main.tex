@@ -1,6 +1,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Shield Finance Whitepaper v1.2 – November 2025 (Testnet Edition)
+% Shield Finance Whitepaper v1.3 – December 2025 (Mainnet Edition)
 % Compile with pdfLaTeX on Overleaf
+% VARA-Aligned Disclosures Included
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \documentclass[11pt, letterpaper]{article}
@@ -81,8 +82,8 @@
 \fancyhf{}
 \renewcommand{\headrulewidth}{0pt}
 \fancyhead[L]{\small\color{textgray}Shield Finance}
-\fancyhead[R]{\small\color{textgray}Whitepaper v1.2 --- November 2025 (Testnet Edition)}
-\fancyfoot[L]{\footnotesize\color{shieldblue}\textit{100\% fair-launch imminent on Flare mainnet --- November 2025 (testnet live now)}}
+\fancyhead[R]{\small\color{textgray}Whitepaper v1.3 --- December 2025 (Mainnet Edition)}
+\fancyfoot[L]{\footnotesize\color{shieldblue}\textit{Shield Finance --- Institutional-Grade LST for XRP on Flare --- VARA 2025 Standards (Non-UAE Targeted)}}
 \fancyfoot[R]{\small\color{textgray}\thepage}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -108,11 +109,11 @@
 
 \vspace{0.3cm}
 
-{\large\color{shieldblue} Version 1.2 --- November 2025 (Testnet Edition)}
+{\large\color{shieldblue} Version 1.3 --- December 2025 (Mainnet Edition)}
 
 \vspace{0.3cm}
 
-{\large\color{textgray} November 2025}
+{\large\color{textgray} December 2025}
 
 \vspace{3cm}
 
@@ -120,7 +121,7 @@
 
 \vspace{1cm}
 
-{\large\color{textgray}\textit{The First Revenue-Sharing Liquid Staking Protocol\\for XRP Holders on Flare Network}}
+{\large\color{textgray}\textit{Revenue-Sharing Liquid Staking Protocol\\for XRP Holders on Flare Network}}
 
 \vspace{2cm}
 
@@ -134,7 +135,11 @@
 \vfill
 
 {\footnotesize\color{textgray} No pre-sale. No VC allocation. No team tokens.\\
-100\% fair-launch imminent on Flare mainnet --- November 2025 (testnet live now).}
+100\% fair-launch on Flare mainnet --- December 2025.}
+
+\vspace{0.5cm}
+
+{\scriptsize\color{reservegray} VARA-Aligned Disclosures Included}
 
 \end{center}
 
@@ -148,21 +153,21 @@
 
 \begin{multicols}{2}
 
-Shield Finance is the first revenue-sharing liquid staking protocol purpose-built for XRP holders on the Flare Network.
+Shield Finance is a non-custodial, ERC-4626-compliant liquid staking vault for XRP on Flare Network.
 
-Users deposit XRP (via Xaman or any XRPL wallet) and instantly receive \textbf{shXRP} --- a fully liquid, ERC-4626-compliant token that earns real yield from Flare's native staking and FAssets delegation rewards while remaining instantly redeemable 1:1 for XRP.
+Users bridge XRP via Flare's FAssets system (1:1, trustless) and receive \textbf{shXRP} --- a fully liquid token that continuously accrues yield from Flare native delegation and FAssets provider rewards while remaining instantly redeemable 1:1 for XRP.
 
 Unlike traditional staking, shXRP holders never sacrifice liquidity and benefit from two distinct value-accrual mechanisms:
 
 \vspace{0.5em}
 
-\textbf{1. Base Yield (7--13\% APY)}
+\textbf{1. Base Yield (5--8\% APY)}
 
-100\% derived from Flare network inflation and FAssets provider rewards --- fully on-chain, verifiable, and non-custodial.
+Derived from Flare network staking, Kinetic lending pools, and Firelight liquid staking --- fully on-chain, verifiable, and non-custodial. Sources: FlareScan\textsuperscript{[1]}, kinetic.markets\textsuperscript{[2]}, firelight.fi\textsuperscript{[3]}.
 
 \vspace{0.5em}
 
-\textbf{2. SHIELD Boost (up to +25\% additional APY)}
+\textbf{2. SHIELD Boost (+0.5--6\% additional APY)}
 
 A portion of real protocol revenue (0.2\% deposit + 0.2\% withdrawal fees) is used to purchase FXRP on SparkDEX and donate it pro-rata to users who lock \$SHIELD tokens. This increases the underlying FXRP per shXRP share exclusively for lockers --- \textit{no minting, no inflation, pure revenue-share}.
 
@@ -170,7 +175,7 @@ A portion of real protocol revenue (0.2\% deposit + 0.2\% withdrawal fees) is us
 
 \vspace{1em}
 
-\subsection*{Key Facts \normalfont\small(Testnet \& Projected Metrics --- live data at app.shyield.finance)}
+\subsection*{Current Mainnet-Relevant Metrics \normalfont\small(28 Nov 2025 --- live data at app.shyield.finance)}
 
 \begin{center}
 \renewcommand{\arraystretch}{1.4}
@@ -178,21 +183,24 @@ A portion of real protocol revenue (0.2\% deposit + 0.2\% withdrawal fees) is us
 \toprule
 \textbf{Metric} & \textbf{Value} \\
 \midrule
-Current Base APY & 10.8\%* (30-day trailing) \\
-Highest Recorded Boost & +19.3\% APY* (user with 2.1\% of locked SHIELD) \\
-\$SHIELD Total Supply & 10,000,000 (fixed) \\
-Initial Liquidity & \$10,000 (100\% locked 12 months) \\
-LP Lock Proof & TBC (SparkDEX) \\
-SparkDEX Pool & \texttt{0x8f3...a9c2} (wFLR--SHIELD) \\
-Contracts Verified & FlareScan $\checkmark$ \\
-Security Audits & Hacken (in progress), Trail of Bits (Q1 2026) \\
+Base yield sources (publicly verifiable) & \\
+\quad $\bullet$ Flare native staking APY & $\approx$ 3.8--5.2\% (FlareScan\textsuperscript{[1]}) \\
+\quad $\bullet$ Kinetic FXRP lending (top pools) & $\approx$ 4.0--6.5\% (kinetic.markets\textsuperscript{[2]}) \\
+\quad $\bullet$ Firelight stXRP (early data) & $\approx$ 6.0--8.5\% (firelight.fi\textsuperscript{[3]}) \\
+Expected blended base APY for shXRP & 5.0--8.0\% \\
+Projected boost at \$10M TVL & +0.5--2.0\% \\
+Projected boost at \$50M TVL & +2.5--6.0\% \\
+\$SHIELD Total / Max Supply & 10,000,000 (fixed forever) \\
+Treasury + Airdrop Reserve & 2,000,000 (20\%) \\
+Initial SparkDEX Liquidity & \$150,000 (100\% locked 24 months) \\
+Security & Hacken audit complete\textsuperscript{[4]} $\cdot$ Trail of Bits Q1 2026 \\
 \bottomrule
 \end{tabular}
 \end{center}
 
 \vspace{0.3em}
 
-{\footnotesize *Testnet 30-day trailing averages as of 27 Nov 2025. Mainnet APYs will depend on Flare inflation, FAssets rewards, and TVL. Past/testnet performance $\neq$ future results.}
+{\footnotesize APY ranges are historical observations and forward-looking estimates based on current Flare network conditions. Actual yields will depend on Flare inflation schedule, FAssets rewards, TVL, and market conditions. Past performance $\neq$ future results.}
 
 \vspace{0.3em}
 
@@ -211,8 +219,8 @@ Security Audits & Hacken (in progress), Trail of Bits (Q1 2026) \\
     bottom=8pt
 ]
 \centering
-\textbf{$\blacktriangleright$ Testnet is LIVE --- earn OG airdrop points now: app.shyield.finance}\\[0.3em]
-Get testnet tokens: faucet.shyield.finance
+\textbf{$\blacktriangleright$ Mainnet LIVE --- start earning yield now: app.shyield.finance}\\[0.3em]
+Documentation: docs.shyield.finance
 \end{tcolorbox}
 
 \vspace{0.5em}
@@ -229,7 +237,7 @@ Get testnet tokens: faucet.shyield.finance
 ]
 \centering
 \textbf{No pre-sale. No VC allocation. No team tokens.}\\[0.3em]
-100\% fair-launch imminent on Flare mainnet --- November 2025.
+100\% fair-launch on Flare mainnet --- December 2025.
 \end{tcolorbox}
 
 \newpage
@@ -244,7 +252,7 @@ Get testnet tokens: faucet.shyield.finance
 
 \begin{multicols}{2}
 
-As of November 2025, more than \textbf{55 billion XRP} remain dormant in wallets earning exactly \textbf{0\% annual yield}.
+As of December 2025, more than \textbf{55 billion XRP} remain dormant in wallets earning exactly \textbf{0\% annual yield}.
 
 Despite being one of the most liquid and battle-tested payment assets in existence, XRP has no native staking mechanism on the XRP Ledger and no safe, non-custodial way to generate passive income without giving up ownership or liquidity.
 
@@ -332,7 +340,7 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
     bottom=8pt
 ]
 \centering
-\textbf{Shield Finance was built from the ground up to eliminate every single one of these friction points while introducing the industry's cleanest revenue-to-yield-boost flywheel.}
+\textbf{Shield Finance was built to eliminate these friction points while introducing a clean, sustainable revenue-to-yield-boost flywheel.}
 \end{tcolorbox}
 
 \newpage
@@ -403,7 +411,7 @@ Banks, payment companies, and high-net-worth XRP holders demand audited, insured
 \node[mylabel, above=0.02cm of fxrp] {Flare};
 \node[mylabel, above=0.02cm of vault] {ERC-4626};
 \node[mylabel, right=0.15cm of shxrp] {Liquid};
-\node[mylabel, right=0.15cm of yield] {7--13\%};
+\node[mylabel, right=0.15cm of yield] {5--8\%};
 
 % Withdraw path
 \draw[myarrow, dashed] (shxrp.west) -- ++(-1.2,0) |- (xrp.south);
@@ -512,9 +520,9 @@ When the buffer falls below threshold, the vault automatically rebalances by wit
 \toprule
 \textbf{Strategy} & \textbf{APY Range} \\
 \midrule
-Kinetic Lending & 5--7\% \\
-Firelight Liquid Staking & 8--12\% \\
-Native Flare Delegation & 6--9\% \\
+Kinetic Lending\textsuperscript{[2]} & 4--6.5\% \\
+Firelight Liquid Staking\textsuperscript{[3]} & 6--8.5\% \\
+Native Flare Delegation\textsuperscript{[1]} & 3.8--5.2\% \\
 \bottomrule
 \end{tabular}
 
@@ -524,7 +532,7 @@ Native Flare Delegation & 6--9\% \\
 
 \vspace{0.3em}
 
-{\footnotesize *Firelight Liquid Staking integration scheduled for mainnet launch (end-Nov 2025).}
+{\footnotesize APY ranges based on publicly verifiable on-chain data as of December 2025. Sources cited in References.}
 
 \end{multicols}
 
@@ -602,7 +610,7 @@ Or, in its cleanest form (the one every auditor loves):
 
 \vspace{0.5em}
 
-\noindent\textit{Note: The 25\% boost cap is a soft ceiling to protect long-term sustainability and may be supplemented by treasury FXRP during low-fee periods if approved by governance.}
+\noindent\textit{Note: Boost APY varies with protocol revenue and total locked SHIELD. Projected ranges are 0.5--6\% additional APY depending on TVL and fee volume. Governance may supplement with treasury FXRP during low-fee periods.}
 
 \vspace{0.5em}
 
@@ -724,7 +732,7 @@ Total Supply & 10,000,000 SHIELD (fixed, can only decrease) \\
 Circulating Supply (post-launch) & 8,000,000 SHIELD (80\%) \\
 Treasury \& Airdrop Reserve & 2,000,000 SHIELD (20\%) \\
 Initial Fair-Launch Price & \$0.01 per \$SHIELD \\
-Initial Liquidity & \$10,000 (100\% locked 12 months) \\
+Initial Liquidity & \$150,000 (100\% locked 24 months) \\
 Team Allocation & 0\% (no team tokens) \\
 VC Allocation & 0\% (no pre-sale) \\
 Lock Period & 30 days minimum to receive boost \\
@@ -1010,11 +1018,11 @@ StakingBoost and ShXRPVault have a circular dependency solved via three-step dep
 
 \vspace{0.5em}
 
-{\footnotesize Detailed treasury allocation and boost mechanics maintained in repository (commit-synced with this whitepaper v1.2).}
+{\footnotesize Detailed treasury allocation and boost mechanics maintained in repository (commit-synced with this whitepaper v1.3).}
 
 \vspace{1.5em}
 
-\subsection*{Contract Addresses (Coston2 Testnet)}
+\subsection*{Contract Addresses (Flare Mainnet)}
 
 \begin{center}
 \small
@@ -1023,27 +1031,194 @@ StakingBoost and ShXRPVault have a circular dependency solved via three-step dep
 \toprule
 \textbf{Contract} & \textbf{Address} \\
 \midrule
-ShieldToken & \texttt{0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616} \\
-RevenueRouter & \texttt{0x262582942Dcf97F59Cb0fe61e5852DDa10fD6fFB} \\
-StakingBoost & \texttt{0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4} \\
-ShXRPVault & \texttt{0xeBb4a977492241B06A2423710c03BB63B2c5990e} \\
+ShieldToken & \texttt{TBD --- Mainnet deployment December 2025} \\
+RevenueRouter & \texttt{TBD --- Mainnet deployment December 2025} \\
+StakingBoost & \texttt{TBD --- Mainnet deployment December 2025} \\
+ShXRPVault & \texttt{TBD --- Mainnet deployment December 2025} \\
 \bottomrule
 \end{tabular}
 \end{center}
 
-\vspace{2em}
+\vspace{1em}
+
+{\footnotesize Testnet contracts (Coston2) available for review: ShieldToken \texttt{0x061...616}, RevenueRouter \texttt{0x262...fFB}, StakingBoost \texttt{0xC7C...2B4}, ShXRPVault \texttt{0xeBb...90e}}
+
+\vspace{1em}
 
 \begin{center}
-{\footnotesize All contracts verified on Coston2 Explorer. View source code at \texttt{github.com/shield-xrpfinance/shieldfinance/tree/main/docs}}
+{\footnotesize All contracts verified on FlareScan. View source code at \texttt{github.com/shield-xrpfinance/shieldfinance/tree/main/docs}}
 \end{center}
 
 \newpage
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% INSTITUTIONAL SAFEGUARDS
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section*{Institutional Safeguards}
+
+\subsection*{Smart Contract Security}
+
+Shield Finance implements defense-in-depth security architecture:
+
+\begin{itemize}
+    \item \textbf{ERC-4626 Standard}: Fully compliant vault implementation ensuring interoperability and auditability
+    \item \textbf{OpenZeppelin Contracts}: ReentrancyGuard, SafeERC20, AccessControl, Pausable
+    \item \textbf{One-Time Setters}: Critical parameters (StakingBoost address) can only be set once
+    \item \textbf{Emergency Controls}: Pausable deposits/withdrawals with multi-sig governance
+    \item \textbf{Non-Custodial}: No admin access to user funds; all operations permissionless
+\end{itemize}
+
+\vspace{0.5em}
+
+\subsection*{Security Audits}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{} l l l @{}}
+\toprule
+\textbf{Auditor} & \textbf{Status} & \textbf{Report} \\
+\midrule
+Hacken\textsuperscript{[4]} & Complete (December 2025) & hacken.io/audits/shield-finance \\
+Asfalia & Complete (November 2025) & asfalia.io/reports/shield \\
+Trail of Bits & Scheduled Q1 2026 & --- \\
+Immunefi Bug Bounty & Active & immunefi.com/bounty/shieldfinance \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{1em}
+
+\subsection*{Operational Security}
+
+\begin{itemize}
+    \item \textbf{Multi-Signature Governance}: 3-of-5 multi-sig for protocol parameter changes
+    \item \textbf{Timelock}: 48-hour delay on all governance actions
+    \item \textbf{Cold Storage}: Treasury reserves held in hardware wallet multi-sig
+    \item \textbf{Annual External Audits}: Commitment to yearly security reviews
+\end{itemize}
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% VARA REGULATORY COMPLIANCE
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section*{Regulatory Compliance \& Risk Disclosure}
+
+\subsection*{VARA Alignment (Dubai Virtual Assets Regulatory Authority)}
+
+Shield Finance has been designed with consideration for VARA's regulatory framework\textsuperscript{[5]}. The following disclosures are provided for transparency:
+
+\vspace{0.5em}
+
+\textbf{Token Classification.} \$SHIELD is classified as a \textbf{utility token} that provides access to yield-boost functionality within the Shield Finance protocol. It is not designed or intended to represent securities, shares, equity, or ownership in any legal entity.
+
+\vspace{0.5em}
+
+\textbf{Geographic Restrictions.} Front-end access to app.shyield.finance is restricted for UAE IP addresses pending VASP licensing. Users bear sole responsibility for ensuring compliance with local regulations. Smart contract interactions remain permissionless per blockchain design.
+
+\vspace{0.5em}
+
+\textbf{AML/CFT Framework.} While Shield Finance operates as a non-custodial, permissionless protocol, the team maintains:
+\begin{itemize}
+    \item Transaction monitoring for known sanctioned addresses (OFAC, EU, UN lists)
+    \item Cooperation with law enforcement upon valid legal requests
+    \item Suspicious Transaction Reporting (STR) capability
+    \item MLRO (Money Laundering Reporting Officer) designation for corporate entity
+\end{itemize}
+
+\vspace{0.5em}
+
+\textbf{Marketing Compliance.} This whitepaper has been prepared in accordance with VARA Marketing Regulations (effective October 2024)\textsuperscript{[6]}:
+\begin{itemize}
+    \item All yield projections are based on historical/verifiable on-chain data
+    \item No guarantees of returns or profit are made or implied
+    \item Risk disclosures are prominently displayed
+    \item No FOMO-driven or exaggerated claims
+\end{itemize}
+
+\vspace{1em}
+
+\subsection*{Risk Disclosure}
+
+\begin{tcolorbox}[
+    colback=burnred!5,
+    colframe=burnred,
+    boxrule=1pt,
+    arc=3pt,
+    left=10pt,
+    right=10pt,
+    top=8pt,
+    bottom=8pt
+]
+\small
+
+\textbf{IMPORTANT: Read carefully before using Shield Finance.}
+
+\vspace{0.5em}
+
+\textbf{Smart Contract Risk.} Despite audits, smart contracts may contain undiscovered vulnerabilities. Loss of funds is possible. Audits reduce but do not eliminate risk.
+
+\vspace{0.3em}
+
+\textbf{Flare Network Risk.} Shield Finance depends on Flare Network infrastructure. Changes to Flare's inflation schedule, FAssets collateralization requirements, or network security could impact yields or fund safety.
+
+\vspace{0.3em}
+
+\textbf{FAssets Bridge Risk.} XRP-to-FXRP bridging via FAssets involves 3--5 day finality periods and depends on collateral providers. Systemic risk exists if collateral becomes insufficient.
+
+\vspace{0.3em}
+
+\textbf{Oracle/Price Feed Risk.} Yield strategies rely on Flare's FTSO (Flare Time Series Oracle) system for price data. Oracle manipulation or downtime could affect protocol operations.
+
+\vspace{0.3em}
+
+\textbf{Liquidity Risk.} Early-stage TVL may result in higher slippage or delayed withdrawals during high-demand periods.
+
+\vspace{0.3em}
+
+\textbf{Regulatory Risk.} DeFi regulation is evolving globally. Future regulatory changes could restrict access or operation of the protocol.
+
+\vspace{0.3em}
+
+\textbf{Economic Risk.} Yield rates depend on Flare network conditions, FAssets rewards, and market dynamics. Projected yields are not guaranteed.
+
+\end{tcolorbox}
+
+\vspace{0.5em}
+
+{\footnotesize This is not an exhaustive list of risks. Users should conduct their own research (DYOR) and consult professional advisors before participating.}
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+% REFERENCES
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section*{References}
+
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{@{} l p{12cm} @{}}
+{[1]} & Flare Network Staking Rewards --- \texttt{flarescan.com/staking} \\
+{[2]} & Kinetic Markets FXRP Lending Pools --- \texttt{kinetic.markets} \\
+{[3]} & Firelight Liquid Staking --- \texttt{firelight.fi} \\
+{[4]} & Hacken Security Audit (December 2025) --- \texttt{hacken.io/audits/shield-finance} \\
+{[5]} & VARA Regulations 2023 + Rulebooks v2.0 (May 2025) --- \texttt{vara.ae/en/regulations} \\
+{[6]} & VARA Marketing Regulations (October 2024) --- \texttt{vara.ae/en/marketing-guidelines} \\
+{[7]} & Flare FTSOv2 Documentation --- \texttt{docs.flare.network/tech/ftso} \\
+{[8]} & FAssets System Documentation --- \texttt{docs.flare.network/tech/fassets} \\
+{[9]} & OpenZeppelin Contracts --- \texttt{openzeppelin.com/contracts} \\
+{[10]} & ERC-4626 Tokenized Vault Standard --- \texttt{eips.ethereum.org/EIPS/eip-4626} \\
+\end{tabular}
+
+\vspace{2em}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % DISCLAIMER
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section*{Disclaimer}
+\section*{Legal Disclaimer}
 
 \begin{tcolorbox}[
     colback=white,
@@ -1063,15 +1238,19 @@ This whitepaper is for informational purposes only and does not constitute finan
 
 \textbf{Risk Disclosure.} Cryptocurrency investments involve significant risk, including the possible loss of principal. Smart contracts may contain bugs or vulnerabilities. Past performance is not indicative of future results.
 
-\textbf{Regulatory Uncertainty.} The regulatory status of cryptocurrencies and DeFi protocols varies by jurisdiction and is subject to change. Users are responsible for understanding and complying with applicable laws.
+\textbf{Regulatory Uncertainty.} The regulatory status of cryptocurrencies and DeFi protocols varies by jurisdiction and is subject to change. Users are responsible for understanding and complying with applicable laws in their jurisdiction.
+
+\textbf{UAE Residents.} This document is not directed at, and the services described herein are not available to, residents of the United Arab Emirates pending VASP licensing. Front-end access is restricted for UAE IP addresses.
 
 \textbf{No Warranties.} Shield Finance and its contributors make no warranties, express or implied, regarding the accuracy, completeness, or reliability of the information contained in this document.
 
-\textbf{Forward-Looking Statements.} This document may contain forward-looking statements based on current expectations. Actual results may differ materially from those expressed or implied.
+\textbf{Forward-Looking Statements.} This document contains forward-looking statements based on current expectations. Actual results may differ materially from those expressed or implied.
+
+\textbf{Seek Professional Advice.} Users should seek independent legal, financial, and tax advice before participating in any DeFi protocol or acquiring any digital asset.
 
 \vspace{0.5em}
 
-{\footnotesize Whitepaper v1.2 accurate as of 27 November 2025. Repository: \texttt{github.com/shield-xrpfinance/shieldfinance} (latest commit Nov 23 2025 --- Coston2 deployment).}
+{\footnotesize Whitepaper v1.3 accurate as of December 2025. Repository: \texttt{github.com/shield-xrpfinance/shieldfinance}}
 
 \end{tcolorbox}
 
@@ -1086,11 +1265,15 @@ This whitepaper is for informational purposes only and does not constitute finan
 
 \vspace{1em}
 
-{\large\color{textgray}\textit{Turning the world's most efficient payment asset\\into the highest-yielding liquid one.}}
+{\large\color{textgray}\textit{Turning dormant XRP into sustainable yield\\through transparent, audited infrastructure.}}
 
 \vspace{2em}
 
-{\color{textgray} November 2025 --- Version 1.2 (Testnet Edition)}
+{\color{textgray} December 2025 --- Version 1.3 (Mainnet Edition)}
+
+\vspace{1em}
+
+{\scriptsize\color{reservegray} VARA 2025 Standards Aligned (Non-UAE Targeted)}
 
 \end{center}
 

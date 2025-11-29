@@ -1371,6 +1371,22 @@ export default function Landing() {
               </ul>
             </div>
           </div>
+          {/* Regulatory Disclaimer */}
+          <div className="border-t border-border/50 pt-6 mb-6">
+            <div className="max-w-4xl mx-auto text-center">
+              <p className="text-xs text-muted-foreground leading-relaxed mb-3" data-testid="text-regulatory-disclaimer">
+                <strong>Risk Disclosure:</strong> Cryptocurrency investments involve significant risk, including potential loss of principal. 
+                Smart contracts may contain vulnerabilities. Past performance is not indicative of future results. 
+                Yield projections are estimates based on current network conditions and are not guaranteed.
+              </p>
+              <p className="text-xs text-muted-foreground leading-relaxed" data-testid="text-vara-disclaimer">
+                <strong>Regulatory Notice:</strong> Shield Finance is not licensed as a VASP under VARA (Dubai). 
+                Front-end access is restricted for UAE IP addresses. Users bear sole responsibility for compliance with local regulations.
+                This service is not directed at UAE residents. Smart contract interactions remain permissionless per blockchain design.
+              </p>
+            </div>
+          </div>
+          
           <div className="border-t border-border/50 pt-8 text-center text-sm text-muted-foreground">
             <p data-testid="text-footer-copyright">&copy; 2025 Shield Finance. All rights reserved.</p>
           </div>

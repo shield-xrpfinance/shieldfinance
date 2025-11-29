@@ -1,0 +1,72 @@
+You are an expert LaTeX editor. Completely rewrite the current main.tex file to produce Whitepaper v1.3 (December 2025) with the following exact content and structure. Keep the existing document class, packages, formatting, fonts, and layout (titles, spacing, etc.) exactly the same — only replace the text content.
+
+Replace everything with this new v1.3 content (copy verbatim, including all LaTeX markup you generate):
+
+% ==================== TITLE PAGE ====================
+\title{Shield Finance\\Whitepaper\\v1.3 — December 2025\\[.5cm]{\large Revenue-Sharing Liquid Staking for XRP on Flare Network}}
+\date{}
+\maketitle
+\vspace{1.5cm}
+\begin{center}
+\begin{tabular}{ll}
+Website   & shyield.finance \\
+dApp      & app.shyield.finance \\
+Twitter   & @ShieldFinanceX \\
+GitHub    & github.com/shield-xrpfinance/shieldfinance \\
+Docs      & github.com/shield-xrpfinance/shieldfinance/tree/main/docs \\[1em]
+\end{tabular}
+\bigskip
+{\small No pre-sale · No VC allocation · No team allocation}\\[.3cm]
+{\small 100\% fair-launch on Flare mainnet — December 2025}
+\end{center}
+\thispagestyle{empty}
+\newpage
+
+% ==================== ABSTRACT ====================
+\section*{Abstract}
+Shield Finance is a non-custodial, ERC-4626-compliant liquid staking vault for XRP on Flare Network.
+
+Users bridge XRP via Flare’s FAssets system (1:1, trustless) and receive \texttt{shXRP} — a fully liquid token that continuously accrues:
+\begin{itemize}
+    \item Base yield from Flare native delegation and FAssets provider rewards
+    \item Optional SHIELD Boost funded exclusively by protocol fees (no minting, no emissions)
+\end{itemize}
+
+All yield sources are on-chain and publicly verifiable. The protocol takes no performance fee on base yield — only modest 0.20\% deposit + 0.20\% withdrawal fees that are partially burned and partially used to increase the FXRP backing of shXRP for \$SHIELD lockers.
+
+Shield Finance was built in public with zero pre-allocation and will fair-launch on Flare mainnet in December 2025.
+
+% ==================== CURRENT METRICS ====================
+\section*{Current Mainnet-Relevant Metrics (28 Nov 2025)}
+\begin{tabular}{ll}
+Base yield sources (publicly verifiable) & \\
+\quad • Flare native staking APY            & ≈ 3.8 – 5.2\% \quad (FlareScan) \\
+\quad • Kinetic FXRP lending (top pools)     & ≈ 4.0 – 6.5\% \quad (kinetic.markets) \\
+\quad • Firelight stXRP (early data)         & ≈ 6.0 – 8.5\% \quad (firelight.fi) \\[.5em]
+Expected blended base APY for shXRP         & 5.0 – 8.0\% \\
+Projected boost at \$10 M TVL               & +0.5 – 2.0\% \\
+Projected boost at \$50 M TVL               & +2.5 – 6.0\% \\[.8em]
+\$SHIELD total / max supply                 & 10,000,000 (fixed forever) \\
+Treasury + airdrop reserve                  & 2,000,000 (20\%) \\
+Initial SparkDEX liquidity                  & \$150,000 (100\% locked 24 months) \\
+Security                                    & Hacken audit complete · Trail of Bits Q1 2026 \\
+\end{tabular}
+
+\section*{Problem Statement}
+The majority of the 55 B+ XRP supply earns zero yield today. Existing solutions either lock liquidity, require trust, or force users through 15+ complex steps across multiple wallets.
+
+Shield Finance removes these trade-offs: one-click bridging from any XRPL wallet → instant shXRP → compounded Flare rewards + optional revenue-share boost, while remaining fully redeemable 1:1 for XRP at any time.
+
+% Keep ALL remaining sections (Architecture, Boost Mechanics, Tokenomics, Roadmap, Risks, etc.) exactly as they are in the current file, unless they contain the old 7-13% or +25% numbers — in that case replace any APY claims with the new realistic ranges above and remove every occurrence of “first”, “highest”, “up to +25%”, and “10.8% testnet”.
+
+% At the very end, add this new Risks section if it doesn’t exist:
+\section*{Risks \& Disclaimer}
+\begin{itemize}
+    \item Smart-contract risk (mitigated by Hacken audit + Trail of Bits review + Immunefi bounty)
+    \item Flare network risk (inflation schedule changes, FAssets collateral changes)
+    \item Liquidity risk in early days
+    \item Oracle / price-feed risk (Flare’s FTSO system is battle-tested since 2022)
+\end{itemize}
+Yield numbers are historical observations and forward-looking estimates only — not guarantees. Always DYOR.
+
+Do not add any new packages, do not change fonts or colors, do not touch the page numbering or footer spam. Just cleanly replace the text content with the new v1.3 version above while preserving the original professional layout.

@@ -13,7 +13,9 @@ import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import { CurrencyProvider } from "@/lib/currencyContext";
 import { ReownProvider } from "@/lib/ReownProvider";
+import { GeoProvider } from "@/lib/geoContext";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
+import { GeoRestrictionModal } from "@/components/GeoRestrictionModal";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Landing from "@/pages/Landing";
@@ -176,14 +178,17 @@ function AppContent() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        {isDashboard ? (
-          <DashboardLayout />
-        ) : (
-          <RouterSwitch>
-            <Route path="/" component={Landing} />
-            <Route component={NotFound} />
-          </RouterSwitch>
-        )}
+        <GeoProvider>
+          {isDashboard ? (
+            <DashboardLayout />
+          ) : (
+            <RouterSwitch>
+              <Route path="/" component={Landing} />
+              <Route component={NotFound} />
+            </RouterSwitch>
+          )}
+          <GeoRestrictionModal />
+        </GeoProvider>
         <Toaster />
       </TooltipProvider>
     </QueryClientProvider>
