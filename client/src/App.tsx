@@ -28,6 +28,7 @@ import BridgeTracking from "@/pages/BridgeTracking";
 import Airdrop from "@/pages/Airdrop";
 import Staking from "@/pages/Staking";
 import Swap from "@/pages/Swap";
+import Optimize from "@/pages/Optimize";
 import NotFound from "@/pages/not-found";
 
 function DashboardRouter() {
@@ -42,6 +43,7 @@ function DashboardRouter() {
       <Route path="/app/airdrop" component={Airdrop} />
       <Route path="/app/staking" component={Staking} />
       <Route path="/app/swap" component={Swap} />
+      <Route path="/app/optimize" component={Optimize} />
       <Route component={NotFound} />
     </RouterSwitch>
   );
