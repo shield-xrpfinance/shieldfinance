@@ -93,7 +93,7 @@ class AnalyticsService {
     let currentFrom = fromBlock;
     
     while (currentFrom <= toBlock) {
-      const currentTo = Math.min(currentFrom + MAX_BLOCKS_PER_QUERY, toBlock);
+      const currentTo = Math.min(currentFrom + MAX_BLOCKS_PER_QUERY - 1, toBlock);
       
       try {
         const events = await contract.queryFilter(filter, currentFrom, currentTo);
