@@ -8,6 +8,7 @@ const REDEMPTION_AWAITING_PROOF_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
 
 export interface IStorage {
   getVaults(): Promise<Vault[]>;
+  getVaultsByAssetType(assetType: 'crypto' | 'rwa' | 'tokenized_security'): Promise<Vault[]>;
   getAllVaults(): Promise<Vault[]>;
   getVault(id: string): Promise<Vault | undefined>;
   createVault(vault: InsertVault): Promise<Vault>;
@@ -174,6 +175,10 @@ export class DatabaseStorage implements IStorage {
 
   async getVaults(): Promise<Vault[]> {
     return await db.select().from(vaults);
+  }
+
+  async getVaultsByAssetType(assetType: 'crypto' | 'rwa' | 'tokenized_security'): Promise<Vault[]> {
+    return await db.select().from(vaults).where(eq(vaults.assetType, assetType));
   }
 
   async getAllVaults() {

@@ -17,7 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Search, Loader2 } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Search, Loader2, Coins, Building2, Landmark } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/lib/walletContext";
@@ -26,6 +27,8 @@ import UniversalProvider from "@walletconnect/universal-provider";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
 import { getAssetAddress, getAssetDecimals, getAssetDisplayName, type Network } from "@shared/assetConfig";
+
+type AssetCategory = 'all' | 'crypto' | 'rwa' | 'tokenized_security';
 
 export default function Vaults() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -38,6 +41,7 @@ export default function Vaults() {
   const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; apyLabel?: string | null; depositAssets: string[] } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("apy");
+  const [assetCategory, setAssetCategory] = useState<AssetCategory>("all");
   const [progressModalOpen, setProgressModalOpen] = useState(false);
   const [progressStep, setProgressStep] = useState<ProgressStep>('creating');
   const [progressErrorMessage, setProgressErrorMessage] = useState<string | undefined>(undefined);
@@ -165,6 +169,14 @@ export default function Vaults() {
       depositLimitRaw: (vault as any).depositLimitRaw || null,
       paused: typeof (vault as any).paused === 'boolean' ? (vault as any).paused : null,
       comingSoon: (vault as any).comingSoon || false,
+      // RWA and compliance fields
+      assetType: vault.assetType || 'crypto',
+      kycRequired: vault.kycRequired || false,
+      accreditationRequired: vault.accreditationRequired || false,
+      jurisdiction: vault.jurisdiction || null,
+      underlyingInstrument: vault.underlyingInstrument || null,
+      currencyDenomination: vault.currencyDenomination || null,
+      minInvestmentUsd: vault.minInvestmentUsd || null,
     };
   }) || [];
 
@@ -185,7 +197,25 @@ export default function Vaults() {
     return allVaults;
   }, [allVaults, isConnected, ecosystem]);
 
-  const filteredVaults = ecosystemFilteredVaults
+  // Filter by asset category (crypto, rwa, tokenized_security)
+  const categoryFilteredVaults = useMemo(() => {
+    if (assetCategory === 'all') {
+      return ecosystemFilteredVaults;
+    }
+    return ecosystemFilteredVaults.filter(vault => vault.assetType === assetCategory);
+  }, [ecosystemFilteredVaults, assetCategory]);
+
+  // Count vaults by category for tab badges
+  const categoryCounts = useMemo(() => {
+    return {
+      all: ecosystemFilteredVaults.length,
+      crypto: ecosystemFilteredVaults.filter(v => v.assetType === 'crypto').length,
+      rwa: ecosystemFilteredVaults.filter(v => v.assetType === 'rwa').length,
+      tokenized_security: ecosystemFilteredVaults.filter(v => v.assetType === 'tokenized_security').length,
+    };
+  }, [ecosystemFilteredVaults]);
+
+  const filteredVaults = categoryFilteredVaults
     .filter((vault) =>
       vault.name.toLowerCase().includes(searchQuery.toLowerCase())
     )
@@ -214,6 +244,40 @@ export default function Vaults() {
     // Block deposit flow if vault is paused
     if (vault.paused === true) {
       return;
+    }
+    
+    // Eligibility checks for RWA and tokenized securities
+    if (vault.assetType === 'rwa' || vault.assetType === 'tokenized_security') {
+      // Check KYC requirement
+      if (vault.kycRequired) {
+        toast({
+          title: "KYC Required",
+          description: `This ${vault.assetType === 'rwa' ? 'Real World Asset' : 'tokenized security'} vault requires KYC verification. Please complete identity verification to deposit.`,
+          variant: "default",
+        });
+        // In production, would redirect to KYC flow
+        // For now, we allow the deposit to continue but show the warning
+      }
+      
+      // Check accreditation requirement
+      if (vault.accreditationRequired) {
+        toast({
+          title: "Accredited Investor Status Required",
+          description: `This vault requires accredited investor status${vault.jurisdiction ? ` (${vault.jurisdiction})` : ''}. Please verify your accreditation status to deposit.`,
+          variant: "default",
+        });
+        // In production, would redirect to accreditation verification flow
+        // For now, we allow the deposit to continue but show the warning
+      }
+      
+      // Check minimum investment
+      if (vault.minInvestmentUsd && parseFloat(vault.minInvestmentUsd) > 0) {
+        toast({
+          title: "Minimum Investment",
+          description: `This vault has a minimum investment of $${parseFloat(vault.minInvestmentUsd).toLocaleString()} USD equivalent.`,
+          variant: "default",
+        });
+      }
     }
     
     // Compute depositAssets from vault.asset (backend returns asset field, not depositAssets)
@@ -693,6 +757,39 @@ export default function Vaults() {
           Browse and deposit into high-yield XRP vaults
         </p>
       </div>
+
+      {/* Category Tabs */}
+      <Tabs value={assetCategory} onValueChange={(v) => setAssetCategory(v as AssetCategory)} className="w-full">
+        <TabsList className="grid w-full grid-cols-4 h-auto" data-testid="tabs-asset-category">
+          <TabsTrigger value="all" className="flex items-center gap-2 py-2" data-testid="tab-all">
+            <span>All</span>
+            {categoryCounts.all > 0 && (
+              <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{categoryCounts.all}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="crypto" className="flex items-center gap-2 py-2" data-testid="tab-crypto">
+            <Coins className="h-4 w-4" />
+            <span className="hidden sm:inline">Crypto</span>
+            {categoryCounts.crypto > 0 && (
+              <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{categoryCounts.crypto}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="rwa" className="flex items-center gap-2 py-2" data-testid="tab-rwa">
+            <Building2 className="h-4 w-4" />
+            <span className="hidden sm:inline">RWA</span>
+            {categoryCounts.rwa > 0 && (
+              <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{categoryCounts.rwa}</span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="tokenized_security" className="flex items-center gap-2 py-2" data-testid="tab-securities">
+            <Landmark className="h-4 w-4" />
+            <span className="hidden sm:inline">Securities</span>
+            {categoryCounts.tokenized_security > 0 && (
+              <span className="text-xs bg-muted px-1.5 py-0.5 rounded-full">{categoryCounts.tokenized_security}</span>
+            )}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <div className="flex flex-col sm:flex-row gap-4">
         <div className="relative flex-1">

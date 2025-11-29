@@ -342,16 +342,26 @@ export async function registerRoutes(
   app.use("/api", globalRateLimiter);
 
   // Get all vaults with live on-chain data
-  app.get("/api/vaults", async (_req, res) => {
+  // Supports filtering by assetType query parameter: crypto | rwa | tokenized_security
+  app.get("/api/vaults", async (req, res) => {
     try {
+      const assetType = req.query.assetType as 'crypto' | 'rwa' | 'tokenized_security' | undefined;
+      
       // Use VaultDataService for enriched vaults with on-chain TVL, price, etc.
       if (vaultDataService && vaultDataService.isReady()) {
-        const enrichedVaults = await vaultDataService.getEnrichedVaults();
+        let enrichedVaults = await vaultDataService.getEnrichedVaults();
+        // Apply asset type filter if specified
+        if (assetType && ['crypto', 'rwa', 'tokenized_security'].includes(assetType)) {
+          enrichedVaults = enrichedVaults.filter(v => v.assetType === assetType);
+        }
         return res.json(enrichedVaults);
       }
       
       // Fallback: try basic enrichment with flareClient if VaultDataService not ready
-      const vaults = await storage.getVaults();
+      // Use filtered query if assetType specified, otherwise get all vaults
+      const vaults = assetType && ['crypto', 'rwa', 'tokenized_security'].includes(assetType)
+        ? await storage.getVaultsByAssetType(assetType)
+        : await storage.getVaults();
       
       if (flareClient && vaults.length > 0) {
         try {

@@ -55,6 +55,13 @@ export const backendStatusEnum = pgEnum("backend_status", [
   "abandoned"             // Gave up after max retries (user still has XRP)
 ]);
 
+// Asset type enum for categorizing vaults
+export const assetTypeEnum = pgEnum("asset_type", [
+  "crypto",               // Cryptocurrency assets (XRP, FXRP, stablecoins)
+  "rwa",                  // Real World Assets (real estate, commodities, bonds)
+  "tokenized_security"    // Tokenized securities (stocks, funds, ETFs)
+]);
+
 export const vaults = pgTable("vaults", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
@@ -67,6 +74,25 @@ export const vaults = pgTable("vaults", {
   riskLevel: text("risk_level").notNull(),
   status: text("status").notNull().default("active"),
   comingSoon: boolean("coming_soon").notNull().default(false),
+  
+  // Asset categorization for RWA and tokenized products
+  assetType: assetTypeEnum("asset_type").notNull().default("crypto"),
+  
+  // Compliance fields for RWA and tokenized securities
+  kycRequired: boolean("kyc_required").notNull().default(false),
+  accreditationRequired: boolean("accreditation_required").notNull().default(false),
+  jurisdiction: text("jurisdiction"), // e.g., "US", "EU", "UAE", "Global"
+  underlyingInstrument: text("underlying_instrument"), // e.g., "US Treasury Bonds", "S&P 500 ETF"
+  currencyDenomination: text("currency_denomination"), // e.g., "USD", "EUR" for RWAs
+  
+  // Documentation and disclosures
+  prospectusUrl: text("prospectus_url"), // Link to prospectus/offering document
+  riskDisclosure: text("risk_disclosure"), // Specific risk disclosure text
+  custodian: text("custodian"), // Name of custodian for RWAs
+  valuationFrequency: text("valuation_frequency"), // e.g., "daily", "weekly", "monthly"
+  
+  // Minimum investment requirements (in USD equivalent)
+  minInvestmentUsd: decimal("min_investment_usd", { precision: 18, scale: 2 }),
 });
 
 export const positions = pgTable("positions", {
