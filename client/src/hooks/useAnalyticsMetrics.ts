@@ -36,21 +36,31 @@ export function useAnalyticsMetrics(): FormattedMetrics {
     };
   }
 
-  // Format TVL: Convert from raw value to millions
+  // Format TVL: Show appropriate scale based on actual value
   const tvlValue = parseFloat(overview.tvl);
-  const tvlFormatted = tvlValue >= 1_000_000 
-    ? `$${(tvlValue / 1_000_000).toFixed(1)}M`
-    : `$${tvlValue.toFixed(0)}K`;
+  let tvlFormatted: string;
+  if (tvlValue >= 1_000_000) {
+    tvlFormatted = `$${(tvlValue / 1_000_000).toFixed(1)}M`;
+  } else if (tvlValue >= 1_000) {
+    tvlFormatted = `$${(tvlValue / 1_000).toFixed(1)}K`;
+  } else {
+    tvlFormatted = `$${tvlValue.toFixed(0)}`;
+  }
 
   // Format APY: Ensure percentage format
   const apyValue = parseFloat(overview.avgApy);
   const apyFormatted = `${apyValue.toFixed(1)}%`;
 
-  // Format Stakers: Add comma separator and + suffix
+  // Format Stakers: Show actual count, abbreviate only for large numbers
   const stakersValue = parseInt(overview.totalStakers.toString());
-  const stakersFormatted = stakersValue > 0 
-    ? `${(stakersValue / 1000).toFixed(1)}K+`
-    : "0+";
+  let stakersFormatted: string;
+  if (stakersValue >= 1_000_000) {
+    stakersFormatted = `${(stakersValue / 1_000_000).toFixed(1)}M+`;
+  } else if (stakersValue >= 1_000) {
+    stakersFormatted = `${(stakersValue / 1_000).toFixed(1)}K+`;
+  } else {
+    stakersFormatted = `${stakersValue}`;
+  }
 
   return {
     tvl: tvlFormatted,
