@@ -41,11 +41,10 @@ import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
 import { IPhoneMockup } from "@/components/IPhoneMockup";
 import { useShieldLogo } from "@/components/ShieldLogo";
-import flareLogo from "@assets/flare-network-logo.svg";
-import xrpLogo from "@assets/XRP-Ledger---Horizontal---Black_1763817099433.png";
-import xamanLogo from "@assets/xaman-logo.svg";
-import walletConnectLogo from "@assets/walletconnect-logo-wc.svg";
-import portfolioScreenshot from "@assets/IMG_2708_1763820959453.jpeg";
+import flareLogo from "@assets/flr.svg";
+import xrpLogo from "@assets/xrp.148c3b50_1762588566535.png";
+import xamanLogo from "@assets/xaman-wallet-icon.svg";
+import walletConnectLogo from "@assets/walletconnect-logo.svg";
 
 export default function Landing() {
   const shieldLogo = useShieldLogo();
@@ -971,7 +970,7 @@ export default function Landing() {
             </div>
             <div className={`order-1 lg:order-2 flex justify-center px-4 sm:px-0 transition-opacity duration-500 ${mobileExperienceAnimation.isVisible ? 'animate-fade-in-up opacity-100' : 'opacity-100'}`} style={{ animationDelay: '0.1s' }} data-testid="container-mobile-mockup">
               <IPhoneMockup 
-                screenshot={portfolioScreenshot} 
+                screenshot={shieldLogo} 
                 alt="Shield Finance mobile portfolio interface"
                 className="transition-transform hover:scale-105"
               />
