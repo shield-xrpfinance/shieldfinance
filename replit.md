@@ -38,6 +38,10 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Analytics & Monitoring**: Revenue transparency analytics, testnet monitoring & alerting system (metrics collection, alerts for delays/failures, API endpoints, real-time dashboard, Prometheus endpoint).
 - **Asset Configuration**: Network-aware asset configuration system for automatic token switching between mainnet and testnet.
 - **Production Readiness**: Fast server startup, asynchronous service initialization, dual health endpoints, API readiness guards, API rate limiting, and RPC failover utility.
+- **Airdrop System**: Faucet API (faucet.shyield.finance) as single source of truth for eligibility, with endpoints `/api/airdrop/stats` and `/api/airdrop/check/:address` (5-second timeout). MerkleDistributor contract at `0x25783E1Ebf2C9Fc7DDe2E764C931348d3bB3AB31`. Live on-chain claim status checking.
+- **Portfolio Enhancements**: Pending deposits section, bridge activity integration in position tracking, improved position verification and FXRP balance calculation with on-chain data.
+- **Navigation**: Documentation at docs.shyield.finance, blog at blog.shyield.finance, whitepaper at shyield.finance/whitepaper.pdf, Discord at discord.gg/Vzs3KbzU.
+- **SHIELD Token**: Fair Launch price set at $0.01.
 
 ### Smart Contracts (Solidity on Flare Network)
 - **Development Environment**: Hardhat.
