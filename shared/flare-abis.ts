@@ -183,6 +183,26 @@ export const ERC4626_ABI = [
 ] as const;
 
 /**
+ * ShXRPVault Event ABI
+ * Events emitted by the Shield XRP Vault contract for analytics tracking
+ */
+export const SHXRP_VAULT_EVENTS_ABI = [
+  "event FeeTransferred(string indexed feeType, uint256 amount, address indexed recipient)",
+  "event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)",
+  "event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)",
+  "event DonatedOnBehalf(address indexed user, uint256 fxrpAmount, uint256 sharesMinted)",
+] as const;
+
+/**
+ * RevenueRouter Event ABI
+ * Events emitted when revenue is distributed (SHIELD burn + staker boost)
+ */
+export const REVENUE_ROUTER_EVENTS_ABI = [
+  "event RevenueDistributed(uint256 wflrTotal, uint256 shieldBurned, uint256 fxrpToStakers, uint256 reserves)",
+  "event ReservesWithdrawn(address indexed to, uint256 amount)",
+] as const;
+
+/**
  * Firelight Launch Vault ABI (extends ERC-4626)
  * 
  * Used by Firelight Launch Vault for FXRP → stXRP staking
