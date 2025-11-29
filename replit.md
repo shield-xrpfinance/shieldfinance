@@ -1,7 +1,7 @@
 # XRP Liquid Staking Protocol Dashboard
 
 ## Whitepaper
-[Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) — Complete technical documentation with formal mathematical notation and architecture diagrams.
+[Whitepaper v1.3 (PDF)](https://shyield.finance/whitepaper.pdf) — December 2025 Mainnet Edition. VARA-compliant documentation including Institutional Safeguards, audit citations (Hacken Dec 2025, Trail of Bits Q1 2026), realistic APY ranges (5-8% base), and regulatory risk disclosures. Local copy at `public/whitepaper.pdf`, source at `docs/whitepaper/main.tex`.
 
 ## Overview
 This project is a full-stack DeFi application providing a dashboard for XRP liquid staking. It enables users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform integrates smart contracts on Flare Network for its $SHIELD governance token and shXRP liquid staking vault, with FAssets protocol for cross-chain XRP bridging to Flare. The vision is to enhance DeFi accessibility and efficiency on the XRP Ledger, capitalizing on the growing liquid staking market. It features a dual wallet architecture providing tailored experiences for XRPL (Xaman/XUMM) and EVM (Reown AppKit/MetaMask) users, showing XRP or FXRP vaults respectively.
@@ -34,6 +34,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Wallet Architecture**: Dual-ecosystem wallet support with three provider types: `xaman` (native XRPL SDK with xApp integration), `walletconnect` (XRPL via WalletConnect), and `reown` (EVM via Reown AppKit). Wallet type derived from connected addresses (evmAddress → "evm", address → "xrpl"). Header displays connected address with disconnect button. Dark-themed Reown modal with custom CSS overrides.
 - **Xaman xApp Integration**: Streamlined xApp experience when opened within Xaman wallet - auto-connect via `xumm.user.account`, deposit auto-sign via `xumm.xapp.openSignRequest()`, xApp context detection (JWT/OTT/ReactNativeWebView), and `xumm.xapp.ready()` loader dismissal. Note: Claim/withdraw flows currently fall back to QR modal pending backend updates.
 - **Security & Controls**: P0 vault controls (deposit limits, pausable emergency controls), minimum deposits, transparent accounting, double-mint prevention, idempotency, crash recovery, wallet-scoped transaction security, and FDC proof generation lock.
+- **UAE Geo-Blocking**: Fail-closed front-end geo-blocking for VARA compliance using ipapi.co. GeoProvider context (`client/src/lib/geoContext.tsx`) detects location, shows compliance modal for UAE IPs, and blocks app routes when detection fails (fail-closed). Users can retry detection or return to homepage. Smart contracts remain permissionless by design.
 - **Multi-Asset Swap**: Full swap feature with SparkDEX V3 router, real-time quotes, and approval flows.
 - **Analytics & Monitoring**: Revenue transparency analytics, testnet monitoring & alerting system (metrics collection, alerts for delays/failures, API endpoints, real-time dashboard, Prometheus endpoint).
 - **Asset Configuration**: Network-aware asset configuration system for automatic token switching between mainnet and testnet.
