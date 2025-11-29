@@ -25,6 +25,7 @@ import crypto from "crypto";
 import { generateFDCProof } from "./utils/fdc-proof";
 import { globalRateLimiter, strictRateLimiter } from "./middleware/rateLimiter";
 import { analyticsService } from "./services/AnalyticsService";
+import { yieldOptimizerService } from "./services/YieldOptimizerService";
 
 /**
  * Admin authentication middleware for operational endpoints
