@@ -350,7 +350,7 @@ The platform includes a complete smart contract infrastructure deployed on Flare
 
 ### ShieldToken ($SHIELD)
 - **Type**: ERC-20 governance and utility token
-- **Total Supply**: 100,000,000 SHIELD
+- **Total Supply**: 10,000,000 SHIELD
 - **Treasury**: 10,000,000 SHIELD (10% allocation)
 - **Features**: Burnable, Mintable (owner-controlled), Transferable ownership
 
