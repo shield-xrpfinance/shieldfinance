@@ -365,6 +365,22 @@ export default function Landing() {
                 </div>
                 <ExternalLink className="h-4 w-4 text-gray-400" />
               </a>
+              
+              <div className="border-t border-gray-100 my-2" />
+              
+              <a 
+                href="https://faucet.shyield.finance/" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center justify-between text-white bg-primary hover:bg-primary/90 px-4 py-3 rounded-lg transition-all"
+                data-testid="link-mobile-faucet"
+              >
+                <div className="flex items-center gap-3">
+                  <Droplets className="h-5 w-5" />
+                  <span className="font-medium">Get Test Tokens</span>
+                </div>
+                <ExternalLink className="h-4 w-4 text-white/70" />
+              </a>
             </nav>
           </div>
         )}
@@ -438,6 +454,12 @@ export default function Landing() {
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </Button>
               </Link>
+              <a href="https://faucet.shyield.finance/" target="_blank" rel="noopener noreferrer">
+                <Button size="lg" variant="outline" data-testid="button-hero-faucet" className="transition-all hover:scale-105 border-primary/50 text-white hover:bg-primary/10">
+                  <Droplets className="mr-2 h-5 w-5" />
+                  Get Test Tokens
+                </Button>
+              </a>
             </div>
             
             {/* Glassmorphic Stats */}
