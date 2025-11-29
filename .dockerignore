@@ -3,6 +3,7 @@ node_modules/
 .npm/
 .cache/
 dist/
+*.tsbuildinfo
 
 # Documentation and source files (not needed at runtime)
 docs/
@@ -12,8 +13,10 @@ tests/
 *.test.tsx
 *.spec.ts
 *.spec.tsx
+vitest.config.ts
+tsconfig.test.json
 
-# Hardhat/Solidity development
+# Hardhat/Solidity development (contracts already deployed)
 artifacts/
 cache/
 typechain-types/
@@ -21,6 +24,7 @@ ignition/
 migrations/
 scripts/
 contracts/
+deployments/
 hardhat.config.ts
 
 # Git and IDE
@@ -28,22 +32,47 @@ hardhat.config.ts
 .gitignore
 .vscode/
 .idea/
+.husky/
 
 # Replit specific
 .replit
 replit.nix
 .config/
 .upm/
+.local/
+.cache/
 
-# LaTeX source (PDF is pre-compiled)
+# LaTeX source (PDF is pre-compiled at public/whitepaper.pdf)
 docs/whitepaper/
 
-# Misc
-*.md
-!README.md
+# Development assets and temporary files
+attached_assets/
+generated-icon.png
 *.log
 *.tmp
 .env.local
 .env.development
-attached_assets/
-generated-icon.png
+.env.test
+
+# Documentation files
+*.md
+CHANGELOG.md
+DEPLOYMENT_GUIDE.md
+MONITORING_GUIDE.md
+REVIEWERS.md
+SMART_ACCOUNTS.md
+TESTNET_GUIDE.md
+
+# Package manager files (will be rebuilt)
+package-lock.json
+.npmrc
+
+# Type definitions (compiled into dist)
+types/
+
+# Data directory (should use database)
+data/
+
+# Test coverage
+coverage/
+.nyc_output/
