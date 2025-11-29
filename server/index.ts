@@ -13,6 +13,7 @@ import { DepositWatchdogService } from "./services/DepositWatchdogService";
 import { WithdrawalRetryService } from "./services/WithdrawalRetryService";
 import { MetricsService } from "./services/MetricsService";
 import { AlertingService } from "./services/AlertingService";
+import { OnChainMonitorService } from "./services/OnChainMonitorService";
 import { readinessRegistry } from "./services/ReadinessRegistry";
 import { startDiscordBot } from "./discord-bot";
 
@@ -23,6 +24,7 @@ let realBridgeService: BridgeService | null = null;
 let realFlareClient: FlareClient | null = null;
 let realMetricsService: MetricsService | null = null;
 let realAlertingService: AlertingService | null = null;
+let realOnChainMonitorService: OnChainMonitorService | null = null;
 
 declare module 'http' {
   interface IncomingMessage {
@@ -566,11 +568,12 @@ async function initializeServices() {
 
   // Step 9: Initialize AlertingService (requires MetricsService)
   // This service monitors critical metrics and sends webhook notifications to Slack/Discord
+  let alertingService: AlertingService | undefined;
   if (metricsService) {
     try {
       console.log(`🔔 Initializing AlertingService...`);
       
-      const alertingService = new AlertingService({
+      alertingService = new AlertingService({
         storage,
         metricsService,
         slackWebhookUrl: process.env.SLACK_WEBHOOK_URL,
@@ -600,7 +603,117 @@ async function initializeServices() {
     readinessRegistry.setError('alertingService', 'MetricsService not available');
   }
 
+  // Step 10: Initialize OnChainMonitorService (OpenZeppelin Monitor-style event watcher)
+  // This service monitors critical contract events and sends alerts via AlertingService
+  try {
+    console.log(`🔗 Initializing OnChainMonitorService...`);
+    
+    const rpcUrl = process.env.FLARE_RPC_URL || "https://coston2-api.flare.network/ext/C/rpc";
+    
+    // Get contract addresses from deployment files or environment
+    const deploymentInfo = getDeploymentAddresses();
+    
+    if (deploymentInfo) {
+      const contractConfigs = OnChainMonitorService.getDefaultContractConfigs(deploymentInfo);
+      
+      const onChainMonitor = new OnChainMonitorService({
+        storage,
+        alertingService,
+        rpcUrl,
+        contracts: contractConfigs,
+        enabled: process.env.ON_CHAIN_MONITOR_ENABLED !== 'false', // Enabled by default
+        pollingInterval: process.env.ON_CHAIN_MONITOR_POLL_MS 
+          ? parseInt(process.env.ON_CHAIN_MONITOR_POLL_MS, 10) 
+          : 15000, // Default 15 seconds
+      });
+      
+      // Export to module-level for routes
+      realOnChainMonitorService = onChainMonitor;
+      
+      // Start the monitor
+      onChainMonitor.start();
+      
+      readinessRegistry.setReady('onChainMonitor');
+      console.log(`✅ OnChainMonitorService initialized - monitoring ${contractConfigs.length} contracts`);
+    } else {
+      readinessRegistry.setError('onChainMonitor', 'Contract deployment info not available');
+      console.warn(`⚠️  OnChainMonitorService skipped - no deployment addresses found`);
+    }
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+    readinessRegistry.setError('onChainMonitor', errorMsg);
+    console.error(`❌ OnChainMonitorService initialization failed:`, errorMsg);
+  }
+
   console.log("✅ All services initialized");
+}
+
+/**
+ * Get contract deployment addresses from environment or deployment files
+ */
+function getDeploymentAddresses(): {
+  shXRPVault: string;
+  shieldToken: string;
+  revenueRouter: string;
+  stakingBoost: string;
+} | null {
+  // Check environment variables first
+  const envAddresses = {
+    shXRPVault: process.env.VITE_SHXRP_VAULT_ADDRESS,
+    shieldToken: process.env.VITE_SHIELD_TOKEN_ADDRESS,
+    revenueRouter: process.env.VITE_REVENUE_ROUTER_ADDRESS,
+    stakingBoost: process.env.VITE_STAKING_BOOST_ADDRESS,
+  };
+  
+  // Check if all addresses are set via environment variables
+  if (envAddresses.shXRPVault && 
+      envAddresses.shieldToken && 
+      envAddresses.revenueRouter && 
+      envAddresses.stakingBoost &&
+      envAddresses.shXRPVault !== "0x..." &&
+      envAddresses.shieldToken !== "0x..." &&
+      envAddresses.revenueRouter !== "0x..." &&
+      envAddresses.stakingBoost !== "0x...") {
+    return envAddresses as { shXRPVault: string; shieldToken: string; revenueRouter: string; stakingBoost: string; };
+  }
+  
+  // Try reading from deployment files
+  try {
+    const fs = require("fs");
+    const path = require("path");
+    
+    const deploymentsDir = path.join(process.cwd(), "deployments");
+    const files = fs.readdirSync(deploymentsDir)
+      .filter((f: string) => 
+        f.startsWith("coston2-") && 
+        f.endsWith(".json") && 
+        f !== "coston2-latest.json" &&
+        f !== "coston2-deployment.json" &&
+        /coston2-\d+\.json/.test(f)
+      )
+      .sort()
+      .reverse();
+    
+    if (files.length > 0) {
+      const latestDeployment = JSON.parse(
+        fs.readFileSync(path.join(deploymentsDir, files[0]), "utf-8")
+      );
+      
+      const contracts = latestDeployment.contracts;
+      if (contracts) {
+        return {
+          shXRPVault: contracts.ShXRPVault?.address || "",
+          shieldToken: contracts.ShieldToken?.address || "",
+          revenueRouter: contracts.RevenueRouter?.address || "",
+          stakingBoost: contracts.StakingBoost?.address || "",
+        };
+      }
+    }
+  } catch (error) {
+    console.warn("Failed to read deployment file:", error);
+  }
+  
+  return null;
 }
 
 /**
@@ -711,7 +824,21 @@ async function initializeFlareClientWithRetry(config: {
     }
   });
   
-  const server = await registerRoutes(app, bridgeServiceProxy, flareClientProxy, metricsServiceProxy, alertingServiceProxy);
+  const onChainMonitorProxy = new Proxy({} as OnChainMonitorService, {
+    get(target, prop) {
+      if (!realOnChainMonitorService) {
+        // Return undefined for optional usage (routes handle gracefully)
+        return undefined;
+      }
+      const value = (realOnChainMonitorService as any)[prop];
+      if (typeof value === 'function') {
+        return value.bind(realOnChainMonitorService);
+      }
+      return value;
+    }
+  });
+  
+  const server = await registerRoutes(app, bridgeServiceProxy, flareClientProxy, metricsServiceProxy, alertingServiceProxy, onChainMonitorProxy);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;

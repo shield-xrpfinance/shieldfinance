@@ -42,7 +42,8 @@ export type AlertType =
   | 'apy_drift' 
   | 'bridge_failure' 
   | 'rpc_issue' 
-  | 'health_change';
+  | 'health_change'
+  | 'on_chain_event';
 
 export type AlertSeverity = 'info' | 'warning' | 'critical';
 
@@ -848,6 +849,7 @@ export class AlertingService {
       case 'bridge_failure': return 'Bridge Health Issue';
       case 'rpc_issue': return 'RPC Connectivity Issue';
       case 'health_change': return 'System Health Alert';
+      case 'on_chain_event': return 'On-Chain Event Detected';
     }
   }
 
@@ -895,5 +897,27 @@ export class AlertingService {
 
     console.log('🧪 Sending test alert...');
     await this.sendAlert(testCondition);
+  }
+
+  /**
+   * Send a custom alert (used by OnChainMonitorService)
+   * Allows external services to send alerts through the AlertingService
+   */
+  async sendCustomAlert(alert: {
+    type: AlertType;
+    severity: AlertSeverity;
+    message: string;
+    metadata?: Record<string, any>;
+  }): Promise<void> {
+    const condition: AlertCondition = {
+      type: alert.type,
+      severity: alert.severity,
+      message: alert.message,
+      metadata: alert.metadata
+    };
+
+    if (this.shouldSendAlert(condition)) {
+      await this.sendAlert(condition);
+    }
   }
 }

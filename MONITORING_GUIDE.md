@@ -2,11 +2,12 @@
 
 ## Overview
 
-The monitoring system provides real-time visibility into testnet health via three components:
+The monitoring system provides real-time visibility into testnet health via four components:
 
 1. **MetricsService** - Collects vault, bridge, and transaction metrics with 1-minute caching
 2. **AlertingService** - Detects issues and sends webhook notifications to Slack/Discord
-3. **Analytics Dashboard** - Real-time UI displays on Analytics page with 30-second polling
+3. **OnChainMonitorService** - OpenZeppelin Monitor-style blockchain event watcher for critical contract events
+4. **Analytics Dashboard** - Real-time UI displays on Analytics page with 30-second polling
 
 ## System Architecture
 
@@ -45,6 +46,80 @@ Aggregates three categories of metrics:
 ### AlertingService (server/services/AlertingService.ts)
 
 Monitors metrics every 5 minutes and sends alerts when conditions trigger. Includes intelligent throttling (15-minute minimum between identical alerts).
+
+#### Alert Conditions
+
+### OnChainMonitorService (server/services/OnChainMonitorService.ts)
+
+Inspired by [OpenZeppelin Monitor](https://github.com/OpenZeppelin/openzeppelin-monitor), this service provides real-time blockchain event monitoring for Shield Finance smart contracts.
+
+#### Monitored Contracts
+
+| Contract | Events Monitored | Severity Mapping |
+|----------|------------------|------------------|
+| ShXRPVault | OwnershipTransferred, Paused, Unpaused, OperatorAdded/Removed, StrategyAdded/Removed, Deposit, Withdraw | CRITICAL for ownership/pause, WARNING for operator/strategy, INFO for deposits |
+| ShieldToken | OwnershipTransferred, Transfer | CRITICAL for ownership, INFO for transfers |
+| RevenueRouter | OwnershipTransferred, RevenueDistributed | CRITICAL for ownership, INFO for distributions |
+| StakingBoost | OwnershipTransferred, Staked, Unstaked | CRITICAL for ownership, INFO for staking |
+
+#### Critical Event Examples
+
+**Ownership Transfer (CRITICAL)**
+- Triggered when contract ownership changes
+- Immediate alert via Slack/Discord
+- Template: "CRITICAL: Ownership of {contractName} transferred from {previousOwner} to {newOwner}"
+
+**Contract Pause (CRITICAL)**
+- Triggered when contract is paused (emergency stop)
+- Template: "CRITICAL: {contractName} has been PAUSED by {account}"
+
+**Large Deposits/Withdrawals (INFO)**
+- Logged for all deposit/withdraw events
+- Tracked in database for analytics
+
+#### Configuration
+
+```bash
+# Enable/disable on-chain monitoring (default: enabled)
+export ON_CHAIN_MONITOR_ENABLED=true
+
+# Polling interval in milliseconds (default: 15000ms = 15 seconds)
+export ON_CHAIN_MONITOR_POLL_MS=15000
+
+# RPC URL for Flare/Coston2 (default: Coston2 public RPC)
+export FLARE_RPC_URL="https://coston2-api.flare.network/ext/C/rpc"
+```
+
+#### Contract Addresses
+
+Contract addresses are loaded from:
+1. Environment variables (highest priority):
+   - `VITE_SHXRP_VAULT_ADDRESS`
+   - `VITE_SHIELD_TOKEN_ADDRESS`
+   - `VITE_REVENUE_ROUTER_ADDRESS`
+   - `VITE_STAKING_BOOST_ADDRESS`
+
+2. Deployment files (fallback): `deployments/coston2-*.json`
+
+#### Event Storage
+
+All monitored events are stored in the `on_chain_events` PostgreSQL table:
+
+```sql
+CREATE TABLE on_chain_events (
+  id SERIAL PRIMARY KEY,
+  contract_name TEXT NOT NULL,
+  contract_address TEXT NOT NULL,
+  event_name TEXT NOT NULL,
+  severity TEXT NOT NULL,  -- 'info' | 'warning' | 'critical'
+  block_number INTEGER NOT NULL,
+  transaction_hash TEXT NOT NULL,
+  log_index INTEGER NOT NULL,
+  args JSONB NOT NULL,
+  timestamp TIMESTAMP NOT NULL DEFAULT NOW(),
+  notified BOOLEAN NOT NULL DEFAULT FALSE
+);
+```
 
 #### Alert Conditions
 
@@ -121,6 +196,77 @@ Bridge operation health and statistics.
 #### GET /api/analytics/revenue-stats
 Revenue transparency metrics (fees, SHIELD burned, yield distributed).
 
+#### GET /api/analytics/on-chain-events
+Recent on-chain events from monitored contracts with filtering and pagination.
+
+**Query Parameters:**
+- `contract`: Filter by contract name (ShXRPVault, ShieldToken, RevenueRouter, StakingBoost)
+- `severity`: Filter by severity level (info, warning, critical)
+- `limit`: Number of events to return (default 50, max 200)
+- `offset`: Pagination offset (default 0)
+
+**Response:**
+```json
+{
+  "events": [
+    {
+      "id": 1,
+      "contractName": "ShXRPVault",
+      "contractAddress": "0x...",
+      "eventName": "Deposit",
+      "severity": "info",
+      "blockNumber": 12345678,
+      "transactionHash": "0x...",
+      "logIndex": 0,
+      "args": { "sender": "0x...", "assets": "1000000" },
+      "timestamp": "2025-11-29T10:30:00.000Z",
+      "notified": true
+    }
+  ],
+  "pagination": {
+    "limit": 50,
+    "offset": 0,
+    "returned": 1
+  }
+}
+```
+
+#### GET /api/analytics/on-chain-events/summary
+Summary statistics of on-chain events for dashboard overview.
+
+**Response:**
+```json
+{
+  "last24Hours": {
+    "bySeverity": {
+      "info": 45,
+      "warning": 3,
+      "critical": 0
+    },
+    "byContract": {
+      "ShXRPVault": 38,
+      "StakingBoost": 10
+    },
+    "total": 48
+  },
+  "recentCriticalEvents": []
+}
+```
+
+#### GET /api/analytics/monitor-status
+Current status of the on-chain monitoring service.
+
+**Response:**
+```json
+{
+  "status": "active",
+  "isRunning": true,
+  "lastProcessedBlock": 12345678,
+  "contractsMonitored": ["ShXRPVault", "ShieldToken", "RevenueRouter", "StakingBoost"],
+  "eventsConfigured": 15
+}
+```
+
 #### GET /metrics (Prometheus Format)
 Exportable metrics in Prometheus text format for external monitoring tools.
 
@@ -188,11 +334,18 @@ xrp_liquid_staking_etherspot_success_rate_percent
 
 ### Analytics Page Dashboard
 
-Located at `/analytics`, displays real-time metrics in three card sections:
+Located at `/analytics`, displays real-time metrics in four card sections:
 
-1. **Vault Metrics Card**: TVL, APY, active users, deposits/withdrawals, staking adoption
-2. **Bridge Status Card**: Pending ops, avg time, stuck count, failure rate, 24h successes
-3. **System Health Card**: Overall status badge, RPC indicator, last update, quick metrics
+1. **Revenue Transparency Card**: Total fees collected, SHIELD burned, extra yield distributed
+2. **System Monitoring Dashboard**: Overall system health with vault, bridge, and transaction metrics
+3. **On-Chain Events Panel**: Real-time contract activity with event list, severity badges, and block tracking
+4. **Vault Distribution & Performance**: TVL, APY, active users, top vaults
+
+**On-Chain Events Panel Features:**
+- **Live Indicator**: Green pulsing dot when monitoring service is active
+- **Event Summary Cards**: Total events (24h), critical count, warnings count, last processed block
+- **Recent Events List**: Last 10 events with severity badges, contract names, block numbers, and explorer links
+- **Auto-Refresh**: Data updates every 30 seconds
 
 **Update Frequency**: 30-second polling with TanStack Query
 
@@ -311,6 +464,24 @@ export ALERT_ENABLED=true
 tail -f server.log | grep "ALERT"
 ```
 
+### On-Chain Events Testing
+```bash
+# Fetch recent on-chain events
+curl http://localhost:5000/api/analytics/on-chain-events | jq
+
+# Fetch events filtered by contract
+curl "http://localhost:5000/api/analytics/on-chain-events?contract=ShXRPVault&limit=10" | jq
+
+# Fetch critical events only
+curl "http://localhost:5000/api/analytics/on-chain-events?severity=critical" | jq
+
+# Fetch event summary for last 24 hours
+curl http://localhost:5000/api/analytics/on-chain-events/summary | jq
+
+# Check monitor service status
+curl http://localhost:5000/api/analytics/monitor-status | jq
+```
+
 ### Metrics Cache Testing
 ```bash
 # Fetch metrics twice within 1 minute - should return cached data
@@ -324,8 +495,10 @@ time curl http://localhost:5000/api/analytics/vault-metrics > /dev/null
 ## Future Improvements
 
 ### Phase 2: Enhanced Observability
+- [x] Implement on-chain event monitoring (OnChainMonitorService)
+- [x] Add on-chain events API endpoints
+- [x] Add on-chain events panel to Analytics dashboard
 - [ ] Add actual UserOp tracking from Etherspot webhooks
-- [ ] Implement ShXRPVault contract event ingestion
 - [ ] Add `updatedAt` tracking for precise stuck detection
 - [ ] Track per-vault APY changes separately
 - [ ] Add transaction detailed breakdown by type
@@ -375,6 +548,43 @@ time curl http://localhost:5000/api/analytics/vault-metrics > /dev/null
 3. XRPL payment not received
 
 **Resolution**: Use redemption retry service or manual recovery endpoint
+
+### On-Chain Monitor Not Running
+**Common Causes**:
+1. Contract addresses not configured (environment variables or deployment files missing)
+2. RPC URL unreachable or rate-limited
+3. `ON_CHAIN_MONITOR_ENABLED=false` set in environment
+
+**Verification**:
+```bash
+# Check monitor status
+curl http://localhost:5000/api/analytics/monitor-status | jq
+
+# Should return:
+# { "status": "active", "isRunning": true, ... }
+```
+
+**Resolution**:
+1. Verify deployment files exist in `deployments/` directory
+2. Set contract addresses via environment variables
+3. Check RPC endpoint connectivity
+
+### No Events Being Detected
+**Common Causes**:
+1. Monitor started after relevant blocks were processed
+2. Contracts have had no activity
+3. Event listener filters not matching emitted events
+
+**Debug**:
+```bash
+# Check last processed block vs current block
+curl http://localhost:5000/api/analytics/monitor-status | jq '.lastProcessedBlock'
+
+# Compare with current block on explorer
+# https://coston2-explorer.flare.network
+```
+
+**Resolution**: The monitor will catch up on historical events; allow 1-2 minutes for sync
 
 ---
 

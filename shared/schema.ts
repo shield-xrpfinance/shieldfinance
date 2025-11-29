@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, decimal, integer, timestamp, pgEnum, boolean, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, decimal, integer, timestamp, pgEnum, boolean, unique, jsonb } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -347,6 +347,21 @@ export const stakingPositions = pgTable("staking_positions", {
   unlockTime: varchar("unlock_time").notNull(), // timestamp in seconds
 });
 
+// On-chain events table for OpenZeppelin Monitor-style blockchain monitoring
+export const onChainEvents = pgTable("on_chain_events", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  contractName: text("contract_name").notNull(),
+  contractAddress: text("contract_address").notNull(),
+  eventName: text("event_name").notNull(),
+  severity: text("severity").notNull(), // 'info' | 'warning' | 'critical'
+  blockNumber: integer("block_number").notNull(),
+  transactionHash: text("transaction_hash").notNull(),
+  logIndex: integer("log_index").notNull(),
+  args: jsonb("args").notNull(), // Event arguments as JSON
+  timestamp: timestamp("timestamp").notNull().defaultNow(),
+  notified: boolean("notified").notNull().default(false),
+});
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -432,6 +447,7 @@ export type InsertServiceState = z.infer<typeof insertServiceStateSchema>;
 export type ServiceState = typeof serviceState.$inferSelect;
 export type InsertStakingPosition = z.infer<typeof insertStakingPositionSchema>;
 export type StakingPosition = typeof stakingPositions.$inferSelect;
+export type OnChainEvent = typeof onChainEvents.$inferSelect;
 
 export interface PaymentRequest {
   bridgeId: string;

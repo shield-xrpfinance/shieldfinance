@@ -11,12 +11,13 @@ import { YieldService } from "./services/YieldService";
 import type { FlareClient } from "./utils/flare-client";
 import type { MetricsService } from "./services/MetricsService";
 import type { AlertingService } from "./services/AlertingService";
+import type { OnChainMonitorService } from "./services/OnChainMonitorService";
 import { VaultDataService, setVaultDataService } from "./services/VaultDataService";
 import { getPriceService } from "./services/PriceService";
 import { getPositionService } from "./services/PositionService";
 import { db } from "./db";
-import { fxrpToXrpRedemptions } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { fxrpToXrpRedemptions, onChainEvents } from "@shared/schema";
+import { eq, and, desc, sql } from "drizzle-orm";
 import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
@@ -175,7 +176,8 @@ export async function registerRoutes(
   bridgeService: BridgeService,
   flareClient?: FlareClient,
   metricsService?: MetricsService,
-  alertingService?: AlertingService
+  alertingService?: AlertingService,
+  onChainMonitorService?: OnChainMonitorService
 ): Promise<Server> {
   // Initialize VaultDataService for live on-chain data
   let vaultDataService: VaultDataService | undefined;
@@ -4254,6 +4256,144 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Failed to fetch revenue stats:", error);
       res.status(500).json({ error: "Failed to fetch revenue stats" });
+    }
+  });
+
+  /**
+   * GET /api/analytics/on-chain-events
+   * 
+   * Retrieve recent on-chain events from monitored contracts
+   * Supports filtering by contract, severity, and pagination
+   * 
+   * Query params:
+   * - contract: Filter by contract name (ShXRPVault, ShieldToken, RevenueRouter, StakingBoost)
+   * - severity: Filter by severity level (info, warning, critical)
+   * - limit: Number of events to return (default 50, max 200)
+   * - offset: Pagination offset (default 0)
+   */
+  app.get("/api/analytics/on-chain-events", async (req, res) => {
+    try {
+      const { contract, severity, limit: limitStr, offset: offsetStr } = req.query;
+      const limit = Math.min(parseInt(limitStr as string) || 50, 200);
+      const offset = parseInt(offsetStr as string) || 0;
+
+      let query = db.select().from(onChainEvents);
+      
+      const conditions: any[] = [];
+      
+      if (contract && typeof contract === 'string') {
+        conditions.push(sql`${onChainEvents.contractName} = ${contract}`);
+      }
+      
+      if (severity && typeof severity === 'string') {
+        conditions.push(sql`${onChainEvents.severity} = ${severity}`);
+      }
+
+      const events = await db.select()
+        .from(onChainEvents)
+        .where(conditions.length > 0 ? and(...conditions) : undefined)
+        .orderBy(desc(onChainEvents.timestamp))
+        .limit(limit)
+        .offset(offset);
+
+      res.json({
+        events,
+        pagination: {
+          limit,
+          offset,
+          returned: events.length,
+        }
+      });
+    } catch (error) {
+      console.error("Failed to fetch on-chain events:", error);
+      res.status(500).json({ error: "Failed to fetch on-chain events" });
+    }
+  });
+
+  /**
+   * GET /api/analytics/on-chain-events/summary
+   * 
+   * Get summary statistics of on-chain events for dashboard overview
+   * Returns counts by severity and contract over the last 24 hours
+   */
+  app.get("/api/analytics/on-chain-events/summary", async (req, res) => {
+    try {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const [severityCounts, contractCounts, recentCritical] = await Promise.all([
+        db.select({
+          severity: onChainEvents.severity,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(onChainEvents)
+        .where(sql`${onChainEvents.timestamp} > ${twentyFourHoursAgo}`)
+        .groupBy(onChainEvents.severity),
+
+        db.select({
+          contractName: onChainEvents.contractName,
+          count: sql<number>`count(*)::int`,
+        })
+        .from(onChainEvents)
+        .where(sql`${onChainEvents.timestamp} > ${twentyFourHoursAgo}`)
+        .groupBy(onChainEvents.contractName),
+
+        db.select()
+        .from(onChainEvents)
+        .where(and(
+          sql`${onChainEvents.severity} = 'critical'`,
+          sql`${onChainEvents.timestamp} > ${twentyFourHoursAgo}`
+        ))
+        .orderBy(desc(onChainEvents.timestamp))
+        .limit(5),
+      ]);
+
+      const summary = {
+        last24Hours: {
+          bySeverity: Object.fromEntries(
+            severityCounts.map(s => [s.severity, s.count])
+          ),
+          byContract: Object.fromEntries(
+            contractCounts.map(c => [c.contractName, c.count])
+          ),
+          total: severityCounts.reduce((sum, s) => sum + s.count, 0),
+        },
+        recentCriticalEvents: recentCritical,
+      };
+
+      res.json(summary);
+    } catch (error) {
+      console.error("Failed to fetch on-chain events summary:", error);
+      res.status(500).json({ error: "Failed to fetch on-chain events summary" });
+    }
+  });
+
+  /**
+   * GET /api/analytics/monitor-status
+   * 
+   * Get the current status of the on-chain monitoring service
+   * Includes running state, last processed block, and monitored contracts
+   */
+  app.get("/api/analytics/monitor-status", async (_req, res) => {
+    try {
+      if (onChainMonitorService) {
+        const status = onChainMonitorService.getStatus();
+        res.json({
+          status: "active",
+          ...status,
+        });
+      } else {
+        res.json({
+          status: "inactive",
+          isRunning: false,
+          lastProcessedBlock: 0,
+          contractsMonitored: [],
+          eventsConfigured: 0,
+          message: "On-chain monitoring service is not initialized",
+        });
+      }
+    } catch (error) {
+      console.error("Failed to fetch monitor status:", error);
+      res.status(500).json({ error: "Failed to fetch monitor status" });
     }
   });
 

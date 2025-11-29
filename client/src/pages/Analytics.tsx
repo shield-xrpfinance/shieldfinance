@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { TrendingUp, DollarSign, Percent, Users, Vault, Flame, Info } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { TrendingUp, DollarSign, Percent, Users, Vault, Flame, Info, Activity, AlertTriangle, ExternalLink, Radio } from "lucide-react";
 import { LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { useQuery } from "@tanstack/react-query";
 import { MultiAssetIcon } from "@/components/AssetIcon";
@@ -47,6 +48,38 @@ interface RevenueTransparency {
   burnedAmountUsd: string;
 }
 
+interface OnChainEvent {
+  id: number;
+  contractName: string;
+  contractAddress: string;
+  eventName: string;
+  severity: 'info' | 'warning' | 'critical';
+  blockNumber: number;
+  transactionHash: string;
+  logIndex: number;
+  args: Record<string, any>;
+  timestamp: string;
+  notified: boolean;
+}
+
+interface OnChainEventsSummary {
+  last24Hours: {
+    bySeverity: Record<string, number>;
+    byContract: Record<string, number>;
+    total: number;
+  };
+  recentCriticalEvents: OnChainEvent[];
+}
+
+interface MonitorStatus {
+  status: 'active' | 'inactive';
+  isRunning: boolean;
+  lastProcessedBlock: number;
+  contractsMonitored: string[];
+  eventsConfigured: number;
+  message?: string;
+}
+
 export default function Analytics() {
   const [revenueModalOpen, setRevenueModalOpen] = useState(false);
 
@@ -74,6 +107,21 @@ export default function Analytics() {
     queryKey: ["/api/analytics/revenue-transparency"],
   });
 
+  const { data: eventsSummary, isLoading: eventsSummaryLoading } = useQuery<OnChainEventsSummary>({
+    queryKey: ["/api/analytics/on-chain-events/summary"],
+    refetchInterval: 30000,
+  });
+
+  const { data: recentEvents, isLoading: recentEventsLoading } = useQuery<{ events: OnChainEvent[] }>({
+    queryKey: ["/api/analytics/on-chain-events"],
+    refetchInterval: 30000,
+  });
+
+  const { data: monitorStatus } = useQuery<MonitorStatus>({
+    queryKey: ["/api/analytics/monitor-status"],
+    refetchInterval: 30000,
+  });
+
   const getRiskTierLabel = (riskLevel: string) => {
     const labels: Record<string, string> = {
       low: "Stable Yield Tier",
@@ -90,6 +138,29 @@ export default function Analytics() {
       high: "hsl(var(--chart-3))",
     };
     return colors[riskLevel] || "hsl(var(--chart-1))";
+  };
+
+  const getSeverityBadgeVariant = (severity: string) => {
+    switch (severity) {
+      case 'critical': return 'destructive';
+      case 'warning': return 'outline';
+      default: return 'secondary';
+    }
+  };
+
+  const formatTimeAgo = (timestamp: string) => {
+    const now = new Date();
+    const date = new Date(timestamp);
+    const diff = Math.floor((now.getTime() - date.getTime()) / 1000);
+    
+    if (diff < 60) return `${diff}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  };
+
+  const truncateAddress = (address: string) => {
+    return `${address.slice(0, 6)}...${address.slice(-4)}`;
   };
 
   return (
@@ -167,6 +238,148 @@ export default function Analytics() {
 
       {/* System Monitoring Dashboard */}
       <MonitoringDashboard />
+
+      {/* On-Chain Events Panel */}
+      <Card data-testid="on-chain-events-panel">
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Activity className="h-5 w-5" />
+              On-Chain Events
+              {monitorStatus?.isRunning && (
+                <span className="flex items-center gap-1">
+                  <span className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-xs text-muted-foreground font-normal">Live</span>
+                </span>
+              )}
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Real-time contract activity from monitored contracts
+            </p>
+          </div>
+          {eventsSummary && eventsSummary.last24Hours.total > 0 && (
+            <Badge variant="secondary" data-testid="badge-events-count">
+              {eventsSummary.last24Hours.total} events (24h)
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent>
+          {eventsSummaryLoading || recentEventsLoading ? (
+            <div className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-4">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+              </div>
+              <Skeleton className="h-40 w-full" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Event Summary Cards */}
+              <div className="grid gap-4 md:grid-cols-4">
+                <div className="p-3 rounded-md bg-muted/50">
+                  <div className="text-sm text-muted-foreground">Total Events</div>
+                  <div className="text-xl font-bold font-mono">
+                    {eventsSummary?.last24Hours.total || 0}
+                  </div>
+                  <div className="text-xs text-muted-foreground">Last 24 hours</div>
+                </div>
+                <div className="p-3 rounded-md bg-muted/50">
+                  <div className="text-sm text-muted-foreground flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3 text-red-500" />
+                    Critical
+                  </div>
+                  <div className="text-xl font-bold font-mono text-red-500">
+                    {eventsSummary?.last24Hours.bySeverity?.critical || 0}
+                  </div>
+                </div>
+                <div className="p-3 rounded-md bg-muted/50">
+                  <div className="text-sm text-muted-foreground flex items-center gap-1">
+                    <AlertTriangle className="h-3 w-3 text-yellow-500" />
+                    Warnings
+                  </div>
+                  <div className="text-xl font-bold font-mono text-yellow-500">
+                    {eventsSummary?.last24Hours.bySeverity?.warning || 0}
+                  </div>
+                </div>
+                <div className="p-3 rounded-md bg-muted/50">
+                  <div className="text-sm text-muted-foreground flex items-center gap-1">
+                    <Radio className="h-3 w-3" />
+                    Block
+                  </div>
+                  <div className="text-xl font-bold font-mono">
+                    {monitorStatus?.lastProcessedBlock?.toLocaleString() || 'N/A'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Recent Events List */}
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-medium">Recent Events</h4>
+                  {monitorStatus?.contractsMonitored && (
+                    <span className="text-xs text-muted-foreground">
+                      Monitoring {monitorStatus.contractsMonitored.length} contracts
+                    </span>
+                  )}
+                </div>
+                {recentEvents?.events && recentEvents.events.length > 0 ? (
+                  <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                    {recentEvents.events.slice(0, 10).map((event) => (
+                      <div 
+                        key={event.id} 
+                        className="p-3 rounded-md bg-muted/50 flex flex-wrap items-start justify-between gap-2"
+                        data-testid={`event-row-${event.id}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <Badge 
+                            variant={getSeverityBadgeVariant(event.severity) as any}
+                            className="text-xs uppercase"
+                          >
+                            {event.severity}
+                          </Badge>
+                          <div>
+                            <div className="font-medium text-sm flex items-center gap-2">
+                              {event.eventName}
+                              <span className="text-muted-foreground font-normal text-xs">
+                                on {event.contractName}
+                              </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
+                              <span>Block {event.blockNumber.toLocaleString()}</span>
+                              <span>|</span>
+                              <a
+                                href={`https://coston2-explorer.flare.network/tx/${event.transactionHash}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="hover:underline flex items-center gap-1"
+                                data-testid={`link-tx-${event.id}`}
+                              >
+                                {truncateAddress(event.transactionHash)}
+                                <ExternalLink className="h-3 w-3" />
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                        <span className="text-xs text-muted-foreground">
+                          {formatTimeAgo(event.timestamp)}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-muted-foreground">
+                    <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">No events detected yet</p>
+                    <p className="text-xs mt-1">Events will appear when contract activity is detected</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
