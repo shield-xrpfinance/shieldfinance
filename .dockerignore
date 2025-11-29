@@ -1,0 +1,49 @@
+# Development and build artifacts
+node_modules/
+.npm/
+.cache/
+dist/
+
+# Documentation and source files (not needed at runtime)
+docs/
+test/
+tests/
+*.test.ts
+*.test.tsx
+*.spec.ts
+*.spec.tsx
+
+# Hardhat/Solidity development
+artifacts/
+cache/
+typechain-types/
+ignition/
+migrations/
+scripts/
+contracts/
+hardhat.config.ts
+
+# Git and IDE
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Replit specific
+.replit
+replit.nix
+.config/
+.upm/
+
+# LaTeX source (PDF is pre-compiled)
+docs/whitepaper/
+
+# Misc
+*.md
+!README.md
+*.log
+*.tmp
+.env.local
+.env.development
+attached_assets/
+generated-icon.png
