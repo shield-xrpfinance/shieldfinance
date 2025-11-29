@@ -33,7 +33,8 @@ import {
   Compass,
   PartyPopper,
   BadgeCheck,
-  Activity
+  Activity,
+  Droplets
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
@@ -1139,13 +1140,19 @@ export default function Landing() {
                   </div>
                 </div>
               </div>
-              <div className="mt-8">
+              <div className="mt-8 flex flex-col sm:flex-row gap-4">
                 <Link href="/app/airdrop">
-                  <Button size="lg" className="group" data-testid="button-claim-airdrop">
+                  <Button size="lg" className="group w-full sm:w-auto" data-testid="button-claim-airdrop">
                     Check Your Allocation
                     <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </Link>
+                <a href="https://faucet.shyield.finance/" target="_blank" rel="noopener noreferrer">
+                  <Button size="lg" variant="outline" className="group w-full sm:w-auto" data-testid="button-faucet">
+                    <Droplets className="mr-2 h-5 w-5" />
+                    Get Test Tokens
+                  </Button>
+                </a>
               </div>
             </div>
             <div className="relative">
@@ -1325,6 +1332,7 @@ export default function Landing() {
             <div data-testid="footer-resources">
               <h4 className="font-semibold mb-4" data-testid="heading-footer-resources">Resources</h4>
               <ul className="space-y-2 text-sm text-muted-foreground">
+                <li><a href="https://faucet.shyield.finance/" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-faucet">Testnet Faucet</a></li>
                 <li><a href="https://docs.shyield.finance" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-documentation">Documentation</a></li>
                 <li><a href="https://blog.shyield.finance" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-blog">Blog</a></li>
                 <li><a href="https://shyield.finance/whitepaper.pdf" target="_blank" rel="noopener noreferrer" className="hover-elevate inline-block px-2 py-1 rounded-md transition-all" data-testid="link-footer-whitepaper">Whitepaper</a></li>
