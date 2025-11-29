@@ -1,5 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 50">
-  <rect x="5" y="5" width="40" height="40" rx="10" fill="#3B99FC"/>
-  <path d="M15 25c5.5-5.5 14.5-5.5 20 0l-2 2c-4.4-4.4-11.6-4.4-16 0l-2-2zm4 4c3.3-3.3 8.7-3.3 12 0l-6 6-6-6zm8-8l2 2-6 6-6-6 2-2c2.2-2.2 5.8-2.2 8 0z" fill="#fff"/>
-  <text x="55" y="32" font-family="Inter, system-ui, sans-serif" font-size="16" font-weight="600" fill="currentColor">WalletConnect</text>
-</svg>
