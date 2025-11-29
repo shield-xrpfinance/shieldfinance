@@ -6,7 +6,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { Shield, ShieldAlert, ShieldCheck, Clock, Users, Lock, TrendingUp, AlertTriangle, DollarSign, Link2, UserCheck, BadgeCheck, Building2, Landmark, Coins } from "lucide-react";
+import { Shield, ShieldAlert, ShieldCheck, Clock, Users, Lock, TrendingUp, AlertTriangle, DollarSign, Link2, UserCheck, BadgeCheck, Building2, Landmark, Coins, Vault } from "lucide-react";
 import { MultiAssetIcon } from "@/components/AssetIcon";
 import { useNetwork } from "@/lib/networkContext";
 import { getTooltipContent } from "@/lib/tooltipCopy";
@@ -36,6 +36,8 @@ interface VaultListItemProps {
   underlyingInstrument?: string | null;
   currencyDenomination?: string | null;
   minInvestmentUsd?: string | null;
+  custodian?: string | null;
+  riskDisclosure?: string | null;
   onDeposit: (id: string) => void;
 }
 
@@ -69,6 +71,8 @@ export default function VaultListItem({
   underlyingInstrument,
   currencyDenomination,
   minInvestmentUsd,
+  custodian,
+  riskDisclosure,
   onDeposit,
 }: VaultListItemProps) {
   const risk = riskConfig[riskLevel];
@@ -206,6 +210,20 @@ export default function VaultListItem({
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p>Minimum investment: ${parseFloat(minInvestmentUsd).toLocaleString()} USD equivalent</p>
+                    </TooltipContent>
+                  </Tooltip>
+                )}
+                {custodian && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500" data-testid={`badge-custodian-${id}`}>
+                        <Vault className="h-3 w-3 mr-1" />
+                        {custodian}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Asset custodian: {custodian}</p>
+                      {riskDisclosure && <p className="text-xs mt-1 text-muted-foreground">{riskDisclosure}</p>}
                     </TooltipContent>
                   </Tooltip>
                 )}

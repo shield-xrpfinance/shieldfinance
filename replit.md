@@ -105,3 +105,19 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Firelight.finance Integration**: For generating yield on FXRP deposits.
 - **Flare Data Connector (FDC)**: Cross-chain data verification for attestations.
 - **SparkDEX V3**: Uniswap V2-compatible DEX on Flare Network for token swaps.
+
+### RWA & Tokenized Securities (Future Integration)
+- **RWA.xyz Integration**: Planned integration with https://app.rwa.xyz/ for real-world asset data feeds including U.S. Treasuries, Private Credit, Commodities, Corporate Bonds, and Tokenized Equities.
+- **Vault Asset Categories**: Three-tier asset classification system:
+  - `crypto`: Native crypto yield vaults (XRP, FXRP)
+  - `rwa`: Real World Asset backed vaults (Treasuries, Gold, Private Credit, Real Estate)
+  - `tokenized_security`: Tokenized securities (S&P 500, NASDAQ-100, Dividend Portfolios)
+- **Compliance Framework**: KYC verification, accredited investor checks, jurisdiction restrictions, minimum investments, and custodian transparency.
+- **Mock RWA Vaults**: 12 example vaults aligned with RWA.xyz categories:
+  - U.S. Treasuries: T-Bills (4.2% APY), 10-Year Bonds (4.8% APY) - Blackrock/Fidelity custody
+  - Private Credit: Diversified Loans (9.5% APY), Real Estate Debt (8.2% APY) - Apollo/Blackstone custody
+  - Commodities: Gold (2.5% APY), Silver (3.1% APY) - Brinks custody
+  - Tokenized Securities: S&P 500 (11.5% APY), NASDAQ-100 (14.2% APY), Global Dividends (6.8% APY) - DTCC/State Street custody
+  - Corporate Bonds: Investment Grade (5.8% APY), High Yield (8.9% APY) - Vanguard/PIMCO custody
+  - Institutional: Money Market (5.2% APY) - JP Morgan custody
+- **UI Features**: Category tabs with count badges, asset type badges (RWA/Security), compliance badges (KYC/Accredited), custodian badges, minimum investment indicators, and eligibility checks before deposits.

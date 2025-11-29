@@ -177,6 +177,8 @@ export default function Vaults() {
       underlyingInstrument: vault.underlyingInstrument || null,
       currencyDenomination: vault.currencyDenomination || null,
       minInvestmentUsd: vault.minInvestmentUsd || null,
+      custodian: vault.custodian || null,
+      riskDisclosure: vault.riskDisclosure || null,
     };
   }) || [];
 
