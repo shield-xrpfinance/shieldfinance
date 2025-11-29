@@ -38,7 +38,7 @@ export default function Vaults() {
   const [walletConnectSigningOpen, setWalletConnectSigningOpen] = useState(false);
   const [xamanPayload, setXamanPayload] = useState<{ uuid: string; qrUrl: string; deepLink: string } | null>(null);
   const [pendingDeposit, setPendingDeposit] = useState<{ amounts: { [asset: string]: string }; vaultId: string; vaultName: string } | null>(null);
-  const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; apyLabel?: string | null; depositAssets: string[] } | null>(null);
+  const [selectedVault, setSelectedVault] = useState<{ id: string; name: string; apy: string; apyLabel?: string | null; depositAssets: string[]; assetType?: string } | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [sortBy, setSortBy] = useState("apy");
   const [assetCategory, setAssetCategory] = useState<AssetCategory>("all");
@@ -358,7 +358,8 @@ export default function Vaults() {
       return;
     }
 
-    if (isFXRPDeposit) {
+    // Handle Flare-based deposits (FXRP uses ERC-20 flow, RWA/tokenized securities are Coming Soon)
+    if (isFlareBasedDeposit) {
 
       try {
         setDepositModalOpen(false);
