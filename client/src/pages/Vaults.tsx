@@ -183,9 +183,11 @@ export default function Vaults() {
   }) || [];
 
   // Filter vaults based on selected ecosystem (users can switch between XRPL and Flare)
+  // Show all vaults when no wallet connected so users can browse
   const ecosystemFilteredVaults = useMemo(() => {
     if (!isConnected) {
-      return []; // No wallet connected, return empty array
+      // No wallet connected - show all vaults so users can browse
+      return allVaults;
     }
     
     if (ecosystem === "xrpl") {
