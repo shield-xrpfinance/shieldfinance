@@ -17,6 +17,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface StrategyAllocation {
   vaultId: string;
@@ -66,6 +67,7 @@ const riskIcons = {
 export default function YieldOptimizer() {
   const [selectedStrategy, setSelectedStrategy] = useState<OptimizationStrategy | null>(null);
   const [applyDialogOpen, setApplyDialogOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: strategies = [], isLoading: strategiesLoading } = useQuery<OptimizationStrategy[]>({
     queryKey: ["/api/yield/strategies"],
@@ -99,6 +101,10 @@ export default function YieldOptimizer() {
   const confirmApplyStrategy = () => {
     setApplyDialogOpen(false);
     setSelectedStrategy(null);
+    toast({
+      title: "Coming Soon",
+      description: "Automated strategy allocation will be available after mainnet launch. Stay tuned!",
+    });
   };
 
   if (strategiesLoading || marketLoading) {
