@@ -1,0 +1,110 @@
+[
+  {
+    "id": "7b191cd5-36d4-4dcb-bcdb-36851d042426",
+    "name": "Diversified Private Loans",
+    "asset": "PRIV-CREDIT",
+    "asset_type": "rwa"
+  },
+  {
+    "id": "0cffa5aa-508a-4f92-b953-90ebd3c92548",
+    "name": "Global Dividend Portfolio",
+    "asset": "DIV-TOKEN",
+    "asset_type": "tokenized_security"
+  },
+  {
+    "id": "05d62e25-11d2-4dc5-9027-195a931a88da",
+    "name": "Gold-Backed Yield",
+    "asset": "GOLD",
+    "asset_type": "rwa"
+  },
+  {
+    "id": "14c3554c-fbcc-434e-b4c4-10368095dbf0",
+    "name": "High Yield Corporate Bonds",
+    "asset": "HY-BONDS",
+    "asset_type": "rwa"
+  },
+  {
+    "id": "664b6a0f-1f5b-47c2-a687-4e1396d455e0",
+    "name": "Institutional Money Market",
+    "asset": "MM-FUND",
+    "asset_type": "rwa"
+  },
+  {
+    "id": "30a3cb19-7112-4c43-b0f1-1ae076fad8fc",
+    "name": "Investment Grade Bonds",
+    "asset": "IG-BONDS",
+    "asset_type": "rwa"
+  },
+  {
+    "id": "7fff0ab9-8601-4067-82dd-35d8d3f8d30a",
+    "name": "NASDAQ-100 Token",
+    "asset": "NDX-TOKEN",
+    "asset_type": "tokenized_security"
+  },
+  {
+    "id": "5e029377-adc6-4697-a81b-78f0e22a6391",
+    "name": "RLUSD + USDC Pool",
+    "asset": "RLUSD,USDC",
+    "asset_type": "crypto"
+  },
+  {
+    "id": "9abba8e4-2e85-45b5-b68f-8e6b46c24395",
+    "name": "Real Estate Debt Fund",
+    "asset": "RE-DEBT",
+    "asset_type": "rwa"
+  },
+  {
+    "id": "07ec6967-3556-473e-9521-84dfdec63d09",
+    "name": "S&P 500 Index Token",
+    "asset": "SPX-TOKEN",
+    "asset_type": "tokenized_security"
+  },
+  {
+    "id": "12174bfe-d0b6-4fe6-b954-e3f6319b87e7",
+    "name": "Shield XRP",
+    "asset": "XRP",
+    "asset_type": "crypto"
+  },
+  {
+    "id": "2658003c-9ba1-49b5-8478-9f943d7bba3b",
+    "name": "Silver Commodity Vault",
+    "asset": "SILVER",
+    "asset_type": "rwa"
+  },
+  {
+    "id": "be13b2a5-0f7b-4c1f-935b-eaa7c0cd0345",
+    "name": "Triple Asset Pool",
+    "asset": "XRP,RLUSD,USDC",
+    "asset_type": "crypto"
+  },
+  {
+    "id": "58950e8b-43bd-4f95-bb0f-05f48e72fa7a",
+    "name": "US Treasury 10-Year Bonds",
+    "asset": "T-BONDS",
+    "asset_type": "rwa"
+  },
+  {
+    "id": "52c5ecce-a236-4a09-8af9-db1279383af5",
+    "name": "US Treasury Bills",
+    "asset": "T-BILLS",
+    "asset_type": "rwa"
+  },
+  {
+    "id": "7a059d16-5ff9-49ab-8a16-b4cc50b03814",
+    "name": "USDC Conservative",
+    "asset": "USDC",
+    "asset_type": "crypto"
+  },
+  {
+    "id": "f53e14f5-a01d-4356-a906-e4655ca9a751",
+    "name": "XRP + RLUSD Balanced",
+    "asset": "XRP,RLUSD",
+    "asset_type": "crypto"
+  },
+  {
+    "id": "6ed39871-61f6-4776-8d62-a72d0da40cc6",
+    "name": "XRP Maximum Returns",
+    "asset": "XRP",
+    "asset_type": "crypto"
+  }
+]
