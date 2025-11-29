@@ -74,6 +74,7 @@ const menuItems = [
     title: "Bridge Tracking",
     url: "/app/bridge-tracking",
     icon: Activity,
+    xrplOnly: true,
   },
   {
     title: "Analytics",
@@ -86,6 +87,7 @@ export function AppSidebar() {
   const [location] = useLocation();
   const { network, isTestnet, toggleNetwork } = useNetwork();
   const { currency, setCurrency } = useCurrency();
+  const { walletType } = useWallet();
 
   return (
     <Sidebar>
@@ -178,7 +180,12 @@ export function AppSidebar() {
           <SidebarGroupLabel>Navigation</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {menuItems.map((item) => {
+              {menuItems
+                .filter((item) => {
+                  if (item.xrplOnly && walletType === "evm") return false;
+                  return true;
+                })
+                .map((item) => {
                 const isActive = location === item.url;
                 return (
                   <SidebarMenuItem key={item.title}>
