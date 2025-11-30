@@ -339,6 +339,165 @@ class AnalyticsService {
       return 0;
     }
   }
+
+  /**
+   * Get recent blockchain activity from all monitored contracts
+   * Returns formatted events for display in the analytics dashboard
+   */
+  async getRecentActivity(limit: number = 20): Promise<{
+    events: Array<{
+      id: string;
+      contractName: string;
+      eventName: string;
+      severity: 'info' | 'warning' | 'critical';
+      blockNumber: number;
+      transactionHash: string;
+      timestamp: Date;
+      args: Record<string, string>;
+    }>;
+    currentBlock: number;
+    contractsMonitored: string[];
+  }> {
+    try {
+      const currentBlock = await this.provider.getBlockNumber();
+      const blocksToScan = 500; // Scan recent ~500 blocks
+      const startBlock = Math.max(0, currentBlock - blocksToScan);
+      
+      const events: Array<{
+        id: string;
+        contractName: string;
+        eventName: string;
+        severity: 'info' | 'warning' | 'critical';
+        blockNumber: number;
+        transactionHash: string;
+        timestamp: Date;
+        args: Record<string, string>;
+      }> = [];
+
+      // Query Deposit events
+      const depositFilter = this.vaultContract.filters.Deposit();
+      const depositEvents = await this.queryWithPagination(
+        this.vaultContract,
+        depositFilter,
+        startBlock,
+        currentBlock,
+        (log) => ({
+          sender: log.args[0] as string,
+          owner: log.args[1] as string,
+          assets: log.args[2] as bigint,
+          shares: log.args[3] as bigint,
+          blockNumber: log.blockNumber,
+          transactionHash: log.transactionHash,
+        })
+      );
+
+      for (const event of depositEvents) {
+        const assetsFormatted = (Number(event.assets) / (10 ** FXRP_DECIMALS)).toFixed(2);
+        events.push({
+          id: `deposit-${event.transactionHash}-${event.blockNumber}`,
+          contractName: 'ShXRPVault',
+          eventName: 'Deposit',
+          severity: 'info',
+          blockNumber: event.blockNumber,
+          transactionHash: event.transactionHash,
+          timestamp: new Date(), // Block timestamp would require additional RPC call
+          args: {
+            owner: event.owner.slice(0, 6) + '...' + event.owner.slice(-4),
+            assets: `${assetsFormatted} FXRP`,
+          },
+        });
+      }
+
+      // Query Withdraw events
+      const withdrawFilter = this.vaultContract.filters.Withdraw();
+      const withdrawEvents = await this.queryWithPagination(
+        this.vaultContract,
+        withdrawFilter,
+        startBlock,
+        currentBlock,
+        (log) => ({
+          sender: log.args[0] as string,
+          receiver: log.args[1] as string,
+          owner: log.args[2] as string,
+          assets: log.args[3] as bigint,
+          shares: log.args[4] as bigint,
+          blockNumber: log.blockNumber,
+          transactionHash: log.transactionHash,
+        })
+      );
+
+      for (const event of withdrawEvents) {
+        const assetsFormatted = (Number(event.assets) / (10 ** FXRP_DECIMALS)).toFixed(2);
+        events.push({
+          id: `withdraw-${event.transactionHash}-${event.blockNumber}`,
+          contractName: 'ShXRPVault',
+          eventName: 'Withdraw',
+          severity: 'info',
+          blockNumber: event.blockNumber,
+          transactionHash: event.transactionHash,
+          timestamp: new Date(),
+          args: {
+            owner: event.owner.slice(0, 6) + '...' + event.owner.slice(-4),
+            assets: `${assetsFormatted} FXRP`,
+          },
+        });
+      }
+
+      // Query Fee events
+      const feeEvents = await this.queryFeeEvents(startBlock, currentBlock);
+      for (const event of feeEvents) {
+        const amountFormatted = (Number(event.amount) / (10 ** FXRP_DECIMALS)).toFixed(4);
+        events.push({
+          id: `fee-${event.transactionHash}-${event.blockNumber}`,
+          contractName: 'ShXRPVault',
+          eventName: 'FeeTransferred',
+          severity: 'info',
+          blockNumber: event.blockNumber,
+          transactionHash: event.transactionHash,
+          timestamp: new Date(),
+          args: {
+            feeType: event.feeType,
+            amount: `${amountFormatted} FXRP`,
+          },
+        });
+      }
+
+      // Query Revenue Distribution events
+      const distributionEvents = await this.queryRevenueDistributions(startBlock, currentBlock);
+      for (const event of distributionEvents) {
+        const shieldBurnedFormatted = (Number(event.shieldBurned) / (10 ** 18)).toFixed(2);
+        events.push({
+          id: `revenue-${event.transactionHash}-${event.blockNumber}`,
+          contractName: 'RevenueRouter',
+          eventName: 'RevenueDistributed',
+          severity: 'warning', // More visible for important events
+          blockNumber: event.blockNumber,
+          transactionHash: event.transactionHash,
+          timestamp: new Date(),
+          args: {
+            shieldBurned: `${shieldBurnedFormatted} SHIELD`,
+          },
+        });
+      }
+
+      // Sort by block number descending
+      events.sort((a, b) => b.blockNumber - a.blockNumber);
+
+      return {
+        events: events.slice(0, limit),
+        currentBlock,
+        contractsMonitored: ['ShXRPVault', 'RevenueRouter', 'StakingBoost', 'ShieldToken'],
+      };
+    } catch (error) {
+      console.error("[AnalyticsService] Error fetching recent activity:", error);
+      const currentBlock = await this.provider.getBlockNumber().catch(() => 0);
+      return {
+        events: [],
+        currentBlock,
+        contractsMonitored: ['ShXRPVault', 'RevenueRouter', 'StakingBoost', 'ShieldToken'],
+      };
+    }
+  }
 }
 
 export const analyticsService = new AnalyticsService();

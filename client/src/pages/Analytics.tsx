@@ -69,10 +69,19 @@ interface OnChainEventsSummary {
     total: number;
   };
   recentCriticalEvents: OnChainEvent[];
+  source?: 'database' | 'blockchain';
+  currentBlock?: number;
+}
+
+interface RecentEventsResponse {
+  events: OnChainEvent[];
+  source?: 'database' | 'blockchain';
+  currentBlock?: number;
+  contractsMonitored?: string[];
 }
 
 interface MonitorStatus {
-  status: 'active' | 'inactive';
+  status: 'active' | 'inactive' | 'realtime';
   isRunning: boolean;
   lastProcessedBlock: number;
   contractsMonitored: string[];
@@ -112,7 +121,7 @@ export default function Analytics() {
     refetchInterval: 30000,
   });
 
-  const { data: recentEvents, isLoading: recentEventsLoading } = useQuery<{ events: OnChainEvent[] }>({
+  const { data: recentEvents, isLoading: recentEventsLoading } = useQuery<RecentEventsResponse>({
     queryKey: ["/api/analytics/on-chain-events"],
     refetchInterval: 30000,
   });
@@ -324,6 +333,21 @@ export default function Analytics() {
                     </span>
                   )}
                 </div>
+                {/* Data Source Indicator */}
+                {(eventsSummary?.source || recentEvents?.source) && (
+                  <div className="flex items-center gap-2 mb-2">
+                    <Badge variant="outline" className="text-xs">
+                      {(eventsSummary?.source || recentEvents?.source) === 'blockchain' 
+                        ? 'Live from Coston2' 
+                        : 'From Database'}
+                    </Badge>
+                    {(eventsSummary?.currentBlock || recentEvents?.currentBlock) && (
+                      <span className="text-xs text-muted-foreground">
+                        Latest block: {(eventsSummary?.currentBlock || recentEvents?.currentBlock)?.toLocaleString()}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {recentEvents?.events && recentEvents.events.length > 0 ? (
                   <div className="space-y-2 max-h-[300px] overflow-y-auto">
                     {recentEvents.events.slice(0, 10).map((event) => (
@@ -371,8 +395,19 @@ export default function Analytics() {
                 ) : (
                   <div className="p-6 text-center text-muted-foreground">
                     <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    <p className="text-sm">No events detected yet</p>
-                    <p className="text-xs mt-1">Events will appear when contract activity is detected</p>
+                    <p className="text-sm font-medium">No recent events detected</p>
+                    <p className="text-xs mt-1">
+                      {monitorStatus?.isRunning ? (
+                        <>Actively monitoring {monitorStatus?.contractsMonitored?.length || 4} contracts on Coston2 testnet</>
+                      ) : (
+                        <>Events will appear when contract activity is detected</>
+                      )}
+                    </p>
+                    {(eventsSummary?.currentBlock || recentEvents?.currentBlock) && (
+                      <p className="text-xs mt-2 text-muted-foreground/60">
+                        Scanning last 500 blocks up to #{(eventsSummary?.currentBlock || recentEvents?.currentBlock)?.toLocaleString()}
+                      </p>
+                    )}
                   </div>
                 )}
               </div>

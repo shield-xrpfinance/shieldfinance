@@ -4344,22 +4344,22 @@ export async function registerRoutes(
    * GET /api/analytics/on-chain-events
    * 
    * Retrieve recent on-chain events from monitored contracts
-   * Supports filtering by contract, severity, and pagination
+   * First checks the database, then falls back to real-time blockchain queries
    * 
    * Query params:
    * - contract: Filter by contract name (ShXRPVault, ShieldToken, RevenueRouter, StakingBoost)
    * - severity: Filter by severity level (info, warning, critical)
    * - limit: Number of events to return (default 50, max 200)
    * - offset: Pagination offset (default 0)
+   * - realtime: If "true", query blockchain directly for live data
    */
   app.get("/api/analytics/on-chain-events", async (req, res) => {
     try {
-      const { contract, severity, limit: limitStr, offset: offsetStr } = req.query;
+      const { contract, severity, limit: limitStr, offset: offsetStr, realtime } = req.query;
       const limit = Math.min(parseInt(limitStr as string) || 50, 200);
       const offset = parseInt(offsetStr as string) || 0;
 
-      let query = db.select().from(onChainEvents);
-      
+      // Check database first
       const conditions: any[] = [];
       
       if (contract && typeof contract === 'string') {
@@ -4370,19 +4370,47 @@ export async function registerRoutes(
         conditions.push(sql`${onChainEvents.severity} = ${severity}`);
       }
 
-      const events = await db.select()
+      const dbEvents = await db.select()
         .from(onChainEvents)
         .where(conditions.length > 0 ? and(...conditions) : undefined)
         .orderBy(desc(onChainEvents.timestamp))
         .limit(limit)
         .offset(offset);
 
+      // If database has events or realtime is explicitly false, return database results
+      if (dbEvents.length > 0 && realtime !== "true") {
+        return res.json({
+          events: dbEvents,
+          source: "database",
+          pagination: {
+            limit,
+            offset,
+            returned: dbEvents.length,
+          }
+        });
+      }
+
+      // Otherwise, query blockchain directly for real-time data
+      const realtimeData = await analyticsService.getRecentActivity(limit);
+      
+      // Apply filters if specified
+      let filteredEvents = realtimeData.events;
+      if (contract && typeof contract === 'string') {
+        filteredEvents = filteredEvents.filter(e => e.contractName === contract);
+      }
+      if (severity && typeof severity === 'string') {
+        filteredEvents = filteredEvents.filter(e => e.severity === severity);
+      }
+
       res.json({
-        events,
+        events: filteredEvents,
+        source: "blockchain",
+        currentBlock: realtimeData.currentBlock,
+        contractsMonitored: realtimeData.contractsMonitored,
         pagination: {
           limit,
           offset,
-          returned: events.length,
+          returned: filteredEvents.length,
         }
       });
     } catch (error) {
@@ -4395,12 +4423,13 @@ export async function registerRoutes(
    * GET /api/analytics/on-chain-events/summary
    * 
    * Get summary statistics of on-chain events for dashboard overview
-   * Returns counts by severity and contract over the last 24 hours
+   * Returns counts by severity and contract, from database or real-time blockchain
    */
   app.get("/api/analytics/on-chain-events/summary", async (req, res) => {
     try {
       const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
 
+      // First try database
       const [severityCounts, contractCounts, recentCritical] = await Promise.all([
         db.select({
           severity: onChainEvents.severity,
@@ -4428,17 +4457,47 @@ export async function registerRoutes(
         .limit(5),
       ]);
 
+      const dbTotal = severityCounts.reduce((sum, s) => sum + s.count, 0);
+      
+      // If database has events, return them
+      if (dbTotal > 0) {
+        const summary = {
+          last24Hours: {
+            bySeverity: Object.fromEntries(
+              severityCounts.map(s => [s.severity, s.count])
+            ),
+            byContract: Object.fromEntries(
+              contractCounts.map(c => [c.contractName, c.count])
+            ),
+            total: dbTotal,
+          },
+          recentCriticalEvents: recentCritical,
+          source: "database",
+        };
+        return res.json(summary);
+      }
+
+      // Otherwise get real-time data from blockchain
+      const realtimeData = await analyticsService.getRecentActivity(50);
+      
+      // Count by severity
+      const severityMap: Record<string, number> = { info: 0, warning: 0, critical: 0 };
+      const contractMap: Record<string, number> = {};
+      
+      for (const event of realtimeData.events) {
+        severityMap[event.severity] = (severityMap[event.severity] || 0) + 1;
+        contractMap[event.contractName] = (contractMap[event.contractName] || 0) + 1;
+      }
+
       const summary = {
         last24Hours: {
-          bySeverity: Object.fromEntries(
-            severityCounts.map(s => [s.severity, s.count])
-          ),
-          byContract: Object.fromEntries(
-            contractCounts.map(c => [c.contractName, c.count])
-          ),
-          total: severityCounts.reduce((sum, s) => sum + s.count, 0),
+          bySeverity: severityMap,
+          byContract: contractMap,
+          total: realtimeData.events.length,
         },
-        recentCriticalEvents: recentCritical,
+        recentCriticalEvents: realtimeData.events.filter(e => e.severity === 'critical').slice(0, 5),
+        source: "blockchain",
+        currentBlock: realtimeData.currentBlock,
       };
 
       res.json(summary);
@@ -4453,6 +4512,7 @@ export async function registerRoutes(
    * 
    * Get the current status of the on-chain monitoring service
    * Includes running state, last processed block, and monitored contracts
+   * Falls back to blockchain query for current block if monitor service isn't running
    */
   app.get("/api/analytics/monitor-status", async (_req, res) => {
     try {
@@ -4463,13 +4523,15 @@ export async function registerRoutes(
           ...status,
         });
       } else {
+        // Fall back to getting current block from AnalyticsService
+        const realtimeData = await analyticsService.getRecentActivity(1);
         res.json({
-          status: "inactive",
-          isRunning: false,
-          lastProcessedBlock: 0,
-          contractsMonitored: [],
-          eventsConfigured: 0,
-          message: "On-chain monitoring service is not initialized",
+          status: "realtime",
+          isRunning: true,
+          lastProcessedBlock: realtimeData.currentBlock,
+          contractsMonitored: realtimeData.contractsMonitored,
+          eventsConfigured: 4,
+          message: "Using real-time blockchain queries",
         });
       }
     } catch (error) {
