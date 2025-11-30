@@ -20,7 +20,7 @@ const BASE_SHXRP_APY = 6.2;
 
 export default function Staking() {
   const shieldLogo = useShieldLogo();
-  const { evmAddress, isConnected, isEvmConnected, walletConnectProvider } = useWallet();
+  const { evmAddress, isConnected, isEvmConnected, walletConnectProvider, provider } = useWallet();
   const { toast } = useToast();
   const { shield: shieldBalance, isLoading: balancesLoading } = useComprehensiveBalance();
   const stakingContract = useStakingContract();
@@ -81,7 +81,9 @@ export default function Staking() {
   }, [unlockTime, isLocked, refetchStakeInfo]);
 
   const handleStake = useCallback(async () => {
-    console.log("handleStake called", { stakeAmount, isEvmConnected, hasProvider: !!walletConnectProvider, evmAddress });
+    const isReown = provider === "reown";
+    const hasValidProvider = isReown || !!walletConnectProvider;
+    console.log("handleStake called", { stakeAmount, isEvmConnected, hasProvider: hasValidProvider, evmAddress, provider });
     
     if (!stakeAmount || parseFloat(stakeAmount) <= 0) {
       toast({
@@ -92,11 +94,11 @@ export default function Staking() {
       return;
     }
 
-    if (!isEvmConnected || !walletConnectProvider) {
-      console.log("Wallet check failed:", { isEvmConnected, hasProvider: !!walletConnectProvider });
+    if (!isEvmConnected || !hasValidProvider) {
+      console.log("Wallet check failed:", { isEvmConnected, hasProvider: hasValidProvider, provider });
       toast({
         title: "EVM Wallet Required",
-        description: "Please connect an EVM wallet (MetaMask, Trust Wallet, etc.) via WalletConnect. SHIELD staking is on the Flare EVM chain.",
+        description: "Please connect an EVM wallet (MetaMask, Trust Wallet, etc.). SHIELD staking is on the Flare EVM chain.",
         variant: "destructive",
       });
       return;
@@ -167,7 +169,7 @@ export default function Staking() {
     } finally {
       setIsStaking(false);
     }
-  }, [stakeAmount, isEvmConnected, walletConnectProvider, shieldBalance, stakingContract, toast, refetchStakeInfo]);
+  }, [stakeAmount, isEvmConnected, walletConnectProvider, provider, shieldBalance, stakingContract, toast, refetchStakeInfo]);
 
   const handleUnstake = useCallback(async () => {
     if (!unstakeAmount || parseFloat(unstakeAmount) <= 0) {
@@ -188,10 +190,12 @@ export default function Staking() {
       return;
     }
 
-    if (!isEvmConnected || !walletConnectProvider) {
+    const isReown = provider === "reown";
+    const hasValidProvider = isReown || !!walletConnectProvider;
+    if (!isEvmConnected || !hasValidProvider) {
       toast({
         title: "Wallet Not Connected",
-        description: "Please connect an EVM wallet via WalletConnect to unstake",
+        description: "Please connect an EVM wallet to unstake",
         variant: "destructive",
       });
       return;
@@ -253,7 +257,7 @@ export default function Staking() {
     } finally {
       setIsUnstaking(false);
     }
-  }, [unstakeAmount, isLocked, timeRemaining, isEvmConnected, walletConnectProvider, stakedBalance, stakingContract, toast, refetchStakeInfo]);
+  }, [unstakeAmount, isLocked, timeRemaining, isEvmConnected, walletConnectProvider, provider, stakedBalance, stakingContract, toast, refetchStakeInfo]);
 
   if (!isConnected) {
     return (
