@@ -24,6 +24,13 @@ const REVENUE_ROUTER_ADDRESS = process.env.VITE_REVENUE_ROUTER_ADDRESS || "0x8e5
 const STAKING_BOOST_ADDRESS = process.env.VITE_STAKING_BOOST_ADDRESS || "0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4";
 const SHIELD_TOKEN_ADDRESS = process.env.VITE_SHIELD_TOKEN_ADDRESS || "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616";
 
+// Query configuration - scan last 500 blocks (~5 minutes on Coston2)
+// Smaller range for faster responses, relying on caching for repeated queries
+const BLOCKS_TO_SCAN = 500;
+
+// Rate limiting - add delay between RPC calls to avoid rate limits
+const RPC_DELAY_MS = 25;
+
 const STAKING_BOOST_EVENTS_ABI = [
   "event Staked(address indexed user, uint256 amount)",
   "event Unstaked(address indexed user, uint256 amount)",
@@ -83,7 +90,22 @@ class AnalyticsService {
     revenueData?: RevenueTransparencyData;
     lastFetch?: number;
   } = {};
+  private eventsCache: {
+    events: Array<{
+      id: string;
+      contractName: string;
+      eventName: string;
+      severity: 'info' | 'warning' | 'critical';
+      blockNumber: number;
+      transactionHash: string;
+      timestamp: Date;
+      args: Record<string, string>;
+    }>;
+    currentBlock: number;
+    lastFetch: number;
+  } | null = null;
   private readonly CACHE_TTL_MS = 60_000;
+  private readonly EVENTS_CACHE_TTL_MS = 120_000; // 2 minutes for events cache to reduce RPC load
 
   constructor() {
     this.provider = new ethers.JsonRpcProvider(COSTON2_RPC);
@@ -136,6 +158,86 @@ class AnalyticsService {
       }
       
       currentFrom = currentTo + 1;
+    }
+    
+    return results;
+  }
+
+  /**
+   * Query events using raw eth_getLogs for more reliable event detection
+   */
+  private async queryRawLogs(
+    address: string,
+    topics: (string | null)[],
+    fromBlock: number,
+    toBlock: number
+  ): Promise<Array<{
+    address: string;
+    topics: string[];
+    data: string;
+    blockNumber: number;
+    transactionHash: string;
+    logIndex: number;
+  }>> {
+    const results: Array<{
+      address: string;
+      topics: string[];
+      data: string;
+      blockNumber: number;
+      transactionHash: string;
+      logIndex: number;
+    }> = [];
+    
+    let currentFrom = fromBlock;
+    
+    while (currentFrom <= toBlock) {
+      const currentTo = Math.min(currentFrom + MAX_BLOCKS_PER_QUERY - 1, toBlock);
+      
+      try {
+        const response = await fetch(COSTON2_RPC, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            jsonrpc: '2.0',
+            method: 'eth_getLogs',
+            params: [{
+              fromBlock: '0x' + currentFrom.toString(16),
+              toBlock: '0x' + currentTo.toString(16),
+              address: address,
+              topics: topics.length > 0 ? topics : undefined,
+            }],
+            id: 1,
+          }),
+        });
+        
+        // Check if response is valid JSON
+        const text = await response.text();
+        if (text.startsWith('<')) {
+          // Got HTML (rate limit or error page), skip this chunk
+          console.warn(`[AnalyticsService] Rate limited, skipping blocks ${currentFrom}-${currentTo}`);
+        } else {
+          const data = JSON.parse(text);
+          if (data.result && Array.isArray(data.result)) {
+            for (const log of data.result) {
+              results.push({
+                address: log.address,
+                topics: log.topics,
+                data: log.data,
+                blockNumber: parseInt(log.blockNumber, 16),
+                transactionHash: log.transactionHash,
+                logIndex: parseInt(log.logIndex, 16),
+              });
+            }
+          }
+        }
+      } catch (error) {
+        // Silently handle errors to avoid spamming logs
+      }
+      
+      currentFrom = currentTo + 1;
+      
+      // Add delay between requests to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, RPC_DELAY_MS));
     }
     
     return results;
@@ -371,10 +473,11 @@ class AnalyticsService {
   }
 
   /**
-   * Get recent blockchain activity from all monitored contracts
+   * Get ALL historical blockchain activity from all monitored contracts
+   * Queries from contract deployment block to current block using raw eth_getLogs
    * Returns formatted events for display in the analytics dashboard
    */
-  async getRecentActivity(limit: number = 20): Promise<{
+  async getRecentActivity(limit: number = 50): Promise<{
     events: Array<{
       id: string;
       contractName: string;
@@ -388,10 +491,35 @@ class AnalyticsService {
     currentBlock: number;
     contractsMonitored: string[];
   }> {
+    // Event topic signatures (keccak256 hashes)
+    const EVENT_TOPICS = {
+      // StakingBoost events
+      Staked: '0x9e71bc8eea02a63969f509818f2dafb9254532904319f9dbda79b67bd34a5f3d',
+      Unstaked: '0x0f5bb82176feb1b5e747e28471aa92156a04d9f3ab9f45f28e2d704232b93f75',
+      RewardPaid: '0xe2403640ba68fed3a2f88b7557551d1993f84b99bb10ff833f0cf8db0c5e0486',
+      // ShieldToken events
+      Transfer: '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef',
+      // ShXRPVault events (ERC4626)
+      Deposit: '0xdcbc1c05240f31ff3ad067ef1ee35ce4997762752e3a095284754544f4c709d7',
+      Withdraw: '0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db',
+    };
+
     try {
+      // Check if we have a recent cache
+      const now = Date.now();
+      if (this.eventsCache && (now - this.eventsCache.lastFetch) < this.EVENTS_CACHE_TTL_MS) {
+        console.log(`[AnalyticsService] Using cached events (${this.eventsCache.events.length} events)`);
+        return {
+          events: this.eventsCache.events.slice(0, limit),
+          currentBlock: this.eventsCache.currentBlock,
+          contractsMonitored: ['ShXRPVault', 'RevenueRouter', 'StakingBoost', 'ShieldToken'],
+        };
+      }
+
       const currentBlock = await this.provider.getBlockNumber();
-      const blocksToScan = 500; // Scan recent ~500 blocks
-      const startBlock = Math.max(0, currentBlock - blocksToScan);
+      const startBlock = Math.max(0, currentBlock - BLOCKS_TO_SCAN);
+      
+      console.log(`[AnalyticsService] Querying events from block ${startBlock} to ${currentBlock} (~${BLOCKS_TO_SCAN} blocks)`);
       
       const events: Array<{
         id: string;
@@ -404,180 +532,224 @@ class AnalyticsService {
         args: Record<string, string>;
       }> = [];
 
-      // Query Deposit events
-      const depositFilter = this.vaultContract.filters.Deposit();
-      const depositEvents = await this.queryWithPagination(
-        this.vaultContract,
-        depositFilter,
+      // Query all events from StakingBoost contract (all events, no topic filter)
+      console.log(`[AnalyticsService] Querying StakingBoost at ${STAKING_BOOST_ADDRESS}...`);
+      const stakingBoostLogs = await this.queryRawLogs(
+        STAKING_BOOST_ADDRESS,
+        [],
         startBlock,
-        currentBlock,
-        (log) => ({
-          sender: log.args[0] as string,
-          owner: log.args[1] as string,
-          assets: log.args[2] as bigint,
-          shares: log.args[3] as bigint,
-          blockNumber: log.blockNumber,
-          transactionHash: log.transactionHash,
-        })
+        currentBlock
       );
+      console.log(`[AnalyticsService] Found ${stakingBoostLogs.length} StakingBoost logs`);
 
-      for (const event of depositEvents) {
-        const assetsFormatted = (Number(event.assets) / (10 ** FXRP_DECIMALS)).toFixed(2);
-        events.push({
-          id: `deposit-${event.transactionHash}-${event.blockNumber}`,
-          contractName: 'ShXRPVault',
-          eventName: 'Deposit',
-          severity: 'info',
-          blockNumber: event.blockNumber,
-          transactionHash: event.transactionHash,
-          timestamp: new Date(), // Block timestamp would require additional RPC call
-          args: {
-            owner: event.owner.slice(0, 6) + '...' + event.owner.slice(-4),
-            assets: `${assetsFormatted} FXRP`,
-          },
-        });
+      for (const log of stakingBoostLogs) {
+        const topic0 = log.topics[0];
+        
+        if (topic0 === EVENT_TOPICS.Staked) {
+          const user = '0x' + log.topics[1].slice(26);
+          const amount = BigInt(log.data);
+          const amountFormatted = (Number(amount) / (10 ** 18)).toFixed(2);
+          events.push({
+            id: `staked-${log.transactionHash}-${log.blockNumber}`,
+            contractName: 'StakingBoost',
+            eventName: 'Staked',
+            severity: 'info',
+            blockNumber: log.blockNumber,
+            transactionHash: log.transactionHash,
+            timestamp: new Date(),
+            args: {
+              user: user.slice(0, 6) + '...' + user.slice(-4),
+              amount: `${amountFormatted} SHIELD`,
+            },
+          });
+        } else if (topic0 === EVENT_TOPICS.Unstaked) {
+          const user = '0x' + log.topics[1].slice(26);
+          const amount = BigInt(log.data);
+          const amountFormatted = (Number(amount) / (10 ** 18)).toFixed(2);
+          events.push({
+            id: `unstaked-${log.transactionHash}-${log.blockNumber}`,
+            contractName: 'StakingBoost',
+            eventName: 'Unstaked',
+            severity: 'info',
+            blockNumber: log.blockNumber,
+            transactionHash: log.transactionHash,
+            timestamp: new Date(),
+            args: {
+              user: user.slice(0, 6) + '...' + user.slice(-4),
+              amount: `${amountFormatted} SHIELD`,
+            },
+          });
+        } else if (topic0 === EVENT_TOPICS.RewardPaid) {
+          const user = '0x' + log.topics[1].slice(26);
+          const reward = BigInt(log.data);
+          const rewardFormatted = (Number(reward) / (10 ** 18)).toFixed(4);
+          events.push({
+            id: `reward-${log.transactionHash}-${log.blockNumber}`,
+            contractName: 'StakingBoost',
+            eventName: 'RewardPaid',
+            severity: 'warning',
+            blockNumber: log.blockNumber,
+            transactionHash: log.transactionHash,
+            timestamp: new Date(),
+            args: {
+              user: user.slice(0, 6) + '...' + user.slice(-4),
+              reward: `${rewardFormatted} SHIELD`,
+            },
+          });
+        }
       }
 
-      // Query Withdraw events
-      const withdrawFilter = this.vaultContract.filters.Withdraw();
-      const withdrawEvents = await this.queryWithPagination(
-        this.vaultContract,
-        withdrawFilter,
+      // Query all events from ShXRPVault contract
+      console.log(`[AnalyticsService] Querying ShXRPVault at ${SHXRP_VAULT_ADDRESS}...`);
+      const vaultLogs = await this.queryRawLogs(
+        SHXRP_VAULT_ADDRESS,
+        [],
         startBlock,
-        currentBlock,
-        (log) => ({
-          sender: log.args[0] as string,
-          receiver: log.args[1] as string,
-          owner: log.args[2] as string,
-          assets: log.args[3] as bigint,
-          shares: log.args[4] as bigint,
-          blockNumber: log.blockNumber,
-          transactionHash: log.transactionHash,
-        })
+        currentBlock
       );
+      console.log(`[AnalyticsService] Found ${vaultLogs.length} ShXRPVault logs`);
 
-      for (const event of withdrawEvents) {
-        const assetsFormatted = (Number(event.assets) / (10 ** FXRP_DECIMALS)).toFixed(2);
-        events.push({
-          id: `withdraw-${event.transactionHash}-${event.blockNumber}`,
-          contractName: 'ShXRPVault',
-          eventName: 'Withdraw',
-          severity: 'info',
-          blockNumber: event.blockNumber,
-          transactionHash: event.transactionHash,
-          timestamp: new Date(),
-          args: {
-            owner: event.owner.slice(0, 6) + '...' + event.owner.slice(-4),
-            assets: `${assetsFormatted} FXRP`,
-          },
-        });
+      for (const log of vaultLogs) {
+        const topic0 = log.topics[0];
+        
+        if (topic0 === EVENT_TOPICS.Deposit) {
+          // Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)
+          const sender = '0x' + log.topics[1].slice(26);
+          const owner = '0x' + log.topics[2].slice(26);
+          // Decode assets and shares from data (64 hex chars each = 32 bytes)
+          const assets = BigInt('0x' + log.data.slice(2, 66));
+          const assetsFormatted = (Number(assets) / (10 ** FXRP_DECIMALS)).toFixed(2);
+          events.push({
+            id: `deposit-${log.transactionHash}-${log.blockNumber}`,
+            contractName: 'ShXRPVault',
+            eventName: 'Deposit',
+            severity: 'info',
+            blockNumber: log.blockNumber,
+            transactionHash: log.transactionHash,
+            timestamp: new Date(),
+            args: {
+              owner: owner.slice(0, 6) + '...' + owner.slice(-4),
+              assets: `${assetsFormatted} FXRP`,
+            },
+          });
+        } else if (topic0 === EVENT_TOPICS.Withdraw) {
+          // Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)
+          const owner = '0x' + log.topics[3].slice(26);
+          const assets = BigInt('0x' + log.data.slice(2, 66));
+          const assetsFormatted = (Number(assets) / (10 ** FXRP_DECIMALS)).toFixed(2);
+          events.push({
+            id: `withdraw-${log.transactionHash}-${log.blockNumber}`,
+            contractName: 'ShXRPVault',
+            eventName: 'Withdraw',
+            severity: 'info',
+            blockNumber: log.blockNumber,
+            transactionHash: log.transactionHash,
+            timestamp: new Date(),
+            args: {
+              owner: owner.slice(0, 6) + '...' + owner.slice(-4),
+              assets: `${assetsFormatted} FXRP`,
+            },
+          });
+        }
       }
 
-      // Query Fee events
-      const feeEvents = await this.queryFeeEvents(startBlock, currentBlock);
-      for (const event of feeEvents) {
-        const amountFormatted = (Number(event.amount) / (10 ** FXRP_DECIMALS)).toFixed(4);
-        events.push({
-          id: `fee-${event.transactionHash}-${event.blockNumber}`,
-          contractName: 'ShXRPVault',
-          eventName: 'FeeTransferred',
-          severity: 'info',
-          blockNumber: event.blockNumber,
-          transactionHash: event.transactionHash,
-          timestamp: new Date(),
-          args: {
-            feeType: event.feeType,
-            amount: `${amountFormatted} FXRP`,
-          },
-        });
-      }
-
-      // Query Revenue Distribution events
-      const distributionEvents = await this.queryRevenueDistributions(startBlock, currentBlock);
-      for (const event of distributionEvents) {
-        const shieldBurnedFormatted = (Number(event.shieldBurned) / (10 ** 18)).toFixed(2);
-        events.push({
-          id: `revenue-${event.transactionHash}-${event.blockNumber}`,
-          contractName: 'RevenueRouter',
-          eventName: 'RevenueDistributed',
-          severity: 'warning', // More visible for important events
-          blockNumber: event.blockNumber,
-          transactionHash: event.transactionHash,
-          timestamp: new Date(),
-          args: {
-            shieldBurned: `${shieldBurnedFormatted} SHIELD`,
-          },
-        });
-      }
-
-      // Query Staked events from StakingBoost
-      const stakedFilter = this.stakingBoostContract.filters.Staked();
-      const stakedEvents = await this.queryWithPagination(
-        this.stakingBoostContract,
-        stakedFilter,
+      // Query all events from ShieldToken contract (Transfer events only)
+      console.log(`[AnalyticsService] Querying ShieldToken at ${SHIELD_TOKEN_ADDRESS}...`);
+      const shieldTokenLogs = await this.queryRawLogs(
+        SHIELD_TOKEN_ADDRESS,
+        [EVENT_TOPICS.Transfer],
         startBlock,
-        currentBlock,
-        (log) => ({
-          user: log.args[0] as string,
-          amount: log.args[1] as bigint,
-          blockNumber: log.blockNumber,
-          transactionHash: log.transactionHash,
-        })
+        currentBlock
       );
+      console.log(`[AnalyticsService] Found ${shieldTokenLogs.length} ShieldToken Transfer logs`);
 
-      for (const event of stakedEvents) {
-        const amountFormatted = (Number(event.amount) / (10 ** 18)).toFixed(2);
-        events.push({
-          id: `staked-${event.transactionHash}-${event.blockNumber}`,
-          contractName: 'StakingBoost',
-          eventName: 'Staked',
-          severity: 'info',
-          blockNumber: event.blockNumber,
-          transactionHash: event.transactionHash,
-          timestamp: new Date(),
-          args: {
-            user: event.user.slice(0, 6) + '...' + event.user.slice(-4),
-            amount: `${amountFormatted} SHIELD`,
-          },
-        });
+      // Only show significant transfers (mints, burns, or large transfers)
+      const ZERO_ADDRESS = '0x0000000000000000000000000000000000000000';
+      for (const log of shieldTokenLogs) {
+        const from = '0x' + log.topics[1].slice(26);
+        const to = '0x' + log.topics[2].slice(26);
+        const value = BigInt(log.data);
+        const valueFormatted = (Number(value) / (10 ** 18)).toFixed(2);
+        
+        // Filter to only show mints (from zero) or burns (to zero) or large transfers > 100 SHIELD
+        const isMint = from.toLowerCase() === ZERO_ADDRESS;
+        const isBurn = to.toLowerCase() === ZERO_ADDRESS;
+        const isLargeTransfer = value >= BigInt(100) * BigInt(10 ** 18);
+        
+        if (isMint || isBurn || isLargeTransfer) {
+          let eventName = 'Transfer';
+          let severity: 'info' | 'warning' | 'critical' = 'info';
+          
+          if (isMint) {
+            eventName = 'Mint';
+            severity = 'warning';
+          } else if (isBurn) {
+            eventName = 'Burn';
+            severity = 'critical';
+          }
+          
+          events.push({
+            id: `transfer-${log.transactionHash}-${log.blockNumber}-${log.logIndex}`,
+            contractName: 'ShieldToken',
+            eventName,
+            severity,
+            blockNumber: log.blockNumber,
+            transactionHash: log.transactionHash,
+            timestamp: new Date(),
+            args: {
+              from: isMint ? 'Minted' : from.slice(0, 6) + '...' + from.slice(-4),
+              to: isBurn ? 'Burned' : to.slice(0, 6) + '...' + to.slice(-4),
+              amount: `${valueFormatted} SHIELD`,
+            },
+          });
+        }
       }
 
-      // Query Unstaked events from StakingBoost
-      const unstakedFilter = this.stakingBoostContract.filters.Unstaked();
-      const unstakedEvents = await this.queryWithPagination(
-        this.stakingBoostContract,
-        unstakedFilter,
+      // Query all events from RevenueRouter contract
+      console.log(`[AnalyticsService] Querying RevenueRouter at ${REVENUE_ROUTER_ADDRESS}...`);
+      const revenueRouterLogs = await this.queryRawLogs(
+        REVENUE_ROUTER_ADDRESS,
+        [],
         startBlock,
-        currentBlock,
-        (log) => ({
-          user: log.args[0] as string,
-          amount: log.args[1] as bigint,
-          blockNumber: log.blockNumber,
-          transactionHash: log.transactionHash,
-        })
+        currentBlock
       );
+      console.log(`[AnalyticsService] Found ${revenueRouterLogs.length} RevenueRouter logs`);
 
-      for (const event of unstakedEvents) {
-        const amountFormatted = (Number(event.amount) / (10 ** 18)).toFixed(2);
-        events.push({
-          id: `unstaked-${event.transactionHash}-${event.blockNumber}`,
-          contractName: 'StakingBoost',
-          eventName: 'Unstaked',
-          severity: 'info',
-          blockNumber: event.blockNumber,
-          transactionHash: event.transactionHash,
-          timestamp: new Date(),
-          args: {
-            user: event.user.slice(0, 6) + '...' + event.user.slice(-4),
-            amount: `${amountFormatted} SHIELD`,
-          },
-        });
+      for (const log of revenueRouterLogs) {
+        // RevenueDistributed event - check topic matches
+        if (log.topics[0] && log.data.length >= 130) {
+          // Parse RevenueDistributed(uint256 wflrTotal, uint256 shieldBurned, uint256 fxrpToStakers, uint256 reserves)
+          const shieldBurned = BigInt('0x' + log.data.slice(66, 130));
+          const shieldBurnedFormatted = (Number(shieldBurned) / (10 ** 18)).toFixed(2);
+          
+          if (shieldBurned > BigInt(0)) {
+            events.push({
+              id: `revenue-${log.transactionHash}-${log.blockNumber}`,
+              contractName: 'RevenueRouter',
+              eventName: 'RevenueDistributed',
+              severity: 'warning',
+              blockNumber: log.blockNumber,
+              transactionHash: log.transactionHash,
+              timestamp: new Date(),
+              args: {
+                shieldBurned: `${shieldBurnedFormatted} SHIELD`,
+              },
+            });
+          }
+        }
       }
 
-      console.log(`[AnalyticsService] Found ${events.length} events: ${depositEvents.length} deposits, ${withdrawEvents.length} withdraws, ${stakedEvents.length} stakes, ${unstakedEvents.length} unstakes`);
+      console.log(`[AnalyticsService] Total events found: ${events.length}`);
 
-      // Sort by block number descending
+      // Sort by block number descending (most recent first)
       events.sort((a, b) => b.blockNumber - a.blockNumber);
+
+      // Cache the results
+      this.eventsCache = {
+        events,
+        currentBlock,
+        lastFetch: Date.now(),
+      };
 
       return {
         events: events.slice(0, limit),
@@ -585,8 +757,19 @@ class AnalyticsService {
         contractsMonitored: ['ShXRPVault', 'RevenueRouter', 'StakingBoost', 'ShieldToken'],
       };
     } catch (error) {
-      console.error("[AnalyticsService] Error fetching recent activity:", error);
+      console.error("[AnalyticsService] Error fetching historical activity:", error);
       const currentBlock = await this.provider.getBlockNumber().catch(() => 0);
+      
+      // Return cached data if available, even if stale
+      if (this.eventsCache) {
+        console.log(`[AnalyticsService] Returning stale cache due to error`);
+        return {
+          events: this.eventsCache.events.slice(0, limit),
+          currentBlock: this.eventsCache.currentBlock,
+          contractsMonitored: ['ShXRPVault', 'RevenueRouter', 'StakingBoost', 'ShieldToken'],
+        };
+      }
+      
       return {
         events: [],
         currentBlock,
