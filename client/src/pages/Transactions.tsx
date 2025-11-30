@@ -21,9 +21,11 @@ interface TransactionSummary {
 function getTransactionIcon(type: string) {
   switch (type) {
     case "deposit":
+    case "direct_fxrp_deposit":
       return <ArrowDownCircle className="h-5 w-5 text-chart-2" />;
     case "withdraw":
     case "withdrawal":
+    case "direct_fxrp_withdrawal":
       return <ArrowUpCircle className="h-5 w-5 text-destructive" />;
     case "claim":
       return <Gift className="h-5 w-5 text-chart-1" />;
@@ -32,17 +34,38 @@ function getTransactionIcon(type: string) {
   }
 }
 
+function isWithdrawalType(type: string): boolean {
+  return type === "withdraw" || type === "withdrawal" || type === "direct_fxrp_withdrawal";
+}
+
+function isDepositType(type: string): boolean {
+  return type === "deposit" || type === "direct_fxrp_deposit";
+}
+
+function isFxrpTransaction(type: string): boolean {
+  return type === "direct_fxrp_deposit" || type === "direct_fxrp_withdrawal";
+}
+
+function getDisplayType(type: string): string {
+  if (type === "direct_fxrp_deposit") return "FXRP Deposit";
+  if (type === "direct_fxrp_withdrawal") return "FXRP Withdraw";
+  if (type === "withdrawal") return "Withdraw";
+  return type.charAt(0).toUpperCase() + type.slice(1);
+}
+
 function getTransactionBadge(type: string) {
   const variants: Record<string, "default" | "destructive" | "secondary"> = {
     deposit: "default",
+    direct_fxrp_deposit: "default",
     withdraw: "destructive",
     withdrawal: "destructive",
+    direct_fxrp_withdrawal: "destructive",
     claim: "secondary",
   };
 
   return (
-    <Badge variant={variants[type] || "secondary"} className="capitalize" data-testid={`badge-${type}`}>
-      {type === "withdrawal" ? "withdraw" : type}
+    <Badge variant={variants[type] || "secondary"} data-testid={`badge-${type}`}>
+      {getDisplayType(type)}
     </Badge>
   );
 }
@@ -184,7 +207,7 @@ export default function Transactions() {
                   </div>
                   <div className="flex items-center justify-between md:block md:text-right ml-11 md:ml-0">
                     <div className="text-base md:text-lg font-mono font-bold tabular-nums" data-testid={`text-amount-${tx.id}`}>
-                      {(tx.type === "withdraw" || tx.type === "withdrawal") ? "-" : "+"}{parseFloat(tx.type === "claim" ? tx.rewards || "0" : tx.amount).toLocaleString()} XRP
+                      {isWithdrawalType(tx.type) ? "-" : "+"}{parseFloat(tx.type === "claim" ? tx.rewards || "0" : tx.amount).toLocaleString()} {isFxrpTransaction(tx.type) ? "FXRP" : "XRP"}
                     </div>
                     {tx.txHash && (
                       <div className="text-xs text-muted-foreground font-mono hidden md:block">

@@ -576,10 +576,10 @@ export class DatabaseStorage implements IStorage {
       const amount = parseFloat(tx.amount);
       const rewards = parseFloat(tx.rewards || "0");
       
-      if (tx.type === "deposit") {
+      if (tx.type === "deposit" || tx.type === "direct_fxrp_deposit") {
         totalDeposits += amount;
         depositCount++;
-      } else if (tx.type === "withdraw" || tx.type === "withdrawal") {
+      } else if (tx.type === "withdraw" || tx.type === "withdrawal" || tx.type === "direct_fxrp_withdrawal") {
         totalWithdrawals += amount;
         withdrawalCount++;
       } else if (tx.type === "claim") {
