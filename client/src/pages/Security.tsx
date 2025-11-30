@@ -5,8 +5,7 @@ import {
   AlertTriangle, 
   Info, 
   FileCode, 
-  ExternalLink, 
-  Github, 
+  ExternalLink,
   Bug,
   ChevronRight,
   Lock,
@@ -255,12 +254,15 @@ export default function SecurityPage() {
                     </ul>
                   </div>
                   
-                  <a href="https://github.com/Shield-Finance/contracts" target="_blank" rel="noopener noreferrer">
-                    <Button className="w-full" variant="outline" data-testid="button-github">
-                      <Github className="w-4 h-4 mr-2" />
-                      View Tests on GitHub
-                    </Button>
-                  </a>
+                  <Button 
+                    className="w-full" 
+                    variant="outline" 
+                    data-testid="button-run-tests"
+                    onClick={() => window.open('/api/test-results', '_blank')}
+                  >
+                    <FileCode className="w-4 h-4 mr-2" />
+                    View Test Results
+                  </Button>
                 </CardContent>
               </Card>
             </div>
