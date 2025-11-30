@@ -4508,6 +4508,124 @@ export async function registerRoutes(
   });
 
   /**
+   * GET /api/analytics/all-time-totals
+   * 
+   * Get cumulative all-time totals computed from the on_chain_events database
+   * Includes total deposits, total withdrawals, total staked, unique stakers, etc.
+   */
+  app.get("/api/analytics/all-time-totals", async (_req, res) => {
+    try {
+      const FXRP_DECIMALS = 6;
+      const SHIELD_DECIMALS = 18;
+      const XRP_PRICE_USD = 2.10;
+      const SHIELD_PRICE_USD = 0.01;
+
+      // Query all events from database
+      const [
+        depositEvents,
+        withdrawEvents,
+        stakedEvents,
+        unstakedEvents,
+        totalEventCount,
+      ] = await Promise.all([
+        db.select()
+          .from(onChainEvents)
+          .where(sql`${onChainEvents.eventName} = 'Deposit' AND ${onChainEvents.contractName} = 'ShXRPVault'`),
+        db.select()
+          .from(onChainEvents)
+          .where(sql`${onChainEvents.eventName} = 'Withdraw' AND ${onChainEvents.contractName} = 'ShXRPVault'`),
+        db.select()
+          .from(onChainEvents)
+          .where(sql`${onChainEvents.eventName} = 'Staked' AND ${onChainEvents.contractName} = 'StakingBoost'`),
+        db.select()
+          .from(onChainEvents)
+          .where(sql`${onChainEvents.eventName} = 'Unstaked' AND ${onChainEvents.contractName} = 'StakingBoost'`),
+        db.select({ count: sql<number>`count(*)::int` })
+          .from(onChainEvents),
+      ]);
+
+      // Calculate totals
+      let totalDepositsRaw = BigInt(0);
+      let totalWithdrawsRaw = BigInt(0);
+      let totalStakedRaw = BigInt(0);
+      let totalUnstakedRaw = BigInt(0);
+      const uniqueDepositors = new Set<string>();
+      const uniqueStakers = new Set<string>();
+
+      for (const event of depositEvents) {
+        const args = event.args as any;
+        if (args.assets) {
+          totalDepositsRaw += BigInt(args.assets);
+        }
+        if (args.owner) {
+          uniqueDepositors.add(args.owner.toLowerCase());
+        }
+      }
+
+      for (const event of withdrawEvents) {
+        const args = event.args as any;
+        if (args.assets) {
+          totalWithdrawsRaw += BigInt(args.assets);
+        }
+      }
+
+      for (const event of stakedEvents) {
+        const args = event.args as any;
+        if (args.amount) {
+          totalStakedRaw += BigInt(args.amount);
+        }
+        if (args.user) {
+          uniqueStakers.add(args.user.toLowerCase());
+        }
+      }
+
+      for (const event of unstakedEvents) {
+        const args = event.args as any;
+        if (args.amount) {
+          totalUnstakedRaw += BigInt(args.amount);
+        }
+      }
+
+      // Convert to display values
+      const totalDeposits = Number(totalDepositsRaw) / (10 ** FXRP_DECIMALS);
+      const totalWithdraws = Number(totalWithdrawsRaw) / (10 ** FXRP_DECIMALS);
+      const totalStaked = Number(totalStakedRaw) / (10 ** SHIELD_DECIMALS);
+      const totalUnstaked = Number(totalUnstakedRaw) / (10 ** SHIELD_DECIMALS);
+
+      res.json({
+        vault: {
+          totalDeposits: totalDeposits.toFixed(2),
+          totalDepositsUsd: (totalDeposits * XRP_PRICE_USD).toFixed(2),
+          totalWithdraws: totalWithdraws.toFixed(2),
+          totalWithdrawsUsd: (totalWithdraws * XRP_PRICE_USD).toFixed(2),
+          netDeposits: (totalDeposits - totalWithdraws).toFixed(2),
+          netDepositsUsd: ((totalDeposits - totalWithdraws) * XRP_PRICE_USD).toFixed(2),
+          depositCount: depositEvents.length,
+          withdrawCount: withdrawEvents.length,
+          uniqueDepositors: uniqueDepositors.size,
+        },
+        staking: {
+          totalStaked: totalStaked.toFixed(2),
+          totalStakedUsd: (totalStaked * SHIELD_PRICE_USD).toFixed(2),
+          totalUnstaked: totalUnstaked.toFixed(2),
+          netStaked: (totalStaked - totalUnstaked).toFixed(2),
+          stakeCount: stakedEvents.length,
+          unstakeCount: unstakedEvents.length,
+          uniqueStakers: uniqueStakers.size,
+        },
+        totals: {
+          totalEvents: totalEventCount[0]?.count || 0,
+          uniqueUsers: new Set([...Array.from(uniqueDepositors), ...Array.from(uniqueStakers)]).size,
+        },
+        lastUpdated: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error("Failed to fetch all-time totals:", error);
+      res.status(500).json({ error: "Failed to fetch all-time totals" });
+    }
+  });
+
+  /**
    * GET /api/analytics/monitor-status
    * 
    * Get the current status of the on-chain monitoring service

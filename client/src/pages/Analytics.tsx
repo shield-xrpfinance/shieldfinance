@@ -89,6 +89,34 @@ interface MonitorStatus {
   message?: string;
 }
 
+interface AllTimeTotals {
+  vault: {
+    totalDeposits: string;
+    totalDepositsUsd: string;
+    totalWithdraws: string;
+    totalWithdrawsUsd: string;
+    netDeposits: string;
+    netDepositsUsd: string;
+    depositCount: number;
+    withdrawCount: number;
+    uniqueDepositors: number;
+  };
+  staking: {
+    totalStaked: string;
+    totalStakedUsd: string;
+    totalUnstaked: string;
+    netStaked: string;
+    stakeCount: number;
+    unstakeCount: number;
+    uniqueStakers: number;
+  };
+  totals: {
+    totalEvents: number;
+    uniqueUsers: number;
+  };
+  lastUpdated: string;
+}
+
 export default function Analytics() {
   const [revenueModalOpen, setRevenueModalOpen] = useState(false);
 
@@ -129,6 +157,11 @@ export default function Analytics() {
   const { data: monitorStatus } = useQuery<MonitorStatus>({
     queryKey: ["/api/analytics/monitor-status"],
     refetchInterval: 30000,
+  });
+
+  const { data: allTimeTotals, isLoading: allTimeTotalsLoading } = useQuery<AllTimeTotals>({
+    queryKey: ["/api/analytics/all-time-totals"],
+    refetchInterval: 60000,
   });
 
   const getRiskTierLabel = (riskLevel: string) => {
@@ -238,6 +271,124 @@ export default function Analytics() {
                 <div className="text-sm text-muted-foreground mb-1">Extra Yield to Stakers</div>
                 <div className="text-2xl font-bold font-mono tabular-nums">
                   ${parseFloat(revenueData?.extraYieldDistributed || "0").toLocaleString()}
+                </div>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* All-Time Totals Section */}
+      <Card data-testid="all-time-totals-panel">
+        <CardHeader className="flex flex-row items-center justify-between gap-2">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5" />
+              All-Time Totals
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1">
+              Cumulative protocol activity from all recorded events
+            </p>
+          </div>
+          {allTimeTotals && (
+            <Badge variant="secondary" data-testid="badge-total-events">
+              {allTimeTotals.totals.totalEvents} total events
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent>
+          {allTimeTotalsLoading ? (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {/* Vault Activity */}
+              <div>
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Vault className="h-4 w-4" />
+                  Vault Activity
+                </h4>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="p-4 rounded-md bg-muted/50" data-testid="total-deposits">
+                    <div className="text-sm text-muted-foreground mb-1">Total Deposits</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums">
+                      {parseFloat(allTimeTotals?.vault.totalDeposits || "0").toLocaleString()} FXRP
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      ${parseFloat(allTimeTotals?.vault.totalDepositsUsd || "0").toLocaleString()} USD
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-md bg-muted/50" data-testid="total-withdraws">
+                    <div className="text-sm text-muted-foreground mb-1">Total Withdrawals</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums">
+                      {parseFloat(allTimeTotals?.vault.totalWithdraws || "0").toLocaleString()} FXRP
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      ${parseFloat(allTimeTotals?.vault.totalWithdrawsUsd || "0").toLocaleString()} USD
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-md bg-muted/50" data-testid="net-deposits">
+                    <div className="text-sm text-muted-foreground mb-1">Net Deposits</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums text-chart-2">
+                      {parseFloat(allTimeTotals?.vault.netDeposits || "0").toLocaleString()} FXRP
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      ${parseFloat(allTimeTotals?.vault.netDepositsUsd || "0").toLocaleString()} USD
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-md bg-muted/50" data-testid="unique-depositors">
+                    <div className="text-sm text-muted-foreground mb-1">Unique Depositors</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums">
+                      {allTimeTotals?.vault.uniqueDepositors || 0}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {allTimeTotals?.vault.depositCount || 0} deposits, {allTimeTotals?.vault.withdrawCount || 0} withdrawals
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Staking Activity */}
+              <div>
+                <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                  <Flame className="h-4 w-4" />
+                  SHIELD Staking Activity
+                </h4>
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                  <div className="p-4 rounded-md bg-muted/50" data-testid="total-staked">
+                    <div className="text-sm text-muted-foreground mb-1">Total Staked</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums">
+                      {parseFloat(allTimeTotals?.staking.totalStaked || "0").toLocaleString()} SHIELD
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      ${parseFloat(allTimeTotals?.staking.totalStakedUsd || "0").toLocaleString()} USD
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-md bg-muted/50" data-testid="total-unstaked">
+                    <div className="text-sm text-muted-foreground mb-1">Total Unstaked</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums">
+                      {parseFloat(allTimeTotals?.staking.totalUnstaked || "0").toLocaleString()} SHIELD
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-md bg-muted/50" data-testid="net-staked">
+                    <div className="text-sm text-muted-foreground mb-1">Net Staked</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums text-chart-2">
+                      {parseFloat(allTimeTotals?.staking.netStaked || "0").toLocaleString()} SHIELD
+                    </div>
+                  </div>
+                  <div className="p-4 rounded-md bg-muted/50" data-testid="unique-stakers">
+                    <div className="text-sm text-muted-foreground mb-1">Unique Stakers</div>
+                    <div className="text-2xl font-bold font-mono tabular-nums">
+                      {allTimeTotals?.staking.uniqueStakers || 0}
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      {allTimeTotals?.staking.stakeCount || 0} stakes, {allTimeTotals?.staking.unstakeCount || 0} unstakes
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
