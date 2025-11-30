@@ -8,6 +8,7 @@ import { MultiAssetIcon } from "@/components/AssetIcon";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useState } from "react";
 import MonitoringDashboard from "@/components/MonitoringDashboard";
+import { useNetwork } from "@/lib/networkContext";
 
 interface ProtocolOverview {
   tvl: string;
@@ -119,6 +120,28 @@ interface AllTimeTotals {
 
 export default function Analytics() {
   const [revenueModalOpen, setRevenueModalOpen] = useState(false);
+  const { isTestnet } = useNetwork();
+
+  const getExplorerUrl = (event: OnChainEvent): string => {
+    const isXrplTransaction = event.contractAddress === "XRPL" || event.contractName === "BridgeRedemption";
+    
+    if (isXrplTransaction) {
+      const baseUrl = isTestnet
+        ? "https://testnet.xrpl.org/transactions"
+        : "https://livenet.xrpl.org/transactions";
+      return `${baseUrl}/${event.transactionHash}`;
+    } else {
+      const baseUrl = isTestnet
+        ? "https://coston2-explorer.flare.network/tx"
+        : "https://flare-explorer.flare.network/tx";
+      return `${baseUrl}/${event.transactionHash}`;
+    }
+  };
+
+  const getExplorerName = (event: OnChainEvent): string => {
+    const isXrplTransaction = event.contractAddress === "XRPL" || event.contractName === "BridgeRedemption";
+    return isXrplTransaction ? "XRPL" : "Flare";
+  };
 
   const { data: overview, isLoading: overviewLoading } = useQuery<ProtocolOverview>({
     queryKey: ["/api/analytics/overview"],
@@ -522,15 +545,22 @@ export default function Analytics() {
                               </span>
                             </div>
                             <div className="text-xs text-muted-foreground mt-1 flex items-center gap-2 flex-wrap">
-                              <span>Block {event.blockNumber.toLocaleString()}</span>
-                              <span>|</span>
+                              {event.blockNumber > 0 && (
+                                <>
+                                  <span>Block {event.blockNumber.toLocaleString()}</span>
+                                  <span>|</span>
+                                </>
+                              )}
                               <a
-                                href={`https://coston2-explorer.flare.network/tx/${event.transactionHash}`}
+                                href={getExplorerUrl(event)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="hover:underline flex items-center gap-1"
                                 data-testid={`link-tx-${event.id}`}
                               >
+                                <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">
+                                  {getExplorerName(event)}
+                                </Badge>
                                 {truncateAddress(event.transactionHash)}
                                 <ExternalLink className="h-3 w-3" />
                               </a>
