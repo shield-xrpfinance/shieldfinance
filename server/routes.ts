@@ -4556,7 +4556,8 @@ export async function registerRoutes(
       let totalWithdrawsRaw = BigInt(0);
       let totalStakedRaw = BigInt(0);
       let totalUnstakedRaw = BigInt(0);
-      const uniqueDepositors = new Set<string>();
+      const uniqueDepositors = new Set<string>(); // Users who deposited
+      const uniqueWithdrawers = new Set<string>(); // Users who withdrew
       const uniqueStakers = new Set<string>();
 
       for (const event of depositEvents) {
@@ -4575,6 +4576,9 @@ export async function registerRoutes(
         if (args.assets) {
           totalWithdrawsRaw += BigInt(args.assets);
         }
+        if (args.owner) {
+          uniqueWithdrawers.add(args.owner.toLowerCase());
+        }
       }
       
       // Process bridge redemption withdrawals (xrpAmount field, XRP drops = 6 decimals like FXRP)
@@ -4584,7 +4588,7 @@ export async function registerRoutes(
           totalWithdrawsRaw += BigInt(args.xrpAmount);
         }
         if (args.walletAddress) {
-          uniqueDepositors.add(args.walletAddress.toLowerCase());
+          uniqueWithdrawers.add(args.walletAddress.toLowerCase());
         }
       }
 
@@ -4611,6 +4615,13 @@ export async function registerRoutes(
       const totalStaked = Number(totalStakedRaw) / (10 ** SHIELD_DECIMALS);
       const totalUnstaked = Number(totalUnstakedRaw) / (10 ** SHIELD_DECIMALS);
 
+      // Calculate unique users across all activity types
+      const allUniqueUsers = new Set([
+        ...Array.from(uniqueDepositors),
+        ...Array.from(uniqueWithdrawers),
+        ...Array.from(uniqueStakers)
+      ]);
+
       res.json({
         vault: {
           totalDeposits: totalDeposits.toFixed(2),
@@ -4622,6 +4633,7 @@ export async function registerRoutes(
           depositCount: depositEvents.length,
           withdrawCount: evmWithdrawEvents.length + bridgeWithdrawEvents.length,
           uniqueDepositors: uniqueDepositors.size,
+          uniqueWithdrawers: uniqueWithdrawers.size,
         },
         staking: {
           totalStaked: totalStaked.toFixed(2),
@@ -4634,7 +4646,7 @@ export async function registerRoutes(
         },
         totals: {
           totalEvents: totalEventCount[0]?.count || 0,
-          uniqueUsers: new Set([...Array.from(uniqueDepositors), ...Array.from(uniqueStakers)]).size,
+          uniqueUsers: allUniqueUsers.size,
         },
         lastUpdated: new Date().toISOString(),
       });

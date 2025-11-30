@@ -101,6 +101,7 @@ interface AllTimeTotals {
     depositCount: number;
     withdrawCount: number;
     uniqueDepositors: number;
+    uniqueWithdrawers: number;
   };
   staking: {
     totalStaked: string;
@@ -374,11 +375,14 @@ export default function Analytics() {
                     </div>
                   </div>
                   <div className="p-4 rounded-md bg-muted/50" data-testid="unique-depositors">
-                    <div className="text-sm text-muted-foreground mb-1">Unique Depositors</div>
+                    <div className="text-sm text-muted-foreground mb-1">Vault Users</div>
                     <div className="text-2xl font-bold font-mono tabular-nums">
-                      {allTimeTotals?.vault.uniqueDepositors || 0}
+                      {(allTimeTotals?.vault.uniqueDepositors || 0) + (allTimeTotals?.vault.uniqueWithdrawers || 0)}
                     </div>
                     <div className="text-xs text-muted-foreground">
+                      {allTimeTotals?.vault.uniqueDepositors || 0} depositors, {allTimeTotals?.vault.uniqueWithdrawers || 0} withdrawers
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
                       {allTimeTotals?.vault.depositCount || 0} deposits, {allTimeTotals?.vault.withdrawCount || 0} withdrawals
                     </div>
                   </div>
