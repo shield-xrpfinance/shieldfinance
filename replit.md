@@ -23,6 +23,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Automated Systems**: FAssets bridge reconciliation, automated withdrawal system, deposit watchdog, and withdrawal retry services.
 - **Analytics & Monitoring**: Revenue transparency analytics, testnet monitoring, and alerting system.
 - **Production Readiness**: Fast server startup, asynchronous service initialization, health endpoints, API readiness guards, API rate limiting, and RPC failover utility.
+- **Self-Healing Infrastructure**: ServiceSupervisor with auto-restart, ResilientRpcAdapter with multi-endpoint failover, XrplConnectionPool with automatic reconnection, CacheFallbackService for graceful degradation, ReconciliationService for state consistency, and FeatureFlagService for dynamic feature control.
 
 ### Data Storage
 - **Database**: PostgreSQL (Neon serverless) with Drizzle ORM.

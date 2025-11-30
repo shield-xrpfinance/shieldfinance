@@ -646,6 +646,19 @@ async function initializeServices() {
   }
 
   console.log("✅ All services initialized");
+
+  // Step 11: Initialize self-healing infrastructure (runs last, non-blocking)
+  try {
+    const { initializeSelfHealing } = await import("./services/SelfHealingBootstrap");
+    await initializeSelfHealing({
+      enableReconciliation: true,
+      enableFeatureFlags: true,
+      network: (process.env.FLARE_NETWORK === "mainnet") ? "mainnet" : "testnet",
+    });
+    console.log("✅ Self-healing infrastructure initialized");
+  } catch (error) {
+    console.warn("⚠️ Self-healing initialization failed (non-critical):", error);
+  }
 }
 
 /**

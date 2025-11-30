@@ -208,6 +208,38 @@ export async function registerRoutes(
     res.status(httpStatus).json(status);
   });
 
+  // Self-healing status endpoint - Shows service health, circuit breakers, and feature flags
+  app.get("/api/system/health", async (_req, res) => {
+    try {
+      const { getSelfHealingStatus, isSelfHealingInitialized } = await import("./services/SelfHealingBootstrap");
+      const readiness = readinessRegistry.getStatus();
+      
+      if (!isSelfHealingInitialized()) {
+        return res.json({
+          healthy: readiness.ready,
+          timestamp: new Date().toISOString(),
+          selfHealing: { initialized: false },
+          readiness: readiness.services,
+        });
+      }
+      
+      const selfHealingStatus = getSelfHealingStatus();
+      
+      res.json({
+        healthy: readiness.ready,
+        timestamp: new Date().toISOString(),
+        selfHealing: selfHealingStatus,
+        readiness: readiness.services,
+      });
+    } catch (error) {
+      res.status(500).json({ 
+        healthy: false, 
+        error: "Failed to get system health",
+        timestamp: new Date().toISOString(),
+      });
+    }
+  });
+
   // Serve whitepaper PDF
   app.get("/whitepaper.pdf", (_req, res) => {
     const pdfPath = path.resolve(import.meta.dirname, "..", "public", "whitepaper.pdf");
