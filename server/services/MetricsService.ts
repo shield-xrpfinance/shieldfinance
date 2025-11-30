@@ -345,34 +345,63 @@ export class MetricsService {
           )
         );
 
-      // Calculate failure rate (both bridges and redemptions)
-      const totalBridges = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(xrpToFxrpBridges);
-
-      const totalRedemptions = await db
-        .select({ count: sql<number>`COUNT(*)` })
-        .from(fxrpToXrpRedemptions);
-
-      const failedBridges = await db
+      // Calculate failure rate using 24-hour sliding window for real-time monitoring
+      // Only count actual failures (not cancelled) vs successes
+      const successfulBridges24hCount = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(xrpToFxrpBridges)
-        .where(sql`${xrpToFxrpBridges.status} IN ('failed', 'cancelled', 'fdc_timeout', 'vault_mint_failed')`);
+        .where(
+          and(
+            sql`${xrpToFxrpBridges.status} IN ('completed', 'vault_minted')`,
+            gte(xrpToFxrpBridges.createdAt, twentyFourHoursAgo)
+          )
+        );
 
-      const failedRedemptions = await db
+      const failedBridges24h = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(xrpToFxrpBridges)
+        .where(
+          and(
+            sql`${xrpToFxrpBridges.status} IN ('failed', 'fdc_timeout', 'vault_mint_failed')`,
+            gte(xrpToFxrpBridges.createdAt, twentyFourHoursAgo)
+          )
+        );
+
+      const successfulRedemptions24h = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(fxrpToXrpRedemptions)
-        .where(eq(fxrpToXrpRedemptions.status, "failed"));
+        .where(
+          and(
+            eq(fxrpToXrpRedemptions.status, "completed"),
+            gte(fxrpToXrpRedemptions.createdAt, twentyFourHoursAgo)
+          )
+        );
 
-      const totalCount = Number(totalBridges[0]?.count || 0) + Number(totalRedemptions[0]?.count || 0);
-      const failedCount = Number(failedBridges[0]?.count || 0) + Number(failedRedemptions[0]?.count || 0);
-      const failureRate = totalCount > 0 ? (failedCount / totalCount) * 100 : 0;
+      const failedRedemptions24h = await db
+        .select({ count: sql<number>`COUNT(*)` })
+        .from(fxrpToXrpRedemptions)
+        .where(
+          and(
+            eq(fxrpToXrpRedemptions.status, "failed"),
+            gte(fxrpToXrpRedemptions.createdAt, twentyFourHoursAgo)
+          )
+        );
 
-      // Count failures by type
+      const successCount24h = Number(successfulBridges24hCount[0]?.count || 0) + Number(successfulRedemptions24h[0]?.count || 0);
+      const failedCount24h = Number(failedBridges24h[0]?.count || 0) + Number(failedRedemptions24h[0]?.count || 0);
+      const totalCompleted24h = successCount24h + failedCount24h;
+      const failureRate = totalCompleted24h > 0 ? (failedCount24h / totalCompleted24h) * 100 : 0;
+
+      // Count failures by type (also using 24-hour window for real-time monitoring)
       const fdcProofFailures = await db
         .select({ count: sql<number>`COUNT(*)` })
         .from(xrpToFxrpBridges)
-        .where(eq(xrpToFxrpBridges.status, "fdc_timeout"));
+        .where(
+          and(
+            eq(xrpToFxrpBridges.status, "fdc_timeout"),
+            gte(xrpToFxrpBridges.createdAt, twentyFourHoursAgo)
+          )
+        );
 
       const xrplPaymentFailures = await db
         .select({ count: sql<number>`COUNT(*)` })
@@ -380,7 +409,8 @@ export class MetricsService {
         .where(
           and(
             eq(fxrpToXrpRedemptions.status, "failed"),
-            sql`${fxrpToXrpRedemptions.errorMessage} LIKE '%XRPL%' OR ${fxrpToXrpRedemptions.errorMessage} LIKE '%payment%'`
+            sql`${fxrpToXrpRedemptions.errorMessage} LIKE '%XRPL%' OR ${fxrpToXrpRedemptions.errorMessage} LIKE '%payment%'`,
+            gte(fxrpToXrpRedemptions.createdAt, twentyFourHoursAgo)
           )
         );
 
@@ -390,14 +420,15 @@ export class MetricsService {
         .where(
           and(
             eq(fxrpToXrpRedemptions.status, "failed"),
-            sql`${fxrpToXrpRedemptions.errorMessage} LIKE '%confirmation%'`
+            sql`${fxrpToXrpRedemptions.errorMessage} LIKE '%confirmation%'`,
+            gte(fxrpToXrpRedemptions.createdAt, twentyFourHoursAgo)
           )
         );
 
       const fdcProofCount = Number(fdcProofFailures[0]?.count || 0);
       const xrplPaymentCount = Number(xrplPaymentFailures[0]?.count || 0);
       const confirmationCount = Number(confirmationFailures[0]?.count || 0);
-      const otherFailures = failedCount - fdcProofCount - xrplPaymentCount - confirmationCount;
+      const otherFailures = failedCount24h - fdcProofCount - xrplPaymentCount - confirmationCount;
 
       const metrics: BridgeMetrics = {
         pendingOperations,
