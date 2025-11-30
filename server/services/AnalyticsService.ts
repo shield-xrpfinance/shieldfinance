@@ -4,10 +4,14 @@
  * Queries deployed contracts for:
  * - FeeTransferred events from ShXRPVault (deposit/withdraw fees)
  * - RevenueDistributed events from RevenueRouter (SHIELD burns, staker rewards)
+ * - Staked/Unstaked events from StakingBoost (SHIELD staking)
+ * - Transfer events from ShieldToken
  * 
  * Contract Addresses (Coston2):
  * - ShXRPVault: 0x82d74B5fb005F7469e479C224E446bB89031e17F
  * - RevenueRouter: 0x8e5C9933c08451a6a31635a3Ea1221c010DF158e
+ * - StakingBoost: 0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4
+ * - ShieldToken: 0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616
  */
 
 import { ethers } from "ethers";
@@ -17,6 +21,18 @@ const COSTON2_RPC = "https://coston2-api.flare.network/ext/C/rpc";
 
 const SHXRP_VAULT_ADDRESS = process.env.VITE_SHXRP_VAULT_ADDRESS || "0x82d74B5fb005F7469e479C224E446bB89031e17F";
 const REVENUE_ROUTER_ADDRESS = process.env.VITE_REVENUE_ROUTER_ADDRESS || "0x8e5C9933c08451a6a31635a3Ea1221c010DF158e";
+const STAKING_BOOST_ADDRESS = process.env.VITE_STAKING_BOOST_ADDRESS || "0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4";
+const SHIELD_TOKEN_ADDRESS = process.env.VITE_SHIELD_TOKEN_ADDRESS || "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616";
+
+const STAKING_BOOST_EVENTS_ABI = [
+  "event Staked(address indexed user, uint256 amount)",
+  "event Unstaked(address indexed user, uint256 amount)",
+  "event RewardPaid(address indexed user, uint256 reward)",
+];
+
+const SHIELD_TOKEN_EVENTS_ABI = [
+  "event Transfer(address indexed from, address indexed to, uint256 value)",
+];
 
 const SHIELD_PRICE_USD = 0.01;
 const XRP_PRICE_USD = 2.10;
@@ -61,6 +77,8 @@ class AnalyticsService {
   private provider: ethers.JsonRpcProvider;
   private vaultContract: ethers.Contract;
   private revenueRouterContract: ethers.Contract;
+  private stakingBoostContract: ethers.Contract;
+  private shieldTokenContract: ethers.Contract;
   private cache: {
     revenueData?: RevenueTransparencyData;
     lastFetch?: number;
@@ -79,6 +97,18 @@ class AnalyticsService {
     this.revenueRouterContract = new ethers.Contract(
       REVENUE_ROUTER_ADDRESS,
       REVENUE_ROUTER_EVENTS_ABI,
+      this.provider
+    );
+
+    this.stakingBoostContract = new ethers.Contract(
+      STAKING_BOOST_ADDRESS,
+      STAKING_BOOST_EVENTS_ABI,
+      this.provider
+    );
+
+    this.shieldTokenContract = new ethers.Contract(
+      SHIELD_TOKEN_ADDRESS,
+      SHIELD_TOKEN_EVENTS_ABI,
       this.provider
     );
   }
@@ -479,6 +509,72 @@ class AnalyticsService {
           },
         });
       }
+
+      // Query Staked events from StakingBoost
+      const stakedFilter = this.stakingBoostContract.filters.Staked();
+      const stakedEvents = await this.queryWithPagination(
+        this.stakingBoostContract,
+        stakedFilter,
+        startBlock,
+        currentBlock,
+        (log) => ({
+          user: log.args[0] as string,
+          amount: log.args[1] as bigint,
+          blockNumber: log.blockNumber,
+          transactionHash: log.transactionHash,
+        })
+      );
+
+      for (const event of stakedEvents) {
+        const amountFormatted = (Number(event.amount) / (10 ** 18)).toFixed(2);
+        events.push({
+          id: `staked-${event.transactionHash}-${event.blockNumber}`,
+          contractName: 'StakingBoost',
+          eventName: 'Staked',
+          severity: 'info',
+          blockNumber: event.blockNumber,
+          transactionHash: event.transactionHash,
+          timestamp: new Date(),
+          args: {
+            user: event.user.slice(0, 6) + '...' + event.user.slice(-4),
+            amount: `${amountFormatted} SHIELD`,
+          },
+        });
+      }
+
+      // Query Unstaked events from StakingBoost
+      const unstakedFilter = this.stakingBoostContract.filters.Unstaked();
+      const unstakedEvents = await this.queryWithPagination(
+        this.stakingBoostContract,
+        unstakedFilter,
+        startBlock,
+        currentBlock,
+        (log) => ({
+          user: log.args[0] as string,
+          amount: log.args[1] as bigint,
+          blockNumber: log.blockNumber,
+          transactionHash: log.transactionHash,
+        })
+      );
+
+      for (const event of unstakedEvents) {
+        const amountFormatted = (Number(event.amount) / (10 ** 18)).toFixed(2);
+        events.push({
+          id: `unstaked-${event.transactionHash}-${event.blockNumber}`,
+          contractName: 'StakingBoost',
+          eventName: 'Unstaked',
+          severity: 'info',
+          blockNumber: event.blockNumber,
+          transactionHash: event.transactionHash,
+          timestamp: new Date(),
+          args: {
+            user: event.user.slice(0, 6) + '...' + event.user.slice(-4),
+            amount: `${amountFormatted} SHIELD`,
+          },
+        });
+      }
+
+      console.log(`[AnalyticsService] Found ${events.length} events: ${depositEvents.length} deposits, ${withdrawEvents.length} withdraws, ${stakedEvents.length} stakes, ${unstakedEvents.length} unstakes`);
 
       // Sort by block number descending
       events.sort((a, b) => b.blockNumber - a.blockNumber);
