@@ -196,7 +196,13 @@ docs/
 **Audience**: Backend developers, blockchain engineers
 
 ### [MONITORING_GUIDE.md](../MONITORING_GUIDE.md)
-**Purpose**: Testnet monitoring and alerting system  
+**Purpose**: Testnet monitoring and alerting system with real-time metrics  
+**Contents**:
+- Real-time 24-hour sliding window metrics for operational health
+- Bridge failure rate tracking (excludes cancelled, only counts actual failures)
+- On-chain event monitoring (OpenZeppelin Monitor-style)
+- Prometheus metrics export for Grafana integration
+- Alert conditions and webhook configuration
 **Audience**: Operations, DevOps
 
 ### [design_guidelines.md](../design_guidelines.md)
@@ -257,4 +263,4 @@ Archived diagnostic scripts are in `/scripts/archive`.
 
 ---
 
-Last Updated: November 27, 2025
+Last Updated: November 30, 2025

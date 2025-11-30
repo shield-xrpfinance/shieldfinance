@@ -28,9 +28,12 @@ Aggregates three categories of metrics:
 - **Pending Operations**: Count of in-progress deposits and withdrawals
 - **Average Redemption Time**: Mean duration for completed redemptions (seconds)
 - **Stuck Transactions**: Operations stuck >30 minutes at same status
-- **Failure Rate**: Percentage of failed vs. attempted bridge operations
+- **Failure Rate**: Real-time percentage of failed operations using 24-hour sliding window
+  - Only counts actual failures (`failed`, `fdc_timeout`, `vault_mint_failed`) vs successes (`completed`, `vault_minted`)
+  - Excludes user-cancelled operations from failure calculations
+  - Returns 0% when no operations occurred in the time window
 - **Successful Bridges (24h)**: Count of completed bridges in last 24 hours
-- **Failures by Type**: Breakdown of failure reasons (FDC proof, XRPL payment, confirmation, other)
+- **Failures by Type**: Breakdown of failure reasons in last 24 hours (FDC proof, XRPL payment, confirmation, other)
 
 **Detection**: 30-minute threshold based on `createdAt` timestamp (see Known Limitations)
 
@@ -174,24 +177,29 @@ Real-time vault performance metrics.
 ```
 
 #### GET /api/analytics/bridge-status
-Bridge operation health and statistics.
+Bridge operation health and statistics (real-time, 24-hour sliding window).
 
 **Response:**
 ```json
 {
-  "pendingOperations": 1,
+  "pendingOperations": 0,
   "avgRedemptionTime": 0,
-  "stuckTransactions": 4,
-  "failureRate": 47.6,
-  "successfulBridges24h": 11,
+  "stuckTransactions": 0,
+  "failureRate": 0,
+  "successfulBridges24h": 0,
   "failuresByType": {
     "fdcProof": 0,
     "xrplPayment": 0,
     "confirmation": 0,
-    "other": 20
+    "other": 0
   }
 }
 ```
+
+**Field Details:**
+- `failureRate`: Calculated from last 24 hours only (not historical). Returns 0 if no operations in window.
+- `failuresByType`: Breakdown of failures in the last 24 hours.
+- All metrics reflect current operational state, not lifetime statistics.
 
 #### GET /api/analytics/revenue-stats
 Revenue transparency metrics (fees, SHIELD burned, yield distributed).
@@ -288,17 +296,17 @@ xrp_liquid_staking_active_users 42
 # TYPE xrp_liquid_staking_bridge_pending_operations gauge
 xrp_liquid_staking_bridge_pending_operations 1
 
-# HELP xrp_liquid_staking_bridge_failure_rate_percent Bridge failure rate percentage
+# HELP xrp_liquid_staking_bridge_failure_rate_percent Bridge failure rate percentage (24h window)
 # TYPE xrp_liquid_staking_bridge_failure_rate_percent gauge
-xrp_liquid_staking_bridge_failure_rate_percent 47.6
+xrp_liquid_staking_bridge_failure_rate_percent 0
 
 # HELP xrp_liquid_staking_bridge_stuck_transactions Stuck bridge transactions
 # TYPE xrp_liquid_staking_bridge_stuck_transactions gauge
-xrp_liquid_staking_bridge_stuck_transactions 4
+xrp_liquid_staking_bridge_stuck_transactions 0
 
-# HELP xrp_liquid_staking_bridge_success_rate_percent Bridge success rate percentage
+# HELP xrp_liquid_staking_bridge_success_rate_percent Bridge success rate percentage (24h window)
 # TYPE xrp_liquid_staking_bridge_success_rate_percent gauge
-xrp_liquid_staking_bridge_success_rate_percent 52.4
+xrp_liquid_staking_bridge_success_rate_percent 100
 
 # HELP xrp_liquid_staking_etherspot_success_rate_percent Etherspot transaction success rate
 # TYPE xrp_liquid_staking_etherspot_success_rate_percent gauge
@@ -588,6 +596,6 @@ curl http://localhost:5000/api/analytics/monitor-status | jq '.lastProcessedBloc
 
 ---
 
-**Last Updated**: November 2025 (Testnet Phase)
+**Last Updated**: November 30, 2025 (Testnet Phase - Real-time 24h sliding window metrics)
 **Status**: Production-ready for testnet monitoring
 **Next Review**: Post-mainnet deployment

@@ -24,17 +24,22 @@ export interface VaultMetrics {
   };
 }
 
+/**
+ * Bridge operation metrics using 24-hour sliding window for real-time monitoring.
+ * All failure-related metrics are calculated from the last 24 hours only,
+ * providing operational health status rather than lifetime statistics.
+ */
 export interface BridgeMetrics {
-  pendingOperations: number;
-  avgRedemptionTime: number; // seconds
-  stuckTransactions: number; // >30min at same status
-  failureRate: number; // percentage
-  successfulBridges24h: number;
-  failuresByType: {
-    fdcProof: number;
-    xrplPayment: number;
-    confirmation: number;
-    other: number;
+  pendingOperations: number; // Currently in-progress operations
+  avgRedemptionTime: number; // Mean completion time in seconds (completed redemptions only)
+  stuckTransactions: number; // Operations stuck >30min at non-terminal status
+  failureRate: number; // 24h sliding window: (failed / (failed + success)) * 100. Returns 0 if no ops in window
+  successfulBridges24h: number; // Count of completed bridges in last 24h
+  failuresByType: { // Breakdown of 24h failures by root cause
+    fdcProof: number; // FDC attestation/proof failures
+    xrplPayment: number; // XRPL payment confirmation failures  
+    confirmation: number; // General confirmation timeout failures
+    other: number; // Uncategorized failures
   };
 }
 
@@ -272,12 +277,16 @@ export class MetricsService {
   }
 
   /**
-   * Get bridge operation metrics
+   * Get bridge operation metrics using 24-hour sliding window for real-time monitoring.
    * 
-   * CRITICAL FIXES:
-   * 1. Includes BOTH bridges AND redemptions in all calculations
-   * 2. Uses storage methods for stuck transaction queries
-   * 3. Calculates avg redemption time from actual redemption records
+   * KEY IMPLEMENTATION DETAILS:
+   * 1. Failure rate uses 24-hour sliding window (not lifetime statistics)
+   * 2. Only counts actual failures (failed, fdc_timeout, vault_mint_failed) vs successes (completed, vault_minted)
+   * 3. Excludes user-cancelled operations from failure calculations
+   * 4. Returns 0% failure rate when no operations occurred in the time window
+   * 5. Includes BOTH bridges AND redemptions in all calculations
+   * 6. Uses storage methods for stuck transaction queries (>30min at non-terminal status)
+   * 7. Calculates avg redemption time from actual completed redemption records
    */
   async getBridgeMetrics(): Promise<BridgeMetrics> {
     // Check cache
