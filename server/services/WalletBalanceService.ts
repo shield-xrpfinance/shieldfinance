@@ -2,12 +2,14 @@
  * WalletBalanceService - Token Balance Aggregation API
  * 
  * Fetches ERC-20 token balances from Flare/Coston2 networks
- * and integrates with PriceService for USD conversions.
+ * and XRP balances from XRPL.
+ * Integrates with PriceService for USD conversions.
  * 
  * Designed for consumption by vote.shyield.finance and other integrations.
  */
 
 import { ethers } from "ethers";
+import { Client } from "xrpl";
 import { FLARE_CONTRACTS } from "@shared/flare-contracts";
 import { getAssetAddress, getAssetDecimals, getAssetMetadata } from "@shared/assetConfig";
 import type { PriceService } from "./PriceService";
@@ -77,6 +79,73 @@ export class WalletBalanceService {
   }
 
   /**
+   * Check if the provided address is a valid XRPL address
+   */
+  private isValidXrplAddress(address: string): boolean {
+    return /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(address);
+  }
+
+  /**
+   * Fetch XRP balance from XRPL
+   */
+  private async getXRPBalance(xrplAddress: string): Promise<TokenBalance | null> {
+    const xrplServer = this.isTestnet 
+      ? "wss://s.altnet.rippletest.net:51233"
+      : "wss://xrplcluster.com";
+    
+    const client = new Client(xrplServer);
+    
+    try {
+      await client.connect();
+      
+      const response = await client.request({
+        command: "account_info",
+        account: xrplAddress,
+        ledger_index: "validated",
+      });
+      
+      const balanceDrops = response.result.account_data.Balance;
+      const balanceXRP = (parseInt(balanceDrops) / 1_000_000).toFixed(6);
+      
+      const price = await this.priceService.getPrice("XRP");
+      const balanceUsd = (parseFloat(balanceXRP) * price).toFixed(2);
+      
+      await client.disconnect();
+      
+      return {
+        symbol: "XRP",
+        name: "XRP",
+        address: null,
+        chain: "xrpl",
+        balance: balanceXRP,
+        balanceRaw: balanceDrops,
+        balanceUsd,
+        decimals: 6,
+        source: "on-chain",
+      };
+    } catch (error: any) {
+      try { await client.disconnect(); } catch {}
+      
+      if (error?.data?.error === "actNotFound") {
+        return {
+          symbol: "XRP",
+          name: "XRP",
+          address: null,
+          chain: "xrpl",
+          balance: "0",
+          balanceRaw: "0",
+          balanceUsd: "0.00",
+          decimals: 6,
+          source: "on-chain",
+        };
+      }
+      
+      console.error("Error fetching XRP balance:", error);
+      return null;
+    }
+  }
+
+  /**
    * Format balance with proper decimals
    */
   private formatBalance(balance: bigint, decimals: number): string {
@@ -91,6 +160,20 @@ export class WalletBalanceService {
       return integerPart.toString();
     }
     return `${integerPart}.${trimmedFractional}`;
+  }
+
+  /**
+   * Map display symbol to pricing symbol
+   * Handles testnet symbol variations (FTestXRP -> FXRP, C2FLR -> FLR, etc.)
+   */
+  private mapSymbolForPricing(symbol: string): string {
+    const symbolMap: Record<string, string> = {
+      "FTestXRP": "FXRP",
+      "C2FLR": "FLR",
+      "WC2FLR": "FLR",
+      "WFLR": "FLR",
+    };
+    return symbolMap[symbol] || symbol;
   }
 
   /**
@@ -150,7 +233,7 @@ export class WalletBalanceService {
       const balance = await contract.balanceOf(walletAddress);
       const balanceFormatted = this.formatBalance(balance, decimals);
       
-      const priceSymbol = symbol.replace("Test", "").replace("C2", "");
+      const priceSymbol = this.mapSymbolForPricing(symbol);
       const price = await this.priceService.getPrice(priceSymbol);
       const balanceUsd = (parseFloat(balanceFormatted) * price).toFixed(2);
       
@@ -267,6 +350,59 @@ export class WalletBalanceService {
   }
 
   /**
+   * Get XRP balance from XRPL for an XRPL address
+   */
+  async getXRPLBalances(xrplAddress: string): Promise<WalletBalanceResponse> {
+    if (!this.isValidXrplAddress(xrplAddress)) {
+      throw new Error(`Invalid XRPL address: ${xrplAddress}`);
+    }
+
+    const network = this.isTestnet ? "testnet" : "mainnet";
+    const tokens: TokenBalance[] = [];
+    
+    const xrpBalance = await this.getXRPBalance(xrplAddress);
+    if (xrpBalance) {
+      tokens.push(xrpBalance);
+    }
+
+    let nativeUsd = 0;
+    let totalUsd = 0;
+
+    for (const token of tokens) {
+      const usdValue = parseFloat(token.balanceUsd);
+      totalUsd += usdValue;
+      if (token.symbol === "XRP") {
+        nativeUsd += usdValue;
+      }
+    }
+
+    return {
+      walletAddress: xrplAddress,
+      network,
+      tokens,
+      totals: {
+        nativeUsd: nativeUsd.toFixed(2),
+        stakingUsd: "0.00",
+        totalUsd: totalUsd.toFixed(2),
+      },
+      refreshedAt: new Date().toISOString(),
+    };
+  }
+
+  /**
+   * Get balances for any wallet address (auto-detects EVM vs XRPL)
+   */
+  async getBalancesAuto(address: string): Promise<WalletBalanceResponse> {
+    if (this.isValidEvmAddress(address)) {
+      return this.getBalances(address);
+    } else if (this.isValidXrplAddress(address)) {
+      return this.getXRPLBalances(address);
+    } else {
+      throw new Error(`Invalid address format. Expected EVM (0x...) or XRPL (r...) address`);
+    }
+  }
+
+  /**
    * Get balances for multiple tokens by address (custom query)
    */
   async getTokenBalances(
@@ -277,7 +413,7 @@ export class WalletBalanceService {
       throw new Error(`Invalid EVM address: ${walletAddress}`);
     }
 
-    const balancePromises = tokenAddresses.map(async (tokenAddress) => {
+    const balancePromises = tokenAddresses.map(async (tokenAddress): Promise<TokenBalance | null> => {
       try {
         const contract = new ethers.Contract(tokenAddress, ERC20_ABI, this.provider);
         
@@ -291,14 +427,14 @@ export class WalletBalanceService {
         const balanceFormatted = this.formatBalance(balance, decimals);
         
         return {
-          symbol,
-          name,
+          symbol: symbol as string,
+          name: name as string,
           address: tokenAddress,
           chain: "flare" as const,
           balance: balanceFormatted,
           balanceRaw: balance.toString(),
           balanceUsd: "0.00",
-          decimals,
+          decimals: decimals as number,
           source: "on-chain" as const,
         };
       } catch (error) {

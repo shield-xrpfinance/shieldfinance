@@ -15,6 +15,7 @@ import type { OnChainMonitorService } from "./services/OnChainMonitorService";
 import { VaultDataService, setVaultDataService } from "./services/VaultDataService";
 import { getPriceService } from "./services/PriceService";
 import { getPositionService } from "./services/PositionService";
+import { WalletBalanceService } from "./services/WalletBalanceService";
 import { db } from "./db";
 import { fxrpToXrpRedemptions, onChainEvents } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
@@ -5374,6 +5375,90 @@ export async function registerRoutes(
         details: error instanceof Error ? error.message : "Unknown error"
       });
     }
+  });
+
+  /**
+   * Wallet Balance API - Token balance aggregation for external integrations
+   * GET /api/wallet/balances?address=0x...
+   * 
+   * Returns token balances for a wallet on Flare/Coston2 network.
+   * Designed for consumption by vote.shyield.finance and other integrations.
+   * 
+   * CORS: Allows requests from vote.shyield.finance
+   * Rate Limited: Strict rate limiting to prevent abuse
+   */
+  let walletBalanceService: WalletBalanceService | null = null;
+  
+  app.get("/api/wallet/balances", strictRateLimiter, async (req: Request, res: Response) => {
+    const origin = req.headers.origin || "";
+    const allowedOrigins = [
+      "https://vote.shyield.finance",
+      "https://shyield.finance",
+      "https://faucet.shyield.finance",
+      "http://localhost:5000",
+      "http://localhost:3000",
+    ];
+    
+    if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+      res.header("Access-Control-Allow-Origin", origin || "*");
+    }
+    res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    
+    try {
+      const { address } = req.query;
+      
+      if (!address || typeof address !== "string") {
+        return res.status(400).json({ 
+          error: "Missing required parameter: address",
+          example: "/api/wallet/balances?address=0x... or /api/wallet/balances?address=rXXX..." 
+        });
+      }
+      
+      const isEvmAddress = /^0x[a-fA-F0-9]{40}$/.test(address);
+      const isXrplAddress = /^r[1-9A-HJ-NP-Za-km-z]{24,34}$/.test(address);
+      
+      if (!isEvmAddress && !isXrplAddress) {
+        return res.status(400).json({ 
+          error: "Invalid address format",
+          expected: "EVM address (0x followed by 40 hex characters) or XRPL address (r followed by 24-34 alphanumeric characters)" 
+        });
+      }
+      
+      if (!walletBalanceService) {
+        const priceService = getPriceService();
+        await priceService.initialize();
+        walletBalanceService = new WalletBalanceService({ priceService });
+      }
+      
+      const balances = await walletBalanceService.getBalancesAuto(address);
+      
+      res.json(balances);
+    } catch (error) {
+      console.error("Wallet balance API error:", error);
+      res.status(500).json({ 
+        error: "Failed to fetch wallet balances",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  app.options("/api/wallet/balances", (req, res) => {
+    const origin = req.headers.origin || "";
+    const allowedOrigins = [
+      "https://vote.shyield.finance",
+      "https://shyield.finance", 
+      "https://faucet.shyield.finance",
+      "http://localhost:5000",
+      "http://localhost:3000",
+    ];
+    
+    if (allowedOrigins.includes(origin) || process.env.NODE_ENV !== "production") {
+      res.header("Access-Control-Allow-Origin", origin || "*");
+    }
+    res.header("Access-Control-Allow-Methods", "GET, OPTIONS");
+    res.header("Access-Control-Allow-Headers", "Content-Type");
+    res.sendStatus(204);
   });
 
   /**
