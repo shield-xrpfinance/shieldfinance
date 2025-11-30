@@ -830,7 +830,7 @@ export class DatabaseStorage implements IStorage {
     const thresholdDate = new Date(Date.now() - minutesThreshold * 60 * 1000);
     
     // Terminal statuses that should NOT be considered stuck
-    const terminalStatuses = ['completed', 'cancelled', 'failed', 'vault_mint_failed'];
+    const terminalStatuses = ['completed', 'vault_minted', 'cancelled', 'failed', 'vault_mint_failed'];
     
     // Get all bridges older than threshold with non-terminal status
     const allBridges = await db.query.xrpToFxrpBridges.findMany({
