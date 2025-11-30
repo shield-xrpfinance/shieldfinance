@@ -4521,9 +4521,13 @@ export async function registerRoutes(
       const SHIELD_PRICE_USD = 0.01;
 
       // Query all events from database
+      // Note: Withdrawals can come from two sources:
+      // 1. EVM vault Withdraw events (ShXRPVault) - rare, direct EVM withdrawals
+      // 2. Bridge redemption Withdrawal events (BridgeRedemption) - XRPL-based withdrawals via smart accounts
       const [
         depositEvents,
-        withdrawEvents,
+        evmWithdrawEvents,
+        bridgeWithdrawEvents,
         stakedEvents,
         unstakedEvents,
         totalEventCount,
@@ -4534,6 +4538,9 @@ export async function registerRoutes(
         db.select()
           .from(onChainEvents)
           .where(sql`${onChainEvents.eventName} = 'Withdraw' AND ${onChainEvents.contractName} = 'ShXRPVault'`),
+        db.select()
+          .from(onChainEvents)
+          .where(sql`${onChainEvents.eventName} = 'Withdrawal' AND ${onChainEvents.contractName} = 'BridgeRedemption'`),
         db.select()
           .from(onChainEvents)
           .where(sql`${onChainEvents.eventName} = 'Staked' AND ${onChainEvents.contractName} = 'StakingBoost'`),
@@ -4562,10 +4569,22 @@ export async function registerRoutes(
         }
       }
 
-      for (const event of withdrawEvents) {
+      // Process EVM vault withdrawals (assets field, FXRP decimals)
+      for (const event of evmWithdrawEvents) {
         const args = event.args as any;
         if (args.assets) {
           totalWithdrawsRaw += BigInt(args.assets);
+        }
+      }
+      
+      // Process bridge redemption withdrawals (xrpAmount field, XRP drops = 6 decimals like FXRP)
+      for (const event of bridgeWithdrawEvents) {
+        const args = event.args as any;
+        if (args.xrpAmount) {
+          totalWithdrawsRaw += BigInt(args.xrpAmount);
+        }
+        if (args.walletAddress) {
+          uniqueDepositors.add(args.walletAddress.toLowerCase());
         }
       }
 
@@ -4601,7 +4620,7 @@ export async function registerRoutes(
           netDeposits: (totalDeposits - totalWithdraws).toFixed(2),
           netDepositsUsd: ((totalDeposits - totalWithdraws) * XRP_PRICE_USD).toFixed(2),
           depositCount: depositEvents.length,
-          withdrawCount: withdrawEvents.length,
+          withdrawCount: evmWithdrawEvents.length + bridgeWithdrawEvents.length,
           uniqueDepositors: uniqueDepositors.size,
         },
         staking: {

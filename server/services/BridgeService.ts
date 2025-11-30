@@ -7,6 +7,8 @@ import type { SelectXrpToFxrpBridge, PaymentRequest } from "../../shared/schema"
 import type { XRPLDepositListener, RedemptionPayment } from "../listeners/XRPLDepositListener";
 import type { VaultService } from "./VaultService";
 import { calculateLotRounding, type LotRoundingResult } from "../../shared/lotRounding";
+import { db } from "../db";
+import { onChainEvents } from "../../shared/schema";
 
 export interface BridgeServiceConfig {
   network: "mainnet" | "coston2";
@@ -477,6 +479,20 @@ export class BridgeService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Convert a decimal XRP/FXRP amount string to drops (6 decimal places) using string math
+   * Avoids float precision loss for large amounts
+   */
+  private decimalToDrops(amount: string): string {
+    const parts = amount.split('.');
+    const whole = parts[0] || '0';
+    let fraction = (parts[1] || '').padEnd(6, '0').slice(0, 6);
+    // Remove leading zeros from whole part and combine
+    const drops = whole + fraction;
+    // Remove leading zeros but keep at least '0'
+    return drops.replace(/^0+/, '') || '0';
   }
 
   private async demoFAssetsMinting(bridge: SelectXrpToFxrpBridge): Promise<void> {
@@ -2012,6 +2028,37 @@ export class BridgeService {
       });
       console.log(`   ✅ User status: "completed" (frozen - will never change)`);
       console.log(`   ✅ Backend status: "confirming" (backend confirmation in progress)`);
+      
+      // Record withdrawal event for analytics (XRPL-based withdrawals via bridge)
+      console.log(`\n   📊 Recording withdrawal event for analytics...`);
+      try {
+        const xrpAmount = redemption.xrpSent ?? redemption.fxrpRedeemed ?? redemption.shareAmount;
+        // Use string-safe decimal to drops conversion (avoid float precision loss for large amounts)
+        const xrpAmountDrops = this.decimalToDrops(xrpAmount);
+        
+        await db.insert(onChainEvents).values({
+          contractName: "BridgeRedemption",
+          contractAddress: "XRPL", // XRPL-based withdrawal, not an EVM contract
+          eventName: "Withdrawal",
+          severity: "info",
+          blockNumber: 0, // XRPL doesn't use block numbers in same way
+          transactionHash: xrplTxHash,
+          logIndex: 0,
+          args: {
+            walletAddress: redemption.walletAddress,
+            vaultId: redemption.vaultId,
+            positionId: redemption.positionId,
+            xrpAmount: xrpAmountDrops, // XRP in drops (6 decimals)
+            shareAmount: redemption.shareAmount,
+            redemptionId: redemptionId,
+          },
+          notified: true,
+        });
+        console.log(`   ✅ Withdrawal event recorded: ${xrpAmount} XRP to ${redemption.walletAddress}`);
+      } catch (eventError) {
+        // Don't fail the redemption if event logging fails
+        console.error(`   ⚠️  Failed to record withdrawal event:`, eventError);
+      }
       
       // CRITICAL: Update position balance immediately when user receives XRP
       // This ensures frontend shows correct balance even while backend confirmation is in progress
