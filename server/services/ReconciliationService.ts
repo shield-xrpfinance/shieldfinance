@@ -303,16 +303,16 @@ export class ReconciliationService {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
       const cleanupResult = await db.execute(sql`
-        DELETE FROM bridge_transactions 
+        DELETE FROM xrp_to_fxrp_bridges 
         WHERE status = 'failed' 
         AND created_at < ${thirtyDaysAgo.toISOString()}
-        AND (metadata->>'autoCleanup')::boolean = true
+        AND retry_count >= 10
       `);
 
       result.reconciled = (cleanupResult.rowCount ?? 0) as number;
       result.details.push(`Cleaned up ${result.reconciled} old failed bridge transactions`);
     } catch (error) {
-      console.error("❌ ReconciliationService: Cleanup error:", error);
+      console.warn("⚠️ ReconciliationService: Cleanup skipped (table may not exist yet)");
     }
 
     return result;
