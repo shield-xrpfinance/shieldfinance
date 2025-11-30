@@ -534,12 +534,12 @@ export default function Landing() {
                 Wallet SDK Integration
               </div>
             </div>
-            <div className="relative group" data-testid="partner-etherspot">
+            <div className="relative group" data-testid="partner-walletconnect">
               <div className="glassmorphic-light rounded-xl px-8 py-4 transition-all hover:scale-110 flex items-center justify-center">
                 <img src={walletConnectLogo} alt="WalletConnect" className="h-6 w-auto" data-testid="img-walletconnect-logo" />
               </div>
               <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 text-xs text-primary font-medium opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-                ERC-4337 Smart Accounts
+                Multi-Chain Connectivity
               </div>
             </div>
           </div>
@@ -730,9 +730,9 @@ export default function Landing() {
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                 <Award className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-lg font-semibold mb-2" data-testid="title-why-us-proven">Proven Track Record</h3>
+              <h3 className="text-lg font-semibold mb-2" data-testid="title-why-us-proven">Security Audited</h3>
               <p className="text-sm text-muted-foreground" data-testid="text-why-us-proven">
-                Over 2 years of reliable operations with zero security incidents
+                Comprehensive security audit completed with all critical findings resolved
               </p>
             </Card>
 
@@ -1030,16 +1030,16 @@ export default function Landing() {
           <div className={`mt-12 text-center ${platformIntelligenceAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.2s' }}>
             <Card className="inline-block p-6 glassmorphic" data-testid="card-intelligence-stats">
               <p className="text-sm text-muted-foreground mb-2" data-testid="text-intelligence-stats-label">
-                Platform Reliability Metrics
+                Platform Reliability Targets
               </p>
               <div className="flex gap-8">
                 <div data-testid="stat-intelligence-uptime">
                   <div className="text-2xl font-bold text-primary" data-testid="value-intelligence-uptime">99.9%</div>
-                  <div className="text-xs text-muted-foreground" data-testid="label-intelligence-uptime">Uptime</div>
+                  <div className="text-xs text-muted-foreground" data-testid="label-intelligence-uptime">Target Uptime</div>
                 </div>
                 <div data-testid="stat-intelligence-recovery">
-                  <div className="text-2xl font-bold text-chart-2" data-testid="value-intelligence-recovery">100%</div>
-                  <div className="text-xs text-muted-foreground" data-testid="label-intelligence-recovery">Recovery Rate</div>
+                  <div className="text-2xl font-bold text-chart-2" data-testid="value-intelligence-recovery">Auto</div>
+                  <div className="text-xs text-muted-foreground" data-testid="label-intelligence-recovery">Recovery</div>
                 </div>
                 <div data-testid="stat-intelligence-monitoring">
                   <div className="text-2xl font-bold text-chart-3" data-testid="value-intelligence-monitoring">24/7</div>
@@ -1334,7 +1334,7 @@ export default function Landing() {
               Ready to Start Earning?
             </h2>
             <p className="text-lg mb-8 opacity-90 max-w-2xl mx-auto" data-testid="text-cta-subtitle">
-              Join thousands of users who are already earning rewards while maintaining liquidity
+              Start earning rewards while maintaining liquidity with our security-audited protocol
             </p>
             <Link href="/app">
               <Button size="lg" variant="secondary" data-testid="button-cta-launch" className="transition-all hover:scale-110">
