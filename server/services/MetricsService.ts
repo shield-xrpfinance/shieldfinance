@@ -150,7 +150,7 @@ export class MetricsService {
         .where(eq(positions.status, "active"));
 
       const tvl = activePositions[0]?.totalAmount || "0";
-      const activeUsers = activePositions[0]?.userCount || 0;
+      const activeUsers = Number(activePositions[0]?.userCount || 0);
 
       // Calculate weighted average APY from ALL vaults (including inactive) using Decimal.js
       // APY calculation based on actual TVL in positions, weighted by vault allocation
@@ -221,7 +221,7 @@ export class MetricsService {
         })
         .from(stakingPositions);
 
-      const totalStakers = stakingData[0]?.totalStakers || 0;
+      const totalStakers = Number(stakingData[0]?.totalStakers || 0);
       const totalShieldStaked = stakingData[0]?.totalStaked || "0";
 
       // Calculate average boost percentage using Decimal.js
@@ -300,7 +300,7 @@ export class MetricsService {
         .from(fxrpToXrpRedemptions)
         .where(sql`${fxrpToXrpRedemptions.status} IN ('pending', 'redeeming_shares', 'redeeming_fxrp', 'awaiting_proof')`);
 
-      const pendingOperations = (pendingBridges[0]?.count || 0) + (pendingRedemptions[0]?.count || 0);
+      const pendingOperations = Number(pendingBridges[0]?.count || 0) + Number(pendingRedemptions[0]?.count || 0);
 
       // Calculate average redemption time (completed redemptions only)
       const completedRedemptions = await db
@@ -364,8 +364,8 @@ export class MetricsService {
         .from(fxrpToXrpRedemptions)
         .where(eq(fxrpToXrpRedemptions.status, "failed"));
 
-      const totalCount = (totalBridges[0]?.count || 0) + (totalRedemptions[0]?.count || 0);
-      const failedCount = (failedBridges[0]?.count || 0) + (failedRedemptions[0]?.count || 0);
+      const totalCount = Number(totalBridges[0]?.count || 0) + Number(totalRedemptions[0]?.count || 0);
+      const failedCount = Number(failedBridges[0]?.count || 0) + Number(failedRedemptions[0]?.count || 0);
       const failureRate = totalCount > 0 ? (failedCount / totalCount) * 100 : 0;
 
       // Count failures by type
@@ -394,18 +394,21 @@ export class MetricsService {
           )
         );
 
-      const otherFailures = failedCount - (fdcProofFailures[0]?.count || 0) - (xrplPaymentFailures[0]?.count || 0) - (confirmationFailures[0]?.count || 0);
+      const fdcProofCount = Number(fdcProofFailures[0]?.count || 0);
+      const xrplPaymentCount = Number(xrplPaymentFailures[0]?.count || 0);
+      const confirmationCount = Number(confirmationFailures[0]?.count || 0);
+      const otherFailures = failedCount - fdcProofCount - xrplPaymentCount - confirmationCount;
 
       const metrics: BridgeMetrics = {
         pendingOperations,
         avgRedemptionTime,
         stuckTransactions,
         failureRate,
-        successfulBridges24h: successfulBridges24h[0]?.count || 0,
+        successfulBridges24h: Number(successfulBridges24h[0]?.count || 0),
         failuresByType: {
-          fdcProof: fdcProofFailures[0]?.count || 0,
-          xrplPayment: xrplPaymentFailures[0]?.count || 0,
-          confirmation: confirmationFailures[0]?.count || 0,
+          fdcProof: fdcProofCount,
+          xrplPayment: xrplPaymentCount,
+          confirmation: confirmationCount,
           other: Math.max(0, otherFailures),
         },
       };

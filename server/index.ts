@@ -531,6 +531,9 @@ async function initializeServices() {
       flareClient, // Optional - only used for SHIELD burn tracking
     });
     
+    // Initialize the service (sets ready flag)
+    await metricsService.initialize();
+    
     // Export to module-level for routes
     realMetricsService = metricsService;
     
