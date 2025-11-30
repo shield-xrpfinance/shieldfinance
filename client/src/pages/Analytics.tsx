@@ -231,9 +231,14 @@ export default function Analytics() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-bold">Analytics</h1>
+        <div className="flex items-center gap-3 flex-wrap">
+          <h1 className="text-3xl font-bold">Protocol Analytics</h1>
+          <Badge variant="outline" className="text-xs">
+            Network-Wide Data
+          </Badge>
+        </div>
         <p className="text-muted-foreground mt-2">
-          Track protocol performance and vault metrics
+          Aggregate metrics across all users and transactions on the network (not wallet-specific)
         </p>
       </div>
 
@@ -314,9 +319,14 @@ export default function Analytics() {
             </p>
           </div>
           {allTimeTotals && (
-            <Badge variant="secondary" data-testid="badge-total-events">
-              {allTimeTotals.totals.totalEvents} total events
-            </Badge>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Badge variant="secondary" data-testid="badge-total-events">
+                {allTimeTotals.totals.totalEvents} events
+              </Badge>
+              <Badge variant="outline" data-testid="badge-unique-users">
+                {allTimeTotals.totals.uniqueUsers} unique users
+              </Badge>
+            </div>
           )}
         </CardHeader>
         <CardContent>
