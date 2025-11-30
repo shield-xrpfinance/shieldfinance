@@ -176,30 +176,82 @@ describe("StakingBoost - Adversarial Scenarios", function () {
         .withArgs(user1.address, stakeAmount);
     });
 
-    it("Should handle multiple stakes resetting lock period", async function () {
+    it("Should handle multiple stakes resetting lock period (SB-03 fix)", async function () {
+      // AUDIT FIX SB-03: Each new deposit resets the 30-day lock period
+      // This prevents gaming where users stake tiny amounts early to bypass locks
       const stake1 = ethers.parseEther("500");
       const stake2 = ethers.parseEther("500");
       
       await shieldToken.connect(user1).approve(await stakingBoost.getAddress(), stake1 + stake2);
       
-      // First stake
+      // First stake at time T
       await stakingBoost.connect(user1).stake(stake1);
       
       // Fast forward 15 days
       await ethers.provider.send("evm_increaseTime", [15 * 24 * 60 * 60]);
       await ethers.provider.send("evm_mine", []);
       
-      // Second stake (note: lock period does NOT reset according to contract logic)
+      // Second stake at T+15 days - lock period RESETS per SB-03 fix
       await stakingBoost.connect(user1).stake(stake2);
       
-      // The contract keeps the original stakedAt timestamp
-      // So after another 15 days (30 total), withdrawal should work
+      // After only 15 more days (30 total from first stake), withdrawal should FAIL
+      // because the lock was reset when stake2 was made
       await ethers.provider.send("evm_increaseTime", [15 * 24 * 60 * 60]);
       await ethers.provider.send("evm_mine", []);
       
-      // Should be able to withdraw all
+      // Should NOT be able to withdraw (only 15 days since stake2, needs 30)
       await expect(
         stakingBoost.connect(user1).withdraw(stake1 + stake2)
+      ).to.be.revertedWith("Tokens still locked");
+      
+      // Fast forward remaining 15 days to complete 30 days from stake2
+      await ethers.provider.send("evm_increaseTime", [15 * 24 * 60 * 60]);
+      await ethers.provider.send("evm_mine", []);
+      
+      // NOW withdrawal should succeed (30 days since last stake)
+      await expect(
+        stakingBoost.connect(user1).withdraw(stake1 + stake2)
+      ).to.emit(stakingBoost, "Withdrawn");
+    });
+
+    it("Should prevent lock period gaming attack (SB-03)", async function () {
+      // This test specifically verifies the SB-03 fix prevents the attack described in the audit:
+      // 1. Stake tiny amount on Day 1
+      // 2. Wait 29 days  
+      // 3. Stake large amount on Day 30
+      // 4. Try to immediately withdraw (should FAIL with fix)
+      
+      const tinyStake = ethers.parseEther("0.0001");
+      const largeStake = ethers.parseEther("10000");
+      
+      await shieldToken.connect(attacker).approve(await stakingBoost.getAddress(), tinyStake + largeStake);
+      
+      // Step 1: Attacker stakes tiny amount on Day 1
+      await stakingBoost.connect(attacker).stake(tinyStake);
+      
+      // Step 2: Wait 29 days (just under lock period)
+      await ethers.provider.send("evm_increaseTime", [29 * 24 * 60 * 60]);
+      await ethers.provider.send("evm_mine", []);
+      
+      // Step 3: Stake large amount on Day 30
+      await stakingBoost.connect(attacker).stake(largeStake);
+      
+      // Step 4: Try to immediately withdraw - should FAIL with SB-03 fix
+      // (Without the fix, this would succeed because stakedAt was set on Day 1)
+      await expect(
+        stakingBoost.connect(attacker).withdraw(tinyStake + largeStake)
+      ).to.be.revertedWith("Tokens still locked");
+      
+      // Verify the lock was properly reset to Day 30
+      const stakeInfo = await stakingBoost.getStakeInfo(attacker.address);
+      
+      // Must wait full 30 days from the large stake
+      await ethers.provider.send("evm_increaseTime", [LOCK_PERIOD]);
+      await ethers.provider.send("evm_mine", []);
+      
+      // NOW withdrawal should succeed
+      await expect(
+        stakingBoost.connect(attacker).withdraw(tinyStake + largeStake)
       ).to.emit(stakingBoost, "Withdrawn");
     });
   });

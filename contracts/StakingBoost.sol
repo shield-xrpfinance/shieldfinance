@@ -39,11 +39,12 @@ interface IShXRPVault {
  * - ReentrancyGuard on all state-changing functions including recoverTokens
  * - Only RevenueRouter can call distributeBoost()
  * - Only this contract can call vault.donateOnBehalf()
- * - 30-day lock period on staked SHIELD
+ * - 30-day lock period on staked SHIELD (resets on EVERY deposit per SB-03 fix)
  * - Owner CANNOT withdraw FXRP owed to stakers (only excess FXRP)
  * - Fee-on-transfer tokens are detected and rejected
  * - Zero-address validation on all constructor parameters
  * - Orphaned FXRP (distributed when totalStaked=0) is stored in pendingRewards
+ * - SB-03: Lock period resets on each deposit to prevent gaming exploits
  * 
  * Token Assumptions (Documented per Audit):
  * - SHIELD and FXRP must be standard ERC-20 tokens
@@ -199,6 +200,12 @@ contract StakingBoost is ReentrancyGuard, Ownable {
      * 
      * updateReward modifier settles any pending rewards before staking.
      * 
+     * Lock Period Behavior:
+     * - Each new deposit resets the 30-day lock period for the ENTIRE staked balance
+     * - The lock timer is based on the MOST RECENT deposit timestamp
+     * - This prevents gaming where users stake tiny amounts early to bypass lock periods
+     * 
+     * AUDIT FIX (SB-03): Lock period is now reset on EVERY deposit, not just the first.
      * AUDIT FIX: Added fee-on-transfer token detection
      * 
      * @param amount Amount of SHIELD to stake
@@ -222,9 +229,11 @@ contract StakingBoost is ReentrancyGuard, Ownable {
         
         // Update stake
         userStake.amount += amount;
-        if (userStake.stakedAt == 0) {
-            userStake.stakedAt = block.timestamp;
-        }
+        // AUDIT FIX (SB-03): Always reset stakedAt on every deposit to enforce full lock period
+        // This prevents lock period gaming where users stake tiny amounts early, then add large
+        // amounts just before the lock expires to immediately withdraw everything.
+        // The entire staked balance is now locked for 30 days from the MOST RECENT deposit.
+        userStake.stakedAt = block.timestamp;
         
         totalStaked += amount;
         
@@ -453,8 +462,8 @@ contract StakingBoost is ReentrancyGuard, Ownable {
      * @dev Get user's stake information
      * @param user Address of user
      * @return amount Amount staked
-     * @return stakedAt Timestamp when first staked
-     * @return unlockTime When tokens can be withdrawn
+     * @return stakedAt Timestamp of most recent deposit (lock period starts from here)
+     * @return unlockTime When tokens can be withdrawn (30 days from stakedAt)
      * @return pendingRewards Unclaimed FXRP rewards
      */
     function getStakeInfo(address user) external view returns (

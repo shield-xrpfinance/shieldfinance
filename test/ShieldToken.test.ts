@@ -52,8 +52,10 @@ describe("ShieldToken", function () {
       expect(await shieldToken.symbol()).to.equal("SHIELD");
     });
 
-    it("Should set deployer as owner", async function () {
-      expect(await shieldToken.owner()).to.equal(owner.address);
+    it("ST-02: Should NOT have an owner() function (Ownable removed)", async function () {
+      // After ST-02 fix, ShieldToken no longer inherits from Ownable
+      // This test verifies the contract has no owner() function
+      expect(typeof (shieldToken as any).owner).to.equal("undefined");
     });
   });
 
@@ -171,21 +173,20 @@ describe("ShieldToken", function () {
     });
   });
 
-  describe("Ownership", function () {
-    it("Should allow owner to transfer ownership", async function () {
-      await shieldToken.transferOwnership(user1.address);
-      expect(await shieldToken.owner()).to.equal(user1.address);
-    });
-
-    it("Should fail to transfer ownership from non-owner", async function () {
-      await expect(
-        shieldToken.connect(user1).transferOwnership(user2.address)
-      ).to.be.revertedWithCustomError(shieldToken, "OwnableUnauthorizedAccount");
-    });
-
-    it("Should allow owner to renounce ownership", async function () {
-      await shieldToken.renounceOwnership();
-      expect(await shieldToken.owner()).to.equal(ethers.ZeroAddress);
+  describe("Permissionless Design (ST-02)", function () {
+    it("Should have no admin functions", async function () {
+      // After ST-02 fix, ShieldToken is fully permissionless
+      // No owner, no admin, no privileged access
+      // Contract only has standard ERC20 + Burnable functions
+      
+      // Verify core ERC20 functions work without any special permissions
+      const amount = ethers.parseEther("100");
+      await shieldToken.transfer(user1.address, amount);
+      expect(await shieldToken.balanceOf(user1.address)).to.equal(amount);
+      
+      // Verify any user can burn their tokens (ERC20Burnable)
+      await shieldToken.connect(user1).burn(ethers.parseEther("10"));
+      expect(await shieldToken.balanceOf(user1.address)).to.equal(ethers.parseEther("90"));
     });
   });
 
