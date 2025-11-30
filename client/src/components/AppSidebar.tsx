@@ -10,7 +10,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Vault, Wallet, History, BarChart3, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles, Zap, Vote } from "lucide-react";
+import { LayoutDashboard, Vault, Wallet, History, BarChart3, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles, Zap, Vote, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
@@ -80,6 +80,11 @@ const menuItems = [
     title: "Analytics",
     url: "/app/analytics",
     icon: BarChart3,
+  },
+  {
+    title: "Security",
+    url: "/app/security",
+    icon: ShieldCheck,
   },
 ];
 

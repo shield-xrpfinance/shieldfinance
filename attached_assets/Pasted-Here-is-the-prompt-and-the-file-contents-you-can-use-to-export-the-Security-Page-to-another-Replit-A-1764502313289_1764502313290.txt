@@ -1,0 +1,452 @@
+Here is the prompt and the file contents you can use to export the Security Page to another Replit Agent or application.
+
+Prompt for the other Agent:
+Please build a "Security & Audits" page for Shyeld Finance using React, Tailwind CSS, and Framer Motion.
+Dependencies to install:
+- lucide-react
+- framer-motion
+- shadcn components (accordion, card, badge, button, separator)
+1. Configure the Theme:
+   Update `client/src/index.css` with the custom color palette and utilities provided below.
+2. Create the Page:
+   Create `client/src/pages/security.tsx` with the provided code.
+3. Assets:
+   The page references a background image. You can generate a dark purple abstract gradient background or use a placeholder.
+Here are the file contents:
+
+File Contents to Copy:
+1. client/src/index.css (Theme & Utilities)
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@custom-variant dark (&:is(.dark *));
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Shyeld Finance Palette */
+  --color-background: hsl(260 20% 4%); /* Very dark purple/black */
+  --color-foreground: hsl(260 10% 95%);
+  
+  --color-card: hsl(260 25% 8% / 0.6); /* Glassy dark */
+  --color-card-foreground: hsl(260 10% 95%);
+  
+  --color-popover: hsl(260 25% 8%);
+  --color-popover-foreground: hsl(260 10% 95%);
+  
+  --color-primary: hsl(265 89% 66%); /* Vivid Purple #8B5CF6 */
+  --color-primary-foreground: hsl(0 0% 100%);
+  
+  --color-secondary: hsl(260 20% 15%);
+  --color-secondary-foreground: hsl(260 10% 90%);
+  
+  --color-muted: hsl(260 20% 15%);
+  --color-muted-foreground: hsl(260 10% 70%);
+  
+  --color-accent: hsl(265 89% 66% / 0.15);
+  --color-accent-foreground: hsl(265 89% 75%);
+  
+  --color-destructive: hsl(0 84% 60%);
+  --color-destructive-foreground: hsl(0 0% 98%);
+  
+  --color-success: hsl(150 100% 40%);
+  --color-success-foreground: hsl(150 10% 5%);
+  --color-border: hsl(260 20% 20%);
+  --color-input: hsl(260 20% 20%);
+  --color-ring: hsl(265 89% 66%);
+  
+  --color-chart-1: hsl(265 89% 66%);
+  --color-chart-2: hsl(150 100% 40%);
+  --color-chart-3: hsl(30 100% 50%);
+  
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --radius: 0.5rem;
+}
+/* Base Styles */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-primary/30 selection:text-primary-foreground font-sans;
+    background-image: radial-gradient(circle at 50% 0%, hsl(265 89% 66% / 0.15), transparent 60%);
+    min-height: 100vh;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-display tracking-tight;
+  }
+}
+/* Custom Utilities */
+@layer utilities {
+  .glass-panel {
+    @apply bg-card backdrop-blur-xl border border-white/5 shadow-xl;
+  }
+  
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-linear-to-r from-white via-purple-200 to-purple-400;
+  }
+  
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent bg-linear-to-r from-primary via-purple-400 to-primary;
+  }
+  .glow-purple {
+    box-shadow: 0 0 40px -10px hsl(265 89% 66% / 0.3);
+  }
+  
+  .glow-success {
+    box-shadow: 0 0 30px -10px hsl(150 100% 40% / 0.3);
+  }
+}
+
+2. client/src/pages/security.tsx (Page Component)
+
+import { motion } from "framer-motion";
+import { 
+  ShieldCheck, 
+  CheckCircle2, 
+  AlertTriangle, 
+  Info, 
+  FileCode, 
+  ExternalLink, 
+  Github, 
+  Bug,
+  ChevronRight,
+  Lock,
+  Search,
+  Check
+} from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
+// Note: You will need to generate or replace this image import
+import generatedBg from "@assets/generated_images/dark_abstract_purple_gradient_background.png";
+export default function SecurityPage() {
+  return (
+    <div className="min-h-[calc(100vh-4rem)] w-full text-foreground overflow-hidden relative selection:bg-primary/30">
+      {/* Background Assets */}
+      <div className="fixed inset-0 z-0 opacity-20 pointer-events-none">
+        <img 
+          src={generatedBg} 
+          alt="" 
+          className="w-full h-full object-cover"
+        />
+        <div className="absolute inset-0 bg-background/80 backdrop-blur-[2px]" />
+      </div>
+      <div className="relative z-10 container mx-auto px-4 py-12 max-w-5xl">
+        {/* Hero Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16 space-y-6"
+        >
+          <Badge variant="outline" className="border-green-500/50 text-green-400 bg-green-900/10 px-4 py-1 text-sm uppercase tracking-wider mb-4 glow-success">
+            <CheckCircle2 className="w-4 h-4 mr-2 inline-block" />
+            100% Remediated
+          </Badge>
+          
+          <h1 className="text-5xl md:text-7xl font-display font-bold tracking-tighter text-white mb-4">
+            Security First. <span className="text-gradient-primary">Always.</span>
+          </h1>
+          
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            All 12 audit findings identified and resolved. Full transparency on fixes, trade-offs, and verification.
+          </p>
+          {/* Timeline */}
+          <div className="mt-12 pt-8">
+            <div className="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-0 relative">
+              {/* Connecting Line (Desktop) */}
+              <div className="hidden md:block absolute top-1/2 left-10 right-10 h-0.5 bg-secondary -z-10 -translate-y-1/2" />
+              
+              <TimelineStep status="completed" label="Audit Completed" date="Q4 2025" />
+              <TimelineStep status="completed" label="Fixes Implemented" date="100% Done" />
+              <TimelineStep status="completed" label="Hardhat Tests" date="100% Passing" />
+              <TimelineStep status="active" label="Ready for Mainnet" date="Live Now" />
+            </div>
+          </div>
+        </motion.div>
+        {/* Audit Summary Card */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.2 }}
+          className="mb-16"
+        >
+          <Card className="glass-panel border-white/10 overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary to-transparent opacity-50" />
+            <CardContent className="p-8">
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground font-mono uppercase tracking-wider">Auditor</p>
+                  <div className="flex items-center gap-2">
+                    <ShieldCheck className="w-6 h-6 text-primary" />
+                    <span className="font-display font-bold text-xl">Independent Security Audit</span>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <p className="text-sm text-muted-foreground font-mono uppercase tracking-wider">Scope</p>
+                  <div className="flex flex-col">
+                    <span className="font-mono text-sm text-white">StakingBoost.sol</span>
+                    <span className="font-mono text-sm text-white/70">ShieldToken.sol</span>
+                  </div>
+                </div>
+                <div className="col-span-1 md:col-span-2 bg-secondary/30 rounded-lg p-4 border border-white/5">
+                  <div className="flex justify-between items-center text-center">
+                    <SeverityStat count={0} label="Critical" color="text-red-500" />
+                    <div className="w-px h-8 bg-white/10" />
+                    <SeverityStat count={0} label="High" color="text-orange-500" />
+                    <div className="w-px h-8 bg-white/10" />
+                    <SeverityStat count={1} label="Low" color="text-yellow-500" />
+                    <div className="w-px h-8 bg-white/10" />
+                    <SeverityStat count={11} label="Info" color="text-blue-400" />
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+        {/* Detailed Findings */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-16">
+          <div className="lg:col-span-2 space-y-6">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-display font-bold">Findings & Remediations</h2>
+              <Badge variant="outline" className="text-xs font-mono text-muted-foreground">
+                Report v1.0
+              </Badge>
+            </div>
+            <Accordion type="single" collapsible defaultValue="item-1" className="space-y-4">
+              <FindingItem 
+                id="item-1"
+                code="SB-03"
+                severity="Informational"
+                severityColor="bg-blue-500/10 text-blue-400 border-blue-500/20"
+                title="Lock Period Logic Flaw"
+                description="Potential for lock gaming if stakedAt timestamp isn't updated."
+              >
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="space-y-2">
+                    <span className="text-muted-foreground font-mono text-xs uppercase">Remediation</span>
+                    <p className="text-green-400 flex items-start gap-2">
+                      <Check className="w-4 h-4 mt-0.5 shrink-0" />
+                      Reset stakedAt on each new deposit to prevent gaming.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <span className="text-muted-foreground font-mono text-xs uppercase">Trade-off</span>
+                    <p className="text-muted-foreground">Slightly higher gas cost for stronger security guarantees.</p>
+                  </div>
+                </div>
+              </FindingItem>
+              <FindingItem 
+                id="item-2"
+                code="ST-01"
+                severity="Informational"
+                severityColor="bg-blue-500/10 text-blue-400 border-blue-500/20"
+                title="Centralized Token Distribution"
+                description="Initial supply minted to deployer address."
+              >
+                <div className="p-3 bg-secondary/50 rounded border border-white/5 text-sm text-muted-foreground">
+                  <p className="flex items-start gap-2">
+                    <Info className="w-4 h-4 mt-0.5 shrink-0 text-blue-400" />
+                    Intentional fair-launch design. Clearly documented in whitepaper, no code changes required.
+                  </p>
+                </div>
+              </FindingItem>
+              <FindingItem 
+                id="item-3"
+                code="ST-02"
+                severity="Informational"
+                severityColor="bg-blue-500/10 text-blue-400 border-blue-500/20"
+                title="Unused Ownable Inheritance"
+                description="Contract inherits Ownable but never uses onlyOwner modifiers."
+              >
+                <div className="space-y-2 text-sm">
+                  <span className="text-muted-foreground font-mono text-xs uppercase">Remediation</span>
+                  <p className="text-green-400 flex items-start gap-2">
+                    <Check className="w-4 h-4 mt-0.5 shrink-0" />
+                    Removed Ownable inheritance to reduce contract size and attack surface.
+                  </p>
+                </div>
+              </FindingItem>
+              <FindingItem 
+                id="item-4"
+                code="ST-05"
+                severity="Low"
+                severityColor="bg-yellow-500/10 text-yellow-400 border-yellow-500/20"
+                title="Style & Micro-Optimizations"
+                description="Gas optimizations and code style improvements."
+              >
+                 <div className="space-y-2 text-sm">
+                  <span className="text-muted-foreground font-mono text-xs uppercase">Remediation</span>
+                  <p className="text-green-400 flex items-start gap-2">
+                    <Check className="w-4 h-4 mt-0.5 shrink-0" />
+                    Applied custom errors, immutable variables for constants, and full NatSpec documentation.
+                  </p>
+                </div>
+              </FindingItem>
+              
+              <div className="p-4 glass-panel rounded-lg border-dashed border-white/10 flex items-center justify-center text-muted-foreground text-sm">
+                <span className="mr-2">8 other Informational findings resolved</span>
+                <Button variant="link" className="text-primary h-auto p-0">View Full Report</Button>
+              </div>
+            </Accordion>
+          </div>
+          {/* Test Coverage Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="sticky top-8 space-y-6">
+              <Card className="glass-panel border-primary/20 bg-primary/5">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <FileCode className="w-5 h-5 text-primary" />
+                    Test Coverage
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="flex items-end gap-2">
+                    <span className="text-4xl font-bold font-display text-white">98%</span>
+                    <span className="text-sm text-muted-foreground mb-1">Line Coverage</span>
+                  </div>
+                  
+                  <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
+                    <div className="bg-primary h-full w-[98%] shadow-[0_0_10px_rgba(139,92,246,0.5)]" />
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">Verified Scenarios</p>
+                    <ul className="space-y-2">
+                      <TestItem id="SB-01" label="Owner cannot drain rewards" />
+                      <TestItem id="SB-02" label="Reentrancy protection" />
+                      <TestItem id="SB-03" label="Lock period logic" />
+                      <TestItem id="SB-04" label="Fee-on-transfer checks" />
+                      <TestItem id="SB-06" label="USDT approval race safety" />
+                      <TestItem id="SB-07" label="Zero-address validation" />
+                    </ul>
+                  </div>
+                  
+                  <Button className="w-full bg-white/5 hover:bg-white/10 text-white border border-white/10" variant="outline">
+                    <Github className="w-4 h-4 mr-2" />
+                    View Tests on GitHub
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+        {/* Verification & Links */}
+        <motion.div 
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-24"
+        >
+          <LinkCard 
+            icon={<Search className="w-6 h-6 text-blue-400" />}
+            title="Verified on Etherscan"
+            description="Check contract source code verification matches audit."
+            action="View Contracts"
+          />
+          <LinkCard 
+            icon={<Lock className="w-6 h-6 text-primary" />}
+            title="Full Audit Report"
+            description="Download the complete PDF report with technical details."
+            action="Download PDF"
+          />
+          <LinkCard 
+            icon={<Bug className="w-6 h-6 text-green-400" />}
+            title="Bug Bounty"
+            description="Up to $50,000 reward for critical vulnerabilities on Immunefi."
+            action="Submit Report"
+          />
+        </motion.div>
+        {/* Footer */}
+        <footer className="text-center border-t border-white/5 pt-12 pb-8">
+          <p className="text-muted-foreground text-sm max-w-xl mx-auto">
+            <AlertTriangle className="w-4 h-4 inline mr-2 text-yellow-500/50" />
+            Audits reduce risk but never eliminate it entirely. Always do your own research (DYOR) before depositing funds into any DeFi protocol.
+          </p>
+        </footer>
+      </div>
+    </div>
+  );
+}
+// Subcomponents
+function TimelineStep({ status, label, date }: { status: "completed" | "active" | "pending", label: string, date: string }) {
+  const isCompleted = status === "completed";
+  const isActive = status === "active";
+  
+  return (
+    <div className="flex flex-col items-center relative z-10 md:w-1/4 mb-8 md:mb-0 group">
+      <div className={`
+        w-10 h-10 rounded-full flex items-center justify-center border-2 mb-3 transition-all duration-300
+        ${isCompleted ? "bg-green-900/20 border-green-500 text-green-500 shadow-[0_0_15px_rgba(16,185,129,0.3)]" : 
+          isActive ? "bg-primary/20 border-primary text-primary shadow-[0_0_15px_rgba(139,92,246,0.4)] scale-110" : 
+          "bg-secondary border-white/10 text-muted-foreground"}
+      `}>
+        {isCompleted ? <Check className="w-5 h-5" /> : isActive ? <div className="w-3 h-3 bg-current rounded-full animate-pulse" /> : <div className="w-2 h-2 bg-current rounded-full" />}
+      </div>
+      <h3 className={`font-display font-bold text-sm mb-1 ${isActive ? "text-white" : "text-muted-foreground"}`}>{label}</h3>
+      <span className="text-xs font-mono text-muted-foreground/70">{date}</span>
+    </div>
+  );
+}
+function SeverityStat({ count, label, color }: { count: number, label: string, color: string }) {
+  return (
+    <div className="flex flex-col items-center px-2 md:px-6">
+      <span className={`text-3xl font-display font-bold ${color}`}>{count}</span>
+      <span className="text-xs text-muted-foreground font-mono uppercase mt-1">{label}</span>
+    </div>
+  );
+}
+function FindingItem({ id, code, severity, severityColor, title, description, children }: any) {
+  return (
+    <AccordionItem value={id} className="border border-white/5 bg-card/50 rounded-lg px-4 mb-2 overflow-hidden data-[state=open]:bg-card/80 transition-colors">
+      <AccordionTrigger className="hover:no-underline py-4">
+        <div className="flex items-start md:items-center gap-4 text-left w-full pr-4">
+          <Badge variant="outline" className={`${severityColor} shrink-0 font-mono`}>
+            {code} • {severity}
+          </Badge>
+          <div className="flex-1">
+            <h4 className="font-medium text-white">{title}</h4>
+          </div>
+        </div>
+      </AccordionTrigger>
+      <AccordionContent className="pb-4 pl-1 pt-0">
+        <div className="ml-0 md:ml-[calc(100px+1rem)] space-y-4 border-l border-white/10 pl-4 mt-2">
+          <p className="text-muted-foreground">{description}</p>
+          {children}
+        </div>
+      </AccordionContent>
+    </AccordionItem>
+  );
+}
+function TestItem({ id, label }: { id: string, label: string }) {
+  return (
+    <li className="flex items-center gap-3 text-sm text-muted-foreground/80">
+      <CheckCircle2 className="w-4 h-4 text-green-500/50 shrink-0" />
+      <span className="font-mono text-xs text-white/30 mr-1">{id}</span>
+      <span>{label}</span>
+    </li>
+  );
+}
+function LinkCard({ icon, title, description, action }: any) {
+  return (
+    <a href="#" className="group block p-6 rounded-xl bg-white/5 border border-white/5 hover:bg-white/10 hover:border-primary/30 transition-all duration-300 hover:-translate-y-1">
+      <div className="mb-4 p-3 bg-black/20 w-fit rounded-lg border border-white/5 group-hover:scale-110 transition-transform">
+        {icon}
+      </div>
+      <h3 className="font-display font-bold text-lg text-white mb-2 group-hover:text-primary transition-colors">{title}</h3>
+      <p className="text-muted-foreground text-sm mb-4">{description}</p>
+      <div className="flex items-center text-sm font-medium text-white/50 group-hover:text-white">
+        {action} <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
+      </div>
+    </a>
+  );
+}

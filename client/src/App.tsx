@@ -29,6 +29,7 @@ import Airdrop from "@/pages/Airdrop";
 import Staking from "@/pages/Staking";
 import Swap from "@/pages/Swap";
 import Optimize from "@/pages/Optimize";
+import Security from "@/pages/Security";
 import NotFound from "@/pages/not-found";
 
 function DashboardRouter() {
@@ -44,6 +45,7 @@ function DashboardRouter() {
       <Route path="/app/staking" component={Staking} />
       <Route path="/app/swap" component={Swap} />
       <Route path="/app/optimize" component={Optimize} />
+      <Route path="/app/security" component={Security} />
       <Route component={NotFound} />
     </RouterSwitch>
   );
@@ -186,6 +188,7 @@ function AppContent() {
           ) : (
             <RouterSwitch>
               <Route path="/" component={Landing} />
+              <Route path="/security" component={Security} />
               <Route component={NotFound} />
             </RouterSwitch>
           )}
