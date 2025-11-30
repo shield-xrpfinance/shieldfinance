@@ -24,9 +24,9 @@ const REVENUE_ROUTER_ADDRESS = process.env.VITE_REVENUE_ROUTER_ADDRESS || "0x8e5
 const STAKING_BOOST_ADDRESS = process.env.VITE_STAKING_BOOST_ADDRESS || "0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4";
 const SHIELD_TOKEN_ADDRESS = process.env.VITE_SHIELD_TOKEN_ADDRESS || "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616";
 
-// Query configuration - scan last 500 blocks (~5 minutes on Coston2)
-// Smaller range for faster responses, relying on caching for repeated queries
-const BLOCKS_TO_SCAN = 500;
+// Query configuration - scan last 5000 blocks (~1 hour on Coston2)
+// Larger range to capture historical events, with aggressive caching
+const BLOCKS_TO_SCAN = 5000;
 
 // Rate limiting - add delay between RPC calls to avoid rate limits
 const RPC_DELAY_MS = 25;
@@ -105,7 +105,7 @@ class AnalyticsService {
     lastFetch: number;
   } | null = null;
   private readonly CACHE_TTL_MS = 60_000;
-  private readonly EVENTS_CACHE_TTL_MS = 120_000; // 2 minutes for events cache to reduce RPC load
+  private readonly EVENTS_CACHE_TTL_MS = 300_000; // 5 minutes for events cache to reduce RPC load
 
   constructor() {
     this.provider = new ethers.JsonRpcProvider(COSTON2_RPC);
