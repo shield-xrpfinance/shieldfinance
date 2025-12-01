@@ -1954,6 +1954,239 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================================
+  // USER DASHBOARD & NOTIFICATIONS API ENDPOINTS
+  // ============================================================
+
+  /**
+   * GET /api/user/dashboard-summary
+   * Get comprehensive dashboard summary for a user
+   * Query params: walletAddress (required)
+   */
+  app.get("/api/user/dashboard-summary", async (req, res) => {
+    try {
+      const walletAddress = req.query.walletAddress as string;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "walletAddress query parameter required" });
+      }
+
+      const priceService = getPriceService();
+      if (!priceService.isReady()) {
+        await priceService.initialize();
+      }
+
+      // Get all active positions for this wallet
+      const positions = await storage.getPositions(walletAddress);
+      const activePositions = positions.filter(p => p.status === "active");
+
+      // Get SHIELD staking position
+      const stakingPosition = await storage.getStakeInfo(walletAddress);
+
+      // Get all vaults for metadata
+      const vaults = await storage.getVaults();
+      const vaultMap = new Map(vaults.map(v => [v.id, v]));
+
+      // Get prices for calculations
+      const prices = await priceService.getPrices(["XRP", "FXRP", "SHIELD", "FLR"]);
+
+      // Calculate position values using Decimal for precision
+      const Decimal = (await import("decimal.js")).default;
+      let totalValueUsd = new Decimal(0);
+      let stakedValueUsd = new Decimal(0);
+      let rewardsValueUsd = new Decimal(0);
+      let totalWeightedApy = new Decimal(0);
+      let totalWeight = new Decimal(0);
+      const assetBreakdown: Record<string, number> = {};
+
+      for (const position of activePositions) {
+        const vault = vaultMap.get(position.vaultId);
+        if (!vault) continue;
+
+        const amount = new Decimal(position.amount || "0");
+        const rewards = new Decimal(position.rewards || "0");
+        
+        const assets = vault.asset.split(",");
+        const primaryAsset = assets[0].trim().toUpperCase();
+        const price = prices.get(primaryAsset) || prices.get("XRP") || 0;
+
+        const positionValueUsd = amount.mul(price);
+        const positionRewardsUsd = rewards.mul(price);
+
+        totalValueUsd = totalValueUsd.add(positionValueUsd).add(positionRewardsUsd);
+        stakedValueUsd = stakedValueUsd.add(positionValueUsd);
+        rewardsValueUsd = rewardsValueUsd.add(positionRewardsUsd);
+
+        assetBreakdown[primaryAsset] = (assetBreakdown[primaryAsset] || 0) + positionValueUsd.toNumber();
+
+        const vaultApy = new Decimal(vault.apy || "0");
+        totalWeightedApy = totalWeightedApy.add(vaultApy.mul(positionValueUsd));
+        totalWeight = totalWeight.add(positionValueUsd);
+      }
+
+      // Calculate SHIELD staking value and boost
+      let shieldStakedValueUsd = 0;
+      let boostPercentage = 0;
+      
+      if (stakingPosition) {
+        const shieldAmount = new Decimal(stakingPosition.amount || "0").div(1e18);
+        const shieldPrice = prices.get("SHIELD") || 0.01;
+        shieldStakedValueUsd = shieldAmount.mul(shieldPrice).toNumber();
+        totalValueUsd = totalValueUsd.add(shieldStakedValueUsd);
+        boostPercentage = Math.min(shieldAmount.div(10000).toNumber(), 50);
+        assetBreakdown["SHIELD"] = shieldStakedValueUsd;
+      }
+
+      const baseApy = totalWeight.gt(0) ? totalWeightedApy.div(totalWeight).toNumber() : 0;
+      const effectiveApy = baseApy * (1 + boostPercentage / 100);
+
+      res.json({
+        success: true,
+        summary: {
+          totalValueUsd: totalValueUsd.toNumber(),
+          stakedValueUsd: stakedValueUsd.toNumber(),
+          shieldStakedValueUsd,
+          rewardsValueUsd: rewardsValueUsd.toNumber(),
+          effectiveApy,
+          baseApy,
+          boostPercentage,
+          positionCount: activePositions.length,
+          assetBreakdown,
+        },
+        timestamp: Date.now(),
+      });
+    } catch (error) {
+      console.error("Failed to get dashboard summary:", error);
+      res.status(500).json({ error: "Failed to get dashboard summary" });
+    }
+  });
+
+  /**
+   * GET /api/user/portfolio-history
+   * Get historical portfolio snapshots for charts
+   * Query params: walletAddress (required), days (optional, default 30)
+   */
+  app.get("/api/user/portfolio-history", async (req, res) => {
+    try {
+      const walletAddress = req.query.walletAddress as string;
+      const days = parseInt(req.query.days as string) || 30;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "walletAddress query parameter required" });
+      }
+
+      const toDate = new Date();
+      const fromDate = new Date();
+      fromDate.setDate(fromDate.getDate() - days);
+
+      const snapshots = await storage.getDashboardSnapshots(walletAddress, fromDate, toDate);
+
+      res.json({
+        success: true,
+        history: snapshots.map(s => ({
+          date: s.snapshotDate.toISOString().split('T')[0],
+          totalValueUsd: parseFloat(s.totalValueUsd),
+          stakedValueUsd: parseFloat(s.stakedValueUsd),
+          shieldStakedValueUsd: parseFloat(s.shieldStakedValueUsd),
+          rewardsValueUsd: parseFloat(s.rewardsValueUsd),
+          effectiveApy: parseFloat(s.effectiveApy),
+          boostPercentage: parseFloat(s.boostPercentage),
+        })),
+        period: { from: fromDate.toISOString(), to: toDate.toISOString() },
+      });
+    } catch (error) {
+      console.error("Failed to get portfolio history:", error);
+      res.status(500).json({ error: "Failed to get portfolio history" });
+    }
+  });
+
+  /**
+   * GET /api/user/notifications
+   * Get notifications for a user
+   * Query params: walletAddress (required), limit (optional), unreadOnly (optional)
+   */
+  app.get("/api/user/notifications", async (req, res) => {
+    try {
+      const walletAddress = req.query.walletAddress as string;
+      const limit = parseInt(req.query.limit as string) || 50;
+      const unreadOnly = req.query.unreadOnly === "true";
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "walletAddress query parameter required" });
+      }
+
+      const notifications = await storage.getUserNotifications(walletAddress, limit, unreadOnly);
+      const unreadCount = await storage.getUnreadNotificationCount(walletAddress);
+
+      res.json({
+        success: true,
+        notifications,
+        unreadCount,
+      });
+    } catch (error) {
+      console.error("Failed to get notifications:", error);
+      res.status(500).json({ error: "Failed to get notifications" });
+    }
+  });
+
+  /**
+   * POST /api/user/notifications/:id/read
+   * Mark a notification as read
+   */
+  app.post("/api/user/notifications/:id/read", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid notification ID" });
+      }
+
+      await storage.markNotificationAsRead(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to mark notification as read:", error);
+      res.status(500).json({ error: "Failed to mark notification as read" });
+    }
+  });
+
+  /**
+   * POST /api/user/notifications/read-all
+   * Mark all notifications as read for a user
+   */
+  app.post("/api/user/notifications/read-all", async (req, res) => {
+    try {
+      const { walletAddress } = req.body;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "walletAddress required in request body" });
+      }
+
+      await storage.markAllNotificationsAsRead(walletAddress);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to mark all notifications as read:", error);
+      res.status(500).json({ error: "Failed to mark all notifications as read" });
+    }
+  });
+
+  /**
+   * DELETE /api/user/notifications/:id
+   * Delete a notification
+   */
+  app.delete("/api/user/notifications/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid notification ID" });
+      }
+
+      await storage.deleteNotification(id);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete notification:", error);
+      res.status(500).json({ error: "Failed to delete notification" });
+    }
+  });
+
   // Authenticate xApp session using OTT (One Time Token)
   // The frontend detects xApp context and sends the OTT to backend for secure verification
   // OTT is valid for 1 minute and can only be fetched once

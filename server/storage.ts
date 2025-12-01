@@ -1,6 +1,6 @@
-import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFxrpToXrpRedemption, type SelectFxrpToXrpRedemption, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, type InsertServiceState, type ServiceState, type InsertStakingPosition, type StakingPosition, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, fxrpToXrpRedemptions, firelightPositions, compoundingRuns, serviceState, stakingPositions } from "@shared/schema";
+import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFxrpToXrpRedemption, type SelectFxrpToXrpRedemption, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, type InsertServiceState, type ServiceState, type InsertStakingPosition, type StakingPosition, type InsertDashboardSnapshot, type DashboardSnapshot, type InsertUserNotification, type UserNotification, type NotificationType, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, fxrpToXrpRedemptions, firelightPositions, compoundingRuns, serviceState, stakingPositions, dashboardSnapshots, userNotifications } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, gte, lte, gt } from "drizzle-orm";
+import { eq, desc, sql, and, gte, lte, gt, asc } from "drizzle-orm";
 
 // Redemption expiry: FAssets redemptions typically complete within hours
 // 24h provides safety margin while preventing old expired redemptions from matching
@@ -74,6 +74,19 @@ export interface IStorage {
   getStakeInfo(walletAddress: string): Promise<StakingPosition | null>;
   recordStake(walletAddress: string, amount: string, stakedAt: string, unlockTime: string): Promise<void>;
   recordUnstake(walletAddress: string, amount: string): Promise<void>;
+  
+  // Dashboard snapshots for portfolio history
+  createDashboardSnapshot(snapshot: InsertDashboardSnapshot): Promise<DashboardSnapshot>;
+  getDashboardSnapshots(walletAddress: string, fromDate: Date, toDate: Date): Promise<DashboardSnapshot[]>;
+  getLatestDashboardSnapshot(walletAddress: string): Promise<DashboardSnapshot | undefined>;
+  
+  // User notifications for persistent notification center
+  createUserNotification(notification: InsertUserNotification): Promise<UserNotification>;
+  getUserNotifications(walletAddress: string, limit?: number, unreadOnly?: boolean): Promise<UserNotification[]>;
+  getUnreadNotificationCount(walletAddress: string): Promise<number>;
+  markNotificationAsRead(id: number): Promise<void>;
+  markAllNotificationsAsRead(walletAddress: string): Promise<void>;
+  deleteNotification(id: number): Promise<void>;
   
   getProtocolOverview(): Promise<{ tvl: string; avgApy: string; activeVaults: number; totalStakers: number }>;
   getApyHistory(days?: number): Promise<Array<{ date: string; stable: number; high: number; maximum: number }>>;
@@ -1173,6 +1186,86 @@ export class DatabaseStorage implements IStorage {
         .set({ amount: newAmount.toString() })
         .where(eq(stakingPositions.walletAddress, walletAddress));
     }
+  }
+
+  // Dashboard snapshot methods
+  async createDashboardSnapshot(snapshot: InsertDashboardSnapshot): Promise<DashboardSnapshot> {
+    const [created] = await db.insert(dashboardSnapshots).values(snapshot).returning();
+    return created;
+  }
+
+  async getDashboardSnapshots(walletAddress: string, fromDate: Date, toDate: Date): Promise<DashboardSnapshot[]> {
+    return db.select()
+      .from(dashboardSnapshots)
+      .where(
+        and(
+          eq(dashboardSnapshots.walletAddress, walletAddress),
+          gte(dashboardSnapshots.snapshotDate, fromDate),
+          lte(dashboardSnapshots.snapshotDate, toDate)
+        )
+      )
+      .orderBy(asc(dashboardSnapshots.snapshotDate));
+  }
+
+  async getLatestDashboardSnapshot(walletAddress: string): Promise<DashboardSnapshot | undefined> {
+    const results = await db.select()
+      .from(dashboardSnapshots)
+      .where(eq(dashboardSnapshots.walletAddress, walletAddress))
+      .orderBy(desc(dashboardSnapshots.snapshotDate))
+      .limit(1);
+    return results[0];
+  }
+
+  // User notification methods
+  async createUserNotification(notification: InsertUserNotification): Promise<UserNotification> {
+    const [created] = await db.insert(userNotifications).values(notification).returning();
+    return created;
+  }
+
+  async getUserNotifications(walletAddress: string, limit: number = 50, unreadOnly: boolean = false): Promise<UserNotification[]> {
+    const conditions = [eq(userNotifications.walletAddress, walletAddress)];
+    if (unreadOnly) {
+      conditions.push(eq(userNotifications.read, false));
+    }
+    return db.select()
+      .from(userNotifications)
+      .where(and(...conditions))
+      .orderBy(desc(userNotifications.createdAt))
+      .limit(limit);
+  }
+
+  async getUnreadNotificationCount(walletAddress: string): Promise<number> {
+    const result = await db.select({ count: sql<number>`count(*)::int` })
+      .from(userNotifications)
+      .where(
+        and(
+          eq(userNotifications.walletAddress, walletAddress),
+          eq(userNotifications.read, false)
+        )
+      );
+    return result[0]?.count ?? 0;
+  }
+
+  async markNotificationAsRead(id: number): Promise<void> {
+    await db.update(userNotifications)
+      .set({ read: true, readAt: new Date() })
+      .where(eq(userNotifications.id, id));
+  }
+
+  async markAllNotificationsAsRead(walletAddress: string): Promise<void> {
+    await db.update(userNotifications)
+      .set({ read: true, readAt: new Date() })
+      .where(
+        and(
+          eq(userNotifications.walletAddress, walletAddress),
+          eq(userNotifications.read, false)
+        )
+      );
+  }
+
+  async deleteNotification(id: number): Promise<void> {
+    await db.delete(userNotifications)
+      .where(eq(userNotifications.id, id));
   }
 }
 

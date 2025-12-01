@@ -362,6 +362,61 @@ export const onChainEvents = pgTable("on_chain_events", {
   notified: boolean("notified").notNull().default(false),
 });
 
+// Dashboard portfolio snapshots for historical charts
+export const dashboardSnapshots = pgTable("dashboard_snapshots", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  walletAddress: varchar("wallet_address").notNull(),
+  snapshotDate: timestamp("snapshot_date").notNull(), // Date of the snapshot (daily granularity)
+  
+  // Portfolio value breakdown (all in USD)
+  totalValueUsd: decimal("total_value_usd", { precision: 18, scale: 2 }).notNull(),
+  stakedValueUsd: decimal("staked_value_usd", { precision: 18, scale: 2 }).notNull(),
+  shieldStakedValueUsd: decimal("shield_staked_value_usd", { precision: 18, scale: 2 }).notNull(),
+  rewardsValueUsd: decimal("rewards_value_usd", { precision: 18, scale: 2 }).notNull(),
+  
+  // Breakdown by asset (JSON object with asset -> USD value mapping)
+  assetBreakdown: jsonb("asset_breakdown").notNull().default({}),
+  
+  // APY and boost metrics at snapshot time
+  effectiveApy: decimal("effective_apy", { precision: 5, scale: 2 }).notNull(),
+  baseApy: decimal("base_apy", { precision: 5, scale: 2 }).notNull(),
+  boostPercentage: decimal("boost_percentage", { precision: 5, scale: 2 }).notNull().default("0"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  walletDateIdx: sql`CREATE INDEX IF NOT EXISTS idx_dashboard_snapshots_wallet_date ON ${table} (wallet_address, snapshot_date DESC)`,
+  snapshotDateIdx: sql`CREATE INDEX IF NOT EXISTS idx_dashboard_snapshots_date ON ${table} (snapshot_date DESC)`,
+}));
+
+// User notifications for persistent notification center
+export const userNotifications = pgTable("user_notifications", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  walletAddress: varchar("wallet_address").notNull(),
+  
+  // Notification content
+  type: text("type").notNull(), // 'deposit' | 'withdrawal' | 'reward' | 'boost' | 'system' | 'vault_event'
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  
+  // Related entity (optional)
+  relatedTxHash: text("related_tx_hash"),
+  relatedVaultId: varchar("related_vault_id"),
+  relatedPositionId: varchar("related_position_id"),
+  
+  // Metadata for rich notifications (JSON with amounts, percentages, etc.)
+  metadata: jsonb("metadata").default({}),
+  
+  // Read/unread state
+  read: boolean("read").notNull().default(false),
+  readAt: timestamp("read_at"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  walletIdx: sql`CREATE INDEX IF NOT EXISTS idx_user_notifications_wallet ON ${table} (wallet_address)`,
+  walletUnreadIdx: sql`CREATE INDEX IF NOT EXISTS idx_user_notifications_wallet_unread ON ${table} (wallet_address, read)`,
+  createdAtIdx: sql`CREATE INDEX IF NOT EXISTS idx_user_notifications_created_at ON ${table} (created_at DESC)`,
+}));
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -423,6 +478,17 @@ export const insertStakingPositionSchema = createInsertSchema(stakingPositions).
   id: true,
 });
 
+export const insertDashboardSnapshotSchema = createInsertSchema(dashboardSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserNotificationSchema = createInsertSchema(userNotifications).omit({
+  id: true,
+  createdAt: true,
+  readAt: true,
+});
+
 export type InsertVault = z.infer<typeof insertVaultSchema>;
 export type Vault = typeof vaults.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
@@ -448,6 +514,26 @@ export type ServiceState = typeof serviceState.$inferSelect;
 export type InsertStakingPosition = z.infer<typeof insertStakingPositionSchema>;
 export type StakingPosition = typeof stakingPositions.$inferSelect;
 export type OnChainEvent = typeof onChainEvents.$inferSelect;
+export type InsertDashboardSnapshot = z.infer<typeof insertDashboardSnapshotSchema>;
+export type DashboardSnapshot = typeof dashboardSnapshots.$inferSelect;
+export type InsertUserNotification = z.infer<typeof insertUserNotificationSchema>;
+export type UserNotification = typeof userNotifications.$inferSelect;
+
+// Notification type enum for type safety
+export type NotificationType = 'deposit' | 'withdrawal' | 'reward' | 'boost' | 'system' | 'vault_event';
+
+// Dashboard summary response type (for API)
+export interface DashboardSummary {
+  totalValueUsd: number;
+  stakedValueUsd: number;
+  shieldStakedValueUsd: number;
+  rewardsValueUsd: number;
+  effectiveApy: number;
+  baseApy: number;
+  boostPercentage: number;
+  positionCount: number;
+  assetBreakdown: Record<string, number>;
+}
 
 export interface PaymentRequest {
   bridgeId: string;
