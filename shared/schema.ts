@@ -479,12 +479,10 @@ export const insertStakingPositionSchema = createInsertSchema(stakingPositions).
 });
 
 export const insertDashboardSnapshotSchema = createInsertSchema(dashboardSnapshots).omit({
-  id: true,
   createdAt: true,
 });
 
 export const insertUserNotificationSchema = createInsertSchema(userNotifications).omit({
-  id: true,
   createdAt: true,
   readAt: true,
 });
