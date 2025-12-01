@@ -898,7 +898,7 @@ export default function Landing() {
               </div>
               <h3 className="text-xl font-semibold mb-3" data-testid="title-step-4">Earn & Use</h3>
               <p className="text-muted-foreground text-sm mb-2" data-testid="text-step-4">
-                Earn staking rewards while using your stXRP across DeFi protocols
+                Earn staking rewards while using your shXRP across DeFi protocols
               </p>
               <p className="text-xs text-primary font-semibold" data-testid="text-step-4-highlight">
                 Maximize your yield
