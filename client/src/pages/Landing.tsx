@@ -245,7 +245,6 @@ export default function Landing() {
           }
         `}
       </style>
-
       {/* Light Theme Header - To Highlight Logo */}
       <header className="sticky top-0 z-50 transition-all duration-300 bg-white border-b border-gray-200" data-testid="header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -402,7 +401,6 @@ export default function Landing() {
           </div>
         )}
       </header>
-
       {/* Hero Section with Animated Gradient Background */}
       <section 
         className="relative overflow-hidden py-24 lg:py-32 min-h-screen flex items-center" 
@@ -502,7 +500,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Partner Logos Section */}
       <section ref={partnersAnimation.ref} className="py-16 bg-muted/30" data-testid="section-partners">
         <div className={`max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 ${partnersAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
@@ -545,7 +542,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Latest Updates Section - Post Security Audit Features */}
       <section ref={latestUpdatesAnimation.ref} className="py-24" data-testid="section-latest-updates">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -636,7 +632,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Features Section with Glassmorphism */}
       <section id="features" ref={featuresAnimation.ref} className="py-24" data-testid="section-features">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -692,7 +687,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Why Us Section */}
       <section ref={whyUsAnimation.ref} className="py-24 bg-muted/30" data-testid="section-why-us">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -748,7 +742,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Technical Advantages Section */}
       <section ref={technicalAnimation.ref} className="py-24" data-testid="section-technical">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -841,7 +834,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* How It Works Section with Connecting Lines */}
       <section id="how-it-works" ref={howItWorksAnimation.ref} className="py-24 bg-muted/30" data-testid="section-how-it-works">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -891,7 +883,7 @@ export default function Landing() {
               <div className="h-16 w-16 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-2xl font-bold mx-auto mb-6 relative z-10 transition-all hover:scale-110" data-testid="badge-step-3">
                 3
               </div>
-              <h3 className="text-xl font-semibold mb-3" data-testid="title-step-3">Receive stXRP</h3>
+              <h3 className="text-xl font-semibold mb-3" data-testid="title-step-3">Receive shXRP</h3>
               <p className="text-muted-foreground text-sm mb-2" data-testid="text-step-3">
                 Get liquid staking tokens instantly via ERC-4337 Smart Account
               </p>
@@ -915,7 +907,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Mobile Experience Section */}
       <section ref={mobileExperienceAnimation.ref} className="py-24" data-testid="section-mobile-experience">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -979,7 +970,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Platform Intelligence Section */}
       <section ref={platformIntelligenceAnimation.ref} className="py-24 bg-muted/30" data-testid="section-platform-intelligence">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1050,7 +1040,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Security Section with Glassmorphism */}
       <section id="security" ref={securityAnimation.ref} className="py-24 bg-muted/30" data-testid="section-security">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1134,7 +1123,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* SHIELD Token & Airdrop Section */}
       <section ref={airdropAnimation.ref} className="py-24" data-testid="section-airdrop">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1226,7 +1214,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* How SHIELD Creates Value Section */}
       <section ref={valueAnimation.ref} className="py-24 bg-muted/30" data-testid="section-value">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -1317,8 +1304,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
-
       {/* CTA Section with Glassmorphism */}
       <section 
         ref={ctaAnimation.ref} 
@@ -1345,7 +1330,6 @@ export default function Landing() {
           </Card>
         </div>
       </section>
-
       {/* Footer with Glassmorphism */}
       <footer className="glassmorphic-light py-12" data-testid="footer">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
