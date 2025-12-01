@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import PortfolioTable from "@/components/PortfolioTable";
 import WithdrawModal from "@/components/WithdrawModal";
 import { WithdrawProgressModal, type WithdrawProgressStep } from "@/components/WithdrawProgressModal";
@@ -14,13 +15,15 @@ import EmptyState from "@/components/EmptyState";
 import ConnectWalletEmptyState from "@/components/ConnectWalletEmptyState";
 import { PortfolioStatsSkeleton, PortfolioTableSkeleton } from "@/components/skeletons/PortfolioSkeleton";
 import { PositionHealthCard, type PositionActivity } from "@/components/PositionHealthCard";
-import { TrendingUp, Coins, Gift, Package, AlertCircle, ExternalLink, Loader2 } from "lucide-react";
+import { TrendingUp, Coins, Gift, Package, AlertCircle, ExternalLink, Loader2, HelpCircle, Zap } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useLocation } from "wouter";
 import { usePortfolioPolling } from "@/hooks/usePortfolioPolling";
 import { useEnrichedPositions, type PendingActivity } from "@/hooks/useEnrichedPositions";
+import { useUserDashboard, calculateBoostDelta } from "@/hooks/useUserDashboard";
+import { getTooltipContent } from "@/lib/tooltipCopy";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ethers } from "ethers";
 
@@ -52,6 +55,17 @@ export default function Portfolio() {
   const { isConnected, address, evmAddress, walletType } = useWallet();
   const { network, ecosystem } = useNetwork();
   const [, navigate] = useLocation();
+  
+  const walletAddrForDashboard = address || evmAddress;
+  const { data: dashboardData, isLoading: dashboardLoading } = useUserDashboard({
+    walletAddress: walletAddrForDashboard,
+    enabled: !!walletAddrForDashboard,
+  });
+  
+  const boostPercentage = dashboardData?.summary?.boostPercentage || 0;
+  const baseApy = dashboardData?.summary?.baseApy || 0;
+  const effectiveApy = dashboardData?.summary?.effectiveApy || 0;
+  const { delta: boostDelta } = calculateBoostDelta(baseApy, effectiveApy);
   
   // On-chain shXRP balance for accurate FXRP vault display - using react-query for proper caching/invalidation
   const { data: onChainShxrpBalance = null } = useQuery<string | null>({
@@ -616,10 +630,20 @@ export default function Portfolio() {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-3">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-sm font-medium">Total Portfolio Value</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" data-testid="tooltip-portfolio-value" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>{getTooltipContent("portfolio", "totalValue")}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Coins className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -630,9 +654,19 @@ export default function Portfolio() {
                 <div className="text-3xl font-bold font-mono tabular-nums">
                   {totalValue.toLocaleString()} XRP
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  ≈ ${(totalValue * 2.45).toLocaleString()} USD
-                </p>
+                <div className="flex items-center gap-1 mt-1">
+                  <p className="text-xs text-muted-foreground">
+                    Staked: {(totalValue - totalRewards).toLocaleString()} XRP
+                  </p>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-3 w-3 text-muted-foreground cursor-help" data-testid="tooltip-staked-value" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>{getTooltipContent("portfolio", "stakedValue")}</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
               </>
             )}
           </CardContent>
@@ -640,7 +674,17 @@ export default function Portfolio() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Rewards Earned</CardTitle>
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-sm font-medium">Total Rewards Earned</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" data-testid="tooltip-rewards" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>{getTooltipContent("rewards", "accrual")}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
             <Gift className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -675,6 +719,55 @@ export default function Portfolio() {
                 <p className="text-xs text-muted-foreground mt-1">
                   Across {formattedPositions.length} positions
                 </p>
+              </>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card className={boostPercentage > 0 ? "border-primary/30 bg-primary/5" : ""}>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+            <div className="flex items-center gap-1.5">
+              <CardTitle className="text-sm font-medium">SHIELD Boost</CardTitle>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help" data-testid="tooltip-shield-boost" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>{getTooltipContent("shield", "boostEffect")}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            <Zap className={`h-4 w-4 ${boostPercentage > 0 ? "text-primary" : "text-muted-foreground"}`} />
+          </CardHeader>
+          <CardContent>
+            {dashboardLoading ? (
+              <Skeleton className="h-9 w-32" />
+            ) : (
+              <>
+                <div className="flex items-baseline gap-2">
+                  <span className={`text-3xl font-bold font-mono tabular-nums ${boostPercentage > 0 ? "text-primary" : ""}`} data-testid="text-boost-percentage">
+                    +{boostPercentage.toFixed(1)}%
+                  </span>
+                  {boostPercentage > 0 && (
+                    <Badge variant="secondary" className="text-xs bg-primary/10 text-primary border-0">
+                      Active
+                    </Badge>
+                  )}
+                </div>
+                {boostPercentage > 0 ? (
+                  <p className="text-xs text-muted-foreground mt-1" data-testid="text-boosted-earnings">
+                    +{boostDelta.toFixed(2)}% extra APY on all positions
+                  </p>
+                ) : (
+                  <Button 
+                    variant="ghost" 
+                    className="h-auto p-0 text-xs text-primary underline underline-offset-4 mt-1"
+                    onClick={() => navigate("/app/staking")}
+                    data-testid="button-stake-shield"
+                  >
+                    Stake SHIELD to boost yields
+                  </Button>
+                )}
               </>
             )}
           </CardContent>
@@ -774,6 +867,7 @@ export default function Portfolio() {
           <PortfolioTable
             positions={formattedPositions}
             network={network}
+            boostPercentage={boostPercentage}
             onWithdraw={handleWithdraw}
             onClaim={handleClaim}
           />

@@ -10,10 +10,15 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
-import { Shield, TrendingUp, Lock, Unlock, Clock, Info, ExternalLink, Loader2, Coins } from "lucide-react";
+import { Shield, TrendingUp, Lock, Unlock, Clock, Info, ExternalLink, Loader2, Coins, HelpCircle, ArrowRight, Zap } from "lucide-react";
 import { useShieldLogo } from "@/components/ShieldLogo";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ethers } from "ethers";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { getTooltipContent, TOOLTIP_CONTENT } from "@/lib/tooltipCopy";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
+import type { Vault } from "@shared/schema";
 
 const COSTON2_EXPLORER = "https://coston2-explorer.flare.network";
 const BASE_SHXRP_APY = 6.2;
@@ -37,6 +42,12 @@ export default function Staking() {
     enabled: !!evmAddress && isEvmConnected,
     refetchInterval: 30000,
   });
+
+  const { data: vaults = [], isLoading: vaultsLoading } = useQuery<Vault[]>({
+    queryKey: ["/api/vaults"],
+  });
+
+  const activeVaults = vaults.filter(v => !v.comingSoon && v.status === "active");
 
   const stakedBalance = onChainStakeInfo?.amount 
     ? parseFloat(ethers.formatEther(onChainStakeInfo.amount)) 
@@ -306,6 +317,20 @@ export default function Staking() {
             data-testid="logo-staking-header"
           />
           SHIELD Staking
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                aria-label="Learn about SHIELD token"
+              >
+                <HelpCircle className="h-5 w-5" />
+              </button>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p>{TOOLTIP_CONTENT.shield.token}</p>
+            </TooltipContent>
+          </Tooltip>
         </h1>
         <p className="text-muted-foreground text-lg">
           Stake SHIELD tokens to boost your shXRP APY rewards
@@ -388,6 +413,194 @@ export default function Staking() {
           </CardContent>
         </Card>
       )}
+
+      <Card className="mb-8 backdrop-blur-md bg-card/95 border-2" data-testid="card-boost-impact">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <Zap className="h-5 w-5 text-primary" />
+            <CardTitle>Boost Impact Preview</CardTitle>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Learn about boost effect"
+                  data-testid="tooltip-shield-boost"
+                >
+                  <HelpCircle className="h-4 w-4" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>{TOOLTIP_CONTENT.shield.boostEffect}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+          <CardDescription>
+            See how your SHIELD stake boosts APY across all vaults
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current Boost</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Learn about boost formula"
+                      data-testid="tooltip-boost-formula"
+                    >
+                      <HelpCircle className="h-3 w-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>{TOOLTIP_CONTENT.shield.boostFormula}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-2xl font-bold text-primary font-mono tabular-nums">
+                +{boostPercentage.toFixed(1)}%
+              </p>
+            </div>
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">Example Calculation</p>
+              <div className="flex items-center gap-2" data-testid="text-boost-example">
+                <span className="text-lg font-semibold font-mono tabular-nums">8%</span>
+                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                <span className="text-lg font-semibold font-mono tabular-nums text-chart-2">
+                  {(8 * (1 + boostPercentage / 100)).toFixed(1)}%
+                </span>
+                {boostPercentage > 0 && (
+                  <Badge variant="outline" className="text-chart-2 border-chart-2/50 ml-1">
+                    +{((boostPercentage / 100) * 100).toFixed(0)}%
+                  </Badge>
+                )}
+              </div>
+            </div>
+            <div className="p-4 rounded-lg bg-muted/50 border">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Max Boost</span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label="Learn about maximum boost"
+                    >
+                      <HelpCircle className="h-3 w-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    <p>{TOOLTIP_CONTENT.shield.maxBoost}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+              <p className="text-2xl font-bold text-muted-foreground font-mono tabular-nums">
+                50%
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <div className="flex items-center gap-2 mb-3">
+              <h4 className="font-semibold text-sm">Vault Yield Preview</h4>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground transition-colors"
+                    aria-label="Learn about SHIELD staking"
+                  >
+                    <HelpCircle className="h-3.5 w-3.5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p>{TOOLTIP_CONTENT.shield.staking}</p>
+                </TooltipContent>
+              </Tooltip>
+            </div>
+            
+            {vaultsLoading ? (
+              <div className="space-y-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : activeVaults.length > 0 ? (
+              <div className="rounded-lg border overflow-hidden">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="w-[40%]">Vault</TableHead>
+                      <TableHead className="text-right">Base APY</TableHead>
+                      <TableHead className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          Boosted APY
+                          {boostPercentage > 0 && (
+                            <Badge variant="default" className="bg-chart-2 text-chart-2-foreground border-transparent text-[10px] px-1 py-0">
+                              +{boostPercentage.toFixed(0)}%
+                            </Badge>
+                          )}
+                        </div>
+                      </TableHead>
+                      <TableHead className="text-right hidden sm:table-cell">Extra Yield</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {activeVaults.map((vault) => {
+                      const baseApy = parseFloat(vault.apy);
+                      const boostedApy = baseApy * (1 + boostPercentage / 100);
+                      const extraYield = boostedApy - baseApy;
+                      return (
+                        <TableRow key={vault.id} data-testid={`row-vault-${vault.id}`}>
+                          <TableCell className="font-medium">
+                            <div className="flex items-center gap-2">
+                              <Coins className="h-4 w-4 text-muted-foreground" />
+                              {vault.name}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums">
+                            {baseApy.toFixed(1)}%
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums">
+                            <span className={boostPercentage > 0 ? "text-chart-2 font-semibold" : ""}>
+                              {boostedApy.toFixed(1)}%
+                            </span>
+                          </TableCell>
+                          <TableCell className="text-right font-mono tabular-nums hidden sm:table-cell">
+                            {boostPercentage > 0 ? (
+                              <span className="text-chart-2">+{extraYield.toFixed(2)}%</span>
+                            ) : (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            ) : (
+              <div className="text-center py-6 text-muted-foreground">
+                <p>No active vaults available</p>
+              </div>
+            )}
+
+            {boostPercentage > 0 && activeVaults.length > 0 && (
+              <div className="mt-4 p-3 rounded-lg bg-chart-2/10 border border-chart-2/20">
+                <div className="flex items-center gap-2">
+                  <Zap className="h-4 w-4 text-chart-2" />
+                  <span className="text-sm font-medium">
+                    Your +{boostPercentage.toFixed(1)}% boost applies to all {activeVaults.length} vaults simultaneously
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <Card className="backdrop-blur-md bg-card/95 border-2">

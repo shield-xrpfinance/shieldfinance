@@ -9,10 +9,11 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { ArrowUpRight, Lock, ExternalLink } from "lucide-react";
+import { ArrowUpRight, Lock, ExternalLink, Zap } from "lucide-react";
 import { MultiAssetIcon } from "@/components/AssetIcon";
 import type { Escrow } from "@shared/schema";
 import { formatDistanceToNow } from "date-fns";
+import { getTooltipContent } from "@/lib/tooltipCopy";
 
 interface Position {
   id: string;
@@ -29,6 +30,7 @@ interface PortfolioTableProps {
   positions: Position[];
   escrows?: Escrow[];
   network?: string;
+  boostPercentage?: number;
   onWithdraw: (id: string) => void;
   onClaim: (id: string) => void;
 }
@@ -77,9 +79,15 @@ export default function PortfolioTable({
   positions,
   escrows = [],
   network = "mainnet",
+  boostPercentage = 0,
   onWithdraw,
   onClaim,
 }: PortfolioTableProps) {
+  const calculateBoostedApy = (baseApy: string) => {
+    const base = parseFloat(baseApy) || 0;
+    const boostDelta = base * (boostPercentage / 100);
+    return (base + boostDelta).toFixed(1);
+  };
   const getPositionEscrow = (positionId: string): Escrow | undefined => {
     return escrows.find((escrow) => escrow.positionId === positionId);
   };
@@ -299,7 +307,48 @@ export default function PortfolioTable({
                     )}
                   </TableCell>
                   <TableCell className="text-right">
-                    <Badge variant="secondary">{position.apy}%</Badge>
+                    {boostPercentage > 0 ? (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div className="inline-flex flex-col items-end gap-0.5">
+                            <Badge variant="secondary" className="bg-primary/10 border-primary/20" data-testid={`badge-boosted-apy-${position.id}`}>
+                              <Zap className="h-3 w-3 mr-1 text-primary" />
+                              {calculateBoostedApy(position.apy)}%
+                            </Badge>
+                            <span className="text-xs text-muted-foreground" data-testid={`text-base-apy-${position.id}`}>
+                              Base: {position.apy}%
+                            </span>
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="max-w-xs">
+                          <div className="space-y-1.5">
+                            <div className="flex items-center gap-1.5 font-semibold text-sm">
+                              <Zap className="h-4 w-4 text-primary" />
+                              SHIELD Boost Active
+                            </div>
+                            <div className="text-xs space-y-1">
+                              <div className="flex justify-between gap-4">
+                                <span className="text-muted-foreground">Base APY:</span>
+                                <span className="font-mono">{position.apy}%</span>
+                              </div>
+                              <div className="flex justify-between gap-4">
+                                <span className="text-muted-foreground">Boost:</span>
+                                <span className="font-mono text-primary">+{boostPercentage}%</span>
+                              </div>
+                              <div className="flex justify-between gap-4 border-t pt-1">
+                                <span className="text-muted-foreground font-medium">Effective APY:</span>
+                                <span className="font-mono font-medium">{calculateBoostedApy(position.apy)}%</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-muted-foreground pt-1">
+                              {getTooltipContent("apy", "formula")}
+                            </p>
+                          </div>
+                        </TooltipContent>
+                      </Tooltip>
+                    ) : (
+                      <Badge variant="secondary" data-testid={`badge-apy-${position.id}`}>{position.apy}%</Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
@@ -350,7 +399,30 @@ export default function PortfolioTable({
                       <p className="text-xs text-muted-foreground">{position.depositDate}</p>
                     </div>
                   </div>
-                  <Badge variant="secondary" className="shrink-0">{position.apy}%</Badge>
+                  {boostPercentage > 0 ? (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Badge variant="secondary" className="shrink-0 bg-primary/10 border-primary/20" data-testid={`badge-boosted-apy-mobile-${position.id}`}>
+                          <Zap className="h-3 w-3 mr-1 text-primary" />
+                          {calculateBoostedApy(position.apy)}%
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <div className="text-xs space-y-1">
+                          <div className="flex justify-between gap-4">
+                            <span>Base APY:</span>
+                            <span className="font-mono">{position.apy}%</span>
+                          </div>
+                          <div className="flex justify-between gap-4">
+                            <span>SHIELD Boost:</span>
+                            <span className="font-mono text-primary">+{boostPercentage}%</span>
+                          </div>
+                        </div>
+                      </TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <Badge variant="secondary" className="shrink-0" data-testid={`badge-apy-mobile-${position.id}`}>{position.apy}%</Badge>
+                  )}
                 </div>
 
                 {/* Amount info */}

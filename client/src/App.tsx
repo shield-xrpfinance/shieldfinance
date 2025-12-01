@@ -9,6 +9,7 @@ import { AppSidebar } from "@/components/AppSidebar";
 import { TestnetBanner } from "@/components/TestnetBanner";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { ControlCenter } from "@/components/ControlCenter";
+import { NotificationCenter } from "@/components/dashboard/NotificationCenter";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import { CurrencyProvider } from "@/lib/currencyContext";
@@ -77,8 +78,9 @@ function Header({ onConnectWallet }: HeaderProps) {
         )}
       </div>
 
-      {/* Right side - Control Center for all screen sizes */}
+      {/* Right side - Notifications and Control Center for all screen sizes */}
       <div className="flex items-center gap-2">
+        <NotificationCenter />
         <ControlCenter onConnectWallet={onConnectWallet} />
       </div>
     </header>

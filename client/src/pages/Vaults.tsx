@@ -18,11 +18,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Loader2, Coins, Building2, Landmark } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { Search, Loader2, Coins, Building2, Landmark, Zap, HelpCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
+import { useUserDashboard } from "@/hooks/useUserDashboard";
+import { getTooltipContent } from "@/lib/tooltipCopy";
 import UniversalProvider from "@walletconnect/universal-provider";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useLocation } from "wouter";
@@ -49,6 +52,17 @@ export default function Vaults() {
   const { address, evmAddress, provider, walletType, isConnected, walletConnectProvider, requestPayment } = useWallet();
   const { network, isTestnet, ecosystem } = useNetwork();
   const [, setLocation] = useLocation();
+  
+  // Get user dashboard data for boost percentage
+  const walletAddress = address || evmAddress;
+  const { data: dashboardData } = useUserDashboard({
+    walletAddress,
+    enabled: !!walletAddress,
+    refetchInterval: 60000,
+  });
+  
+  const boostPercentage = dashboardData?.summary?.boostPercentage || 0;
+  const hasActiveBoost = boostPercentage > 0;
 
   const { data: apiVaults, isLoading } = useQuery<VaultType[]>({
     queryKey: ["/api/vaults"],
@@ -855,7 +869,13 @@ export default function Vaults() {
             {filteredVaults
               .filter((vault) => !vault.comingSoon)
               .map((vault) => (
-                <VaultListItem key={vault.id} {...vault} onDeposit={handleDeposit} />
+                <VaultListItem 
+                  key={vault.id} 
+                  {...vault} 
+                  boostPercentage={boostPercentage}
+                  hasActiveBoost={hasActiveBoost}
+                  onDeposit={handleDeposit} 
+                />
               ))}
           </div>
         </div>
@@ -873,7 +893,13 @@ export default function Vaults() {
               {filteredVaults
                 .filter((vault) => vault.comingSoon)
                 .map((vault) => (
-                  <VaultListItem key={vault.id} {...vault} onDeposit={handleDeposit} />
+                  <VaultListItem 
+                    key={vault.id} 
+                    {...vault} 
+                    boostPercentage={boostPercentage}
+                    hasActiveBoost={hasActiveBoost}
+                    onDeposit={handleDeposit} 
+                  />
                 ))}
             </div>
           </CollapsibleSection>
