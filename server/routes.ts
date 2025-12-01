@@ -1955,6 +1955,7 @@ export async function registerRoutes(
       const claimedRewards = position.rewards;
       
       // Create transaction record for claim with real or mock txHash
+      const claimTxHash = txHash || `claim-${Date.now()}-${Math.random().toString(36).substring(7)}`;
       await storage.createTransaction({
         walletAddress: position.walletAddress,
         vaultId: position.vaultId,
@@ -1963,9 +1964,24 @@ export async function registerRoutes(
         amount: "0",
         rewards: claimedRewards,
         status: "completed",
-        txHash: txHash || `claim-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        txHash: claimTxHash,
         network: network,
       });
+
+      // Get vault info for notification
+      const vault = await storage.getVault(position.vaultId);
+      const rewardAmount = parseFloat(claimedRewards);
+      
+      // Send notification for successful reward claim
+      await sendNotification(
+        position.walletAddress,
+        "reward",
+        "Rewards Claimed",
+        `You've claimed ${rewardAmount.toFixed(4)} ${vault?.asset || 'XRP'} in rewards from your ${vault?.name || 'vault'} position.`,
+        { rewardAmount, vaultId: position.vaultId, positionId: position.id },
+        claimTxHash,
+        position.vaultId
+      );
       
       // In a real implementation, we'd update the position
       // For now, just return the claimed amount

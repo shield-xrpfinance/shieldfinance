@@ -900,15 +900,49 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateBridge(id: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void> {
+    const bridge = await this.getBridgeById(id);
+    const previousStatus = bridge?.status;
+    
     await db.update(xrpToFxrpBridges)
       .set(updates)
       .where(eq(xrpToFxrpBridges.id, id));
+
+    if (updates.status === "vault_minted" && previousStatus !== "vault_minted" && bridge) {
+      const xrpAmount = parseFloat(bridge.xrpAmount);
+      await this.createUserNotification({
+        walletAddress: bridge.walletAddress,
+        type: "deposit",
+        title: "Deposit Complete",
+        message: `Your deposit of ${xrpAmount.toFixed(2)} XRP has been completed. Vault shares have been minted to your wallet.`,
+        metadata: { xrpAmount, bridgeId: id, vaultId: bridge.vaultId },
+        relatedTxHash: bridge.vaultMintTxHash || updates.vaultMintTxHash || undefined,
+        relatedVaultId: bridge.vaultId,
+        read: false,
+      });
+    }
   }
 
   async updateBridgeStatus(id: string, status: string, updates: Partial<SelectXrpToFxrpBridge>): Promise<void> {
+    const bridge = await this.getBridgeById(id);
+    const previousStatus = bridge?.status;
+    
     await db.update(xrpToFxrpBridges)
       .set({ status: status as any, ...updates, completedAt: status === 'completed' ? new Date() : undefined })
       .where(eq(xrpToFxrpBridges.id, id));
+
+    if (status === "vault_minted" && previousStatus !== "vault_minted" && bridge) {
+      const xrpAmount = parseFloat(bridge.xrpAmount);
+      await this.createUserNotification({
+        walletAddress: bridge.walletAddress,
+        type: "deposit",
+        title: "Deposit Complete",
+        message: `Your deposit of ${xrpAmount.toFixed(2)} XRP has been completed. Vault shares have been minted to your wallet.`,
+        metadata: { xrpAmount, bridgeId: id, vaultId: bridge.vaultId },
+        relatedTxHash: bridge.vaultMintTxHash || updates.vaultMintTxHash || undefined,
+        relatedVaultId: bridge.vaultId,
+        read: false,
+      });
+    }
   }
 
   async createRedemption(redemption: InsertFxrpToXrpRedemption): Promise<SelectFxrpToXrpRedemption> {
@@ -928,15 +962,57 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateRedemption(id: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void> {
+    const redemption = await this.getRedemptionById(id);
+    const previousUserStatus = redemption?.userStatus;
+    
     await db.update(fxrpToXrpRedemptions)
       .set(updates)
       .where(eq(fxrpToXrpRedemptions.id, id));
+
+    if (updates.userStatus === "completed" && previousUserStatus !== "completed" && redemption) {
+      const xrpAmountStr = updates.xrpSent || redemption.xrpSent || updates.fxrpRedeemed || redemption.fxrpRedeemed || redemption.shareAmount;
+      const xrpAmount = xrpAmountStr ? parseFloat(xrpAmountStr) : 0;
+      const txHash = updates.xrplPayoutTxHash || redemption.xrplPayoutTxHash;
+      
+      if (!isNaN(xrpAmount) && xrpAmount > 0) {
+        await this.createUserNotification({
+          walletAddress: redemption.walletAddress,
+          type: "withdrawal",
+          title: "Withdrawal Complete",
+          message: `Your withdrawal of ${xrpAmount.toFixed(2)} XRP has been completed and sent to your XRPL wallet.`,
+          metadata: { xrpAmount, redemptionId: id },
+          relatedTxHash: txHash || undefined,
+          read: false,
+        });
+      }
+    }
   }
 
   async updateRedemptionStatus(id: string, status: string, updates: Partial<SelectFxrpToXrpRedemption>): Promise<void> {
+    const redemption = await this.getRedemptionById(id);
+    const previousUserStatus = redemption?.userStatus;
+    
     await db.update(fxrpToXrpRedemptions)
       .set({ status: status as any, ...updates, completedAt: status === 'completed' ? new Date() : undefined })
       .where(eq(fxrpToXrpRedemptions.id, id));
+
+    if (updates.userStatus === "completed" && previousUserStatus !== "completed" && redemption) {
+      const xrpAmountStr = updates.xrpSent || redemption.xrpSent || updates.fxrpRedeemed || redemption.fxrpRedeemed || redemption.shareAmount;
+      const xrpAmount = xrpAmountStr ? parseFloat(xrpAmountStr) : 0;
+      const txHash = updates.xrplPayoutTxHash || redemption.xrplPayoutTxHash;
+      
+      if (!isNaN(xrpAmount) && xrpAmount > 0) {
+        await this.createUserNotification({
+          walletAddress: redemption.walletAddress,
+          type: "withdrawal",
+          title: "Withdrawal Complete",
+          message: `Your withdrawal of ${xrpAmount.toFixed(2)} XRP has been completed and sent to your XRPL wallet.`,
+          metadata: { xrpAmount, redemptionId: id },
+          relatedTxHash: txHash || undefined,
+          read: false,
+        });
+      }
+    }
   }
 
   async getAllPendingRedemptions(): Promise<SelectFxrpToXrpRedemption[]> {
