@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPositionSchema } from "@shared/schema";
+import { insertPositionSchema, type NotificationType } from "@shared/schema";
 import { XummSdk } from "xumm-sdk";
 import { Client } from "xrpl";
 import type { BridgeService } from "./services/BridgeService";
@@ -28,6 +28,31 @@ import { generateFDCProof } from "./utils/fdc-proof";
 import { globalRateLimiter, strictRateLimiter } from "./middleware/rateLimiter";
 import { analyticsService } from "./services/AnalyticsService";
 import { yieldOptimizerService } from "./services/YieldOptimizerService";
+
+async function sendNotification(
+  walletAddress: string,
+  type: NotificationType,
+  title: string,
+  message: string,
+  metadata?: Record<string, unknown>,
+  relatedTxHash?: string,
+  relatedVaultId?: string
+): Promise<void> {
+  try {
+    await storage.createUserNotification({
+      walletAddress,
+      type,
+      title,
+      message,
+      metadata: metadata || {},
+      relatedTxHash,
+      relatedVaultId,
+      read: false,
+    });
+  } catch (error) {
+    console.error("Failed to send notification:", error);
+  }
+}
 
 /**
  * Admin authentication middleware for operational endpoints
@@ -4249,6 +4274,19 @@ export async function registerRoutes(
       
       // Generate mock txHash for MVP
       const mockTxHash = `0x${Math.random().toString(16).substring(2, 66)}`;
+
+      // Calculate boost percentage for notification
+      const newBoostPercentage = Math.floor(amountNum / 100);
+      
+      // Send notification for successful stake
+      await sendNotification(
+        address,
+        "boost",
+        "SHIELD Staked",
+        `You've staked ${amountNum.toFixed(2)} SHIELD. Your APY boost is now +${newBoostPercentage}%.`,
+        { shieldAmount: amountNum.toFixed(2), boostPercentage: newBoostPercentage, action: "staked" },
+        mockTxHash
+      );
       
       res.json({
         success: true,
@@ -4311,6 +4349,20 @@ export async function registerRoutes(
       
       // Update database
       await storage.recordUnstake(address, amountWei);
+
+      // Calculate new boost percentage after unstaking
+      const currentAmount = parseFloat(stakeInfo.amount) / 1e18;
+      const newAmount = Math.max(0, currentAmount - amountNum);
+      const newBoostPercentage = Math.floor(newAmount / 100);
+      
+      // Send notification for successful unstake
+      await sendNotification(
+        address,
+        "boost",
+        "SHIELD Unstaked",
+        `You've unstaked ${amountNum.toFixed(2)} SHIELD. Your APY boost is now +${newBoostPercentage}%.`,
+        { shieldAmount: amountNum.toFixed(2), boostPercentage: newBoostPercentage, action: "unstaked" }
+      );
       
       res.json({
         success: true
