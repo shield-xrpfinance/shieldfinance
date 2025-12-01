@@ -102,6 +102,30 @@ docs/
 
 ---
 
+## Dashboard Features
+
+### Dashboard Enhancements (v2.2.0)
+**Purpose**: Real-time portfolio analytics and notification system  
+**Components**:
+- **PortfolioSummaryCard**: Total assets, staked amounts, rewards, SHIELD boost contribution
+- **PortfolioPerformanceChart**: Historical visualization with 7D/30D/90D selectors
+- **BoostImpactBanner**: Base vs boosted APY comparison with delta indicator
+- **NotificationCenter**: Persistent bell icon with categorized notifications
+
+**API Endpoints**:
+- `GET /api/user/dashboard-summary` - Aggregated portfolio data
+- `GET /api/user/portfolio-history` - Historical snapshots
+- `GET /api/user/notifications` - Paginated notifications
+- `PATCH /api/user/notifications/:id/read` - Mark as read
+
+**Notification Triggers**:
+- Deposit completion (vault_minted status)
+- Withdrawal completion (userStatus = completed)
+- Staking operations (stake/unstake SHIELD)
+- Reward claims
+
+---
+
 ## Integration Documentation
 
 ### [FASSETS_INTEGRATION_GUIDE.md](integration/FASSETS_INTEGRATION_GUIDE.md)
@@ -263,4 +287,4 @@ Archived diagnostic scripts are in `/scripts/archive`.
 
 ---
 
-Last Updated: November 30, 2025
+Last Updated: December 1, 2025

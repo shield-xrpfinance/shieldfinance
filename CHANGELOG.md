@@ -2,6 +2,112 @@
 
 All notable changes to the XRP Liquid Staking Protocol Dashboard will be documented in this file.
 
+## [2.2.0] - 2025-12-01
+
+### Dashboard Enhancements - Real-Time Portfolio Analytics & Notifications
+
+Comprehensive dashboard upgrade providing users with real-time portfolio insights, SHIELD boost visibility, and automated notifications across their entire DeFi journey.
+
+#### New Components
+
+**PortfolioSummaryCard** (`client/src/components/dashboard/PortfolioSummaryCard.tsx`)
+- Real-time display of total assets, staked amounts, pending rewards, and SHIELD boost contribution
+- USD value calculations using live price feeds
+- Skeleton loading states during data fetching
+- Responsive card layout with data-testid attributes
+
+**PortfolioPerformanceChart** (`client/src/components/dashboard/PortfolioPerformanceChart.tsx`)
+- Historical performance visualization using Recharts
+- Time range selectors: 7D, 30D, 90D views
+- Trend indicators showing portfolio growth
+- Responsive chart with proper dark mode support
+
+**BoostImpactBanner** (`client/src/components/dashboard/BoostImpactBanner.tsx`)
+- Side-by-side comparison of base APY vs boosted APY
+- Visual delta indicator showing boost benefit
+- SHIELD staking call-to-action for non-stakers
+- Boost calculation: +1% APY per 100 SHIELD staked (max 50%)
+
+**NotificationCenter** (`client/src/components/dashboard/NotificationCenter.tsx`)
+- Persistent bell icon in header with unread count badge
+- Popover panel displaying recent notifications
+- Mark as read functionality (individual and batch)
+- Categorized notifications: deposits, withdrawals, rewards, staking
+
+#### Backend Infrastructure
+
+**API Endpoints**
+- `GET /api/user/dashboard-summary` - Aggregated portfolio data with boost calculations
+- `GET /api/user/portfolio-history` - Historical snapshots for charts
+- `GET /api/user/notifications` - Paginated notification retrieval
+- `PATCH /api/user/notifications/:id/read` - Mark notification as read
+- `POST /api/user/notifications/mark-all-read` - Batch mark as read
+
+**Database Schema Updates** (`shared/schema.ts`)
+- Added `dashboardSnapshots` table for historical data
+- Added `userNotifications` table with types: deposit, withdrawal, reward, staking, system
+- Insert/select schemas with Zod validation
+
+**Notification Triggers** (`server/routes.ts`, `server/storage.ts`)
+- Deposit completion: Triggered when bridge status reaches `vault_minted`
+- Withdrawal completion: Triggered when redemption `userStatus` becomes `completed`
+- Staking operations: Triggered on stake/unstake SHIELD actions
+- Reward claims: Triggered when user claims vault rewards
+
+#### Frontend Hooks
+
+- `useUserDashboard` - Dashboard summary with health-aware polling
+- `usePortfolioHistory` - Historical data with time range state
+- `useNotifications` - Notification management with mutations
+
+#### Page Integrations
+
+**Dashboard Page**
+- Integrated PortfolioSummaryCard, PortfolioPerformanceChart, BoostImpactBanner
+- Grid layout optimized for dashboard overview
+
+**Vaults Page**
+- Added SHIELD boost indicators per vault
+- APY displays showing base vs boosted rates
+- Interactive tooltips explaining vault mechanics
+
+**Portfolio Page**
+- SHIELD boost delta per position
+- Reward explanations with tooltips
+- Fee breakdowns with educational content
+
+**Staking Page**
+- Boost effect preview showing impact on vault yields
+- Before/after APY comparison table
+- SHIELD boost calculation visualization
+
+#### Interactive Tooltips
+
+Expanded `client/src/lib/tooltipCopy.ts` with comprehensive explanations for:
+- Fee structures (deposit, withdrawal, performance)
+- Reward mechanics (base yield, boost rewards, compounding)
+- SHIELD boost formula and maximum values
+- Risk tier explanations
+- Lock period details
+
+#### Technical Details
+
+| Feature | Implementation |
+|---------|---------------|
+| Polling Interval | 30 seconds for dashboard, 10 seconds for notifications |
+| Boost Formula | +1% APY per 100 SHIELD staked, max 50% boost |
+| Notification Types | deposit, withdrawal, reward, staking, system |
+| Time Ranges | 7D, 30D, 90D for performance charts |
+| Price Feeds | XRP, FXRP, SHIELD, FLR via PriceService |
+
+#### Bug Fixes
+
+- Fixed withdrawal notification NaN issue by prioritizing `updates.xrpSent` over stale record values
+- Added guards against zero/NaN amounts in notification messages
+- Prevented duplicate notifications with status-change checks
+
+---
+
 ## [2.1.0] - 2025-11-27
 
 ### Stake SHIELD → Boost shXRP Yield Feature Complete

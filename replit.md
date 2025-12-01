@@ -15,6 +15,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **State Management**: React Context API, TanStack Query, React hooks.
 - **Wallet Architecture**: Dual-ecosystem wallet support (`xaman`, `walletconnect` for XRPL, `reown` for EVM) with wallet-type-aware vault filtering.
 - **UX Enhancements**: Multi-step progress modals, deposit cancellation, real-time portfolio updates, consolidated position display with aggregated rewards, and a Shepherd.js-based guided tour.
+- **Dashboard Enhancements**: Real-time vault balances (PortfolioSummaryCard), historical performance charts (PortfolioPerformanceChart), SHIELD boost impact displays (BoostImpactBanner), and persistent notification center (NotificationCenter) with triggers for deposits, withdrawals, staking, and reward claims.
 - **Security**: UAE Geo-Blocking for VARA compliance.
 
 ### Backend
@@ -27,7 +28,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 
 ### Data Storage
 - **Database**: PostgreSQL (Neon serverless) with Drizzle ORM.
-- **Schema**: Comprehensive schema covering vaults, positions, transactions, and various system states.
+- **Schema**: Comprehensive schema covering vaults, positions, transactions, dashboard snapshots, user notifications, and various system states.
 
 ### System Design
 - **Separation of Concerns**: Monorepo structure (`/client`, `/server`, `/shared`).

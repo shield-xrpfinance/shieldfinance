@@ -51,11 +51,16 @@ The platform automatically detects your wallet type and shows compatible vaults.
 - Separate views: Portfolio (positions + alerts), Transactions (history), Bridge Tracking (real-time status)
 
 ### 📊 Dashboard Features
+- **Portfolio Summary**: Real-time display of total assets, staked amounts, pending rewards, and SHIELD boost contribution
+- **Performance Charts**: Historical portfolio visualization with 7D/30D/90D time range selectors
+- **Boost Impact Banner**: Side-by-side comparison of base APY vs boosted APY with SHIELD staking CTA
+- **Notification Center**: Persistent bell icon with unread count, triggers for deposits, withdrawals, staking, and reward claims
 - **Portfolio Page**: Active positions with automatic 5s refresh during withdrawals
 - **Transaction History**: Complete wallet-scoped transaction history (deposits, claims, withdrawals)
 - **Bridge Tracking**: Real-time status of all bridge operations with detailed progress
 - In-flight withdrawal alerts with direct navigation to detailed status
 - Active vault statistics and historical APY trends with charts
+- Interactive tooltips explaining fees, rewards, and vault mechanics
 - Network switching (Mainnet/Testnet)
 
 ### 🔄 Multi-Asset Swap

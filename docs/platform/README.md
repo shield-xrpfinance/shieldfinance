@@ -99,6 +99,8 @@ See [Database Schema](database.md) for detailed table structures.
 - `positions` - User positions
 - `transactions` - Transaction history
 - `vault_metrics_daily` - Historical analytics
+- `dashboard_snapshots` - Portfolio history for charts
+- `user_notifications` - Notification storage with read status
 
 ## Security Architecture
 
@@ -134,6 +136,44 @@ See [Database Schema](database.md) for detailed table structures.
 - Environment variable management
 - Health checks and monitoring
 
+## Dashboard Enhancements Architecture
+
+### Component Structure
+```
+client/src/components/dashboard/
+├── PortfolioSummaryCard.tsx   # Real-time vault balances
+├── PortfolioPerformanceChart.tsx  # Historical charts
+├── BoostImpactBanner.tsx      # SHIELD boost visualization
+└── NotificationCenter.tsx     # Persistent notifications
+```
+
+### Data Flow
+```
+Wallet Connect → useUserDashboard Hook → Dashboard Summary API
+                      ↓
+              TanStack Query Cache
+                      ↓
+              UI Components (30s polling)
+```
+
+### Notification System
+```
+Event Trigger (Deposit/Withdrawal/Stake/Claim)
+         ↓
+    Storage Layer (createUserNotification)
+         ↓
+    PostgreSQL (user_notifications table)
+         ↓
+    useNotifications Hook (10s polling)
+         ↓
+    NotificationCenter UI
+```
+
+### Key Hooks
+- **useUserDashboard**: Aggregated portfolio data with health-aware polling
+- **usePortfolioHistory**: Historical snapshots with time range state
+- **useNotifications**: CRUD operations with unread count tracking
+
 ## Performance Optimizations
 
 ### Frontend
@@ -142,6 +182,7 @@ See [Database Schema](database.md) for detailed table structures.
 - Optimistic updates
 - Debounced search and filters
 - Image optimization
+- Dashboard polling with stale-while-revalidate
 
 ### Backend
 - Database connection pooling
