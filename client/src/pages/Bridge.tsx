@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowRightLeft, 
   Loader2, 
@@ -16,8 +17,11 @@ import {
   ArrowRight, 
   AlertCircle,
   CheckCircle2,
-  Wallet
+  Wallet,
+  Globe,
+  Zap
 } from "lucide-react";
+import { FSwapWidget } from "@/components/FSwapWidget";
 import { useWallet } from "@/lib/walletContext";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -571,6 +575,14 @@ export default function Bridge() {
     );
   }
 
+  const handleFSwapComplete = (params: { txHash: string }) => {
+    toast({
+      title: "Bridge Complete",
+      description: `Transaction hash: ${params.txHash.substring(0, 10)}...`,
+    });
+    queryClient.invalidateQueries({ queryKey: ["/api/user/notifications"] });
+  };
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
@@ -578,152 +590,188 @@ export default function Bridge() {
         <p className="text-muted-foreground mt-1">Transfer assets across multiple chains</p>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Networks</CardTitle>
-          <CardDescription>Choose source and destination chains</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr,auto,1fr] gap-4 items-end">
-            <ChainSelector
-              label="From"
-              value={sourceNetwork}
-              onChange={setSourceNetwork}
-              networks={networks}
-              excludeNetwork={destNetwork}
-              testId="select-source-network"
-            />
-            
+      <Tabs defaultValue="multichain" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="multichain" className="flex items-center gap-2" data-testid="tab-multichain">
+            <Globe className="w-4 h-4" />
+            Multi-Chain
+          </TabsTrigger>
+          <TabsTrigger value="fassets" className="flex items-center gap-2" data-testid="tab-fassets">
+            <Zap className="w-4 h-4" />
+            XRP ↔ Flare
+          </TabsTrigger>
+        </TabsList>
+        
+        <TabsContent value="multichain" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="w-5 h-5" />
+                FSwap Multi-Chain Bridge
+              </CardTitle>
+              <CardDescription>
+                Bridge assets between XRPL, Flare, Ethereum, Base, Arbitrum, and more via Luminite
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <FSwapWidget 
+                sourceChainId="xrpl"
+                destChainId="flare"
+                onSwapComplete={handleFSwapComplete}
+              />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="fassets" className="mt-6 space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Networks</CardTitle>
+              <CardDescription>Choose source and destination chains</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-[1fr,auto,1fr] gap-4 items-end">
+                <ChainSelector
+                  label="From"
+                  value={sourceNetwork}
+                  onChange={setSourceNetwork}
+                  networks={networks}
+                  excludeNetwork={destNetwork}
+                  testId="select-source-network"
+                />
+                
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={swapNetworks}
+                  className="self-center mt-6 md:mt-0"
+                  data-testid="button-swap-networks"
+                >
+                  <ArrowRightLeft className="w-5 h-5" />
+                </Button>
+                
+                <ChainSelector
+                  label="To"
+                  value={destNetwork}
+                  onChange={setDestNetwork}
+                  networks={networks}
+                  excludeNetwork={sourceNetwork}
+                  testId="select-dest-network"
+                />
+              </div>
+
+              {routeConfig && (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <CheckCircle2 className="w-4 h-4 text-green-500" />
+                  <span>Route available via {routeConfig.protocols.join(", ")}</span>
+                </div>
+              )}
+
+              {sourceNetwork && destNetwork && !routeConfig && (
+                <div className="flex items-center gap-2 text-sm text-destructive">
+                  <AlertCircle className="w-4 h-4" />
+                  <span>No direct route available between these networks</span>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Select Token & Amount</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <TokenSelector
+                label="Token"
+                value={sourceToken}
+                onChange={setSourceToken}
+                tokens={availableTokens}
+                testId="select-token"
+              />
+
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-sm font-medium text-muted-foreground">Amount</Label>
+                  <span className="text-xs text-muted-foreground" data-testid="text-balance">
+                    Balance: 0.00 {sourceToken || "---"}
+                  </span>
+                </div>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="pr-20 font-mono"
+                    data-testid="input-amount"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="absolute right-1 top-1/2 -translate-y-1/2 h-7 text-xs"
+                    onClick={() => setAmount("100")}
+                    data-testid="button-max-amount"
+                  >
+                    MAX
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Route Preview</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <RoutePreview route={previewRoute} isLoading={quoteMutation.isPending} />
+            </CardContent>
+          </Card>
+
+          <FeeBreakdown quote={quote} isLoading={quoteMutation.isPending} />
+
+          <div className="flex flex-col sm:flex-row gap-4">
             <Button
-              variant="ghost"
-              size="icon"
-              onClick={swapNetworks}
-              className="self-center mt-6 md:mt-0"
-              data-testid="button-swap-networks"
+              variant="outline"
+              className="flex-1"
+              onClick={() => quoteMutation.mutate()}
+              disabled={!canGetQuote || quoteMutation.isPending}
+              data-testid="button-get-quote"
             >
-              <ArrowRightLeft className="w-5 h-5" />
+              {quoteMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Getting Quote...
+                </>
+              ) : (
+                "Get Quote"
+              )}
             </Button>
             
-            <ChainSelector
-              label="To"
-              value={destNetwork}
-              onChange={setDestNetwork}
-              networks={networks}
-              excludeNetwork={sourceNetwork}
-              testId="select-dest-network"
-            />
+            <Button
+              className="flex-1"
+              onClick={() => initiateMutation.mutate()}
+              disabled={!canExecute}
+              data-testid="button-execute-bridge"
+            >
+              {initiateMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Initiating...
+                </>
+              ) : (
+                "Execute Bridge"
+              )}
+            </Button>
           </div>
 
-          {routeConfig && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground">
-              <CheckCircle2 className="w-4 h-4 text-green-500" />
-              <span>Route available via {routeConfig.protocols.join(", ")}</span>
+          {quote && (
+            <div className="text-center text-xs text-muted-foreground">
+              Quote valid for 60 seconds. Rates may vary at execution time.
             </div>
           )}
-
-          {sourceNetwork && destNetwork && !routeConfig && (
-            <div className="flex items-center gap-2 text-sm text-destructive">
-              <AlertCircle className="w-4 h-4" />
-              <span>No direct route available between these networks</span>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Select Token & Amount</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <TokenSelector
-            label="Token"
-            value={sourceToken}
-            onChange={setSourceToken}
-            tokens={availableTokens}
-            testId="select-token"
-          />
-
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <Label className="text-sm font-medium text-muted-foreground">Amount</Label>
-              <span className="text-xs text-muted-foreground" data-testid="text-balance">
-                Balance: 0.00 {sourceToken || "---"}
-              </span>
-            </div>
-            <div className="relative">
-              <Input
-                type="text"
-                placeholder="0.00"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="pr-20 font-mono"
-                data-testid="input-amount"
-              />
-              <Button
-                variant="ghost"
-                size="sm"
-                className="absolute right-1 top-1/2 -translate-y-1/2 h-7 text-xs"
-                onClick={() => setAmount("100")}
-                data-testid="button-max-amount"
-              >
-                MAX
-              </Button>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-base">Route Preview</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <RoutePreview route={previewRoute} isLoading={quoteMutation.isPending} />
-        </CardContent>
-      </Card>
-
-      <FeeBreakdown quote={quote} isLoading={quoteMutation.isPending} />
-
-      <div className="flex flex-col sm:flex-row gap-4">
-        <Button
-          variant="outline"
-          className="flex-1"
-          onClick={() => quoteMutation.mutate()}
-          disabled={!canGetQuote || quoteMutation.isPending}
-          data-testid="button-get-quote"
-        >
-          {quoteMutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Getting Quote...
-            </>
-          ) : (
-            "Get Quote"
-          )}
-        </Button>
-        
-        <Button
-          className="flex-1"
-          onClick={() => initiateMutation.mutate()}
-          disabled={!canExecute}
-          data-testid="button-execute-bridge"
-        >
-          {initiateMutation.isPending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Initiating...
-            </>
-          ) : (
-            "Execute Bridge"
-          )}
-        </Button>
-      </div>
-
-      {quote && (
-        <div className="text-center text-xs text-muted-foreground">
-          Quote valid for 60 seconds. Rates may vary at execution time.
-        </div>
-      )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
