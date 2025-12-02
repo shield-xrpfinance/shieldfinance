@@ -7,12 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2, History, ArrowDownToLine, ArrowUpFromLine, ExternalLink, Copy } from "lucide-react";
+import { Activity, CheckCircle2, XCircle, Wallet, RefreshCw, Loader2, History, ArrowDownToLine, ArrowUpFromLine, ExternalLink, Copy, ArrowLeftRight } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import BridgeStatusModal from "@/components/BridgeStatusModal";
 import { format } from "date-fns";
-import type { SelectXrpToFxrpBridge, SelectFxrpToXrpRedemption, Vault, BridgeHistoryEntry } from "@shared/schema";
+import type { SelectXrpToFxrpBridge, SelectFxrpToXrpRedemption, Vault, BridgeHistoryEntry, CrossChainBridgeJob } from "@shared/schema";
 import { useBridgeTracking } from "@/hooks/useBridgeTracking";
 import { useIsMobile } from "@/hooks/use-is-mobile";
 import {
@@ -312,11 +312,12 @@ const BridgeSection = ({
 // Reusable History Section Component
 interface HistorySectionProps {
   history: BridgeHistoryEntry[] | undefined;
+  crossChainJobs: CrossChainBridgeJob[] | undefined;
   isLoadingHistory: boolean;
   address: string | null;
 }
 
-const HistorySection = ({ history, isLoadingHistory, address }: HistorySectionProps) => {
+const HistorySection = ({ history, crossChainJobs, isLoadingHistory, address }: HistorySectionProps) => {
   const NotConnectedMessage = () => (
     <Card>
       <CardContent className="flex flex-col items-center justify-center py-12">
@@ -346,8 +347,11 @@ const HistorySection = ({ history, isLoadingHistory, address }: HistorySectionPr
   if (isLoadingHistory) {
     return <LoadingMessage />;
   }
+
+  const hasHistory = history && history.length > 0;
+  const hasCrossChainJobs = crossChainJobs && crossChainJobs.length > 0;
   
-  if (!history || history.length === 0) {
+  if (!hasHistory && !hasCrossChainJobs) {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
@@ -356,7 +360,7 @@ const HistorySection = ({ history, isLoadingHistory, address }: HistorySectionPr
             No bridge history
           </p>
           <p className="text-center text-sm text-muted-foreground mt-2">
-            Your deposits and withdrawals will appear here
+            Your deposits, withdrawals, and cross-chain bridges will appear here
           </p>
         </CardContent>
       </Card>
@@ -365,7 +369,64 @@ const HistorySection = ({ history, isLoadingHistory, address }: HistorySectionPr
   
   return (
     <div className="space-y-3">
-      {history.map((entry) => (
+      {/* Multi-Chain Bridge Jobs (FSwap) */}
+      {crossChainJobs?.map((job) => (
+        <Card key={job.id} data-testid={`card-crosschain-${job.id}`}>
+          <CardContent className="p-4">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex items-start gap-3 flex-1 min-w-0">
+                <div className="mt-0.5">
+                  <ArrowLeftRight className="h-5 w-5 text-purple-500" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <Badge 
+                      variant="outline"
+                      className="border-purple-500 text-purple-600"
+                      data-testid={`badge-type-crosschain-${job.id}`}
+                    >
+                      Multi-Chain
+                    </Badge>
+                    <Badge 
+                      variant={getStatusVariant(job.status)}
+                      data-testid={`badge-status-${job.status}`}
+                    >
+                      {formatStatus(job.status)}
+                    </Badge>
+                  </div>
+                  <p className="text-sm font-medium">
+                    {job.sourceNetwork} → {job.destNetwork}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {job.createdAt && format(new Date(job.createdAt), "MMM d, yyyy 'at' h:mm a")}
+                    {job.completedAt && (
+                      <span className="block mt-1">
+                        Completed: {format(new Date(job.completedAt), "MMM d, h:mm a")}
+                      </span>
+                    )}
+                  </p>
+                  {job.errorMessage && (
+                    <p className="text-sm text-destructive mt-1">
+                      {job.errorMessage}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-col gap-2 sm:items-end">
+                <p className="font-semibold break-all" data-testid={`text-amount-${job.id}`}>
+                  {parseFloat(job.sourceAmount?.toString() || "0").toFixed(6)} {job.sourceToken}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  → {parseFloat(job.destAmountReceived?.toString() || job.destAmount?.toString() || "0").toFixed(6)} {job.destToken}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+
+      {/* FAssets Bridge History */}
+      {history?.map((entry) => (
         <Card key={entry.id} data-testid={`card-history-${entry.id}`}>
           <CardContent className="p-4">
             <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
@@ -487,6 +548,12 @@ export default function BridgeTracking() {
 
   const { data: redemptions = [] } = useQuery<SelectFxrpToXrpRedemption[]>({
     queryKey: [`/api/withdrawals/wallet/${walletAddr}`],
+    enabled: !!walletAddr,
+  });
+
+  // Query for multi-chain bridge jobs (FSwap widget)
+  const { data: crossChainJobs } = useQuery<{ jobs: CrossChainBridgeJob[] }>({
+    queryKey: [`/api/bridge/jobs/${walletAddr}`],
     enabled: !!walletAddr,
   });
 
@@ -729,13 +796,14 @@ export default function BridgeTracking() {
               <History className="h-4 w-4" />
               <span>History</span>
               <Badge variant="secondary" className="ml-auto mr-2">
-                {history?.length || 0}
+                {(history?.length || 0) + (crossChainJobs?.jobs?.length || 0)}
               </Badge>
             </div>
           </AccordionTrigger>
           <AccordionContent>
             <HistorySection
               history={history}
+              crossChainJobs={crossChainJobs?.jobs}
               isLoadingHistory={isLoadingHistory}
               address={address}
             />
@@ -760,7 +828,7 @@ export default function BridgeTracking() {
             </TabsTrigger>
             <TabsTrigger value="history" data-testid="tab-history" className="flex-1 whitespace-nowrap focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
               <History className="h-4 w-4 mr-2" />
-              History ({history?.length || 0})
+              History ({(history?.length || 0) + (crossChainJobs?.jobs?.length || 0)})
             </TabsTrigger>
           </TabsList>
         </div>
@@ -804,6 +872,7 @@ export default function BridgeTracking() {
         <TabsContent value="history" className="mt-6">
           <HistorySection
             history={history}
+            crossChainJobs={crossChainJobs?.jobs}
             isLoadingHistory={isLoadingHistory}
             address={address}
           />

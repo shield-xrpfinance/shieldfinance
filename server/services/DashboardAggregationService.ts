@@ -379,4 +379,68 @@ export class DashboardAggregationService {
       { shieldAmount, boostPercentage: newBoostPercentage, action }
     );
   }
+
+  /**
+   * Create bridge completion notification
+   */
+  async notifyBridgeComplete(
+    walletAddress: string,
+    sourceNetwork: string,
+    destNetwork: string,
+    sourceToken: string,
+    destToken: string,
+    amount: string,
+    txHash?: string
+  ): Promise<void> {
+    const title = "Bridge Complete";
+    const message = `Successfully bridged ${amount} ${sourceToken} from ${sourceNetwork} to ${destNetwork}.`;
+
+    await this.createNotification(
+      walletAddress,
+      "bridge",
+      title,
+      message,
+      { 
+        sourceNetwork, 
+        destNetwork, 
+        sourceToken, 
+        destToken, 
+        amount,
+        provider: "fswap"
+      },
+      txHash
+    );
+  }
+
+  /**
+   * Create bridge failed notification
+   */
+  async notifyBridgeFailed(
+    walletAddress: string,
+    sourceNetwork: string,
+    destNetwork: string,
+    sourceToken: string,
+    errorMessage?: string,
+    txHash?: string
+  ): Promise<void> {
+    const title = "Bridge Failed";
+    const message = errorMessage 
+      ? `Failed to bridge ${sourceToken} from ${sourceNetwork} to ${destNetwork}: ${errorMessage}`
+      : `Failed to bridge ${sourceToken} from ${sourceNetwork} to ${destNetwork}. Please try again.`;
+
+    await this.createNotification(
+      walletAddress,
+      "bridge",
+      title,
+      message,
+      { 
+        sourceNetwork, 
+        destNetwork, 
+        sourceToken, 
+        error: errorMessage,
+        provider: "fswap"
+      },
+      txHash
+    );
+  }
 }

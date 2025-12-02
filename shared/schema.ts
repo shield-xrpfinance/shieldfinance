@@ -783,7 +783,7 @@ export type InsertCrossChainBridgeQuote = z.infer<typeof insertCrossChainBridgeQ
 export type CrossChainBridgeQuote = typeof crossChainBridgeQuotes.$inferSelect;
 
 // Notification type enum for type safety
-export type NotificationType = 'deposit' | 'withdrawal' | 'reward' | 'boost' | 'system' | 'vault_event';
+export type NotificationType = 'deposit' | 'withdrawal' | 'reward' | 'boost' | 'system' | 'vault_event' | 'bridge';
 
 // Dashboard summary response type (for API)
 export interface DashboardSummary {

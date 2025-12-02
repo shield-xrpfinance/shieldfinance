@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Wallet, Globe } from "lucide-react";
 import { FSwapWidget } from "@/components/FSwapWidget";
 import { useWallet } from "@/lib/walletContext";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { BridgeProgressTracker, type BridgeJob } from "@/components/BridgeProgressTracker";
 
 export default function Bridge() {
@@ -60,12 +60,42 @@ export default function Bridge() {
     );
   }
 
+  // Mutation to log FSwap bridge completions
+  const logBridgeMutation = useMutation({
+    mutationFn: async (data: { 
+      walletAddress: string; 
+      txHash: string;
+      sourceNetwork?: string;
+      destNetwork?: string;
+      sourceToken?: string;
+      destToken?: string;
+      amount?: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/bridge/fswap-complete", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bridge/jobs"] });
+    },
+    onError: (error) => {
+      console.error("Failed to log bridge completion:", error);
+    },
+  });
+
   const handleFSwapComplete = (params: { txHash: string }) => {
     toast({
       title: "Bridge Complete",
       description: `Transaction hash: ${params.txHash.substring(0, 10)}...`,
     });
-    queryClient.invalidateQueries({ queryKey: ["/api/user/notifications"] });
+    
+    // Log the bridge completion to backend for notifications and tracking
+    if (walletAddr) {
+      logBridgeMutation.mutate({
+        walletAddress: walletAddr,
+        txHash: params.txHash,
+      });
+    }
   };
 
   return (

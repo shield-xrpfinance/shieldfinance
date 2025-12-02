@@ -17,7 +17,7 @@ import { getPriceService } from "./services/PriceService";
 import { getPositionService } from "./services/PositionService";
 import { WalletBalanceService } from "./services/WalletBalanceService";
 import { db } from "./db";
-import { fxrpToXrpRedemptions, onChainEvents } from "@shared/schema";
+import { fxrpToXrpRedemptions, onChainEvents, crossChainBridgeJobs } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { ethers } from "ethers";
 import fs from "fs";
@@ -6593,6 +6593,82 @@ export async function registerRoutes(
     } catch (error) {
       console.error("[Bridge API] Failed to cancel job:", error);
       res.status(500).json({ error: "Failed to cancel job" });
+    }
+  });
+
+  // FSwap widget completion handler - logs bridge and creates notification
+  app.post("/api/bridge/fswap-complete", async (req, res) => {
+    try {
+      const { 
+        walletAddress, 
+        txHash, 
+        sourceNetwork, 
+        destNetwork, 
+        sourceToken, 
+        destToken, 
+        amount 
+      } = req.body;
+
+      if (!walletAddress || !txHash) {
+        return res.status(400).json({ error: "walletAddress and txHash are required" });
+      }
+
+      console.log(`🌉 [FSwap] Bridge completion reported for wallet ${walletAddress}`);
+      console.log(`   TX: ${txHash}`);
+      console.log(`   Route: ${sourceNetwork || 'unknown'} (${sourceToken || '?'}) -> ${destNetwork || 'unknown'} (${destToken || '?'})`);
+
+      // Create bridge job record for tracking
+      const [insertedJob] = await db.insert(crossChainBridgeJobs).values({
+        walletAddress,
+        sourceNetwork: sourceNetwork || "unknown",
+        sourceToken: sourceToken || "UNKNOWN",
+        sourceAmount: amount || "0",
+        destNetwork: destNetwork || "unknown",
+        destToken: destToken || "UNKNOWN",
+        destAmount: amount || "0",
+        destAmountReceived: amount || "0",
+        recipientAddress: walletAddress, // FSwap handles recipient internally
+        totalLegs: 1,
+        currentLeg: 1,
+        status: "completed",
+        completedAt: new Date(),
+      }).returning({ id: crossChainBridgeJobs.id });
+      
+      const jobId = insertedJob?.id || `fswap-${Date.now()}`;
+
+      // Create notification for the user
+      const srcNet = sourceNetwork || "Source Chain";
+      const dstNet = destNetwork || "Destination Chain";
+      const srcToken = sourceToken || "Token";
+      const dstToken = destToken || "Token";
+      const bridgeAmount = amount || "Unknown amount";
+      
+      await sendNotification(
+        walletAddress,
+        "bridge",
+        "Bridge Complete",
+        `Successfully bridged ${bridgeAmount} ${srcToken} from ${srcNet} to ${dstNet}.`,
+        { 
+          sourceNetwork: srcNet, 
+          destNetwork: dstNet, 
+          sourceToken: srcToken, 
+          destToken: dstToken, 
+          amount: bridgeAmount,
+          provider: "fswap"
+        },
+        txHash
+      );
+
+      console.log(`✅ [FSwap] Bridge logged and notification created for ${walletAddress}`);
+
+      res.json({ 
+        success: true, 
+        jobId,
+        message: "Bridge completion recorded"
+      });
+    } catch (error) {
+      console.error("[FSwap] Failed to log bridge completion:", error);
+      res.status(500).json({ error: "Failed to record bridge completion" });
     }
   });
 
