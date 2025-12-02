@@ -417,6 +417,51 @@ export const userNotifications = pgTable("user_notifications", {
   createdAtIdx: sql`CREATE INDEX IF NOT EXISTS idx_user_notifications_created_at ON ${table} (created_at DESC)`,
 }));
 
+// User settings for preferences and multi-wallet support
+export const userSettings = pgTable("user_settings", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: text("wallet_address").notNull().unique(),
+  theme: text("theme").default("light"),
+  defaultNetwork: text("default_network"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// User wallets for multi-wallet support (EVM + XRPL)
+export const userWallets = pgTable("user_wallets", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  userSettingsId: text("user_settings_id").notNull().references(() => userSettings.id, { onDelete: "cascade" }),
+  walletType: text("wallet_type").notNull(), // "evm" | "xrpl"
+  address: text("address").notNull(),
+  label: text("label"),
+  isPrimary: boolean("is_primary").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  uniqueWalletAddress: unique().on(table.userSettingsId, table.walletType, table.address),
+}));
+
+// User-enabled networks for bridge/multi-chain preferences
+export const userEnabledNetworks = pgTable("user_enabled_networks", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  userSettingsId: text("user_settings_id").notNull().references(() => userSettings.id, { onDelete: "cascade" }),
+  networkId: text("network_id").notNull(), // e.g., "flare", "ethereum", "xrpl"
+  enabled: boolean("enabled").default(true),
+  customRpcUrl: text("custom_rpc_url"),
+}, (table) => ({
+  uniqueUserNetwork: unique().on(table.userSettingsId, table.networkId),
+}));
+
+// User-enabled tokens per network
+export const userEnabledTokens = pgTable("user_enabled_tokens", {
+  id: text("id").primaryKey().default(sql`gen_random_uuid()`),
+  userSettingsId: text("user_settings_id").notNull().references(() => userSettings.id, { onDelete: "cascade" }),
+  networkId: text("network_id").notNull(),
+  tokenId: text("token_id").notNull(), // e.g., "FXRP", "USDC"
+  enabled: boolean("enabled").default(true),
+}, (table) => ({
+  uniqueUserNetworkToken: unique().on(table.userSettingsId, table.networkId, table.tokenId),
+}));
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -487,6 +532,25 @@ export const insertUserNotificationSchema = createInsertSchema(userNotifications
   readAt: true,
 });
 
+export const insertUserSettingsSchema = createInsertSchema(userSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertUserWalletSchema = createInsertSchema(userWallets).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertUserEnabledNetworkSchema = createInsertSchema(userEnabledNetworks).omit({
+  id: true,
+});
+
+export const insertUserEnabledTokenSchema = createInsertSchema(userEnabledTokens).omit({
+  id: true,
+});
+
 export type InsertVault = z.infer<typeof insertVaultSchema>;
 export type Vault = typeof vaults.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
@@ -516,6 +580,14 @@ export type InsertDashboardSnapshot = z.infer<typeof insertDashboardSnapshotSche
 export type DashboardSnapshot = typeof dashboardSnapshots.$inferSelect;
 export type InsertUserNotification = z.infer<typeof insertUserNotificationSchema>;
 export type UserNotification = typeof userNotifications.$inferSelect;
+export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
+export type UserSettings = typeof userSettings.$inferSelect;
+export type InsertUserWallet = z.infer<typeof insertUserWalletSchema>;
+export type UserWallet = typeof userWallets.$inferSelect;
+export type InsertUserEnabledNetwork = z.infer<typeof insertUserEnabledNetworkSchema>;
+export type UserEnabledNetwork = typeof userEnabledNetworks.$inferSelect;
+export type InsertUserEnabledToken = z.infer<typeof insertUserEnabledTokenSchema>;
+export type UserEnabledToken = typeof userEnabledTokens.$inferSelect;
 
 // Notification type enum for type safety
 export type NotificationType = 'deposit' | 'withdrawal' | 'reward' | 'boost' | 'system' | 'vault_event';

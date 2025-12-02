@@ -1,4 +1,4 @@
-import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFxrpToXrpRedemption, type SelectFxrpToXrpRedemption, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, type InsertServiceState, type ServiceState, type InsertStakingPosition, type StakingPosition, type InsertDashboardSnapshot, type DashboardSnapshot, type InsertUserNotification, type UserNotification, type NotificationType, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, fxrpToXrpRedemptions, firelightPositions, compoundingRuns, serviceState, stakingPositions, dashboardSnapshots, userNotifications } from "@shared/schema";
+import { type Vault, type InsertVault, type Position, type InsertPosition, type Transaction, type InsertTransaction, type VaultMetrics, type InsertVaultMetrics, type WithdrawalRequest, type InsertWithdrawalRequest, type Escrow, type InsertEscrow, type InsertXrpToFxrpBridge, type SelectXrpToFxrpBridge, type InsertFxrpToXrpRedemption, type SelectFxrpToXrpRedemption, type InsertFirelightPosition, type SelectFirelightPosition, type InsertCompoundingRun, type SelectCompoundingRun, type InsertServiceState, type ServiceState, type InsertStakingPosition, type StakingPosition, type InsertDashboardSnapshot, type DashboardSnapshot, type InsertUserNotification, type UserNotification, type NotificationType, type InsertUserSettings, type UserSettings, type InsertUserWallet, type UserWallet, type InsertUserEnabledNetwork, type UserEnabledNetwork, type InsertUserEnabledToken, type UserEnabledToken, vaults, positions, transactions, vaultMetricsDaily, withdrawalRequests, escrows, xrpToFxrpBridges, fxrpToXrpRedemptions, firelightPositions, compoundingRuns, serviceState, stakingPositions, dashboardSnapshots, userNotifications, userSettings, userWallets, userEnabledNetworks, userEnabledTokens } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, sql, and, gte, lte, gt, asc } from "drizzle-orm";
 
@@ -87,6 +87,19 @@ export interface IStorage {
   markNotificationAsRead(id: number): Promise<void>;
   markAllNotificationsAsRead(walletAddress: string): Promise<void>;
   deleteNotification(id: number): Promise<void>;
+  
+  // User settings for preferences and multi-wallet support
+  getUserSettings(walletAddress: string): Promise<UserSettings | null>;
+  createUserSettings(data: InsertUserSettings): Promise<UserSettings>;
+  updateUserSettings(id: string, data: Partial<InsertUserSettings>): Promise<UserSettings>;
+  getUserWallets(userSettingsId: string): Promise<UserWallet[]>;
+  createUserWallet(data: InsertUserWallet): Promise<UserWallet>;
+  deleteUserWallet(id: string): Promise<void>;
+  updateUserWallet(id: string, data: Partial<InsertUserWallet>): Promise<UserWallet>;
+  getUserEnabledNetworks(userSettingsId: string): Promise<UserEnabledNetwork[]>;
+  upsertUserEnabledNetwork(data: InsertUserEnabledNetwork): Promise<void>;
+  getUserEnabledTokens(userSettingsId: string): Promise<UserEnabledToken[]>;
+  upsertUserEnabledToken(data: InsertUserEnabledToken): Promise<void>;
   
   getProtocolOverview(): Promise<{ tvl: string; avgApy: string; activeVaults: number; totalStakers: number }>;
   getApyHistory(days?: number): Promise<Array<{ date: string; stable: number | null; high: number | null; maximum: number | null }>>;
@@ -1344,6 +1357,93 @@ export class DatabaseStorage implements IStorage {
   async deleteNotification(id: number): Promise<void> {
     await db.delete(userNotifications)
       .where(eq(userNotifications.id, id));
+  }
+
+  // User settings methods
+  async getUserSettings(walletAddress: string): Promise<UserSettings | null> {
+    const result = await db.select()
+      .from(userSettings)
+      .where(eq(userSettings.walletAddress, walletAddress))
+      .limit(1);
+    return result[0] || null;
+  }
+
+  async createUserSettings(data: InsertUserSettings): Promise<UserSettings> {
+    const [created] = await db.insert(userSettings).values(data).returning();
+    return created;
+  }
+
+  async updateUserSettings(id: string, data: Partial<InsertUserSettings>): Promise<UserSettings> {
+    const [updated] = await db.update(userSettings)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(userSettings.id, id))
+      .returning();
+    if (!updated) {
+      throw new Error(`User settings ${id} not found`);
+    }
+    return updated;
+  }
+
+  async getUserWallets(userSettingsId: string): Promise<UserWallet[]> {
+    return db.select()
+      .from(userWallets)
+      .where(eq(userWallets.userSettingsId, userSettingsId));
+  }
+
+  async createUserWallet(data: InsertUserWallet): Promise<UserWallet> {
+    const [created] = await db.insert(userWallets).values(data).returning();
+    return created;
+  }
+
+  async deleteUserWallet(id: string): Promise<void> {
+    await db.delete(userWallets)
+      .where(eq(userWallets.id, id));
+  }
+
+  async updateUserWallet(id: string, data: Partial<InsertUserWallet>): Promise<UserWallet> {
+    const [updated] = await db.update(userWallets)
+      .set(data)
+      .where(eq(userWallets.id, id))
+      .returning();
+    if (!updated) {
+      throw new Error(`User wallet ${id} not found`);
+    }
+    return updated;
+  }
+
+  async getUserEnabledNetworks(userSettingsId: string): Promise<UserEnabledNetwork[]> {
+    return db.select()
+      .from(userEnabledNetworks)
+      .where(eq(userEnabledNetworks.userSettingsId, userSettingsId));
+  }
+
+  async upsertUserEnabledNetwork(data: InsertUserEnabledNetwork): Promise<void> {
+    await db.insert(userEnabledNetworks)
+      .values(data)
+      .onConflictDoUpdate({
+        target: [userEnabledNetworks.userSettingsId, userEnabledNetworks.networkId],
+        set: {
+          enabled: data.enabled,
+          customRpcUrl: data.customRpcUrl,
+        },
+      });
+  }
+
+  async getUserEnabledTokens(userSettingsId: string): Promise<UserEnabledToken[]> {
+    return db.select()
+      .from(userEnabledTokens)
+      .where(eq(userEnabledTokens.userSettingsId, userSettingsId));
+  }
+
+  async upsertUserEnabledToken(data: InsertUserEnabledToken): Promise<void> {
+    await db.insert(userEnabledTokens)
+      .values(data)
+      .onConflictDoUpdate({
+        target: [userEnabledTokens.userSettingsId, userEnabledTokens.networkId, userEnabledTokens.tokenId],
+        set: {
+          enabled: data.enabled,
+        },
+      });
   }
 }
 

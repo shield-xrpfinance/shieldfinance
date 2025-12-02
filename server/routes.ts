@@ -2228,6 +2228,245 @@ export async function registerRoutes(
     }
   });
 
+  // ============================================================
+  // USER SETTINGS API ENDPOINTS
+  // ============================================================
+
+  /**
+   * GET /api/user/settings
+   * Get or create user settings with associated wallets, networks, and tokens
+   * Query params: walletAddress (required)
+   */
+  app.get("/api/user/settings", async (req, res) => {
+    try {
+      const walletAddress = req.query.walletAddress as string;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "walletAddress query parameter is required" });
+      }
+
+      let settings = await storage.getUserSettings(walletAddress);
+      
+      if (!settings) {
+        settings = await storage.createUserSettings({
+          walletAddress,
+          theme: "light",
+          defaultNetwork: null,
+        });
+      }
+
+      const [wallets, enabledNetworks, enabledTokens] = await Promise.all([
+        storage.getUserWallets(settings.id),
+        storage.getUserEnabledNetworks(settings.id),
+        storage.getUserEnabledTokens(settings.id),
+      ]);
+
+      res.json({
+        settings,
+        wallets,
+        enabledNetworks,
+        enabledTokens,
+      });
+    } catch (error) {
+      console.error("Failed to get user settings:", error);
+      res.status(500).json({ error: "Failed to get user settings" });
+    }
+  });
+
+  /**
+   * PATCH /api/user/settings
+   * Update user settings (theme, defaultNetwork)
+   * Body: { walletAddress, theme?, defaultNetwork? }
+   */
+  app.patch("/api/user/settings", async (req, res) => {
+    try {
+      const { walletAddress, theme, defaultNetwork } = req.body;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "walletAddress is required" });
+      }
+
+      let settings = await storage.getUserSettings(walletAddress);
+      
+      if (!settings) {
+        return res.status(404).json({ error: "User settings not found" });
+      }
+
+      const updates: Record<string, any> = {};
+      if (theme !== undefined) updates.theme = theme;
+      if (defaultNetwork !== undefined) updates.defaultNetwork = defaultNetwork;
+
+      settings = await storage.updateUserSettings(settings.id, updates);
+
+      res.json({ success: true, settings });
+    } catch (error) {
+      console.error("Failed to update user settings:", error);
+      res.status(500).json({ error: "Failed to update user settings" });
+    }
+  });
+
+  /**
+   * POST /api/user/wallets
+   * Add a wallet to user settings
+   * Body: { walletAddress, walletType, address, label?, isPrimary? }
+   */
+  app.post("/api/user/wallets", async (req, res) => {
+    try {
+      const { walletAddress, walletType, address, label, isPrimary } = req.body;
+      
+      if (!walletAddress || !walletType || !address) {
+        return res.status(400).json({ error: "walletAddress, walletType, and address are required" });
+      }
+
+      if (!["evm", "xrpl"].includes(walletType)) {
+        return res.status(400).json({ error: "walletType must be 'evm' or 'xrpl'" });
+      }
+
+      let settings = await storage.getUserSettings(walletAddress);
+      
+      if (!settings) {
+        settings = await storage.createUserSettings({
+          walletAddress,
+          theme: "light",
+          defaultNetwork: null,
+        });
+      }
+
+      const wallet = await storage.createUserWallet({
+        userSettingsId: settings.id,
+        walletType,
+        address,
+        label: label || null,
+        isPrimary: isPrimary || false,
+      });
+
+      res.json({ success: true, wallet });
+    } catch (error) {
+      console.error("Failed to create user wallet:", error);
+      res.status(500).json({ error: "Failed to create user wallet" });
+    }
+  });
+
+  /**
+   * DELETE /api/user/wallets/:walletId
+   * Remove a wallet from user settings
+   */
+  app.delete("/api/user/wallets/:walletId", async (req, res) => {
+    try {
+      const { walletId } = req.params;
+      
+      if (!walletId) {
+        return res.status(400).json({ error: "walletId is required" });
+      }
+
+      await storage.deleteUserWallet(walletId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to delete user wallet:", error);
+      res.status(500).json({ error: "Failed to delete user wallet" });
+    }
+  });
+
+  /**
+   * PATCH /api/user/wallets/:walletId
+   * Update a wallet (label, isPrimary)
+   * Body: { label?, isPrimary? }
+   */
+  app.patch("/api/user/wallets/:walletId", async (req, res) => {
+    try {
+      const { walletId } = req.params;
+      const { label, isPrimary } = req.body;
+      
+      if (!walletId) {
+        return res.status(400).json({ error: "walletId is required" });
+      }
+
+      const updates: Record<string, any> = {};
+      if (label !== undefined) updates.label = label;
+      if (isPrimary !== undefined) updates.isPrimary = isPrimary;
+
+      const wallet = await storage.updateUserWallet(walletId, updates);
+      res.json({ success: true, wallet });
+    } catch (error) {
+      console.error("Failed to update user wallet:", error);
+      res.status(500).json({ error: "Failed to update user wallet" });
+    }
+  });
+
+  /**
+   * PUT /api/user/networks
+   * Update enabled networks for a user
+   * Body: { walletAddress, networkId, enabled, customRpcUrl? }
+   */
+  app.put("/api/user/networks", async (req, res) => {
+    try {
+      const { walletAddress, networkId, enabled, customRpcUrl } = req.body;
+      
+      if (!walletAddress || !networkId || enabled === undefined) {
+        return res.status(400).json({ error: "walletAddress, networkId, and enabled are required" });
+      }
+
+      let settings = await storage.getUserSettings(walletAddress);
+      
+      if (!settings) {
+        settings = await storage.createUserSettings({
+          walletAddress,
+          theme: "light",
+          defaultNetwork: null,
+        });
+      }
+
+      await storage.upsertUserEnabledNetwork({
+        userSettingsId: settings.id,
+        networkId,
+        enabled,
+        customRpcUrl: customRpcUrl || null,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to update enabled network:", error);
+      res.status(500).json({ error: "Failed to update enabled network" });
+    }
+  });
+
+  /**
+   * PUT /api/user/tokens
+   * Update enabled tokens for a user
+   * Body: { walletAddress, networkId, tokenId, enabled }
+   */
+  app.put("/api/user/tokens", async (req, res) => {
+    try {
+      const { walletAddress, networkId, tokenId, enabled } = req.body;
+      
+      if (!walletAddress || !networkId || !tokenId || enabled === undefined) {
+        return res.status(400).json({ error: "walletAddress, networkId, tokenId, and enabled are required" });
+      }
+
+      let settings = await storage.getUserSettings(walletAddress);
+      
+      if (!settings) {
+        settings = await storage.createUserSettings({
+          walletAddress,
+          theme: "light",
+          defaultNetwork: null,
+        });
+      }
+
+      await storage.upsertUserEnabledToken({
+        userSettingsId: settings.id,
+        networkId,
+        tokenId,
+        enabled,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to update enabled token:", error);
+      res.status(500).json({ error: "Failed to update enabled token" });
+    }
+  });
+
   // Authenticate xApp session using OTT (One Time Token)
   // The frontend detects xApp context and sends the OTT to backend for secure verification
   // OTT is valid for 1 minute and can only be fetched once

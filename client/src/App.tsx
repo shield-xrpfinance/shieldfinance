@@ -10,14 +10,18 @@ import { TestnetBanner } from "@/components/TestnetBanner";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { ControlCenter } from "@/components/ControlCenter";
 import { NotificationCenter } from "@/components/dashboard/NotificationCenter";
+import { SettingsPanel } from "@/components/SettingsPanel";
 import { WalletProvider, useWallet } from "@/lib/walletContext";
 import { NetworkProvider, useNetwork } from "@/lib/networkContext";
 import { CurrencyProvider } from "@/lib/currencyContext";
+import { SettingsProvider } from "@/lib/settingsContext";
 import { ReownProvider } from "@/lib/ReownProvider";
 import { GeoProvider } from "@/lib/geoContext";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { GeoRestrictionModal } from "@/components/GeoRestrictionModal";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Settings } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import Landing from "@/pages/Landing";
 import Dashboard from "@/pages/Dashboard";
@@ -54,12 +58,12 @@ function DashboardRouter() {
 
 interface HeaderProps {
   onConnectWallet: () => void;
+  onOpenSettings: () => void;
 }
 
-function Header({ onConnectWallet }: HeaderProps) {
+function Header({ onConnectWallet, onOpenSettings }: HeaderProps) {
   const { address, evmAddress, isConnected } = useWallet();
   
-  // Get the display address (either XRPL or EVM)
   const displayAddress = address || evmAddress;
   const shortAddress = displayAddress 
     ? `${displayAddress.slice(0, 6)}...${displayAddress.slice(-4)}`
@@ -67,10 +71,8 @@ function Header({ onConnectWallet }: HeaderProps) {
 
   return (
     <header className="flex items-center justify-between gap-2 p-3 md:p-4 border-b">
-      {/* Left side - Sidebar trigger */}
       <div className="flex items-center gap-3">
         <SidebarTrigger data-testid="button-sidebar-toggle" />
-        {/* Show connected wallet badge on larger screens */}
         {isConnected && shortAddress && (
           <Badge variant="secondary" className="font-mono text-xs hidden sm:flex" data-testid="badge-wallet-address">
             {shortAddress}
@@ -78,9 +80,16 @@ function Header({ onConnectWallet }: HeaderProps) {
         )}
       </div>
 
-      {/* Right side - Notifications and Control Center for all screen sizes */}
       <div className="flex items-center gap-2">
         <NotificationCenter />
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={onOpenSettings}
+          data-testid="button-settings"
+        >
+          <Settings className="h-5 w-5" />
+        </Button>
         <ControlCenter onConnectWallet={onConnectWallet} />
       </div>
     </header>
@@ -136,6 +145,7 @@ function WalletDisconnectHandler() {
 
 function DashboardLayout() {
   const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const [settingsPanelOpen, setSettingsPanelOpen] = useState(false);
   
   const style = {
     "--sidebar-width": "20rem",
@@ -147,30 +157,39 @@ function DashboardLayout() {
     <ReownProvider>
       <NetworkProvider>
         <WalletProvider>
-          <EcosystemSync />
-          <WalletDisconnectHandler />
-          <CurrencyProvider>
-            <SidebarProvider style={style as React.CSSProperties}>
-              <div className="flex h-screen w-full">
-                <AppSidebar />
-                <div className="flex flex-col flex-1">
-                  <Header onConnectWallet={() => setConnectModalOpen(true)} />
-                  <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
-                    <div className="max-w-7xl mx-auto">
-                      <TestnetBanner />
-                      <DashboardRouter />
-                    </div>
-                  </main>
+          <SettingsProvider>
+            <EcosystemSync />
+            <WalletDisconnectHandler />
+            <CurrencyProvider>
+              <SidebarProvider style={style as React.CSSProperties}>
+                <div className="flex h-screen w-full">
+                  <AppSidebar />
+                  <div className="flex flex-col flex-1">
+                    <Header 
+                      onConnectWallet={() => setConnectModalOpen(true)} 
+                      onOpenSettings={() => setSettingsPanelOpen(true)}
+                    />
+                    <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
+                      <div className="max-w-7xl mx-auto">
+                        <TestnetBanner />
+                        <DashboardRouter />
+                      </div>
+                    </main>
+                  </div>
                 </div>
-              </div>
-              <MobileBottomNav />
-              <ConnectWalletModal
-                open={connectModalOpen}
-                onOpenChange={setConnectModalOpen}
-                onConnect={() => {}}
-              />
-            </SidebarProvider>
-          </CurrencyProvider>
+                <MobileBottomNav />
+                <ConnectWalletModal
+                  open={connectModalOpen}
+                  onOpenChange={setConnectModalOpen}
+                  onConnect={() => {}}
+                />
+                <SettingsPanel
+                  open={settingsPanelOpen}
+                  onOpenChange={setSettingsPanelOpen}
+                />
+              </SidebarProvider>
+            </CurrencyProvider>
+          </SettingsProvider>
         </WalletProvider>
       </NetworkProvider>
     </ReownProvider>
