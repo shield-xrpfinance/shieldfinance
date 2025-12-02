@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/walletContext";
 import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
@@ -21,7 +21,6 @@ import { Badge } from "@/components/ui/badge";
 import type { Vault } from "@shared/schema";
 
 const COSTON2_EXPLORER = "https://coston2-explorer.flare.network";
-const BASE_SHXRP_APY = 6.2;
 
 export default function Staking() {
   const shieldLogo = useShieldLogo();
@@ -48,6 +47,19 @@ export default function Staking() {
   });
 
   const activeVaults = vaults.filter(v => !v.comingSoon && v.status === "active");
+  
+  const baseShxrpApy = useMemo(() => {
+    const xrpVault = activeVaults.find(v => {
+      const assetName = (v.asset ?? "").toLowerCase();
+      const vaultName = (v.name ?? "").toLowerCase();
+      return assetName.includes('xrp') || assetName.includes('fxrp') || vaultName.includes('xrp');
+    });
+    if (xrpVault?.apy) {
+      const apyNum = parseFloat(xrpVault.apy);
+      return isNaN(apyNum) ? 6.2 : apyNum;
+    }
+    return 6.2;
+  }, [activeVaults]);
 
   const stakedBalance = onChainStakeInfo?.amount 
     ? parseFloat(ethers.formatEther(onChainStakeInfo.amount)) 
@@ -380,7 +392,7 @@ export default function Staking() {
           />
           <GlassStatsCard
             label="Effective shXRP APY"
-            value={`${(BASE_SHXRP_APY + boostPercentage).toFixed(1)}%`}
+            value={`${(baseShxrpApy + boostPercentage).toFixed(1)}%`}
             icon={<Coins className="h-6 w-6 text-green-500" />}
           />
           <GlassStatsCard
@@ -402,7 +414,7 @@ export default function Staking() {
                 <h3 className="font-semibold text-lg">Your Rewards Are Active</h3>
                 <p className="text-sm text-muted-foreground">
                   Your {stakedBalance.toLocaleString()} SHIELD stake gives you +{boostPercentage}% APY boost. 
-                  Combined with the base {BASE_SHXRP_APY}% APY, your shXRP deposits earn <strong className="text-green-500">{(BASE_SHXRP_APY + boostPercentage).toFixed(1)}% APY</strong>.
+                  Combined with the base {baseShxrpApy}% APY, your shXRP deposits earn <strong className="text-green-500">{(baseShxrpApy + boostPercentage).toFixed(1)}% APY</strong>.
                 </p>
               </div>
               <div className="text-right hidden sm:block">

@@ -357,7 +357,7 @@ export default function VaultListItem({
                 </TooltipContent>
               </Tooltip>
               <p className="text-2xl font-semibold tabular-nums mt-1" data-testid={`text-depositors-${id}`}>
-                {depositors.toLocaleString()}
+                {depositors >= 0 ? depositors.toLocaleString() : "—"}
               </p>
             </div>
           </div>

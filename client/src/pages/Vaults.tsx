@@ -171,7 +171,7 @@ export default function Vaults() {
       liquidity: formatCurrency(vault.liquidity),
       lockPeriod: vault.lockPeriod,
       riskLevel: vault.riskLevel as "low" | "medium" | "high",
-      depositors: 0,
+      depositors: -1,
       status: vault.status.charAt(0).toUpperCase() + vault.status.slice(1),
       depositAssets: vaultDepositAssets,
       pendingEscrowCount: vaultEscrowStats[vault.id]?.pendingCount || 0,
