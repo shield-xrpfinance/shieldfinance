@@ -426,6 +426,19 @@ export default function Bridge() {
     return getRouteBetweenNetworks(sourceNetwork, destNetwork);
   }, [sourceNetwork, destNetwork]);
 
+  const destToken = useMemo((): BridgeTokenId | null => {
+    if (!sourceToken || !sourceNetwork || !destNetwork) return null;
+    
+    if (sourceNetwork === "xrpl" && destNetwork === "flare") {
+      if (sourceToken === "XRP") return "FXRP";
+    }
+    if (sourceNetwork === "flare" && destNetwork === "xrpl") {
+      if (sourceToken === "FXRP") return "XRP";
+    }
+    
+    return sourceToken;
+  }, [sourceToken, sourceNetwork, destNetwork]);
+
   const previewRoute = useMemo(() => {
     if (!sourceToken || !sourceNetwork || !destNetwork) return [];
     
@@ -458,13 +471,14 @@ export default function Bridge() {
 
   const quoteMutation = useMutation({
     mutationFn: async () => {
-      if (!sourceNetwork || !destNetwork || !sourceToken || !amount) {
+      if (!sourceNetwork || !destNetwork || !sourceToken || !destToken || !amount) {
         throw new Error("Please fill in all fields");
       }
       const response = await apiRequest("POST", "/api/bridge/quote", {
         sourceNetwork,
         destNetwork,
         sourceToken,
+        destToken,
         amount,
         walletAddress: walletAddr,
       });
@@ -484,13 +498,14 @@ export default function Bridge() {
 
   const initiateMutation = useMutation({
     mutationFn: async () => {
-      if (!quote || !sourceNetwork || !destNetwork || !sourceToken || !amount) {
+      if (!quote || !sourceNetwork || !destNetwork || !sourceToken || !destToken || !amount) {
         throw new Error("Please get a quote first");
       }
       const response = await apiRequest("POST", "/api/bridge/initiate", {
         sourceNetwork,
         destNetwork,
         sourceToken,
+        destToken,
         amount,
         walletAddress: walletAddr,
         quote,
