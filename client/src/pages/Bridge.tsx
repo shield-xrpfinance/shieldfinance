@@ -22,6 +22,44 @@ export default function Bridge() {
     refetchInterval: 5000,
   });
 
+  // Mutation to log FSwap bridge completions - must be called before any conditional returns
+  const logBridgeMutation = useMutation({
+    mutationFn: async (data: { 
+      walletAddress: string; 
+      txHash: string;
+      sourceNetwork?: string;
+      destNetwork?: string;
+      sourceToken?: string;
+      destToken?: string;
+      amount?: string;
+    }) => {
+      const response = await apiRequest("POST", "/api/bridge/fswap-complete", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bridge/jobs"] });
+    },
+    onError: (error) => {
+      console.error("Failed to log bridge completion:", error);
+    },
+  });
+
+  const handleFSwapComplete = (params: { txHash: string }) => {
+    toast({
+      title: "Bridge Complete",
+      description: `Transaction hash: ${params.txHash.substring(0, 10)}...`,
+    });
+    
+    // Log the bridge completion to backend for notifications and tracking
+    if (walletAddr) {
+      logBridgeMutation.mutate({
+        walletAddress: walletAddr,
+        txHash: params.txHash,
+      });
+    }
+  };
+
   if (!isConnected) {
     return (
       <div className="max-w-2xl mx-auto">
@@ -59,44 +97,6 @@ export default function Bridge() {
       </div>
     );
   }
-
-  // Mutation to log FSwap bridge completions
-  const logBridgeMutation = useMutation({
-    mutationFn: async (data: { 
-      walletAddress: string; 
-      txHash: string;
-      sourceNetwork?: string;
-      destNetwork?: string;
-      sourceToken?: string;
-      destToken?: string;
-      amount?: string;
-    }) => {
-      const response = await apiRequest("POST", "/api/bridge/fswap-complete", data);
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/user/notifications"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/bridge/jobs"] });
-    },
-    onError: (error) => {
-      console.error("Failed to log bridge completion:", error);
-    },
-  });
-
-  const handleFSwapComplete = (params: { txHash: string }) => {
-    toast({
-      title: "Bridge Complete",
-      description: `Transaction hash: ${params.txHash.substring(0, 10)}...`,
-    });
-    
-    // Log the bridge completion to backend for notifications and tracking
-    if (walletAddr) {
-      logBridgeMutation.mutate({
-        walletAddress: walletAddr,
-        txHash: params.txHash,
-      });
-    }
-  };
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
