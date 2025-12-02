@@ -52,6 +52,17 @@ export default function Dashboard() {
     queryKey: ["/api/vaults"],
   });
 
+  // Fetch APY history data from analytics endpoint (storage + live data)
+  const { data: apyHistoryData } = useQuery<Array<{ 
+    date: string; 
+    stable: number | null; 
+    high: number | null; 
+    maximum: number | null;
+  }>>({
+    queryKey: ["/api/analytics/apy"],
+    refetchInterval: 60000, // Refresh every minute
+  });
+
   // Filter vaults based on selected ecosystem
   const ecosystemFilteredVaults = useMemo(() => {
     if (!isConnected) {
@@ -118,14 +129,22 @@ export default function Dashboard() {
       comingSoon: (vault as any).comingSoon || false,
     }));
 
-  const chartData = [
-    { date: "Oct 1", "Stable Yield": 7.2, "High Yield": 12.5, "Maximum Returns": 18.2 },
-    { date: "Oct 8", "Stable Yield": 7.3, "High Yield": 12.7, "Maximum Returns": 18.5 },
-    { date: "Oct 15", "Stable Yield": 7.4, "High Yield": 12.6, "Maximum Returns": 18.3 },
-    { date: "Oct 22", "Stable Yield": 7.5, "High Yield": 12.8, "Maximum Returns": 18.5 },
-    { date: "Oct 29", "Stable Yield": 7.5, "High Yield": 12.9, "Maximum Returns": 18.7 },
-    { date: "Nov 5", "Stable Yield": 7.5, "High Yield": 12.8, "Maximum Returns": 18.5 },
-  ];
+  // Transform APY history data to chart format, filtering out null data points
+  const chartData = useMemo(() => {
+    if (apyHistoryData && apyHistoryData.length > 0) {
+      // Filter out periods with no data (null values) and transform to chart format
+      return apyHistoryData
+        .filter(item => item.stable !== null)
+        .map(item => ({
+          date: item.date,
+          "Stable Yield": item.stable as number,
+          "High Yield": item.high as number,
+          "Maximum Returns": item.maximum as number,
+        }));
+    }
+    // Empty array if no data yet
+    return [];
+  }, [apyHistoryData]);
 
   const handleDeposit = (vaultId: string) => {
     const vault = vaults.find((v) => v.id === vaultId);

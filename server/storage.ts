@@ -89,8 +89,8 @@ export interface IStorage {
   deleteNotification(id: number): Promise<void>;
   
   getProtocolOverview(): Promise<{ tvl: string; avgApy: string; activeVaults: number; totalStakers: number }>;
-  getApyHistory(days?: number): Promise<Array<{ date: string; stable: number; high: number; maximum: number }>>;
-  getTvlHistory(days?: number): Promise<Array<{ date: string; value: number }>>;
+  getApyHistory(days?: number): Promise<Array<{ date: string; stable: number | null; high: number | null; maximum: number | null }>>;
+  getTvlHistory(days?: number): Promise<Array<{ date: string; value: number | null }>>;
   getVaultDistribution(): Promise<Array<{ name: string; percentage: number }>>;
   getTopPerformingVaults(): Promise<Array<{ name: string; apy: string; riskLevel: string; asset: string }>>;
   
@@ -628,7 +628,7 @@ export class DatabaseStorage implements IStorage {
     };
   }
 
-  async getApyHistory(days: number = 180): Promise<Array<{ date: string; stable: number; high: number; maximum: number }>> {
+  async getApyHistory(days: number = 180): Promise<Array<{ date: string; stable: number | null; high: number | null; maximum: number | null }>> {
     const allVaults = await this.getVaults();
     
     const stableVaults = allVaults.filter(v => v.riskLevel === "low");
@@ -637,13 +637,13 @@ export class DatabaseStorage implements IStorage {
     
     const avgStable = stableVaults.length > 0 
       ? stableVaults.reduce((sum, v) => sum + parseFloat(v.apy), 0) / stableVaults.length 
-      : 0;
+      : null;
     const avgHigh = highVaults.length > 0 
       ? highVaults.reduce((sum, v) => sum + parseFloat(v.apy), 0) / highVaults.length 
-      : 0;
+      : null;
     const avgMax = maxVaults.length > 0 
       ? maxVaults.reduce((sum, v) => sum + parseFloat(v.apy), 0) / maxVaults.length 
-      : 0;
+      : null;
 
     // Generate last 6 months based on current date
     const now = new Date();
@@ -653,16 +653,17 @@ export class DatabaseStorage implements IStorage {
       months.push(d.toLocaleDateString('en-US', { month: 'short' }));
     }
 
-    // Return current APY values for each month (testnet just launched, so values are consistent)
-    return months.map((month) => ({
+    // For testnet: only show data for current month (when we have live data)
+    // Historical months return null to indicate no verified historical data exists
+    return months.map((month, i) => ({
       date: month,
-      stable: parseFloat(avgStable.toFixed(1)),
-      high: parseFloat(avgHigh.toFixed(1)),
-      maximum: parseFloat(avgMax.toFixed(1)),
+      stable: i === months.length - 1 ? (avgStable !== null ? parseFloat(avgStable.toFixed(1)) : null) : null,
+      high: i === months.length - 1 ? (avgHigh !== null ? parseFloat(avgHigh.toFixed(1)) : null) : null,
+      maximum: i === months.length - 1 ? (avgMax !== null ? parseFloat(avgMax.toFixed(1)) : null) : null,
     }));
   }
 
-  async getTvlHistory(days: number = 180): Promise<Array<{ date: string; value: number }>> {
+  async getTvlHistory(days: number = 180): Promise<Array<{ date: string; value: number | null }>> {
     const allVaults = await this.getVaults();
     const totalTvl = allVaults.reduce((sum, v) => sum + parseFloat(v.tvl), 0);
     
@@ -674,10 +675,11 @@ export class DatabaseStorage implements IStorage {
       months.push(d.toLocaleDateString('en-US', { month: 'short' }));
     }
 
-    // Return current TVL for most recent month (testnet launch)
+    // For testnet: only show data for current month (when we have live data)
+    // Historical months return null to indicate no verified historical data exists
     return months.map((month, i) => ({
       date: month,
-      value: i === months.length - 1 ? Math.round(totalTvl) : 0,
+      value: i === months.length - 1 ? Math.round(totalTvl) : null,
     }));
   }
 

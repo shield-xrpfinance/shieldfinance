@@ -4423,21 +4423,103 @@ export async function registerRoutes(
     }
   });
 
-  // Get APY history
+  // Get APY history - uses live data with SHIELD boost tier calculations
   app.get("/api/analytics/apy", async (_req, res) => {
     try {
-      const apyHistory = await storage.getApyHistory();
-      res.json(apyHistory);
+      // Generate last 6 months based on current date
+      const now = new Date();
+      const months: string[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push(d.toLocaleDateString('en-US', { month: 'short' }));
+      }
+
+      // Try to get live APY from VaultDataService
+      let liveBaseApy: number | null = null;
+      if (vaultDataService && vaultDataService.isReady()) {
+        try {
+          const apyStr = await vaultDataService.getLiveAPY();
+          liveBaseApy = parseFloat(apyStr);
+        } catch {
+          // Live data unavailable
+        }
+      }
+
+      // Build result: historical months return null (no verified data)
+      // Current month calculates tiers based on live APY and SHIELD boost levels
+      // Boost tiers based on StakingBoost contract: min(shieldStaked/10000, 50)%
+      // - Stable: No boost (base APY)
+      // - High: 25% boost (moderate SHIELD staking)
+      // - Maximum: 50% boost (maximum SHIELD staking)
+      const result = months.map((month, i) => {
+        const isCurrentMonth = i === months.length - 1;
+        
+        if (isCurrentMonth && liveBaseApy !== null && !isNaN(liveBaseApy)) {
+          return {
+            date: month,
+            stable: Number(liveBaseApy.toFixed(1)),
+            high: Number((liveBaseApy * 1.25).toFixed(1)),     // 25% boost
+            maximum: Number((liveBaseApy * 1.50).toFixed(1)),  // 50% max boost
+          };
+        } else {
+          // Historical months: no verified data available
+          return {
+            date: month,
+            stable: null,
+            high: null,
+            maximum: null,
+          };
+        }
+      });
+
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch APY history" });
     }
   });
 
-  // Get TVL history
+  // Get TVL history - uses live data from VaultDataService
   app.get("/api/analytics/tvl", async (_req, res) => {
     try {
-      const tvlHistory = await storage.getTvlHistory();
-      res.json(tvlHistory);
+      // Generate last 6 months based on current date
+      const now = new Date();
+      const months: string[] = [];
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        months.push(d.toLocaleDateString('en-US', { month: 'short' }));
+      }
+
+      // Try to get live TVL from VaultDataService
+      let liveTvl: number | null = null;
+      if (vaultDataService && vaultDataService.isReady()) {
+        try {
+          const tvlStr = await vaultDataService.getLiveTVL();
+          liveTvl = parseFloat(tvlStr);
+        } catch {
+          // Live data unavailable
+        }
+      }
+
+      // Build result: historical months return null (no verified data)
+      // Current month uses live TVL from blockchain
+      const result = months.map((month, i) => {
+        const isCurrentMonth = i === months.length - 1;
+        
+        if (isCurrentMonth && liveTvl !== null && !isNaN(liveTvl)) {
+          return {
+            date: month,
+            value: Math.round(liveTvl),
+          };
+        } else {
+          // Historical months: no verified data available
+          return {
+            date: month,
+            value: null,
+          };
+        }
+      });
+
+      res.json(result);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch TVL history" });
     }
