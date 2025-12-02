@@ -4760,47 +4760,34 @@ export async function registerRoutes(
 
       const dbTotal = severityCounts.reduce((sum, s) => sum + s.count, 0);
       
-      // If database has events, return them
-      if (dbTotal > 0) {
-        const summary = {
-          last24Hours: {
-            bySeverity: Object.fromEntries(
-              severityCounts.map(s => [s.severity, s.count])
-            ),
-            byContract: Object.fromEntries(
-              contractCounts.map(c => [c.contractName, c.count])
-            ),
-            total: dbTotal,
-          },
-          recentCriticalEvents: recentCritical,
-          source: "database",
-        };
-        return res.json(summary);
+      // Get current block for reference (fast call from monitor status)
+      let currentBlock: number | undefined;
+      try {
+        currentBlock = onChainMonitorService?.getStatus?.()?.lastProcessedBlock || undefined;
+      } catch {
+        // Ignore - not critical
       }
 
-      // Otherwise get real-time data from blockchain
-      const realtimeData = await analyticsService.getRecentActivity(50);
-      
-      // Count by severity
-      const severityMap: Record<string, number> = { info: 0, warning: 0, critical: 0 };
-      const contractMap: Record<string, number> = {};
-      
-      for (const event of realtimeData.events) {
-        severityMap[event.severity] = (severityMap[event.severity] || 0) + 1;
-        contractMap[event.contractName] = (contractMap[event.contractName] || 0) + 1;
-      }
-
+      // Always return database results - OnChainMonitorService populates the events table
+      // This prevents expensive blockchain scans on every request
       const summary = {
         last24Hours: {
-          bySeverity: severityMap,
-          byContract: contractMap,
-          total: realtimeData.events.length,
+          bySeverity: {
+            info: 0,
+            warning: 0,
+            critical: 0,
+            ...Object.fromEntries(severityCounts.map(s => [s.severity, s.count])),
+          },
+          byContract: Object.fromEntries(
+            contractCounts.map(c => [c.contractName, c.count])
+          ),
+          total: dbTotal,
         },
-        recentCriticalEvents: realtimeData.events.filter(e => e.severity === 'critical').slice(0, 5),
-        source: "blockchain",
-        currentBlock: realtimeData.currentBlock,
+        recentCriticalEvents: recentCritical,
+        source: "database",
+        currentBlock,
       };
-
+      
       res.json(summary);
     } catch (error) {
       console.error("Failed to fetch on-chain events summary:", error);
