@@ -805,7 +805,7 @@ export default function BridgeTracking() {
               history={history}
               crossChainJobs={crossChainJobs?.jobs}
               isLoadingHistory={isLoadingHistory}
-              address={address}
+              address={walletAddr}
             />
           </AccordionContent>
         </AccordionItem>
@@ -874,7 +874,7 @@ export default function BridgeTracking() {
             history={history}
             crossChainJobs={crossChainJobs?.jobs}
             isLoadingHistory={isLoadingHistory}
-            address={address}
+            address={walletAddr}
           />
         </TabsContent>
         </Tabs>
