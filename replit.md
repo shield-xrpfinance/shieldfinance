@@ -7,6 +7,38 @@ This project is a full-stack DeFi application providing a dashboard for XRP liqu
 Preferred communication style: Simple, everyday language.
 Design preference: Modern, clean list-based layouts over grid cards for better space utilization.
 
+## Recent Changes (December 2, 2025)
+
+### Bridge Tracking Enhancements
+**Multi-Chain Bridge History Integration**
+- Enhanced Bridge Tracking page to display multi-chain bridge operations (FSwap widget transactions) alongside FAssets bridges
+- Added unified history view combining both bridge types in a single History tab
+- Multi-chain bridges now display with ArrowLeftRight icon in purple, showing source → destination networks
+- Each multi-chain bridge displays source and destination token amounts with conversion info
+- FAssets bridges continue to display with green (deposit) or blue (withdrawal) icons
+- History count badges now include both FAssets and multi-chain bridge totals
+
+**Bridge Tracking Component Updates**
+- Updated `BridgeTracking.tsx` to import `CrossChainBridgeJob` type from schema
+- Added TanStack Query for fetching cross-chain bridge jobs: `/api/bridge/jobs/${walletAddress}`
+- Fixed wallet address detection for EVM users (was only checking XRPL address, now uses combined `walletAddr`)
+- Created reusable `HistorySection` component that accepts both history and crossChainJobs
+- Renders multi-chain jobs first (purple icon), followed by FAssets bridge history
+- Both Accordion (mobile) and Tabs (desktop) layouts properly display unified history
+
+**Frontend Components**
+- Added ArrowLeftRight icon import from lucide-react for multi-chain bridge visual distinction
+- Multi-chain bridges display with outline variant badge and custom border/text styling
+- Maintains consistent card-based layout matching existing FAssets bridge display
+- Error messages and transaction details properly formatted for both bridge types
+
+**Bug Fixes**
+- Fixed React hooks violation in `Bridge.tsx`: moved `useMutation` hook before conditional returns to comply with Rules of Hooks
+- Corrected address prop passed to HistorySection (was `address` for XRPL-only, now uses `walletAddr` for both wallet types)
+
+### Integration Pattern
+FSwap widget → Bridge.tsx onSwapComplete callback → `/api/bridge/fswap-complete` endpoint → notification creation + crossChainBridgeJobs table logging → Bridge Tracking history display
+
 ## System Architecture
 
 ### Frontend
@@ -15,20 +47,20 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **State Management**: React Context API, TanStack Query, React hooks.
 - **Wallet Architecture**: Dual-ecosystem wallet support (`xaman`, `walletconnect` for XRPL, `reown` for EVM) with wallet-type-aware vault filtering.
 - **UX Enhancements**: Multi-step progress modals, deposit cancellation, real-time portfolio updates, consolidated position display with aggregated rewards, and a Shepherd.js-based guided tour.
-- **Dashboard Enhancements**: Real-time vault balances (PortfolioSummaryCard), historical performance charts (PortfolioPerformanceChart), SHIELD boost impact displays (BoostImpactBanner), and persistent notification center (NotificationCenter) with triggers for deposits, withdrawals, staking, and reward claims.
+- **Dashboard Enhancements**: Real-time vault balances (PortfolioSummaryCard), historical performance charts (PortfolioPerformanceChart), SHIELD boost impact displays (BoostImpactBanner), persistent notification center (NotificationCenter) with triggers for deposits/withdrawals/staking/rewards/bridge operations, and unified bridge tracking with multi-chain support.
 - **Security**: UAE Geo-Blocking for VARA compliance.
 
 ### Backend
 - **Server**: Express.js (Node.js, TypeScript) with a RESTful API.
 - **Data Validation**: Zod schemas.
-- **Automated Systems**: FAssets bridge reconciliation, automated withdrawal system, deposit watchdog, and withdrawal retry services.
+- **Automated Systems**: FAssets bridge reconciliation, automated withdrawal system, deposit watchdog, withdrawal retry services, and multi-chain bridge tracking.
 - **Analytics & Monitoring**: Revenue transparency analytics, testnet monitoring with real-time 24-hour sliding window metrics, and alerting system.
 - **Production Readiness**: Fast server startup, asynchronous service initialization, health endpoints, API readiness guards, API rate limiting, and RPC failover utility.
 - **Self-Healing Infrastructure**: ServiceSupervisor with auto-restart, ResilientRpcAdapter with multi-endpoint failover, XrplConnectionPool with automatic reconnection, CacheFallbackService for graceful degradation, ReconciliationService for state consistency, and FeatureFlagService for dynamic feature control.
 
 ### Data Storage
 - **Database**: PostgreSQL (Neon serverless) with Drizzle ORM.
-- **Schema**: Comprehensive schema covering vaults, positions, transactions, dashboard snapshots, user notifications, and various system states.
+- **Schema**: Comprehensive schema covering vaults, positions, transactions, dashboard snapshots, user notifications, cross-chain bridge jobs, and various system states.
 
 ### System Design
 - **Separation of Concerns**: Monorepo structure (`/client`, `/server`, `/shared`).
@@ -38,6 +70,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **StakingBoost ↔ ShXRPVault ↔ RevenueRouter Architecture**: A circular dependency solution for deploying and linking these core contracts for yield boosting and fee distribution.
 - **Airdrop System**: Faucet API and MerkleDistributor contract for SHIELD token distribution.
 - **Multi-Asset Swap**: Full swap feature with SparkDEX V3 router.
+- **Multi-Chain Bridge**: Luminite FSwap widget integration for bridging assets across XRPL, Flare, Ethereum, Base, Arbitrum, and other chains.
 
 ## External Dependencies
 
@@ -65,6 +98,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Firelight.finance Integration**: For generating yield on FXRP deposits.
 - **Flare Data Connector (FDC)**: Cross-chain data verification.
 - **SparkDEX V3**: Uniswap V2-compatible DEX on Flare Network for token swaps.
+- **Luminite FSwap Widget**: Multi-chain bridge widget for cross-network asset transfers.
 
 ### RWA & Tokenized Securities (Future Integration)
 - **RWA.xyz Integration**: Planned for real-world asset data feeds.
@@ -75,6 +109,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **TVL**: Live data from VaultDataService.getLiveTVL() which reads totalAssets from blockchain via flareClient
 - **APY Tiers**: Calculated from vault data with SHIELD boost multipliers (Stable: base APY, High: 1.25x boost, Maximum: 1.50x boost)
 - **On-Chain Events**: Stored in database by OnChainMonitorService, provides real-time event monitoring
+- **Bridge Operations**: Real-time tracking of FAssets and multi-chain bridge jobs with status updates
 
 ### Historical Data Limitations
 The testnet currently has no historical data infrastructure. Analytics endpoints return:
@@ -87,3 +122,7 @@ True live APY calculation requires a vault metrics snapshot system:
 2. **APY Calculation**: Use formula `((pps_latest / pps_previous)^(seconds_in_year / delta_seconds) - 1) * 100` 
 3. **LiveApyService**: New service to calculate trailing APY from snapshots (24h, 7d windows)
 4. This would replace the current storage-seeded APY values with true blockchain-derived metrics
+
+## Files Modified (December 2, 2025)
+- `client/src/pages/BridgeTracking.tsx`: Enhanced with multi-chain bridge history display
+- `client/src/pages/Bridge.tsx`: Fixed React hooks violation
