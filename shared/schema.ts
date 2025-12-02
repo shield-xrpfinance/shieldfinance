@@ -462,6 +462,178 @@ export const userEnabledTokens = pgTable("user_enabled_tokens", {
   uniqueUserNetworkToken: unique().on(table.userSettingsId, table.networkId, table.tokenId),
 }));
 
+// =============================================================================
+// CROSS-CHAIN BRIDGE TABLES (Multi-leg bridging via LayerZero/Stargate/FAssets)
+// =============================================================================
+
+// Status enum for cross-chain bridge jobs
+export const crossChainBridgeJobStatusEnum = pgEnum("cross_chain_bridge_job_status", [
+  "pending",           // Job created, awaiting quote confirmation
+  "quoted",            // Quote received, awaiting user confirmation
+  "confirmed",         // User confirmed, bridge in progress
+  "executing",         // Legs are being executed
+  "awaiting_source",   // Waiting for source chain confirmation
+  "awaiting_dest",     // Waiting for destination chain confirmation
+  "completed",         // All legs completed successfully
+  "partially_failed",  // Some legs failed, refund in progress
+  "failed",            // Bridge failed
+  "cancelled",         // Cancelled by user
+  "refunded"           // Refund completed after failure
+]);
+
+// Status enum for individual bridge legs
+export const crossChainBridgeLegStatusEnum = pgEnum("cross_chain_bridge_leg_status", [
+  "pending",           // Leg not started
+  "executing",         // Transaction submitted
+  "awaiting_confirm",  // Waiting for source chain confirmation
+  "bridging",          // Cross-chain message in transit
+  "awaiting_dest",     // Waiting for destination chain confirmation
+  "completed",         // Leg completed successfully
+  "failed",            // Leg failed
+  "refunded"           // Refund completed
+]);
+
+// Protocol enum for bridge legs
+export const bridgeProtocolEnum = pgEnum("bridge_protocol", [
+  "layerzero",         // LayerZero OFT v2
+  "stargate",          // Stargate stablecoin pools
+  "fassets",           // FAssets XRP ↔ FXRP
+  "native",            // Native transfers (no bridge needed)
+  "swap"               // DEX swap (same chain)
+]);
+
+// Main cross-chain bridge job table
+export const crossChainBridgeJobs = pgTable("cross_chain_bridge_jobs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // User identification
+  walletAddress: text("wallet_address").notNull(),
+  
+  // Source chain and token
+  sourceNetwork: text("source_network").notNull(), // e.g., "ethereum", "xrpl"
+  sourceToken: text("source_token").notNull(),     // e.g., "ETH", "XRP"
+  sourceAmount: decimal("source_amount", { precision: 36, scale: 18 }).notNull(),
+  
+  // Destination chain and token
+  destNetwork: text("dest_network").notNull(),     // e.g., "flare", "arbitrum"
+  destToken: text("dest_token").notNull(),         // e.g., "FXRP", "USDC"
+  destAmount: decimal("dest_amount", { precision: 36, scale: 18 }), // Expected output
+  destAmountReceived: decimal("dest_amount_received", { precision: 36, scale: 18 }), // Actual received
+  
+  // Recipient address (may differ from wallet for cross-ecosystem)
+  recipientAddress: text("recipient_address").notNull(),
+  
+  // Route information
+  route: jsonb("route"), // Array of leg descriptions: [{from, to, protocol, token}]
+  totalLegs: integer("total_legs").notNull().default(1),
+  currentLeg: integer("current_leg").notNull().default(0),
+  
+  // Quote and fee information
+  quoteId: varchar("quote_id").references(() => crossChainBridgeQuotes.id),
+  totalFeeUsd: decimal("total_fee_usd", { precision: 18, scale: 6 }),
+  estimatedTimeMinutes: integer("estimated_time_minutes"),
+  slippageToleranceBps: integer("slippage_tolerance_bps").default(50), // 0.5% default
+  
+  // Status tracking
+  status: crossChainBridgeJobStatusEnum("status").notNull().default("pending"),
+  errorMessage: text("error_message"),
+  errorCode: text("error_code"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  quotedAt: timestamp("quoted_at"),
+  confirmedAt: timestamp("confirmed_at"),
+  completedAt: timestamp("completed_at"),
+  expiresAt: timestamp("expires_at"), // Quote expiry
+  
+}, (table) => ({
+  walletIdx: sql`CREATE INDEX IF NOT EXISTS idx_ccb_jobs_wallet ON ${table} (wallet_address)`,
+  statusIdx: sql`CREATE INDEX IF NOT EXISTS idx_ccb_jobs_status ON ${table} (status)`,
+}));
+
+// Individual legs of a cross-chain bridge
+export const crossChainBridgeLegs = pgTable("cross_chain_bridge_legs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Parent job reference
+  jobId: varchar("job_id").notNull().references(() => crossChainBridgeJobs.id, { onDelete: "cascade" }),
+  legIndex: integer("leg_index").notNull(), // 0-indexed order
+  
+  // Source and destination for this leg
+  fromNetwork: text("from_network").notNull(),
+  fromToken: text("from_token").notNull(),
+  fromAmount: decimal("from_amount", { precision: 36, scale: 18 }).notNull(),
+  
+  toNetwork: text("to_network").notNull(),
+  toToken: text("to_token").notNull(),
+  toAmountExpected: decimal("to_amount_expected", { precision: 36, scale: 18 }),
+  toAmountReceived: decimal("to_amount_received", { precision: 36, scale: 18 }),
+  
+  // Protocol and contract details
+  protocol: bridgeProtocolEnum("protocol").notNull(),
+  routerAddress: text("router_address"),
+  
+  // Transaction hashes (may have multiple per leg for different chains)
+  sourceTxHash: text("source_tx_hash"),
+  bridgeTxHash: text("bridge_tx_hash"), // LayerZero/Stargate message hash
+  destTxHash: text("dest_tx_hash"),
+  
+  // FAssets-specific fields (for XRPL legs)
+  collateralReservationId: text("collateral_reservation_id"),
+  paymentReference: text("payment_reference"),
+  agentAddress: text("agent_address"),
+  
+  // Fee tracking
+  gasFeeSourceUsd: decimal("gas_fee_source_usd", { precision: 18, scale: 6 }),
+  gasFeeDestUsd: decimal("gas_fee_dest_usd", { precision: 18, scale: 6 }),
+  bridgeFeeUsd: decimal("bridge_fee_usd", { precision: 18, scale: 6 }),
+  
+  // Status
+  status: crossChainBridgeLegStatusEnum("status").notNull().default("pending"),
+  errorMessage: text("error_message"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  
+}, (table) => ({
+  jobIdx: sql`CREATE INDEX IF NOT EXISTS idx_ccb_legs_job ON ${table} (job_id)`,
+  uniqueLegOrder: unique().on(table.jobId, table.legIndex),
+}));
+
+// Bridge quotes cache
+export const crossChainBridgeQuotes = pgTable("cross_chain_bridge_quotes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Route specification
+  sourceNetwork: text("source_network").notNull(),
+  sourceToken: text("source_token").notNull(),
+  sourceAmount: decimal("source_amount", { precision: 36, scale: 18 }).notNull(),
+  destNetwork: text("dest_network").notNull(),
+  destToken: text("dest_token").notNull(),
+  
+  // Quote results
+  destAmountEstimate: decimal("dest_amount_estimate", { precision: 36, scale: 18 }).notNull(),
+  route: jsonb("route").notNull(), // Array of legs with protocol info
+  
+  // Fee breakdown
+  totalFeeUsd: decimal("total_fee_usd", { precision: 18, scale: 6 }).notNull(),
+  gasFeeUsd: decimal("gas_fee_usd", { precision: 18, scale: 6 }),
+  bridgeFeeUsd: decimal("bridge_fee_usd", { precision: 18, scale: 6 }),
+  slippageUsd: decimal("slippage_usd", { precision: 18, scale: 6 }),
+  
+  // Time estimates
+  estimatedTimeMinutes: integer("estimated_time_minutes").notNull(),
+  
+  // Validity
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(), // Usually 5 minutes
+  
+  // Pricing data snapshot
+  priceData: jsonb("price_data"), // Token prices at quote time
+});
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -551,6 +723,21 @@ export const insertUserEnabledTokenSchema = createInsertSchema(userEnabledTokens
   id: true,
 });
 
+export const insertCrossChainBridgeJobSchema = createInsertSchema(crossChainBridgeJobs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCrossChainBridgeLegSchema = createInsertSchema(crossChainBridgeLegs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertCrossChainBridgeQuoteSchema = createInsertSchema(crossChainBridgeQuotes).omit({
+  id: true,
+  createdAt: true,
+});
+
 export type InsertVault = z.infer<typeof insertVaultSchema>;
 export type Vault = typeof vaults.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
@@ -588,6 +775,12 @@ export type InsertUserEnabledNetwork = z.infer<typeof insertUserEnabledNetworkSc
 export type UserEnabledNetwork = typeof userEnabledNetworks.$inferSelect;
 export type InsertUserEnabledToken = z.infer<typeof insertUserEnabledTokenSchema>;
 export type UserEnabledToken = typeof userEnabledTokens.$inferSelect;
+export type InsertCrossChainBridgeJob = z.infer<typeof insertCrossChainBridgeJobSchema>;
+export type CrossChainBridgeJob = typeof crossChainBridgeJobs.$inferSelect;
+export type InsertCrossChainBridgeLeg = z.infer<typeof insertCrossChainBridgeLegSchema>;
+export type CrossChainBridgeLeg = typeof crossChainBridgeLegs.$inferSelect;
+export type InsertCrossChainBridgeQuote = z.infer<typeof insertCrossChainBridgeQuoteSchema>;
+export type CrossChainBridgeQuote = typeof crossChainBridgeQuotes.$inferSelect;
 
 // Notification type enum for type safety
 export type NotificationType = 'deposit' | 'withdrawal' | 'reward' | 'boost' | 'system' | 'vault_event';
