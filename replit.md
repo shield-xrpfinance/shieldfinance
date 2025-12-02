@@ -68,3 +68,22 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 
 ### RWA & Tokenized Securities (Future Integration)
 - **RWA.xyz Integration**: Planned for real-world asset data feeds.
+
+## Analytics Data Architecture
+
+### Current State
+- **TVL**: Live data from VaultDataService.getLiveTVL() which reads totalAssets from blockchain via flareClient
+- **APY Tiers**: Calculated from vault data with SHIELD boost multipliers (Stable: base APY, High: 1.25x boost, Maximum: 1.50x boost)
+- **On-Chain Events**: Stored in database by OnChainMonitorService, provides real-time event monitoring
+
+### Historical Data Limitations
+The testnet currently has no historical data infrastructure. Analytics endpoints return:
+- Current month: Live blockchain data (TVL, APY)
+- Historical months: `null` to indicate no verified data exists
+
+### Future Enhancement: Live APY from Snapshots
+True live APY calculation requires a vault metrics snapshot system:
+1. **Snapshot Pipeline**: OnChainMonitorService should persist periodic pricePerShare readings to a vault_metrics table
+2. **APY Calculation**: Use formula `((pps_latest / pps_previous)^(seconds_in_year / delta_seconds) - 1) * 100` 
+3. **LiveApyService**: New service to calculate trailing APY from snapshots (24h, 7d windows)
+4. This would replace the current storage-seeded APY values with true blockchain-derived metrics
