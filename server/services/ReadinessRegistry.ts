@@ -16,7 +16,6 @@ export class ReadinessRegistry {
     'storage',
     'flareClient',
     'vaultService',
-    'bridgeService',
   ]);
 
   /**
