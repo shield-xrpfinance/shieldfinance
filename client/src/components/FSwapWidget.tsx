@@ -20,6 +20,8 @@ const CHAIN_ID_MAP: Record<string, string> = {
   polygon: "eip155:137",
 };
 
+const DEFAULT_API_KEY = import.meta.env.VITE_FSWAP_API_KEY || "";
+
 export function FSwapWidget({
   className,
   style,
@@ -54,9 +56,7 @@ export function FSwapWidget({
     url.searchParams.set("destChainId", mappedDest);
   }
   
-  if (apiKey) {
-    url.searchParams.set("apiKey", apiKey);
-  }
+  url.searchParams.set("apiKey", apiKey || DEFAULT_API_KEY);
 
   useEffect(() => {
     if (!onSwapComplete) return;

@@ -48,7 +48,7 @@ interface BridgeLeg {
   completedAt: string | null;
 }
 
-interface BridgeJob {
+export interface BridgeJob {
   id: string;
   walletAddress: string;
   sourceNetwork: NetworkId;
