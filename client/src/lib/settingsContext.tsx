@@ -81,12 +81,33 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
   
   const walletAddress = address || evmAddress;
   
+  interface EnabledNetworkRow {
+    id: string;
+    networkId: string;
+    enabled: boolean;
+    customRpcUrl: string | null;
+  }
+  
+  interface EnabledTokenRow {
+    id: string;
+    networkId: string;
+    tokenId: string;
+    enabled: boolean;
+  }
+  
+  interface ServerSettingsResponse {
+    settings: UserSettingsState;
+    wallets: WalletState[];
+    enabledNetworks: EnabledNetworkRow[];
+    enabledTokens: EnabledTokenRow[];
+  }
+  
   const { 
     data: settingsData, 
     isLoading, 
     refetch: refetchSettings,
     error: queryError 
-  } = useQuery<{ settings: UserSettingsState; wallets: WalletState[]; networks: NetworkId[]; tokens: Record<NetworkId, BridgeTokenId[]> } | null>({
+  } = useQuery<ServerSettingsResponse | null>({
     queryKey: ["/api/user/settings", walletAddress],
     queryFn: async () => {
       const res = await fetch(`/api/user/settings?walletAddress=${walletAddress}`);
@@ -103,11 +124,24 @@ export function SettingsProvider({ children }: { children: ReactNode }) {
       if (settingsData.wallets) {
         setWallets(settingsData.wallets);
       }
-      if (settingsData.networks) {
-        setEnabledNetworks(settingsData.networks);
+      if (settingsData.enabledNetworks && settingsData.enabledNetworks.length > 0) {
+        const networks = settingsData.enabledNetworks
+          .filter(row => row.enabled)
+          .map(row => row.networkId as NetworkId);
+        setEnabledNetworks(networks);
       }
-      if (settingsData.tokens) {
-        setEnabledTokens(settingsData.tokens);
+      if (settingsData.enabledTokens && settingsData.enabledTokens.length > 0) {
+        const tokenGroups: Record<NetworkId, BridgeTokenId[]> = {};
+        settingsData.enabledTokens
+          .filter(row => row.enabled)
+          .forEach(row => {
+            const netId = row.networkId as NetworkId;
+            if (!tokenGroups[netId]) {
+              tokenGroups[netId] = [];
+            }
+            tokenGroups[netId].push(row.tokenId as BridgeTokenId);
+          });
+        setEnabledTokens(prev => ({ ...prev, ...tokenGroups }));
       }
       if (settingsData.settings?.theme) {
         const serverTheme = settingsData.settings.theme as "light" | "dark";
