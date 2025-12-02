@@ -498,17 +498,13 @@ export default function Bridge() {
 
   const initiateMutation = useMutation({
     mutationFn: async () => {
-      if (!quote || !sourceNetwork || !destNetwork || !sourceToken || !destToken || !amount) {
+      if (!quote || !walletAddr) {
         throw new Error("Please get a quote first");
       }
       const response = await apiRequest("POST", "/api/bridge/initiate", {
-        sourceNetwork,
-        destNetwork,
-        sourceToken,
-        destToken,
-        amount,
+        quoteId: quote.id,
         walletAddress: walletAddr,
-        quote,
+        recipientAddress: walletAddr,
       });
       return response.json();
     },
