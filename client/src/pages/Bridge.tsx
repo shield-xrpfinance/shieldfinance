@@ -65,6 +65,9 @@ interface BridgeQuote {
   priceData: Record<string, number>;
 }
 
+type LegStatus = "pending" | "executing" | "awaiting_confirm" | "bridging" | "awaiting_dest" | "completed" | "failed" | "refunded";
+type JobStatus = "pending" | "quoted" | "confirmed" | "executing" | "awaiting_source" | "awaiting_dest" | "completed" | "partially_failed" | "failed" | "cancelled" | "refunded";
+
 interface BridgeLeg {
   id: string;
   legIndex: number;
@@ -80,7 +83,7 @@ interface BridgeLeg {
   sourceTxHash: string | null;
   bridgeTxHash: string | null;
   destTxHash: string | null;
-  status: string;
+  status: LegStatus;
   errorMessage: string | null;
   gasFeeSourceUsd: string | null;
   gasFeeDestUsd: string | null;
@@ -108,7 +111,7 @@ interface BridgeJob {
   totalFeeUsd: string | null;
   estimatedTimeMinutes: number | null;
   slippageToleranceBps: number | null;
-  status: string;
+  status: JobStatus;
   errorMessage: string | null;
   errorCode: string | null;
   createdAt: string;
@@ -338,6 +341,11 @@ function FeeBreakdown({
 
   const destToken = BRIDGE_TOKENS[quote.destToken];
   
+  const formatUsd = (value: number | null | undefined) => {
+    if (value == null || isNaN(value)) return "$0.00";
+    return `$${value.toFixed(2)}`;
+  };
+  
   return (
     <Card data-testid="card-fee-breakdown">
       <CardHeader className="pb-3">
@@ -349,21 +357,21 @@ function FeeBreakdown({
             <Fuel className="w-4 h-4" />
             <span className="text-sm">Gas Fee</span>
           </div>
-          <span className="font-mono text-sm" data-testid="text-gas-fee">${quote.gasFeeUsd.toFixed(2)}</span>
+          <span className="font-mono text-sm" data-testid="text-gas-fee">{formatUsd(quote.gasFeeUsd)}</span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-muted-foreground">
             <ArrowRightLeft className="w-4 h-4" />
             <span className="text-sm">Bridge Fee</span>
           </div>
-          <span className="font-mono text-sm" data-testid="text-bridge-fee">${quote.bridgeFeeUsd.toFixed(2)}</span>
+          <span className="font-mono text-sm" data-testid="text-bridge-fee">{formatUsd(quote.bridgeFeeUsd)}</span>
         </div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2 text-muted-foreground">
             <Percent className="w-4 h-4" />
             <span className="text-sm">Slippage</span>
           </div>
-          <span className="font-mono text-sm" data-testid="text-slippage">${quote.slippageUsd.toFixed(2)}</span>
+          <span className="font-mono text-sm" data-testid="text-slippage">{formatUsd(quote.slippageUsd)}</span>
         </div>
         <Separator />
         <div className="flex items-center justify-between">
@@ -372,18 +380,18 @@ function FeeBreakdown({
             <span className="text-sm">Estimated Time</span>
           </div>
           <span className="font-medium" data-testid="text-estimated-time">
-            ~{quote.estimatedTimeMinutes} min
+            ~{quote.estimatedTimeMinutes ?? 0} min
           </span>
         </div>
         <Separator />
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium">You will receive</span>
           <span className="font-mono font-bold text-lg" data-testid="text-estimated-output">
-            {parseFloat(quote.destAmountEstimate).toFixed(6)} {destToken?.symbol || quote.destToken}
+            {parseFloat(quote.destAmountEstimate || "0").toFixed(6)} {destToken?.symbol || quote.destToken}
           </span>
         </div>
         <div className="text-xs text-muted-foreground text-right" data-testid="text-total-fee">
-          Total fees: ${quote.totalFeeUsd.toFixed(2)}
+          Total fees: {formatUsd(quote.totalFeeUsd)}
         </div>
       </CardContent>
     </Card>
