@@ -17,7 +17,7 @@ export type BridgeTokenId =
   | "USDC" | "USDT" | "ETH" | "WETH" | "XRP" | "FXRP" | "FLR" | "WFLR" 
   | "sFLR" | "flrETH" | "SPRK" | "SHIELD" | "shXRP";
 
-export type BridgeProtocol = "layerzero" | "stargate" | "fassets" | "native";
+export type BridgeProtocol = "layerzero" | "stargate" | "fassets" | "native" | "swap";
 
 export interface NetworkConfig {
   id: NetworkId;

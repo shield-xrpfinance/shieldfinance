@@ -30,6 +30,7 @@ import Portfolio from "@/pages/Portfolio";
 import Transactions from "@/pages/Transactions";
 import Analytics from "@/pages/Analytics";
 import BridgeTracking from "@/pages/BridgeTracking";
+import Bridge from "@/pages/Bridge";
 import Airdrop from "@/pages/Airdrop";
 import Staking from "@/pages/Staking";
 import Swap from "@/pages/Swap";
@@ -46,6 +47,7 @@ function DashboardRouter() {
       <Route path="/app/transactions" component={Transactions} />
       <Route path="/app/analytics" component={Analytics} />
       <Route path="/app/bridge-tracking" component={BridgeTracking} />
+      <Route path="/app/bridge" component={Bridge} />
       <Route path="/app/airdrop" component={Airdrop} />
       <Route path="/app/staking" component={Staking} />
       <Route path="/app/swap" component={Swap} />

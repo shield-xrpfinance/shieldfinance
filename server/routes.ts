@@ -28,6 +28,9 @@ import { generateFDCProof } from "./utils/fdc-proof";
 import { globalRateLimiter, strictRateLimiter } from "./middleware/rateLimiter";
 import { analyticsService } from "./services/AnalyticsService";
 import { yieldOptimizerService } from "./services/YieldOptimizerService";
+import { BridgeOrchestratorService } from "./services/BridgeOrchestratorService";
+import { RouteRegistry } from "./services/RouteRegistry";
+import { NETWORKS, BRIDGE_TOKENS, DEFAULT_ENABLED_NETWORKS, DEFAULT_ENABLED_TOKENS, type NetworkId, type BridgeTokenId } from "@shared/bridgeConfig";
 
 async function sendNotification(
   walletAddress: string,
@@ -6426,6 +6429,170 @@ export async function registerRoutes(
         error: "Failed to retrieve merkle root",
         details: error instanceof Error ? error.message : "Unknown error"
       });
+    }
+  });
+
+  // =============================================================================
+  // CROSS-CHAIN BRIDGE API ENDPOINTS
+  // =============================================================================
+
+  // Get all networks and tokens for the bridge UI
+  app.get("/api/bridge/networks", async (_req, res) => {
+    try {
+      res.json({
+        networks: Object.values(NETWORKS).filter(n => n.isMainnetReady || !n.isTestnetOnly),
+        tokens: Object.values(BRIDGE_TOKENS),
+        defaultEnabledNetworks: DEFAULT_ENABLED_NETWORKS,
+        defaultEnabledTokens: DEFAULT_ENABLED_TOKENS,
+      });
+    } catch (error) {
+      console.error("[Bridge API] Failed to get networks:", error);
+      res.status(500).json({ error: "Failed to get networks" });
+    }
+  });
+
+  // Get available destinations from a source network
+  app.get("/api/bridge/destinations/:sourceNetwork", async (req, res) => {
+    try {
+      const sourceNetwork = req.params.sourceNetwork as NetworkId;
+      
+      if (!NETWORKS[sourceNetwork]) {
+        return res.status(400).json({ error: "Invalid source network" });
+      }
+
+      const destinations = RouteRegistry.getAvailableDestinations(sourceNetwork);
+      res.json({ destinations });
+    } catch (error) {
+      console.error("[Bridge API] Failed to get destinations:", error);
+      res.status(500).json({ error: "Failed to get destinations" });
+    }
+  });
+
+  // Get available tokens for a network pair
+  app.get("/api/bridge/tokens/:sourceNetwork/:destNetwork", async (req, res) => {
+    try {
+      const sourceNetwork = req.params.sourceNetwork as NetworkId;
+      const destNetwork = req.params.destNetwork as NetworkId;
+      
+      if (!NETWORKS[sourceNetwork] || !NETWORKS[destNetwork]) {
+        return res.status(400).json({ error: "Invalid network" });
+      }
+
+      const tokens = RouteRegistry.getAvailableTokens(sourceNetwork, destNetwork);
+      res.json(tokens);
+    } catch (error) {
+      console.error("[Bridge API] Failed to get tokens:", error);
+      res.status(500).json({ error: "Failed to get tokens" });
+    }
+  });
+
+  // Get a quote for a cross-chain bridge
+  app.post("/api/bridge/quote", async (req, res) => {
+    try {
+      const { sourceNetwork, sourceToken, destNetwork, destToken, amount, slippageToleranceBps } = req.body;
+
+      if (!sourceNetwork || !sourceToken || !destNetwork || !destToken || !amount) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const quote = await BridgeOrchestratorService.getQuote({
+        sourceNetwork,
+        sourceToken,
+        destNetwork,
+        destToken,
+        amount,
+        slippageToleranceBps,
+      });
+
+      if (!quote) {
+        return res.status(400).json({ error: "No route available for this bridge" });
+      }
+
+      res.json(quote);
+    } catch (error) {
+      console.error("[Bridge API] Failed to get quote:", error);
+      res.status(500).json({ error: "Failed to get quote" });
+    }
+  });
+
+  // Initiate a bridge from a quote
+  app.post("/api/bridge/initiate", strictRateLimiter, async (req, res) => {
+    try {
+      const { quoteId, walletAddress, recipientAddress } = req.body;
+
+      if (!quoteId || !walletAddress || !recipientAddress) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      const job = await BridgeOrchestratorService.initiateBridge({
+        quoteId,
+        walletAddress,
+        recipientAddress,
+      });
+
+      if (!job) {
+        return res.status(400).json({ error: "Failed to initiate bridge. Quote may have expired." });
+      }
+
+      // Create notification for the user
+      await sendNotification(
+        walletAddress,
+        "vault_event",
+        "Bridge Started",
+        `Cross-chain bridge from ${job.sourceNetwork} to ${job.destNetwork} initiated.`,
+        { jobId: job.id, sourceToken: job.sourceToken, destToken: job.destToken },
+        undefined,
+        undefined
+      );
+
+      res.json(job);
+    } catch (error) {
+      console.error("[Bridge API] Failed to initiate bridge:", error);
+      res.status(500).json({ error: "Failed to initiate bridge" });
+    }
+  });
+
+  // Get a specific bridge job
+  app.get("/api/bridge/job/:id", async (req, res) => {
+    try {
+      const job = await BridgeOrchestratorService.getJob(req.params.id);
+
+      if (!job) {
+        return res.status(404).json({ error: "Job not found" });
+      }
+
+      res.json(job);
+    } catch (error) {
+      console.error("[Bridge API] Failed to get job:", error);
+      res.status(500).json({ error: "Failed to get job" });
+    }
+  });
+
+  // Get all bridge jobs for a wallet
+  app.get("/api/bridge/jobs/:walletAddress", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 20;
+      const jobs = await BridgeOrchestratorService.getJobsForWallet(req.params.walletAddress, limit);
+      res.json({ jobs });
+    } catch (error) {
+      console.error("[Bridge API] Failed to get jobs:", error);
+      res.status(500).json({ error: "Failed to get jobs" });
+    }
+  });
+
+  // Cancel a bridge job
+  app.post("/api/bridge/job/:id/cancel", async (req, res) => {
+    try {
+      const success = await BridgeOrchestratorService.cancelJob(req.params.id);
+
+      if (!success) {
+        return res.status(400).json({ error: "Cannot cancel job in current status" });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("[Bridge API] Failed to cancel job:", error);
+      res.status(500).json({ error: "Failed to cancel job" });
     }
   });
 
