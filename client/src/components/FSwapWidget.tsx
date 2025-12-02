@@ -33,9 +33,20 @@ export function FSwapWidget({
   const [theme, setTheme] = useState<"light" | "dark">("dark");
   
   useEffect(() => {
-    const savedTheme = localStorage.getItem("theme") as "light" | "dark" | null;
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    setTheme(savedTheme || (prefersDark ? "dark" : "light"));
+    const updateTheme = () => {
+      const isDark = document.documentElement.classList.contains("dark");
+      setTheme(isDark ? "dark" : "light");
+    };
+
+    updateTheme();
+
+    const observer = new MutationObserver(updateTheme);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["class"],
+    });
+
+    return () => observer.disconnect();
   }, []);
   
   const url = new URL("https://fswap.luminite.app");
