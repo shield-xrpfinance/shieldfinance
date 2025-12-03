@@ -44,15 +44,16 @@ export const FLARE_CONTRACTS = {
     
     // Firelight.finance (Launched Nov 11, 2025)
     firelight: {
-      // Launch Vault Contract (ERC-4626)
-      // ⚠️ To be announced - Check firelight.finance app
-      // Visit app and connect wallet to get official address
-      launchVault: null, // Check firelight.finance/vaults
+      // stXRP Vault Contract (ERC-4626)
+      // Verified on Flarescan: https://flarescan.com/address/0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3
+      // TransparentUpgradeableProxy - audited by OpenZeppelin + Coinspect
+      // TVL: ~$35M as of Dec 2025
+      stXRPVault: "0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3",
       
-      // stXRP Token (same as Launch Vault for ERC-4626)
-      stXRP: null, // Same address as launchVault
+      // stXRP Token (same contract as vault - ERC-4626 is also ERC-20)
+      stXRP: "0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3",
       
-      // FXRP Token (for deposits)
+      // FXRP Token (underlying asset for deposits)
       fxrpToken: "0xAd552A648C74D49E10027AB8a618A3ad4901c5bE",
       
       // Firelight App
@@ -176,13 +177,13 @@ export const CONTRACT_STATUS = {
   mainnet: {
     fxrp: "✅ Verified on Flarescan (Sep 2024)",
     assetManager: "🔄 Retrieve via Contract Registry",
-    firelightVault: "🔄 Announced Nov 11, 2025 - Check firelight.finance",
-    stXRP: "🔄 Announced Nov 11, 2025 - Check firelight.finance"
+    stXRPVault: "✅ Live on Flarescan - 0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3",
+    stXRP: "✅ Same contract as stXRPVault (ERC-4626)"
   },
   coston2: {
     fxrp: "✅ Confirmed from deployment",
     assetManager: "🔄 Retrieve via Contract Registry",
-    firelightVault: "❌ Mainnet only (Phase 1)",
+    stXRPVault: "❌ Mainnet only (Phase 1)",
     stXRP: "❌ Mainnet only (Phase 1)"
   }
 } as const;
@@ -198,11 +199,11 @@ export const RISK_NOTES = {
     "AssetManager uses Diamond Pattern (EIP-2535) - may upgrade"
   ],
   firelight: [
-    "Firelight launched Nov 11, 2025 - early stage protocol",
-    "Contract addresses to be announced on firelight.finance",
+    "Firelight launched Nov 11, 2025 - ERC-4626 vault live on mainnet",
+    "stXRP vault verified at 0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3",
+    "Audited by OpenZeppelin + Coinspect (TransparentUpgradeableProxy)",
     "Testnet not available in Phase 1 - mainnet only",
-    "Always verify addresses on Flarescan before depositing funds",
-    "Start with small test amounts"
+    "Rewards activation expected early 2026 (Phase 2)"
   ]
 } as const;
 

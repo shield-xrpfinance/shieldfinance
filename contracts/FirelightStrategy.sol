@@ -7,28 +7,39 @@ import "@openzeppelin/contracts/access/AccessControl.sol";
 import "./interfaces/IStrategy.sol";
 
 /**
+ * @title IERC4626
+ * @dev Minimal ERC-4626 interface for Firelight stXRP vault interaction
+ */
+interface IERC4626 {
+    function asset() external view returns (address);
+    function totalAssets() external view returns (uint256);
+    function convertToShares(uint256 assets) external view returns (uint256);
+    function convertToAssets(uint256 shares) external view returns (uint256);
+    function deposit(uint256 assets, address receiver) external returns (uint256 shares);
+    function redeem(uint256 shares, address receiver, address owner) external returns (uint256 assets);
+    function balanceOf(address account) external view returns (uint256);
+    function maxDeposit(address receiver) external view returns (uint256);
+    function maxRedeem(address owner) external view returns (uint256);
+}
+
+/**
  * @title FirelightStrategy
- * @notice Strategy for staking FXRP in Firelight liquid staking protocol
+ * @notice Strategy for staking FXRP in Firelight liquid staking protocol (stXRP)
  * @dev Implements IStrategy for integration with ShXRPVault multi-strategy system
  * 
  * Firelight Protocol Details:
  * - Liquid staking protocol for FXRP on Flare Network
- * - Expected launch: Q1 2026
- * - Provides stXRP (staked FXRP) liquid staking tokens
- * - Higher APY potential vs lending (staking rewards)
- * - May have unstaking delays/withdrawal queues
+ * - Live since Nov 11, 2025 on mainnet
+ * - stXRP vault: 0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3
+ * - ERC-4626 compliant vault (deposit FXRP → receive stXRP)
+ * - Audited by OpenZeppelin + Coinspect
  * - Website: https://firelight.finance/
  * 
- * Configuration Needed:
- * - Firelight staking contract address
- * - stXRP token contract address
- * - Oracle for stXRP/FXRP exchange rate (if applicable)
- * - Unstaking delay period
- * 
- * Implementation Notes:
- * - DISABLED by default (Q1 2026 launch)
- * - Will be activated when Firelight goes live
- * - Requires careful testing of unstaking flow
+ * Integration Flow:
+ * 1. ShXRPVault approves FXRP for this strategy
+ * 2. deploy() is called → pulls FXRP, deposits to Firelight, receives stXRP
+ * 3. stXRP balance accrues value as staking rewards accumulate
+ * 4. withdraw() redeems stXRP for FXRP and sends to receiver
  * 
  * @custom:security-contact security@shyield.finance
  */
@@ -39,30 +50,21 @@ contract FirelightStrategy is IStrategy, AccessControl {
 
     IERC20 public immutable fxrpToken;
     
-    // Firelight staking contract
-    // TODO: Set to actual Firelight contract address when live (Q1 2026)
-    address public firelightStaking;
-    
-    // stXRP liquid staking token
-    // TODO: Set to actual stXRP token address
-    address public stXRPToken;
-    
-    // Oracle for stXRP/FXRP exchange rate (if needed)
-    // TODO: Determine if oracle required or if Firelight provides rate
-    address public exchangeRateOracle;
+    // Firelight stXRP vault (ERC-4626)
+    // Mainnet: 0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3
+    IERC4626 public stXRPVault;
     
     // Strategy state
     bool private _isActive;
     
-    // Tracking
-    uint256 private totalDeployedAmount;
+    // Tracking for reporting
     uint256 private lastReportedAssets;
-    uint256 private accumulatedYield;
     bool private reportInitialized;
     
     // Events
-    event FirelightConfigUpdated(address indexed stakingContract, address indexed stXRP, address indexed oracle);
-    event UnstakingInitiated(uint256 amount, uint256 withdrawalId);
+    event FirelightConfigUpdated(address indexed stXRPVault);
+    event DepositedToFirelight(uint256 fxrpAmount, uint256 stXRPReceived);
+    event RedeemedFromFirelight(uint256 stXRPAmount, uint256 fxrpReceived);
 
     constructor(
         address _fxrpToken,
@@ -78,110 +80,95 @@ contract FirelightStrategy is IStrategy, AccessControl {
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);
         _grantRole(OPERATOR_ROLE, _operator);
         
-        // Disabled by default (Q1 2026 launch)
+        // Disabled by default until configured
         _isActive = false;
     }
     
     /**
-     * @notice Configure Firelight contract addresses
+     * @notice Configure Firelight stXRP vault address
      * @dev Must be called before activating strategy
-     * @param _stakingContract Firelight staking contract address
-     * @param _stXRP stXRP token address
-     * @param _oracle Exchange rate oracle (address(0) if not needed)
+     * @param _stXRPVault Firelight stXRP vault address (ERC-4626)
      */
-    function setFirelightConfig(
-        address _stakingContract,
-        address _stXRP,
-        address _oracle
-    ) external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(_stakingContract != address(0), "Invalid staking contract");
-        require(_stXRP != address(0), "Invalid stXRP");
+    function setFirelightConfig(address _stXRPVault) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(_stXRPVault != address(0), "Invalid stXRP vault");
         
-        firelightStaking = _stakingContract;
-        stXRPToken = _stXRP;
-        exchangeRateOracle = _oracle;
+        // Verify the vault's underlying asset is FXRP
+        IERC4626 vault = IERC4626(_stXRPVault);
+        require(vault.asset() == address(fxrpToken), "Vault asset must be FXRP");
         
-        emit FirelightConfigUpdated(_stakingContract, _stXRP, _oracle);
+        stXRPVault = vault;
+        
+        emit FirelightConfigUpdated(_stXRPVault);
     }
     
     /**
      * @notice Deploy FXRP to Firelight staking
      * @dev Pull-based: Vault must approve FXRP transfer first
+     *      Deposits FXRP to Firelight stXRP vault, receives stXRP shares
      * @param amount Amount of FXRP to stake (6 decimals)
      */
     function deploy(uint256 amount) external override onlyRole(OPERATOR_ROLE) {
         require(_isActive, "Strategy not active");
         require(amount > 0, "Amount must be > 0");
-        require(firelightStaking != address(0), "Firelight not configured");
+        require(address(stXRPVault) != address(0), "Firelight not configured");
         
-        // TODO: Implement actual Firelight staking
-        // For now, just pull FXRP from vault (safe for testing)
+        // Check Firelight deposit capacity
+        uint256 maxDeposit = stXRPVault.maxDeposit(address(this));
+        require(maxDeposit >= amount, "Exceeds Firelight deposit limit");
+        
+        // Pull FXRP from vault (vault has already approved)
         fxrpToken.safeTransferFrom(msg.sender, address(this), amount);
         
-        // TODO: Stake FXRP to receive stXRP
-        // Example pattern:
-        // fxrpToken.approve(firelightStaking, amount);
-        // uint256 stXRPReceived = IFirelightStaking(firelightStaking).stake(amount);
+        // Approve Firelight to spend FXRP
+        fxrpToken.safeApprove(address(stXRPVault), amount);
         
-        totalDeployedAmount += amount;
+        // Deposit FXRP to Firelight, receive stXRP shares
+        uint256 stXRPReceived = stXRPVault.deposit(amount, address(this));
         
+        emit DepositedToFirelight(amount, stXRPReceived);
         emit DeployedToStrategy(amount);
     }
     
     /**
      * @notice Withdraw FXRP from Firelight staking
+     * @dev Redeems stXRP shares for FXRP and transfers to receiver
      * @param amount Amount of FXRP to withdraw (6 decimals)
      * @param receiver Address to receive withdrawn FXRP
-     * @return actualAmount Amount actually withdrawn (may include staking rewards)
+     * @return actualAmount Amount actually withdrawn (includes any accrued yield)
      */
     function withdraw(uint256 amount, address receiver) external override onlyRole(OPERATOR_ROLE) returns (uint256 actualAmount) {
         require(amount > 0, "Amount must be > 0");
         require(receiver != address(0), "Invalid receiver");
+        require(address(stXRPVault) != address(0), "Firelight not configured");
         
-        // Get current total assets (principal + staking rewards)
-        uint256 currentTotal = this.totalAssets();
-        
-        // Clamp to available assets
-        uint256 requestedAmount = amount < currentTotal ? amount : currentTotal;
-        
-        // TODO: Implement actual Firelight unstaking
-        // Important: Firelight may have unstaking delays!
-        // Example pattern:
-        // uint256 stXRPBalance = IERC20(stXRPToken).balanceOf(address(this));
-        // uint256 exchangeRate = getStXRPToFXRPRate();
-        // uint256 stXRPToUnstake = (requestedAmount * 1e18) / exchangeRate;
-        // 
-        // // Option 1: Instant withdrawal (if available, may have fee)
-        // actualAmount = IFirelightStaking(firelightStaking).unstakeInstant(stXRPToUnstake);
-        // 
-        // // Option 2: Delayed withdrawal (queue, claim later)
-        // uint256 withdrawalId = IFirelightStaking(firelightStaking).requestUnstake(stXRPToUnstake);
-        // emit UnstakingInitiated(requestedAmount, withdrawalId);
-        // revert("Unstaking delayed - claim after delay period");
-        
-        // For now, transfer from buffer (safe for testing)
-        uint256 balance = fxrpToken.balanceOf(address(this));
-        actualAmount = balance < requestedAmount ? balance : requestedAmount;
-        
-        if (actualAmount > 0) {
-            fxrpToken.safeTransfer(receiver, actualAmount);
-            
-            // Withdraw from yield first, then principal
-            if (actualAmount <= accumulatedYield) {
-                accumulatedYield -= actualAmount;
-            } else {
-                uint256 yieldPortion = accumulatedYield;
-                uint256 principalPortion = actualAmount - yieldPortion;
-                accumulatedYield = 0;
-                
-                if (principalPortion >= totalDeployedAmount) {
-                    totalDeployedAmount = 0;
-                } else {
-                    totalDeployedAmount -= principalPortion;
-                }
-            }
+        // Get our stXRP balance
+        uint256 stXRPBalance = stXRPVault.balanceOf(address(this));
+        if (stXRPBalance == 0) {
+            return 0;
         }
         
+        // Calculate how many stXRP shares we need to redeem for the requested FXRP amount
+        uint256 sharesToRedeem = stXRPVault.convertToShares(amount);
+        
+        // Cap at our actual balance
+        if (sharesToRedeem > stXRPBalance) {
+            sharesToRedeem = stXRPBalance;
+        }
+        
+        // Check Firelight redemption capacity
+        uint256 maxRedeem = stXRPVault.maxRedeem(address(this));
+        if (sharesToRedeem > maxRedeem) {
+            sharesToRedeem = maxRedeem;
+        }
+        
+        if (sharesToRedeem == 0) {
+            return 0;
+        }
+        
+        // Redeem stXRP shares for FXRP
+        actualAmount = stXRPVault.redeem(sharesToRedeem, receiver, address(this));
+        
+        emit RedeemedFromFirelight(sharesToRedeem, actualAmount);
         emit WithdrawnFromStrategy(amount, actualAmount);
         
         return actualAmount;
@@ -189,51 +176,53 @@ contract FirelightStrategy is IStrategy, AccessControl {
     
     /**
      * @notice Get total assets managed by strategy
-     * @dev Returns FXRP-equivalent value of staked position
+     * @dev Returns FXRP-equivalent value of staked position using ERC-4626 conversion
      * @return Total FXRP value in strategy (6 decimals)
      */
     function totalAssets() external view override returns (uint256) {
-        if (firelightStaking == address(0) || stXRPToken == address(0)) {
+        if (address(stXRPVault) == address(0)) {
             return 0;
         }
         
-        // TODO: Implement actual Firelight balance query
-        // Example pattern:
-        // uint256 stXRPBalance = IERC20(stXRPToken).balanceOf(address(this));
-        // uint256 exchangeRate = getStXRPToFXRPRate(); // From oracle or Firelight
-        // return (stXRPBalance * exchangeRate) / 1e18;
+        // Get our stXRP balance
+        uint256 stXRPBalance = stXRPVault.balanceOf(address(this));
+        if (stXRPBalance == 0) {
+            return 0;
+        }
         
-        // Return principal + yield
-        return totalDeployedAmount + accumulatedYield;
+        // Convert stXRP shares to FXRP value using vault's exchange rate
+        // This automatically includes any accrued staking rewards
+        return stXRPVault.convertToAssets(stXRPBalance);
     }
     
     /**
-     * @notice Get stXRP to FXRP exchange rate
-     * @dev Helper function to query exchange rate (from oracle or Firelight)
-     * @return Exchange rate in 18 decimals
+     * @notice Get stXRP balance held by this strategy
+     * @return stXRP token balance (6 decimals)
      */
-    function getStXRPToFXRPRate() internal view returns (uint256) {
-        // TODO: Implement actual exchange rate query
-        // Option 1: Firelight provides rate
-        // return IFirelightStaking(firelightStaking).getExchangeRate();
-        // 
-        // Option 2: Oracle provides rate
-        // if (exchangeRateOracle != address(0)) {
-        //     return IOracle(exchangeRateOracle).getRate("stXRP/FXRP");
-        // }
-        // 
-        // Option 3: Calculate from reserves
-        // uint256 totalStXRP = IERC20(stXRPToken).totalSupply();
-        // uint256 totalFXRP = IFirelightStaking(firelightStaking).totalStaked();
-        // return (totalFXRP * 1e18) / totalStXRP;
+    function getStXRPBalance() external view returns (uint256) {
+        if (address(stXRPVault) == address(0)) {
+            return 0;
+        }
+        return stXRPVault.balanceOf(address(this));
+    }
+    
+    /**
+     * @notice Get current stXRP to FXRP exchange rate
+     * @dev Uses ERC-4626 conversion (1 stXRP share → X FXRP assets)
+     * @return Exchange rate in 6 decimals (e.g., 1050000 = 1.05 FXRP per stXRP)
+     */
+    function getExchangeRate() external view returns (uint256) {
+        if (address(stXRPVault) == address(0)) {
+            return 1e6; // 1:1 if not configured
+        }
         
-        // For now, return 1:1
-        return 1e18;
+        // How much FXRP is 1 stXRP worth?
+        return stXRPVault.convertToAssets(1e6);
     }
     
     /**
      * @notice Report strategy performance
-     * @dev Called periodically to update metrics
+     * @dev Called periodically to update metrics and calculate profit/loss
      * @return profit FXRP gained since last report (6 decimals)
      * @return loss FXRP lost since last report (6 decimals)
      * @return currentAssets Current total FXRP value (6 decimals)
@@ -283,11 +272,10 @@ contract FirelightStrategy is IStrategy, AccessControl {
     
     /**
      * @notice Activate strategy (admin only)
-     * @dev Should only be activated when Firelight launches (Q1 2026)
+     * @dev Should only be activated after Firelight vault is configured
      */
     function activate() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        require(firelightStaking != address(0), "Firelight not configured");
-        require(stXRPToken != address(0), "stXRP not configured");
+        require(address(stXRPVault) != address(0), "Firelight not configured");
         _isActive = true;
     }
     
@@ -306,32 +294,43 @@ contract FirelightStrategy is IStrategy, AccessControl {
     }
     
     /**
-     * @notice Simulate yield accumulation for testing
-     * @dev Manually adds yield to test report() functionality
-     * @param amount Amount of simulated yield to add (6 decimals)
+     * @notice Get Firelight stXRP vault address
      */
-    function simulateYield(uint256 amount) external onlyRole(OPERATOR_ROLE) {
-        accumulatedYield += amount;
+    function getFirelightVault() external view returns (address) {
+        return address(stXRPVault);
     }
     
     /**
      * @notice Emergency withdrawal (admin only)
-     * @dev Withdraws all stXRP/FXRP back to this contract
+     * @dev Redeems all stXRP back to FXRP and holds in this contract
      */
     function emergencyWithdraw() external onlyRole(DEFAULT_ADMIN_ROLE) {
-        // TODO: Implement Firelight emergency unstake
-        // May require waiting for unstaking delay
+        require(address(stXRPVault) != address(0), "Firelight not configured");
+        
+        uint256 stXRPBalance = stXRPVault.balanceOf(address(this));
+        if (stXRPBalance > 0) {
+            // Redeem all stXRP to this contract
+            uint256 fxrpReceived = stXRPVault.redeem(stXRPBalance, address(this), address(this));
+            emit RedeemedFromFirelight(stXRPBalance, fxrpReceived);
+        }
+        
+        // Deactivate strategy
+        _isActive = false;
     }
     
     /**
-     * @notice Claim pending unstaking withdrawals
-     * @dev For delayed unstaking model
-     * @param withdrawalId ID of pending withdrawal
+     * @notice Rescue stuck tokens (admin only)
+     * @dev Only for tokens other than stXRP (which is managed by the strategy)
+     * @param token Token address to rescue
+     * @param to Recipient address
+     * @param amount Amount to rescue
      */
-    function claimUnstaking(uint256 withdrawalId) external onlyRole(OPERATOR_ROLE) {
-        // TODO: Implement claim logic for delayed withdrawals
-        // Example:
-        // uint256 claimedAmount = IFirelightStaking(firelightStaking).claimUnstake(withdrawalId);
-        // emit WithdrawalClaimed(withdrawalId, claimedAmount);
+    function rescueTokens(address token, address to, uint256 amount) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(to != address(0), "Invalid recipient");
+        // Don't allow rescuing stXRP (strategy's managed asset) unless deactivated
+        if (token == address(stXRPVault)) {
+            require(!_isActive, "Cannot rescue stXRP while active");
+        }
+        IERC20(token).safeTransfer(to, amount);
     }
 }
