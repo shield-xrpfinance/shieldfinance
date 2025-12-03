@@ -3,6 +3,10 @@ import "@nomicfoundation/hardhat-ethers";
 import { ethers as ethersLib } from "ethers";
 import * as fs from "fs";
 import * as path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const SHXRP_VAULT_ABI = [
   "function owner() view returns (address)",
@@ -36,20 +40,31 @@ async function main() {
   console.log("🧪 MOCK STRATEGY DEPLOYMENT FOR TESTNET SIMULATION");
   console.log("=".repeat(60) + "\n");
 
-  const network = hre.network as any;
+  const COSTON2_RPC = process.env.FLARE_COSTON2_RPC_URL || "https://coston2-api.flare.network/ext/C/rpc";
+  const COSTON2_CHAIN_ID = 114;
+  
+  const network = hre.network;
   const ethers = (hre as any).ethers;
+  const networkName = network?.name || "coston2";
+  const networkConfig = (network?.config as any) || {};
   
-  console.log("📡 Network:", network.name);
+  console.log("📡 Network:", networkName);
+  console.log("📡 Chain ID:", networkConfig.chainId || COSTON2_CHAIN_ID);
+  console.log("📡 RPC URL:", networkConfig.url || COSTON2_RPC);
   
-  if (network.name !== "coston2") {
-    console.error("❌ This script is intended for Coston2 testnet only");
+  // Use configured network or fallback to Coston2
+  const rpcUrl = networkConfig.url || COSTON2_RPC;
+  const chainId = networkConfig.chainId || COSTON2_CHAIN_ID;
+  
+  if (chainId !== 114) {
+    console.error("❌ This script is intended for Coston2 testnet only (chainId 114)");
     console.log("Run with: npx hardhat run scripts/deploy-mock-strategy.ts --network coston2");
     process.exit(1);
   }
 
   const provider = new ethersLib.JsonRpcProvider(
-    network.config.url,
-    { chainId: network.config.chainId, name: network.name }
+    rpcUrl,
+    { chainId, name: "coston2" }
   );
   
   if (!process.env.DEPLOYER_PRIVATE_KEY && !process.env.OPERATOR_PRIVATE_KEY) {
@@ -98,15 +113,39 @@ async function main() {
   console.log("");
 
   console.log("1️⃣ Deploying MockStrategy...");
-  const MockStrategy = await ethers.getContractFactory("MockStrategy");
-  const mockStrategy = await MockStrategy.deploy(
-    fxrpAddress,
-    deployer.address,
-    deployer.address,
-    "MockFirelight"
-  );
-  await mockStrategy.waitForDeployment();
-  const mockStrategyAddress = await mockStrategy.getAddress();
+  
+  // Get contract factory through proper HRE ethers
+  const hreEthers = (hre as any).ethers;
+  if (!hreEthers || !hreEthers.getContractFactory) {
+    // Fallback: deploy using direct provider and bytecode
+    console.log("   Using direct deployment method...");
+    const artifact = JSON.parse(fs.readFileSync(
+      path.join(__dirname, "../artifacts/contracts/test/MockStrategy.sol/MockStrategy.json"),
+      "utf-8"
+    ));
+    
+    const factory = new ethersLib.ContractFactory(artifact.abi, artifact.bytecode, deployer);
+    const mockStrategyContract = await factory.deploy(
+      fxrpAddress,
+      deployer.address,
+      deployer.address,
+      "MockFirelight"
+    );
+    await mockStrategyContract.waitForDeployment();
+    var mockStrategyAddress = await mockStrategyContract.getAddress();
+    var mockStrategy = new ethersLib.Contract(mockStrategyAddress, MOCK_STRATEGY_ABI, deployer);
+  } else {
+    const MockStrategy = await hreEthers.getContractFactory("MockStrategy", deployer);
+    const mockStrategyContract = await MockStrategy.deploy(
+      fxrpAddress,
+      deployer.address,
+      deployer.address,
+      "MockFirelight"
+    );
+    await mockStrategyContract.waitForDeployment();
+    var mockStrategyAddress = await mockStrategyContract.getAddress();
+    var mockStrategy = new ethersLib.Contract(mockStrategyAddress, MOCK_STRATEGY_ABI, deployer);
+  }
   console.log("✅ MockStrategy deployed:", mockStrategyAddress);
   console.log("   Explorer:", `https://coston2-explorer.flare.network/address/${mockStrategyAddress}`);
 

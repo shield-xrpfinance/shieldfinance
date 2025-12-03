@@ -1,0 +1,15 @@
+{
+  "network": "coston2",
+  "chainId": 114,
+  "timestamp": "2025-12-03T16:18:29.782Z",
+  "deployer": "0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D",
+  "contracts": {
+    "MockStrategy": {
+      "address": "0x1a8c6d2BfD132bCf75B54B3d23CA4c0542957A45",
+      "fxrpToken": "0x0b6A3645c240605887a5532109323A3E12273dc7",
+      "vault": "0x3219232a45880b79736Ee899Cb3b2f95D527C631",
+      "name": "MockFirelight",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x1a8c6d2BfD132bCf75B54B3d23CA4c0542957A45"
+    }
+  }
+}
