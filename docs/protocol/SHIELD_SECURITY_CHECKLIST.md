@@ -289,36 +289,36 @@ This ensures:
 
 ## 4. Economic Security
 
-### 4.1 Fair Launch Economics
+### 4.1 Fair Launch Economics (TBC - Launch Pending)
 - [ ] **Initial Price:**
-  - Target: $0.01 per SHIELD ✓
-  - LP Ratio: 535,451 wFLR / 1M SHIELD ≈ 0.535 wFLR per SHIELD ✓
-  - Total Liquidity: ~$10,000 ✓
+  - Target: $0.01 per SHIELD (TBC)
+  - LP Ratio: 535,451 wFLR / 1M SHIELD ≈ 0.535 wFLR per SHIELD (TBC)
+  - Total Liquidity: ~$10,000 (TBC)
 - [ ] **Supply Distribution:**
   - Team allocation: 9% (with vesting recommended)
   - Treasury allocations transparent on-chain
   - Airdrop vested via merkle distributor (no unlock)
-  - LP locked for 12 months ✓
+  - LP locked for 12 months (TBC)
 - [ ] **Burn Mechanics:**
   - 50% of revenue burned (deflationary) ✓
   - 50% reserves (sustainability) ✓
   - Burn triggered weekly (automated)
   - Burn events public on-chain
 
-### 4.2 Liquidity Security
+### 4.2 Liquidity Security (TBC - Launch Pending)
 - [ ] **LP Lock:**
-  - 12-month lock via Team Finance
+  - 12-month lock via Team Finance (TBC)
   - Lock duration: 31,536,000 seconds (365 days)
   - Lock receipt publicly verifiable
   - Unlock date communicated to community
 - [ ] **Initial Liquidity:**
-  - Sufficient depth for initial trading (~$10k)
+  - Sufficient depth for initial trading (~$10k) (TBC)
   - Wide price range (±100%) for stability
   - 0.3% fee tier (standard for most pairs)
 - [ ] **Anti-Rug Measures:**
   - No team tokens unlocked at launch
   - No mint function (supply fixed)
-  - LP locked (cannot be removed)
+  - LP locked (cannot be removed) (TBC)
   - Ownership renounced or multisig (optional)
 
 ### 4.3 Market Risk Mitigation
@@ -331,7 +331,7 @@ This ensures:
   - Large trades may still experience slippage
   - Users should use limit orders when possible
 - [ ] **Liquidity Depth:**
-  - $10k initial liquidity may not support large trades
+  - $10k initial liquidity may not support large trades (TBC)
   - Community encouraged to add liquidity over time
   - Protocol revenue increases liquidity via buy pressure
 

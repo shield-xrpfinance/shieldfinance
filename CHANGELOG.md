@@ -330,8 +330,8 @@ Boost APY = Base APY + (Annual Protocol Revenue → FXRP) × (Your Locked SHIELD
 - **SHIELD_DEPLOYMENT.md**: Comprehensive 7-step deployment guide with verification commands
   - Pre-deployment checklist (environment setup, security requirements, testnet validation)
   - Step-by-step deployment sequence (ShieldToken → RevenueRouter → StakingBoost → MerkleDistributor)
-  - SparkDEX V3 liquidity integration (1M SHIELD + 535,451 wFLR = $10K)
-  - LP NFT locking for 12 months
+  - SparkDEX V3 liquidity integration (1M SHIELD + 535,451 wFLR = $10K) (TBC)
+  - LP NFT locking for 12 months (TBC)
   - Post-deployment verification and automated checks
   - Emergency procedures for critical issues
   - Deployment cost estimates (~5 FLR recommended)

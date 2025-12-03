@@ -1,8 +1,10 @@
 # SparkDEX V3 Liquidity Deployment Script
 
+> **Status:** Launch details are TBC (To Be Confirmed). This script is prepared for planned fair launch.
+
 ## Overview
 
-This directory contains a comprehensive Hardhat deployment script for adding initial liquidity to SparkDEX V3 (Uniswap V3 fork) on Flare mainnet for the Shield Finance ($SHIELD) fair launch.
+This directory contains a comprehensive Hardhat deployment script for adding initial liquidity to SparkDEX V3 (Uniswap V3 fork) on Flare mainnet for the Shield Finance ($SHIELD) fair launch (TBC).
 
 ## Files
 
@@ -164,10 +166,10 @@ See `docs/LP_LOCKING_GUIDE.md` for detailed locking instructions.
 
 After script completion, you MUST:
 
-1. **Lock LP NFT for 12 months**
+1. **Lock LP NFT for 12 months** (TBC)
    - See `docs/LP_LOCKING_GUIDE.md`
    - Recommended: Team Finance or custom timelock
-   - Essential for fair launch credibility
+   - Essential for fair launch credibility (TBC)
 
 2. **Verify on Block Explorer**
    - Check pool creation: https://flarescan.com/
@@ -255,14 +257,14 @@ After script completion, you MUST:
    Initial Liquidity:
       - 535451.0 wFLR
       - 1000000.0 SHIELD
-   Estimated Value: ~$10,000 USD
+   Estimated Value: ~$10,000 USD (TBC)
 
 🔗 Useful Links:
    Pool on SparkDEX: https://sparkdex.ai/pool/0x...
    Pool Explorer: https://flarescan.com/address/0x...
    LP NFT Explorer: https://flarescan.com/token/0xEE5FF5Bc5F852764b5584d92A4d592A53DC527da?a=12345
 
-⚠️  CRITICAL NEXT STEP: LOCK LP TOKENS FOR 12 MONTHS
+⚠️  CRITICAL NEXT STEP: LOCK LP TOKENS FOR 12 MONTHS (TBC)
 ================================================================================
 
 🔒 LP Locking Options:
@@ -271,7 +273,7 @@ After script completion, you MUST:
    - Website: https://www.team.finance/
    - Check if Flare mainnet is supported
    - Lock NFT token ID: 12345
-   - Duration: 365 days (12 months)
+   - Duration: 365 days (12 months) (TBC)
 
 2. Unicrypt:
    - Website: https://www.uncx.network/
@@ -330,7 +332,7 @@ All verified on https://flarescan.com/
 
 | Parameter | Value | Explanation |
 |-----------|-------|-------------|
-| wFLR Amount | 535,451 | Approximately $10K at $0.01868/wFLR |
+| wFLR Amount | 535,451 | Approximately $10K at $0.01868/wFLR (TBC) |
 | SHIELD Amount | 1,000,000 | Target liquidity amount |
 | Initial Price | $0.01/SHIELD | Fair launch price |
 | Fee Tier | 0.3% (3000) | Standard Uniswap V3 tier |

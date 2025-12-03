@@ -150,7 +150,7 @@ The initial $SHIELD supply of **10,000,000 tokens** is allocated as follows:
 - **15% Ecosystem Development** - Significant budget for protocol growth
 - **9% Team** - Modest team allocation aligned with long-term success
 
-**Important:** Initial liquidity pool tokens are **locked for 12 months** via Team Finance, ensuring the team cannot remove liquidity.
+**Important:** Initial liquidity pool tokens will be **locked for 12 months** via Team Finance, ensuring the team cannot remove liquidity. (TBC - Launch pending)
 
 ---
 

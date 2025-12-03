@@ -1,5 +1,7 @@
 # LP Token Locking Guide for Shield Finance Fair Launch
 
+> **Status:** Launch details are TBC (To Be Confirmed). This guide covers planned LP locking procedures.
+
 ## Overview
 
 This guide provides comprehensive information on locking LP tokens for the Shield Finance ($SHIELD) fair launch on Flare mainnet. Locking liquidity is **critical** for:
@@ -16,8 +18,8 @@ After running the SparkDEX LP deployment script, you will receive:
 
 - **LP NFT Token ID**: Unique identifier for your Uniswap V3 position
 - **Position Manager Contract**: `0xEE5FF5Bc5F852764b5584d92A4d592A53DC527da`
-- **Initial Liquidity**: 535,451 wFLR + 1,000,000 SHIELD (~$10K USD)
-- **Lock Duration Target**: 12 months (365 days)
+- **Initial Liquidity**: 535,451 wFLR + 1,000,000 SHIELD (~$10K USD) (TBC)
+- **Lock Duration Target**: 12 months (365 days) (TBC)
 
 ## LP Locking Options on Flare Mainnet
 
@@ -286,7 +288,7 @@ contract SimpleLPLocker is IERC721Receiver {
    🔒 LIQUIDITY LOCKED 🔒
    
    LP NFT Token ID: [your token ID]
-   Lock Duration: 12 months
+   Lock Duration: 12 months (TBC)
    Unlock Date: [specific date]
    Locker Contract: [contract address]
    Verification: [block explorer link]
@@ -346,7 +348,7 @@ contract SimpleLPLocker is IERC721Receiver {
 - **Network**: Flare Mainnet (Chain ID: 14)
 
 ### Lock Duration:
-- **Target**: 12 months (365 days)
+- **Target**: 12 months (365 days) (TBC)
 - **Seconds**: 31,536,000
 - **Unlock Date**: 365 days from lock time
 
@@ -354,7 +356,7 @@ contract SimpleLPLocker is IERC721Receiver {
 - **Pair**: wFLR/SHIELD
 - **DEX**: SparkDEX V3
 - **Fee Tier**: 0.3% (3000)
-- **Initial Liquidity**: ~$10,000 USD
+- **Initial Liquidity**: ~$10,000 USD (TBC)
 
 ---
 

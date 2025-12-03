@@ -7,7 +7,9 @@ Complete deployment guide for Shield Finance fair launch on Flare Network mainne
 - Total Supply: 10,000,000 SHIELD (fixed, immutable)
 - Blockchain: Flare Network
 - Token Decimals: 18
-- LP Lock: 12 months (Team Finance or equivalent)
+- LP Lock: 12 months (Team Finance or equivalent) (TBC)
+
+> **Status:** Launch details are TBC (To Be Confirmed). This guide covers planned deployment steps.
 
 ---
 
@@ -228,8 +230,8 @@ The merkle root is **IMMUTABLE** after deployment. Double-check that:
 
 ---
 
-### Step 5: Add Liquidity to SparkDEX V3
-**Target:** 1,000,000 SHIELD + 535,451 wFLR = ~$10,000  
+### Step 5: Add Liquidity to SparkDEX V3 (TBC)
+**Target:** 1,000,000 SHIELD + 535,451 wFLR = ~$10,000 (TBC)  
 **Pool Fee:** 0.3% (3000)  
 **Price Range:** ±100% (wide range for stability)
 
@@ -249,7 +251,7 @@ npx hardhat run scripts/sparkdex-lp.ts --network flare
    Initial Price: $0.01 per SHIELD
    Pool Address: 0x...
    
-⚠️  NEXT STEP: Lock LP NFT for 12 months!
+⚠️  NEXT STEP: Lock LP NFT for 12 months! (TBC)
 ```
 
 **Verification:**
@@ -266,9 +268,9 @@ cast call <POSITION_MANAGER> "ownerOf(uint256)" <NFT_ID> --rpc-url <FLARE_RPC>
 
 ---
 
-### Step 6: Lock LP NFT (12 Months)
+### Step 6: Lock LP NFT (12 Months) (TBC)
 **Platform:** Team Finance (https://www.team.finance/)  
-**Duration:** 365 days (31,536,000 seconds)  
+**Duration:** 365 days (31,536,000 seconds) (TBC)  
 **LP NFT:** From Step 5
 
 **Process:**
@@ -434,7 +436,7 @@ npx hardhat run scripts/verify-shield-deployment.ts --network flare
 - ✅ All contracts deployed and verified on block explorer
 - ✅ Total supply = 10M SHIELD
 - ✅ Token distribution correct (see Treasury Allocations table)
-- ✅ LP NFT locked for 12 months
+- ✅ LP NFT locked for 12 months (TBC)
 - ✅ MerkleDistributor funded with 2M SHIELD
 - ✅ RevenueRouter configured correctly
 - ✅ StakingBoost lock period = 30 days
@@ -446,7 +448,7 @@ npx hardhat run scripts/verify-shield-deployment.ts --network flare
 - [ ] StakingBoost lock period = 2,592,000 seconds (30 days)
 - [ ] MerkleDistributor merkle root matches generated tree
 - [ ] LP Pool exists on SparkDEX V3 (wFLR/SHIELD, 0.3% fee)
-- [ ] LP NFT locked for 365 days on Team Finance
+- [ ] LP NFT locked for 365 days on Team Finance (TBC)
 - [ ] MerkleDistributor balance = 2M SHIELD
 - [ ] Test airdrop claim works
 - [ ] Block explorer verification complete for all contracts

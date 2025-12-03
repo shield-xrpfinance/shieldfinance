@@ -229,9 +229,9 @@ VITE_MERKLE_DISTRIBUTOR_ADDRESS=0x8b3eC671c14E44B9EC8274eA3B6884A4259Ef490
 ## 🚀 Shield Finance Fair Launch - Complete Deployment Guide
 
 ### Overview
-Shield Finance is a **$10K fair launch** with complete smart contract infrastructure on Flare Network. This section covers deploying all contracts for mainnet launch.
+Shield Finance is planning a **$10K fair launch** (TBC) with complete smart contract infrastructure on Flare Network. This section covers deploying all contracts for mainnet launch.
 
-**Status**: Production-ready (176/176 tests passing, comprehensive documentation, security checklist)
+**Status**: Production-ready (176/176 tests passing, comprehensive documentation, security checklist). Launch pending.
 
 ### Quick Start
 
@@ -501,21 +501,23 @@ Users can withdraw anytime through the vault's standard ERC-4626 `redeem()` func
 
 No manual approvals required - all withdrawals are automated and instant via smart contracts.
 
-## 🔥 $10K Fair Launch – Live
+## 🔥 $10K Fair Launch – Planned (TBC)
 
-**Shield Finance ($SHIELD)** has successfully launched with a **$10,000 liquidity commitment** and **100% LP tokens locked for 12 months** on **SparkDEX V3** (Flare mainnet).
+**Shield Finance ($SHIELD)** is planning a fair launch with a **$10,000 liquidity commitment** and **100% LP tokens locked for 12 months** on **SparkDEX V3** (Flare mainnet).
 
-### Tokenomics
+> **Status:** Launch details are TBC (To Be Confirmed). The information below represents planned tokenomics pending official launch.
+
+### Tokenomics (Planned)
 
 - **Total Supply**: 10,000,000 SHIELD
 - **Circulating**: 8,000,000 SHIELD (80%)
-  - 5,353,451 SHIELD + 535,451 wFLR = $10K initial liquidity
+  - 5,353,451 SHIELD + 535,451 wFLR = $10K initial liquidity (TBC)
   - 2,646,549 SHIELD reserved for ecosystem development
 - **Airdrop**: 2,000,000 SHIELD (20%)
   - Claimable via Merkle proof (MerkleDistributor.sol)
   - Fair distribution to early supporters
-- **Initial Price**: $0.01 per SHIELD
-- **Liquidity Lock**: 12 months via Team Finance (or equivalent)
+- **Initial Price**: $0.01 per SHIELD (TBC)
+- **Liquidity Lock**: 12 months via Team Finance (or equivalent) (TBC)
 
 ### Revenue Model: Burns, Boost, Reserves
 
@@ -642,11 +644,11 @@ After deployment, update these addresses:
    # Run LP deployment script
    tsx scripts/sparkdex-lp.ts
    ```
-   Creates wFLR-SHIELD pool with $10K liquidity
+   Creates wFLR-SHIELD pool with $10K liquidity (TBC)
 
-4. **Lock LP NFT** (12 months)
+4. **Lock LP NFT** (12 months - TBC)
    - Use Team Finance: https://team.finance
-   - Lock LP NFT position for 12 months
+   - Lock LP NFT position for 12 months (TBC)
    - Save proof URL/transaction hash
 
 5. **Enable Automated Burns**
@@ -654,10 +656,12 @@ After deployment, update these addresses:
    - Workflow runs every Sunday at 00:00 UTC
    - Burns occur when RevenueRouter balance ≥ 5000 wFLR
 
-### Announcement Tweet
+### Announcement Tweet (Draft - TBC)
+
+> **Note:** This is a draft announcement for when the fair launch occurs. Launch details are TBC.
 
 ```
-🛡️ Shield Finance $SHIELD just fair-launched with $10K liquidity and 100% LP locked 12 months.
+🛡️ Shield Finance $SHIELD fair-launching with $10K liquidity and 100% LP locked 12 months.
 
 ✅ 10M total supply
 ✅ Real revenue → real burns
