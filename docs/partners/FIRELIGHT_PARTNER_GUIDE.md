@@ -339,7 +339,7 @@ await firelightStrategy.activate();
 - Email: partnerships@shyield.finance
 
 **Technical Contact**
-- GitHub: https://github.com/shield-finance
+- GitHub: https://github.com/shield-xrpfinance/shieldfinance
 - Documentation: https://docs.shyield.finance
 
 ---
