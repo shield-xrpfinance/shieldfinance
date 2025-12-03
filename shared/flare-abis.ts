@@ -2,7 +2,7 @@
  * Flare Network Contract ABIs
  * 
  * FAssets Protocol & Firelight.finance Integration
- * Last Updated: November 11, 2025
+ * Last Updated: December 3, 2025
  * 
  * ABI Sources:
  * - FAssets: https://github.com/flare-foundation/fassets

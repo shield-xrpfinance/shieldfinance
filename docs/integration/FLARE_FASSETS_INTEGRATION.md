@@ -1,6 +1,6 @@
 # Flare FAssets Integration Guide
 
-**Last Updated:** November 11, 2025  
+**Last Updated:** December 3, 2025  
 **FAssets Version:** v1.2 (Mainnet - September 2025)
 
 ## Overview

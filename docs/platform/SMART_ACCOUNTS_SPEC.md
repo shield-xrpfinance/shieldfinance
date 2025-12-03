@@ -1,6 +1,6 @@
 # XRPL Smart Accounts Technical Specification
 
-**Last Updated:** November 11, 2025  
+**Last Updated:** December 3, 2025  
 **Status:** Coming December 2025 (Xaman Integration)
 
 ## Overview

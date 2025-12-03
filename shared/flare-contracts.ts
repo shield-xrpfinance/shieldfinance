@@ -2,11 +2,11 @@
  * Flare Network Contract Addresses
  * 
  * FAssets Protocol & Firelight.finance Integration
- * Last Updated: November 11, 2025
+ * Last Updated: December 3, 2025
  * 
  * IMPORTANT NOTES:
  * - AssetManager addresses should be retrieved dynamically from FlareContractRegistry
- * - Firelight contract addresses are being announced post-launch (Nov 11, 2025)
+ * - Firelight contract addresses are being announced post-launch (Dec 3, 2025)
  * - Always verify addresses on block explorers before use
  * - Never hardcode addresses in production; use environment variables
  */
@@ -43,7 +43,7 @@ export const FLARE_CONTRACTS = {
       ]
     },
     
-    // Firelight.finance (Launched Nov 11, 2025)
+    // Firelight.finance (Launched Dec 3, 2025)
     firelight: {
       // stXRP Vault Contract (ERC-4626)
       // Verified on Flarescan: https://flarescan.com/address/0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3
@@ -200,7 +200,7 @@ export const RISK_NOTES = {
     "AssetManager uses Diamond Pattern (EIP-2535) - may upgrade"
   ],
   firelight: [
-    "Firelight launched Nov 11, 2025 - ERC-4626 vault live on mainnet",
+    "Firelight launched Dec 3, 2025 - ERC-4626 vault live on mainnet",
     "stXRP vault verified at 0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3",
     "Audited by OpenZeppelin + Coinspect (TransparentUpgradeableProxy)",
     "Testnet not available in Phase 1 - mainnet only",

@@ -34,7 +34,7 @@ Shield Finance provides a liquid staking dashboard for XRP holders on Flare Netw
 - ERC-4626 compliant vault (clean integration)
 - Audited by OpenZeppelin & Coinspect
 - Strong yield from ESS fees and insurance pools
-- Live on mainnet since November 11, 2025
+- Live on mainnet since December 3, 2025
 
 ---
 

@@ -29,7 +29,7 @@ interface IERC4626 {
  * 
  * Firelight Protocol Details:
  * - Liquid staking protocol for FXRP on Flare Network
- * - Live since Nov 11, 2025 on mainnet
+ * - Live since Dec 3, 2025 on mainnet
  * - stXRP vault: 0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3
  * - ERC-4626 compliant vault (deposit FXRP → receive stXRP)
  * - Audited by OpenZeppelin + Coinspect

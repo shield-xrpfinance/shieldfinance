@@ -572,7 +572,7 @@ export const MOCK_FIRELIGHT_VAULT = {
 
 ⚠️ **Important Notice:**
 
-Firelight launched on November 11, 2025 and is in early Phase 1. Consider the following risks:
+Firelight launched on December 3, 2025 and is in early Phase 1. Consider the following risks:
 
 1. **New Protocol Risk:** Limited production history
 2. **Smart Contract Risk:** Despite audits, bugs may exist
