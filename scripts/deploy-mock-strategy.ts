@@ -118,6 +118,11 @@ async function main() {
   await grantRoleTx.wait();
   console.log("   ✅ OPERATOR_ROLE granted to vault");
 
+  console.log("   Granting OPERATOR_ROLE to deployer (for test calls)...");
+  const grantRoleDeployerTx = await mockStrategy.grantRole(operatorRole, deployer.address);
+  await grantRoleDeployerTx.wait();
+  console.log("   ✅ OPERATOR_ROLE granted to deployer");
+
   console.log("   Activating strategy...");
   const activateTx = await mockStrategy.activate();
   await activateTx.wait();
@@ -129,7 +134,10 @@ async function main() {
   const vaultOwner = await vault.owner();
   if (vaultOwner.toLowerCase() !== deployer.address.toLowerCase()) {
     console.log("   ⚠️  Deployer is not vault owner. Owner:", vaultOwner);
-    console.log("   Skipping vault registration - please add manually.");
+    console.log("   Skipping vault registration - please run the following from vault owner:");
+    console.log(`      vault.addStrategy("${mockStrategyAddress}", 5000) // 50% allocation`);
+    console.log(`      vault.activateStrategy("${mockStrategyAddress}")`);
+    console.log(`      vault.addOperator("${deployer.address}") // for test calls`);
   } else {
     const currentBufferBps = await vault.bufferTargetBps();
     const currentStrategyBps = await vault.totalStrategyTargetBps();
