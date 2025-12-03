@@ -24,10 +24,11 @@ export const FLARE_CONTRACTS = {
       contractRegistry: "0xaD67FE66660Fb8dFE9d6b1b4240d8650e30F6019",
       
       // FXRP Token (ERC-20)
-      // Primary address (verified on Flarescan)
+      // Primary address (verified on Flarescan) - use for general FAssets operations
       fxrpToken: "0xAf7278D382323A865734f93B687b300005B8b60E",
       
-      // Alternative FXRP address (verify before use)
+      // Alternative FXRP address - THIS IS WHAT FIRELIGHT USES as their underlying asset
+      // Use this address for FirelightStrategy integration to ensure compatibility
       fxrpTokenAlt: "0xAd552A648C74D49E10027AB8a618A3ad4901c5bE",
       
       // AssetManager Contract

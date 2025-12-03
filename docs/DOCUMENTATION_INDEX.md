@@ -37,9 +37,12 @@ docs/
 │
 ├── integration/        # External service integrations
 │   ├── FASSETS_INTEGRATION_GUIDE.md  # XRP → FXRP bridging
-│   ├── FIRELIGHT_INTEGRATION.md      # Yield generation
+│   ├── FIRELIGHT_INTEGRATION.md      # Yield generation + testnet simulation
 │   ├── FLARE_FASSETS_INTEGRATION.md  # Flare-specific details
 │   └── LP_LOCKING_GUIDE.md           # Liquidity pool locking
+│
+├── partners/           # Partner-facing documentation
+│   └── FIRELIGHT_PARTNER_GUIDE.md    # Firelight team integration guide
 │
 ├── platform/           # Application architecture
 │   ├── SMART_ACCOUNTS_SPEC.md    # ERC-4337 specification
@@ -143,6 +146,22 @@ docs/
 - FXRP deposit strategies
 - Yield optimization
 - Compounding automation
+- Testnet simulation with MockStrategy
+
+---
+
+## Partner Documentation
+
+### [FIRELIGHT_PARTNER_GUIDE.md](partners/FIRELIGHT_PARTNER_GUIDE.md)
+**Purpose**: Technical documentation for Firelight team partnership  
+**Audience**: Firelight.finance team, integration partners  
+**Contents**:
+- FirelightStrategy.sol contract architecture
+- Technical integration points (ERC-4626)
+- Security measures and access control
+- Expected TVL contribution and mutual benefits
+- Testnet validation results
+- Mainnet deployment plan
 
 ### [FLARE_FASSETS_INTEGRATION.md](integration/FLARE_FASSETS_INTEGRATION.md)
 **Purpose**: Flare-specific FAssets implementation details  
@@ -287,4 +306,4 @@ Archived diagnostic scripts are in `/scripts/archive`.
 
 ---
 
-Last Updated: December 1, 2025
+Last Updated: December 3, 2025

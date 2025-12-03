@@ -1,7 +1,7 @@
 # Firelight.finance Integration Guide
 
-**Last Updated:** November 11, 2025  
-**Status:** Mainnet Launch (November 2025)
+**Last Updated:** December 3, 2025  
+**Status:** Mainnet Live (since November 11, 2025)
 
 ## Overview
 
@@ -14,7 +14,7 @@ Firelight is an institutional-grade liquid staking protocol for XRP built on Fla
 - Bug bounty via Immunefi
 - Estimated APY: 4-7%
 
-**Important:** Firelight just launched on November 11, 2025. Contract addresses are being announced through official channels.
+**Status:** Firelight launched on mainnet November 11, 2025. Contract addresses are now confirmed.
 
 ---
 
@@ -24,29 +24,66 @@ Firelight is an institutional-grade liquid staking protocol for XRP built on Fla
 
 | Contract | Address | Status | Notes |
 |----------|---------|--------|-------|
-| **FXRP Token** | `0xAd552A648C74D49E10027AB8a618A3ad4901c5bE` | ✅ Verified | FAssets bridged XRP |
-| **Firelight Launch Vault** | *To be announced* | 🔄 Pending | Check firelight.finance app |
-| **stXRP Token** | *To be announced* | 🔄 Pending | Liquid staking token |
+| **FXRP Token** | `0xAd552A648C74D49E10027AB8a618A3ad4901c5bE` | ✅ Firelight | Used by Firelight as underlying |
+| **Firelight stXRP Vault** | `0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3` | ✅ Live | ERC-4626 vault |
+| **stXRP Token** | `0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3` | ✅ Live | Same as vault (ERC-4626) |
 
-**How to Get Addresses:**
-1. Visit https://firelight.finance/
-2. Connect your wallet
-3. Navigate to **Vaults** tab
-4. Click on vault details to view contract address
-5. Verify on Flarescan: https://flarescan.com
+> **Note on FXRP Addresses**: Multiple FXRP token addresses exist on Flare mainnet. Our FirelightStrategy uses `0xAd552A64...` because this is the FXRP token address that Firelight's stXRP vault expects as its underlying asset. The FAssets primary address (`0xAf7278D3...`) should be verified if used outside Firelight context.
+
+**Verify on Flarescan:** https://flarescan.com/address/0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3
 
 ### Coston2 Testnet (Chain ID: 114)
 
 | Contract | Address | Status | Notes |
 |----------|---------|--------|-------|
-| **FXRP Token** | `0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3` | ✅ Confirmed | FAssets testnet |
-| **Firelight Launch Vault** | *Not available* | ❌ | Mainnet only (Phase 1) |
-| **stXRP Token** | *Not available* | ❌ | Mainnet only (Phase 1) |
+| **FXRP Token** | `0x0b6A3645c240605887a5532109323A3E12273dc7` | ✅ Active | Retrieved dynamically |
+| **Firelight Vault** | *Not available* | ❌ | Mainnet only |
+| **MockStrategy** | `0x1a8c6d2BfD132bCf75B54B3d23CA4c0542957A45` | ✅ Active | Test replacement |
 
-**Testnet Status:** Firelight Phase 1 launched on mainnet only. For testing, use Coston2 FXRP with mock vault or wait for testnet deployment announcement.
+> **Note on Testnet FXRP**: The FXRP address was retrieved dynamically from the FAssets registry. The legacy address `0xa3Bd00D6...` in older configs is deprecated - always use dynamic lookup via FlareContractRegistry.
+
+**Testnet Alternative:** Since Firelight is mainnet-only, we use `MockStrategy.sol` on Coston2 to simulate vault mechanics and test our integration. See [Testnet Simulation](#testnet-simulation) section.
 
 **Block Explorer (Mainnet):** https://flarescan.com  
 **Block Explorer (Testnet):** https://coston2-explorer.flare.network
+
+---
+
+## Testnet Simulation
+
+Since Firelight only launched on mainnet, we validate our integration using `MockStrategy.sol` on Coston2 testnet.
+
+### MockStrategy Contract
+
+**Address:** `0x1a8c6d2BfD132bCf75B54B3d23CA4c0542957A45`
+
+**Features:**
+- Full `IStrategy` interface implementation
+- Configurable yield simulation via `setYieldAmount()`
+- AccessControl for vault operator permissions
+- Simulates deposit/withdraw/report flow
+
+### Simulation Results (December 3, 2025)
+
+The simulation validates core vault mechanics with variable test amounts:
+
+```
+📋 Proven Capabilities:
+   ✅ Vault correctly mints shares on deposit (share price reflects yield)
+   ✅ Vault can deploy funds to registered strategies
+   ✅ Strategy tracks yield via totalAssets() changes
+   ✅ User can redeem shares for underlying FXRP
+   ✅ ERC-4626 accounting works correctly
+   ✅ Buffer-aware withdrawals prevent strategy over-withdrawal
+```
+
+*Actual amounts vary per run as testnet balances change.*
+
+### Running the Simulation
+
+```bash
+npx hardhat run scripts/test-vault-simulation.ts --network coston2
+```
 
 ---
 

@@ -5,7 +5,9 @@ import * as fs from "fs";
 import * as path from "path";
 
 const MAINNET_ADDRESSES = {
-  fxrpToken: "0x7fDB5cf1F7a75d9a47e097D73c1AF0B73d5A5d2e",
+  // FXRP Token - verified on Flarescan and used by Firelight
+  fxrpToken: "0xAd552A648C74D49E10027AB8a618A3ad4901c5bE",
+  // Firelight stXRP Vault - ERC-4626 compliant, audited by OpenZeppelin + Coinspect
   firelightStXRP: "0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3",
   rpcUrl: "https://flare-api.flare.network/ext/C/rpc",
   chainId: 14,

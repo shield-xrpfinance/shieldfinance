@@ -45,6 +45,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Yield Fee Implementation**: ERC-4626 compliant fee accrual system - fees tracked in `accruedProtocolFees` state variable and claimed only from vault buffer when liquidity available (no unbacked share minting).
 - **Multi-Strategy Architecture**: VaultController manages allocation across FirelightStrategy (50% - FXRP staking on Firelight.finance), KineticStrategy (40% - FXRP lending), and 10% buffer. VaultController.executeCompound() tracks actual yield by comparing strategy totalAssets before/after report.
 - **Mainnet Deployment**: `scripts/deploy-mainnet-strategies.ts` provides production deployment with Firelight integration (mainnet stXRP: 0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3), security checklist, and multi-sig role transfer instructions.
+- **Testnet Validation**: MockStrategy (`0x1a8c6d2BfD132bCf75B54B3d23CA4c0542957A45`) deployed on Coston2 for testing vault mechanics. Simulation validated: deposit, rebalance, yield tracking, and withdrawal all work correctly.
 
 ## External Dependencies
 

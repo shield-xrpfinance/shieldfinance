@@ -74,6 +74,59 @@ Shield Finance underwent several iterations during testnet development to reach 
   - Manages vault deposits and withdrawals
   - Status: ✅ Active
 
+- **MockStrategy (Testnet)**: `0x1a8c6d2BfD132bCf75B54B3d23CA4c0542957A45`
+  - [View on Explorer](https://coston2-explorer.flare.network/address/0x1a8c6d2BfD132bCf75B54B3d23CA4c0542957A45)
+  - Simulates Firelight stXRP vault for testnet validation
+  - Full IStrategy interface with configurable yield
+  - Deployed: December 3, 2025
+  - Status: ✅ Active
+
+---
+
+## 🧪 Strategy Contracts
+
+### MockStrategy (Testnet Only)
+
+Since Firelight is mainnet-only, we use `MockStrategy.sol` on Coston2 to validate vault mechanics.
+
+**Contract:** `0x1a8c6d2BfD132bCf75B54B3d23CA4c0542957A45`
+
+**Features:**
+- Implements full `IStrategy` interface
+- AccessControl with OPERATOR_ROLE for vault
+- Configurable yield simulation via `setYieldAmount()`
+- Can simulate deposit, withdraw, and report flows
+
+**Deployment:**
+```bash
+npx hardhat run scripts/deploy-mock-strategy.ts --network coston2
+```
+
+**Simulation Test:**
+```bash
+npx hardhat run scripts/test-vault-simulation.ts --network coston2
+```
+
+**Results (December 3, 2025):**
+- ✅ Deposit → share minting works
+- ✅ Strategy deployment works
+- ✅ Yield tracking via totalAssets()
+- ✅ Withdrawal → FXRP redemption works
+- ✅ ERC-4626 accounting correct
+
+### FirelightStrategy (Mainnet)
+
+For mainnet, use `FirelightStrategy.sol` which integrates with Firelight's stXRP vault.
+
+**Mainnet Addresses:**
+- Firelight stXRP Vault: `0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3`
+- FXRP Token: `0xAd552A648C74D49E10027AB8a618A3ad4901c5bE`
+
+**Deployment:**
+```bash
+npx hardhat run scripts/deploy-mainnet-strategies.ts --network flare
+```
+
 ---
 
 ## ❌ DEPRECATED: 100M SHIELD Deployments
