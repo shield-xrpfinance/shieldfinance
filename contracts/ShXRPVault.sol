@@ -97,9 +97,15 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     uint256 public constant DEPOSIT_FEE_BPS = 20;  // 0.2% deposit fee
     uint256 public constant WITHDRAW_FEE_BPS = 20; // 0.2% withdraw fee
     
-    // NOTE: Yield routing fee temporarily disabled pending architectural rework
-    // See architect review feedback regarding ERC4626 accounting complexity
-    // uint256 public yieldRoutingFeeBps = 10;     // 0.1% yield routing fee (future)
+    // Yield Routing Fee for protocol revenue from strategy profits
+    // Fee is deducted from reported profits and sent to RevenueRouter
+    // Default: 10 bps = 0.1% of profits (adjustable by owner)
+    uint256 public yieldRoutingFeeBps = 10;
+    
+    // Accrued protocol fees (ERC-4626 compliant fee accrual)
+    // Fees are accrued when strategies report profit, claimed via claimAccruedFees()
+    // This prevents minting unbacked shares which would dilute depositors
+    uint256 public accruedProtocolFees;
     
     // Mapping of approved operators who can manage strategies
     mapping(address => bool) public operators;
@@ -142,6 +148,11 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     // Boost Donation Events
     event DonatedOnBehalf(address indexed user, uint256 fxrpAmount, uint256 sharesMinted);
     event StakingBoostUpdated(address indexed oldBoost, address indexed newBoost);
+    
+    // Fee Events
+    event YieldRoutingFeeUpdated(uint256 newFeeBps);
+    event ProtocolFeesAccrued(address indexed strategy, uint256 amount, uint256 totalAccrued);
+    event ProtocolFeesClaimed(uint256 amount, address indexed recipient);
     
     modifier onlyOperator() {
         require(operators[msg.sender] || msg.sender == owner(), "Not authorized");
@@ -1207,8 +1218,20 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         // Trigger strategy report (returns profit, loss, totalAssets)
         (uint256 profit, uint256 loss, uint256 assetsAfter) = IStrategy(strategy).report();
         
+        // Collect yield routing fee by accruing it internally
+        // ERC-4626 compliant: we don't mint unbacked shares
+        // Instead, we track fees owed and claim from vault buffer or future withdrawals
+        if (profit > 0 && yieldRoutingFeeBps > 0) {
+            uint256 yieldFee = (profit * yieldRoutingFeeBps) / 10000;
+            
+            if (yieldFee > 0) {
+                // Accrue fee internally - it will be claimed via claimAccruedFees()
+                accruedProtocolFees += yieldFee;
+                emit ProtocolFeesAccrued(strategy, yieldFee, accruedProtocolFees);
+            }
+        }
+        
         // Update strategy accounting
-        // NOTE: Yield routing fees disabled pending architectural rework
         strategies[strategy].totalDeployed = assetsAfter;
         strategies[strategy].lastReportTimestamp = block.timestamp;
         
@@ -1238,8 +1261,65 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         emit BufferTargetUpdated(newTargetBps);
     }
     
-    // NOTE: setYieldRoutingFeeBps() temporarily disabled pending architectural rework
-    // See architect review feedback regarding ERC4626 accounting complexity
+    /**
+     * @dev Update yield routing fee
+     * 
+     * Fee is accrued from strategy profits and claimed via claimAccruedFees().
+     * This ERC-4626 compliant approach avoids minting unbacked shares.
+     * 
+     * Max fee: 500 bps = 5% of profits
+     * Default: 10 bps = 0.1% of profits
+     * 
+     * @param newFeeBps New yield routing fee in basis points
+     */
+    function setYieldRoutingFeeBps(uint256 newFeeBps) external onlyOwner {
+        require(newFeeBps <= 500, "Yield fee cannot exceed 5%");
+        yieldRoutingFeeBps = newFeeBps;
+        emit YieldRoutingFeeUpdated(newFeeBps);
+    }
+    
+    /**
+     * @dev Claim accrued protocol fees (ERC-4626 compliant)
+     * 
+     * Fees are accrued when strategies report profit via reportStrategy().
+     * This function claims fees from the vault's FXRP buffer and sends to RevenueRouter.
+     * 
+     * Security:
+     * - Only owner or operators can claim fees
+     * - Fees are only claimed from available buffer (no strategy withdrawals)
+     * - If buffer is insufficient, only available amount is claimed
+     * 
+     * Flow:
+     * 1. Check buffer balance
+     * 2. Claim min(accruedFees, bufferBalance)
+     * 3. Transfer FXRP to RevenueRouter
+     * 4. Reduce accruedFees by claimed amount
+     * 
+     * @return claimed Amount of FXRP claimed and sent to RevenueRouter
+     */
+    function claimAccruedFees() external onlyOperator returns (uint256 claimed) {
+        if (accruedProtocolFees == 0) {
+            return 0;
+        }
+        
+        // Get available buffer balance
+        uint256 bufferBalance = IERC20(asset()).balanceOf(address(this));
+        
+        // Claim up to the available buffer
+        claimed = accruedProtocolFees > bufferBalance ? bufferBalance : accruedProtocolFees;
+        
+        if (claimed > 0) {
+            // Reduce accrued fees
+            accruedProtocolFees -= claimed;
+            
+            // Transfer to RevenueRouter
+            SafeERC20.safeTransfer(IERC20(asset()), revenueRouter, claimed);
+            
+            emit ProtocolFeesClaimed(claimed, revenueRouter);
+        }
+        
+        return claimed;
+    }
     
     // ========================================
     // ERC4626 PREVIEW FUNCTIONS (FEE-ADJUSTED)

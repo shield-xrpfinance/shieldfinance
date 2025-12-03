@@ -33,6 +33,12 @@ contract VaultController is AccessControl, ReentrancyGuard {
     uint256 public minCompoundInterval = 1 hours;
     mapping(address => uint256) public lastCompoundTime;
     
+    // XRP to FXRP conversion rate (basis points, 10000 = 1:1)
+    // FAssets typically mints 1:1, but this allows for fee adjustments
+    // Rate = (FXRP received per XRP) * 10000
+    // Example: 9990 = 0.999 FXRP per XRP (0.1% fee)
+    uint256 public xrpToFxrpRateBps = 10000; // Default 1:1
+    
     // Bridging tracking
     mapping(bytes32 => BridgeRequest) public bridgeRequests;
     
@@ -60,11 +66,12 @@ contract VaultController is AccessControl, ReentrancyGuard {
     // Events
     event VaultRegistered(address indexed vault);
     event VaultDeregistered(address indexed vault);
-    event BridgeRequestCreated(bytes32 indexed requestId, address indexed user, uint256 xrpAmount);
+    event BridgeRequestCreated(bytes32 indexed requestId, address indexed user, uint256 xrpAmount, uint256 fxrpExpected);
     event BridgeStatusUpdated(bytes32 indexed requestId, BridgeStatus newStatus);
     event CompoundExecuted(address indexed vault, uint256 yieldAmount);
     event OperatorAdded(address indexed operator);
     event OperatorRemoved(address indexed operator);
+    event XrpToFxrpRateUpdated(uint256 oldRate, uint256 newRate);
     
     // Strategy Events
     event StrategyRegistered(address indexed strategy, string name);
@@ -110,19 +117,42 @@ contract VaultController is AccessControl, ReentrancyGuard {
     ) external onlyRole(OPERATOR_ROLE) returns (bytes32) {
         bytes32 requestId = keccak256(abi.encodePacked(user, vault, xrpAmount, block.timestamp));
         
+        // Calculate expected FXRP using conversion rate
+        uint256 fxrpExpected = (xrpAmount * xrpToFxrpRateBps) / 10000;
+        
         bridgeRequests[requestId] = BridgeRequest({
             user: user,
             vault: vault,
             xrpAmount: xrpAmount,
-            fxrpExpected: xrpAmount, // 1:1 initially, can add conversion logic
+            fxrpExpected: fxrpExpected,
             timestamp: block.timestamp,
             status: BridgeStatus.Pending,
             xrplTxHash: xrplTxHash,
             flareTxHash: ""
         });
         
-        emit BridgeRequestCreated(requestId, user, xrpAmount);
+        emit BridgeRequestCreated(requestId, user, xrpAmount, fxrpExpected);
         return requestId;
+    }
+    
+    /**
+     * @dev Update XRP to FXRP conversion rate
+     * @param newRateBps New rate in basis points (10000 = 1:1)
+     */
+    function setXrpToFxrpRate(uint256 newRateBps) external onlyRole(DEFAULT_ADMIN_ROLE) {
+        require(newRateBps > 0 && newRateBps <= 11000, "Rate must be between 0 and 110%");
+        uint256 oldRate = xrpToFxrpRateBps;
+        xrpToFxrpRateBps = newRateBps;
+        emit XrpToFxrpRateUpdated(oldRate, newRateBps);
+    }
+    
+    /**
+     * @dev Calculate expected FXRP for a given XRP amount
+     * @param xrpAmount Amount of XRP
+     * @return fxrpAmount Expected FXRP amount
+     */
+    function calculateFxrpAmount(uint256 xrpAmount) external view returns (uint256 fxrpAmount) {
+        return (xrpAmount * xrpToFxrpRateBps) / 10000;
     }
     
     function updateBridgeStatus(
@@ -141,6 +171,9 @@ contract VaultController is AccessControl, ReentrancyGuard {
         emit BridgeStatusUpdated(requestId, newStatus);
     }
     
+    // Compounding events
+    event StrategyReportFailed(address indexed strategy, string reason);
+    
     // Compounding
     function executeCompound(address vault) 
         external 
@@ -153,11 +186,53 @@ contract VaultController is AccessControl, ReentrancyGuard {
             "Compound interval not reached"
         );
         
-        // Call vault's compound function (to be implemented)
-        // For now, just update timestamp
+        ShXRPVault vaultContract = ShXRPVault(vault);
+        uint256 totalYield = 0;
+        uint256 successCount = 0;
+        uint256 failCount = 0;
+        
+        // Report profits from all registered strategies
+        for (uint256 i = 0; i < strategyList.length; i++) {
+            address strategyAddr = strategyList[i];
+            if (!registeredStrategies[strategyAddr]) continue;
+            
+            // Check if strategy is active in vault before reporting
+            try vaultContract.getStrategyInfo(strategyAddr) returns (ShXRPVault.StrategyInfo memory info) {
+                if (info.status == ShXRPVault.StrategyStatus.Active || 
+                    info.status == ShXRPVault.StrategyStatus.Paused) {
+                    
+                    // Get assets before report to calculate yield
+                    uint256 assetsBefore = info.totalDeployed;
+                    
+                    // Report strategy profits (triggers IStrategy.report())
+                    try vaultContract.reportStrategy(strategyAddr) {
+                        // Get updated assets after report
+                        try vaultContract.getStrategyInfo(strategyAddr) returns (ShXRPVault.StrategyInfo memory infoAfter) {
+                            if (infoAfter.totalDeployed > assetsBefore) {
+                                totalYield += infoAfter.totalDeployed - assetsBefore;
+                            }
+                            successCount++;
+                        } catch {
+                            // Could not fetch updated info, but report succeeded
+                            successCount++;
+                        }
+                    } catch Error(string memory reason) {
+                        emit StrategyReportFailed(strategyAddr, reason);
+                        failCount++;
+                    } catch {
+                        emit StrategyReportFailed(strategyAddr, "Unknown error");
+                        failCount++;
+                    }
+                }
+            } catch {
+                emit StrategyReportFailed(strategyAddr, "Could not fetch strategy info");
+                failCount++;
+            }
+        }
+        
         lastCompoundTime[vault] = block.timestamp;
         
-        emit CompoundExecuted(vault, 0);
+        emit CompoundExecuted(vault, totalYield);
     }
     
     function setMinCompoundInterval(uint256 interval) external onlyRole(DEFAULT_ADMIN_ROLE) {
@@ -435,8 +510,10 @@ contract VaultController is AccessControl, ReentrancyGuard {
             // Residual stays in buffer if deployableAmount > firelightNeed
             
         } else {
-            // Both at or above target - cannot deploy
-            revert("Strategies already at or above target allocation");
+            // Both at or above target - no deployment needed
+            // Return (0, 0) so callers can handle gracefully
+            kineticAmount = 0;
+            firelightAmount = 0;
         }
     }
     

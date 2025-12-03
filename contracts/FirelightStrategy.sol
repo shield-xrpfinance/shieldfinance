@@ -120,7 +120,7 @@ contract FirelightStrategy is IStrategy, AccessControl {
         fxrpToken.safeTransferFrom(msg.sender, address(this), amount);
         
         // Approve Firelight to spend FXRP
-        fxrpToken.safeApprove(address(stXRPVault), amount);
+        fxrpToken.forceApprove(address(stXRPVault), amount);
         
         // Deposit FXRP to Firelight, receive stXRP shares
         uint256 stXRPReceived = stXRPVault.deposit(amount, address(this));
