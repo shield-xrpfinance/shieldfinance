@@ -274,6 +274,140 @@ export const FIRELIGHT_VAULT_ABI = [
 ] as const;
 
 /**
+ * VaultController ABI
+ * 
+ * Manages operator permissions, compounding, and multi-strategy coordination for ShXRP vaults.
+ * Handles rebalancing between buffer and strategies (Kinetic, Firelight).
+ */
+export const VAULT_CONTROLLER_ABI = [
+  "function registerVault(address vault) external",
+  "function deregisterVault(address vault) external",
+  "function registeredVaults(address vault) external view returns (bool)",
+  "function vaultList(uint256 index) external view returns (address)",
+  "function getVaultCount() external view returns (uint256)",
+  
+  "function registerStrategy(address strategy, string calldata name) external",
+  "function deregisterStrategy(address strategy) external",
+  "function registeredStrategies(address strategy) external view returns (bool)",
+  "function strategyList(uint256 index) external view returns (address)",
+  "function strategyNames(address strategy) external view returns (string)",
+  "function getStrategyCount() external view returns (uint256)",
+  
+  "function BUFFER_TARGET_BPS() external view returns (uint256)",
+  "function KINETIC_TARGET_BPS() external view returns (uint256)",
+  "function FIRELIGHT_TARGET_BPS() external view returns (uint256)",
+  
+  "function getCurrentAllocation(address vault) external view returns (uint256 bufferAmount, uint256 kineticAmount, uint256 firelightAmount, uint256 totalAssets)",
+  "function getTargetAllocation(address vault, uint256 totalAssets) external view returns (uint256 bufferTarget, uint256 kineticTarget, uint256 firelightTarget)",
+  "function needsRebalancing(address vault, uint256 thresholdBps) external view returns (bool)",
+  
+  "function deployToStrategies(address vault, uint256 amount) external",
+  "function withdrawFromStrategies(address vault, uint256 amount) external",
+  "function rebalanceVault(address vault) external",
+  
+  "function executeCompound(address vault) external",
+  "function setMinCompoundInterval(uint256 interval) external",
+  "function lastCompoundTime(address vault) external view returns (uint256)",
+  "function minCompoundInterval() external view returns (uint256)",
+  
+  "function addOperator(address operator) external",
+  "function removeOperator(address operator) external",
+  "function addCompounder(address compounder) external",
+  "function removeCompounder(address compounder) external",
+  
+  "event VaultRegistered(address indexed vault)",
+  "event VaultDeregistered(address indexed vault)",
+  "event StrategyRegistered(address indexed strategy, string name)",
+  "event StrategyDeregistered(address indexed strategy)",
+  "event StrategyDeployed(address indexed vault, address indexed strategy, uint256 amount)",
+  "event StrategyWithdrawn(address indexed vault, address indexed strategy, uint256 amount)",
+  "event VaultRebalanced(address indexed vault, uint256 bufferBefore, uint256 bufferAfter, uint256 kineticBefore, uint256 kineticAfter, uint256 firelightBefore, uint256 firelightAfter)",
+  "event CompoundExecuted(address indexed vault, uint256 yieldAmount)",
+  "event OperatorAdded(address indexed operator)",
+  "event OperatorRemoved(address indexed operator)"
+] as const;
+
+/**
+ * ShXRPVault Strategy Management ABI
+ * 
+ * Strategy-specific functions for the ShXRP vault.
+ * Used for managing yield strategies (Kinetic, Firelight).
+ */
+export const SHXRP_VAULT_STRATEGY_ABI = [
+  ...ERC20_ABI,
+  
+  "function asset() view returns (address)",
+  "function totalAssets() view returns (uint256)",
+  "function minDeposit() view returns (uint256)",
+  "function depositLimit() view returns (uint256)",
+  "function paused() view returns (bool)",
+  
+  "function deposit(uint256 assets, address receiver) returns (uint256 shares)",
+  "function withdraw(uint256 assets, address receiver, address owner) returns (uint256 shares)",
+  "function redeem(uint256 shares, address receiver, address owner) returns (uint256 assets)",
+  "function convertToShares(uint256 assets) view returns (uint256 shares)",
+  "function convertToAssets(uint256 shares) view returns (uint256 assets)",
+  "function previewDeposit(uint256 assets) view returns (uint256 shares)",
+  "function previewWithdraw(uint256 assets) view returns (uint256 shares)",
+  "function previewRedeem(uint256 shares) view returns (uint256 assets)",
+  
+  "function strategies(address strategy) view returns (address strategyAddress, uint256 targetBps, uint8 status, uint256 totalDeployed, uint256 lastReportTimestamp)",
+  "function strategyList(uint256 index) view returns (address)",
+  "function bufferTargetBps() view returns (uint256)",
+  "function totalStrategyTargetBps() view returns (uint256)",
+  
+  "function getStrategyInfo(address strategy) view returns (tuple(address strategyAddress, uint256 targetBps, uint8 status, uint256 totalDeployed, uint256 lastReportTimestamp))",
+  "function getStrategyList() view returns (address[])",
+  "function getActiveStrategies() view returns (address[])",
+  
+  "function addStrategy(address strategy, uint256 targetBps) external",
+  "function removeStrategy(address strategy) external",
+  "function updateAllocation(address strategy, uint256 newTargetBps) external",
+  "function setStrategyStatus(address strategy, uint8 newStatus) external",
+  
+  "function deployToStrategy(address strategy, uint256 amount) external returns (uint256)",
+  "function withdrawFromStrategy(address strategy, uint256 amount) external returns (uint256)",
+  "function withdrawFromAllStrategies(uint256 amount) external returns (uint256)",
+  
+  "function operators(address account) view returns (bool)",
+  "function addOperator(address operator) external",
+  "function removeOperator(address operator) external",
+  
+  "function pause() external",
+  "function unpause() external",
+  "function setDepositLimit(uint256 newLimit) external",
+  "function setMinDeposit(uint256 newMinDeposit) external",
+  "function setBufferTarget(uint256 newBufferTargetBps) external",
+  
+  "event StrategyAdded(address indexed strategy, uint256 targetBps)",
+  "event StrategyRemoved(address indexed strategy)",
+  "event StrategyStatusUpdated(address indexed strategy, uint8 newStatus)",
+  "event StrategyAllocationUpdated(address indexed strategy, uint256 newTargetBps)",
+  "event DeployedToStrategy(address indexed strategy, uint256 amount)",
+  "event WithdrawnFromStrategy(address indexed strategy, uint256 amount, uint256 actualAmount)",
+  "event BufferTargetUpdated(uint256 newTargetBps)",
+  "event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)",
+  "event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)"
+] as const;
+
+/**
+ * IStrategy Interface ABI
+ * 
+ * Standard interface for yield strategies (Kinetic, Firelight, etc.)
+ */
+export const STRATEGY_ABI = [
+  "function asset() view returns (address)",
+  "function totalAssets() view returns (uint256)",
+  "function deposit(uint256 assets, address receiver) returns (uint256 shares)",
+  "function withdraw(uint256 assets, address receiver) returns (uint256 actualWithdrawn)",
+  "function report() external returns (uint256 profit, uint256 loss)",
+  "function harvest() external",
+  "function migrate(address newStrategy) external",
+  "function maxDeposit() view returns (uint256)",
+  "function paused() view returns (bool)"
+] as const;
+
+/**
  * Helper function to get contract interface
  * 
  * @example
@@ -285,7 +419,7 @@ export const FIRELIGHT_VAULT_ABI = [
  * const vault = new ethers.Contract(vaultAddress, getContractInterface('firelightVault'), signer);
  * ```
  */
-export function getContractInterface(contractType: 'assetManager' | 'fxrp' | 'firelightVault' | 'contractRegistry') {
+export function getContractInterface(contractType: 'assetManager' | 'fxrp' | 'firelightVault' | 'contractRegistry' | 'vaultController' | 'shxrpVaultStrategy' | 'strategy') {
   switch (contractType) {
     case 'assetManager':
       return FASSETS_ASSET_MANAGER_ABI;
@@ -295,6 +429,12 @@ export function getContractInterface(contractType: 'assetManager' | 'fxrp' | 'fi
       return FIRELIGHT_VAULT_ABI;
     case 'contractRegistry':
       return FLARE_CONTRACT_REGISTRY_ABI;
+    case 'vaultController':
+      return VAULT_CONTROLLER_ABI;
+    case 'shxrpVaultStrategy':
+      return SHXRP_VAULT_STRATEGY_ABI;
+    case 'strategy':
+      return STRATEGY_ABI;
     default:
       throw new Error(`Unknown contract type: ${contractType}`);
   }

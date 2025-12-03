@@ -648,9 +648,36 @@ async function initializeServices() {
     console.error(`❌ OnChainMonitorService initialization failed:`, errorMsg);
   }
 
+  // Step 11: Initialize StrategyRebalancerService
+  // This service manages strategy deployments/withdrawals and rebalancing
+  if (flareClient) {
+    try {
+      console.log(`🎯 Initializing StrategyRebalancerService...`);
+      
+      const { StrategyRebalancerService, setStrategyRebalancerService } = await import("./services/StrategyRebalancerService");
+      
+      const rebalancerService = new StrategyRebalancerService({
+        flareClient,
+        storage,
+      });
+      
+      await rebalancerService.initialize();
+      setStrategyRebalancerService(rebalancerService);
+      
+      readinessRegistry.setReady('strategyRebalancer');
+      console.log(`✅ StrategyRebalancerService initialized`);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      readinessRegistry.setError('strategyRebalancer', errorMsg);
+      console.error(`❌ StrategyRebalancerService initialization failed:`, errorMsg);
+    }
+  } else {
+    readinessRegistry.setError('strategyRebalancer', 'FlareClient not available');
+  }
+
   console.log("✅ All services initialized");
 
-  // Step 11: Initialize self-healing infrastructure (runs last, non-blocking)
+  // Step 12: Initialize self-healing infrastructure (runs last, non-blocking)
   try {
     const { initializeSelfHealing } = await import("./services/SelfHealingBootstrap");
     await initializeSelfHealing({

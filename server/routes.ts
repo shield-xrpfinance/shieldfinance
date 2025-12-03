@@ -6277,6 +6277,199 @@ export async function registerRoutes(
     }
   });
 
+  // ========================================
+  // STRATEGY REBALANCING ENDPOINTS
+  // ========================================
+
+  /**
+   * Get strategy status and allocation information
+   * GET /api/strategies/status
+   * 
+   * Returns current and target allocations, strategy list, and rebalancing status.
+   * Public endpoint for monitoring/dashboard.
+   */
+  app.get("/api/strategies/status", async (req: Request, res: Response) => {
+    try {
+      const { getStrategyRebalancerService } = await import("./services/StrategyRebalancerService");
+      const rebalancerService = getStrategyRebalancerService();
+      
+      if (!rebalancerService || !rebalancerService.isReady()) {
+        return res.status(503).json({ 
+          error: "StrategyRebalancerService not available",
+          message: "Service is initializing or not configured"
+        });
+      }
+
+      const thresholdBps = parseInt(req.query.threshold as string) || 500;
+      const status = await rebalancerService.getStrategyStatus(thresholdBps);
+
+      res.json({
+        success: true,
+        data: status,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Strategy status error:", error);
+      res.status(500).json({
+        error: "Failed to get strategy status",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Trigger manual vault rebalance
+   * POST /api/strategies/rebalance
+   * 
+   * Admin-only endpoint to trigger rebalancing between buffer and strategies.
+   * On testnet, this will simulate the operation since Firelight is disabled.
+   */
+  app.post("/api/strategies/rebalance", requireAdminAuth, async (req: Request, res: Response) => {
+    try {
+      const { getStrategyRebalancerService } = await import("./services/StrategyRebalancerService");
+      const rebalancerService = getStrategyRebalancerService();
+      
+      if (!rebalancerService || !rebalancerService.isReady()) {
+        return res.status(503).json({ 
+          error: "StrategyRebalancerService not available",
+          message: "Service is initializing or not configured"
+        });
+      }
+
+      console.log(`🔄 Manual rebalance triggered via API`);
+      const result = await rebalancerService.triggerRebalance();
+
+      if (result.success) {
+        res.json({
+          success: true,
+          ...result,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: result.error,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error("Rebalance error:", error);
+      res.status(500).json({
+        error: "Failed to trigger rebalance",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Deploy buffer funds to strategies
+   * POST /api/strategies/deploy
+   * Body: { amount?: string } - optional amount in FXRP (6 decimals)
+   * 
+   * Admin-only endpoint to deploy excess buffer to yield strategies.
+   * If amount is not provided, deploys the difference between current and target buffer.
+   * On testnet, this will simulate the operation since Firelight is disabled.
+   */
+  app.post("/api/strategies/deploy", requireAdminAuth, async (req: Request, res: Response) => {
+    try {
+      const { getStrategyRebalancerService } = await import("./services/StrategyRebalancerService");
+      const rebalancerService = getStrategyRebalancerService();
+      
+      if (!rebalancerService || !rebalancerService.isReady()) {
+        return res.status(503).json({ 
+          error: "StrategyRebalancerService not available",
+          message: "Service is initializing or not configured"
+        });
+      }
+
+      const { amount } = req.body;
+      
+      if (amount && typeof amount !== 'string') {
+        return res.status(400).json({
+          error: "Invalid amount",
+          message: "Amount must be a string representing FXRP with 6 decimals"
+        });
+      }
+
+      console.log(`📤 Manual deploy triggered via API${amount ? ` (amount: ${amount} FXRP)` : ' (auto-calculate)'}`);
+      const result = await rebalancerService.deployToStrategies(amount);
+
+      if (result.success) {
+        res.json({
+          success: true,
+          ...result,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: result.error,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error("Deploy error:", error);
+      res.status(500).json({
+        error: "Failed to deploy to strategies",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
+  /**
+   * Withdraw funds from strategies to buffer
+   * POST /api/strategies/withdraw
+   * Body: { amount: string } - required amount in FXRP (6 decimals)
+   * 
+   * Admin-only endpoint to withdraw from yield strategies back to buffer.
+   * On testnet, this will simulate the operation since Firelight is disabled.
+   */
+  app.post("/api/strategies/withdraw", requireAdminAuth, async (req: Request, res: Response) => {
+    try {
+      const { getStrategyRebalancerService } = await import("./services/StrategyRebalancerService");
+      const rebalancerService = getStrategyRebalancerService();
+      
+      if (!rebalancerService || !rebalancerService.isReady()) {
+        return res.status(503).json({ 
+          error: "StrategyRebalancerService not available",
+          message: "Service is initializing or not configured"
+        });
+      }
+
+      const { amount } = req.body;
+      
+      if (!amount || typeof amount !== 'string') {
+        return res.status(400).json({
+          error: "Missing required parameter: amount",
+          message: "Amount must be a string representing FXRP with 6 decimals"
+        });
+      }
+
+      console.log(`📥 Manual withdraw triggered via API (amount: ${amount} FXRP)`);
+      const result = await rebalancerService.withdrawFromStrategies(amount);
+
+      if (result.success) {
+        res.json({
+          success: true,
+          ...result,
+          timestamp: new Date().toISOString()
+        });
+      } else {
+        res.status(500).json({
+          success: false,
+          error: result.error,
+          timestamp: new Date().toISOString()
+        });
+      }
+    } catch (error) {
+      console.error("Withdraw error:", error);
+      res.status(500).json({
+        error: "Failed to withdraw from strategies",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+
   /**
    * Check if an address is eligible for SHIELD airdrop
    * GET /api/airdrop/check/:address
