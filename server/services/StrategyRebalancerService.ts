@@ -2,7 +2,7 @@ import { ethers } from "ethers";
 import type { FlareClient } from "../utils/flare-client";
 import type { IStorage } from "../storage";
 import { VAULT_CONTROLLER_ABI, SHXRP_VAULT_STRATEGY_ABI } from "@shared/flare-abis";
-import { getCurrentNetwork, isFirelightEnabled, getNetworkConfig } from "../config/network-config";
+import { getCurrentNetwork, isFirelightEnabled, getNetworkConfig, getStrategyType, type StrategyType } from "../config/network-config";
 import fs from "fs";
 import path from "path";
 
@@ -223,35 +223,26 @@ export class StrategyRebalancerService {
       } catch (controllerError) {
         totalAssets = await this.vaultContract.totalAssets();
         
-        const asset = await this.vaultContract.asset();
         const provider = this.config.flareClient.getProvider();
-        const fxrpContract = new ethers.Contract(
-          asset, 
-          ["function balanceOf(address) view returns (uint256)"], 
-          provider
-        );
-        bufferAmount = await fxrpContract.balanceOf(this.vaultAddress);
         
         const STRATEGY_ABI = [
           "function totalAssets() view returns (uint256)",
           "function name() view returns (string)"
         ];
         
-        let strategyCount = 0;
         let strategyAddresses: string[] = [];
+        let totalDeployedToStrategies = BigInt(0);
         
         if (this.vaultControllerContract) {
           try {
-            strategyCount = Number(await this.vaultControllerContract.getStrategyCount());
+            const strategyCount = Number(await this.vaultControllerContract.getStrategyCount());
             for (let i = 0; i < strategyCount; i++) {
               const addr = await this.vaultControllerContract.strategyList(i);
               if (addr && addr !== ethers.ZeroAddress) {
                 strategyAddresses.push(addr);
               }
             }
-          } catch {
-            strategyCount = 0;
-          }
+          } catch {}
         }
         
         if (strategyAddresses.length === 0) {
@@ -279,6 +270,8 @@ export class StrategyRebalancerService {
               }
             }
             
+            totalDeployedToStrategies += deployedAmount;
+            
             let stratName = "";
             if (this.vaultControllerContract) {
               try {
@@ -291,13 +284,24 @@ export class StrategyRebalancerService {
               } catch {}
             }
             
-            if (stratName.toLowerCase().includes("kinetic")) {
-              kineticAmount = deployedAmount;
-            } else if (stratName.toLowerCase().includes("firelight")) {
-              firelightAmount = deployedAmount;
+            const stratType = getStrategyType(stratAddress, stratName);
+            
+            switch (stratType) {
+              case "kinetic":
+                kineticAmount = deployedAmount;
+                break;
+              case "firelight":
+                firelightAmount = deployedAmount;
+                break;
+              default:
+                break;
             }
           } catch (e) {}
         }
+        
+        bufferAmount = totalAssets > totalDeployedToStrategies 
+          ? totalAssets - totalDeployedToStrategies 
+          : BigInt(0);
       }
 
       const total = totalAssets;

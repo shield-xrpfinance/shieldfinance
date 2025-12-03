@@ -22,6 +22,11 @@ export function getCurrentNetwork(): Network {
 }
 
 /**
+ * Strategy type identifiers for address-to-type mapping
+ */
+export type StrategyType = "kinetic" | "firelight" | "buffer" | "unknown";
+
+/**
  * Network-specific configuration
  */
 export interface NetworkConfig {
@@ -31,8 +36,16 @@ export interface NetworkConfig {
   explorer: string;
   contracts: {
     shXRPVault: string | null;
+    vaultController: string | null;
     firelightStXRP: string | null;
     fxrpToken: string | null;
+  };
+  strategies: {
+    /** Map of strategy contract address (lowercase) to type */
+    addressToType: Record<string, StrategyType>;
+    /** Known strategy addresses by type */
+    kinetic: string | null;
+    firelight: string | null;
   };
   features: {
     firelightEnabled: boolean;
@@ -49,6 +62,20 @@ export function getNetworkConfig(): NetworkConfig {
   
   // Get our deployed vault address from environment or deployments
   const shXRPVault = process.env.VITE_SHXRP_VAULT_ADDRESS || null;
+  const vaultController = process.env.VAULT_CONTROLLER_ADDRESS || null;
+  
+  // Known strategy addresses from environment (set after deployment)
+  const kineticStrategy = process.env.KINETIC_STRATEGY_ADDRESS || null;
+  const firelightStrategy = process.env.FIRELIGHT_STRATEGY_ADDRESS || null;
+  
+  // Build address-to-type mapping
+  const addressToType: Record<string, StrategyType> = {};
+  if (kineticStrategy) {
+    addressToType[kineticStrategy.toLowerCase()] = "kinetic";
+  }
+  if (firelightStrategy) {
+    addressToType[firelightStrategy.toLowerCase()] = "firelight";
+  }
   
   if (network === "mainnet") {
     return {
@@ -58,8 +85,14 @@ export function getNetworkConfig(): NetworkConfig {
       explorer: flareConfig.explorer,
       contracts: {
         shXRPVault,
+        vaultController,
         firelightStXRP: flareConfig.firelight.stXRPVault,
         fxrpToken: flareConfig.fassets.fxrpToken,
+      },
+      strategies: {
+        addressToType,
+        kinetic: kineticStrategy,
+        firelight: firelightStrategy,
       },
       features: {
         firelightEnabled: true,
@@ -76,8 +109,14 @@ export function getNetworkConfig(): NetworkConfig {
     explorer: flareConfig.explorer,
     contracts: {
       shXRPVault,
+      vaultController,
       firelightStXRP: null, // Firelight not available on testnet
       fxrpToken: flareConfig.fassets.fxrpToken,
+    },
+    strategies: {
+      addressToType,
+      kinetic: kineticStrategy,
+      firelight: null, // Firelight mainnet only
     },
     features: {
       firelightEnabled: false, // Firelight mainnet only
@@ -93,6 +132,29 @@ export function getNetworkConfig(): NetworkConfig {
 export function getFirelightVaultAddress(): string | null {
   const config = getNetworkConfig();
   return config.contracts.firelightStXRP;
+}
+
+/**
+ * Get strategy type from address using configuration mapping
+ * Falls back to string matching on name if not in config
+ */
+export function getStrategyType(address: string, name?: string): StrategyType {
+  const config = getNetworkConfig();
+  const normalized = address.toLowerCase();
+  
+  // First check config mapping (most reliable)
+  if (config.strategies.addressToType[normalized]) {
+    return config.strategies.addressToType[normalized];
+  }
+  
+  // Fallback to name-based matching
+  if (name) {
+    const lowerName = name.toLowerCase();
+    if (lowerName.includes("kinetic")) return "kinetic";
+    if (lowerName.includes("firelight")) return "firelight";
+  }
+  
+  return "unknown";
 }
 
 /**
