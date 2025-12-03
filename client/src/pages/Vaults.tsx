@@ -53,8 +53,8 @@ export default function Vaults() {
   const { network, isTestnet, ecosystem } = useNetwork();
   const [, setLocation] = useLocation();
   
-  // Get user dashboard data for boost percentage
-  const walletAddress = address || evmAddress;
+  // Get user dashboard data for boost percentage (prioritize EVM address for staking data)
+  const walletAddress = evmAddress || address;
   const { data: dashboardData } = useUserDashboard({
     walletAddress,
     enabled: !!walletAddress,

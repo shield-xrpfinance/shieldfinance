@@ -521,9 +521,9 @@ export default function Dashboard() {
         </p>
       </div>
 
-      <PortfolioSummaryCard walletAddress={address} />
+      <PortfolioSummaryCard walletAddress={evmAddress || address} />
 
-      <BoostImpactBanner walletAddress={address} />
+      <BoostImpactBanner walletAddress={evmAddress || address} />
 
       <Card className="relative rounded-2xl border-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 overflow-hidden hover-elevate transition-all duration-200">
         <div className="absolute top-6 left-6 rounded-xl bg-primary/20 p-4 backdrop-blur-sm">
@@ -699,7 +699,7 @@ export default function Dashboard() {
         )}
       </div>
 
-      <PortfolioPerformanceChart walletAddress={address} />
+      <PortfolioPerformanceChart walletAddress={evmAddress || address} />
 
       <div className="space-y-6">
         <div className="space-y-2">

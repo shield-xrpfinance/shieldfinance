@@ -56,7 +56,7 @@ export default function Portfolio() {
   const { network, ecosystem } = useNetwork();
   const [, navigate] = useLocation();
   
-  const walletAddrForDashboard = address || evmAddress;
+  const walletAddrForDashboard = evmAddress || address;
   const { data: dashboardData, isLoading: dashboardLoading } = useUserDashboard({
     walletAddress: walletAddrForDashboard,
     enabled: !!walletAddrForDashboard,
