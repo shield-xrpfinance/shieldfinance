@@ -7,7 +7,35 @@ This project is a full-stack DeFi application providing a dashboard for XRP liqu
 Preferred communication style: Simple, everyday language.
 Design preference: Modern, clean list-based layouts over grid cards for better space utilization.
 
-## Recent Changes (December 2, 2025)
+## Recent Changes (December 3, 2025)
+
+### Wallet Address Handling Fix
+**Critical Bug Fix: SHIELD Staking Data Display**
+- Fixed issue where Dashboard, Portfolio, and Vaults pages showed 0 SHIELD staking data despite database having correct records
+- Root cause: Components were passing XRPL address (`address`) instead of EVM address (`evmAddress`) for staking-related queries
+- SHIELD staking occurs on Flare (EVM), so data is stored with EVM addresses (0x...)
+
+**Frontend Changes**
+- Dashboard.tsx: Changed `address` to `evmAddress || address` for PortfolioSummaryCard, BoostImpactBanner, and PortfolioPerformanceChart
+- Portfolio.tsx: Changed `address || evmAddress` to `evmAddress || address` for dashboard data queries
+- Vaults.tsx: Changed `address || evmAddress` to `evmAddress || address` for boost percentage display
+
+**Database Query Case Sensitivity**
+- Fixed Ethereum address comparison to be case-insensitive (addresses are hex, so case doesn't matter)
+- Added `lower()` SQL function to these storage.ts methods:
+  - `getStakeInfo()`: For SHIELD staking position lookups
+  - `recordUnstake()`: For unstaking operations
+  - `getDashboardSnapshots()` and `getLatestDashboardSnapshot()`: For portfolio history
+  - `getPositions()` and `getPositionByWalletAndVault()`: For vault position lookups
+  - `getTransactions()`: For transaction history
+
+**Verification**
+- Both mixed-case (0x507D8535bc...) and lowercase (0x507d8535bc...) addresses now return identical results
+- Dashboard correctly shows SHIELD staking balance, APY boost percentage, and vault positions
+
+---
+
+## Changes (December 2, 2025)
 
 ### Bridge Tracking Enhancements
 **Multi-Chain Bridge History Integration**
