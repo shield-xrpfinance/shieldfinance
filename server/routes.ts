@@ -4647,11 +4647,16 @@ export async function registerRoutes(
             vaultDataService.getLiveAPY(),
             analyticsService.getUniqueStakers()
           ]);
+          
+          // Use database stakers count if on-chain returns 0 (limited block range scan)
+          // The database has complete historical position data
+          const effectiveStakers = liveStakers > 0 ? liveStakers : overview.totalStakers;
+          
           return res.json({
             ...overview,
             tvl: liveTvl,
             avgApy: liveApy,
-            totalStakers: liveStakers,
+            totalStakers: effectiveStakers,
             isLive: true
           });
         } catch (liveError) {

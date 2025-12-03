@@ -633,10 +633,22 @@ export class DatabaseStorage implements IStorage {
     const allVaults = await this.getVaults();
     const allPositions = await this.getPositions();
     
+    // Also count SHIELD stakers who have staking positions
+    const shieldStakers = await db.query.stakingPositions.findMany();
+    
+    // Count unique users from both vault positions and SHIELD staking
+    const uniqueUsers = new Set<string>();
+    for (const pos of allPositions) {
+      uniqueUsers.add(pos.walletAddress.toLowerCase());
+    }
+    for (const stake of shieldStakers) {
+      uniqueUsers.add(stake.walletAddress.toLowerCase());
+    }
+    
     const totalTvl = allVaults.reduce((sum, v) => sum + parseFloat(v.tvl), 0);
     const avgApy = allVaults.reduce((sum, v) => sum + parseFloat(v.apy), 0) / allVaults.length;
     const activeVaults = allVaults.filter(v => v.status === "active").length;
-    const totalStakers = allPositions.length;
+    const totalStakers = uniqueUsers.size;
 
     return {
       tvl: totalTvl.toFixed(0),
