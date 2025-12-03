@@ -380,20 +380,38 @@ export class OnChainMonitorService {
         return;
       }
 
+      // Handle case where blockNumber might be undefined for real-time listener events
+      // Real-time events from contract.on() may not have blockNumber populated yet
+      let blockNumber = event.blockNumber;
+      if (blockNumber === undefined || blockNumber === null) {
+        // Try to get block number from the event log, or fetch current block as fallback
+        try {
+          const currentBlock = await this.provider.getBlockNumber();
+          blockNumber = currentBlock;
+        } catch {
+          blockNumber = 0; // Last resort fallback
+        }
+      }
+
       const monitoredEvent: MonitoredEvent = {
         contractName,
         contractAddress,
         eventName: eventConfig.name,
         severity: eventConfig.severity,
-        blockNumber: event.blockNumber,
-        transactionHash: event.transactionHash,
-        logIndex: event.index,
+        blockNumber,
+        transactionHash: event.transactionHash || "",
+        logIndex: event.index ?? 0,
         args,
         timestamp: new Date(),
         notified: false,
       };
 
       const savedEvent = await this.saveEvent(monitoredEvent);
+
+      // Persist staking events to staking_positions table
+      if (contractName === "StakingBoost") {
+        await this.persistStakingEvent(eventConfig.name, args);
+      }
 
       if (eventConfig.notificationTemplate && this.config.alertingService) {
         await this.sendNotification(contractName, eventConfig, args, savedEvent.id);
@@ -402,6 +420,37 @@ export class OnChainMonitorService {
       console.log(`📡 ${contractName}.${eventConfig.name} detected [${eventConfig.severity}]`);
     } catch (error) {
       console.error(`Error handling event ${contractName}.${eventConfig.name}:`, error);
+    }
+  }
+
+  private async persistStakingEvent(eventName: string, args: Record<string, any>): Promise<void> {
+    try {
+      if (eventName === "Staked") {
+        const user = args.user;
+        const amount = args.amount;
+        const unlockTime = args.unlockTime?.toString() || "0";
+        const stakedAt = Date.now().toString();
+        
+        if (user && amount) {
+          await this.config.storage.recordStake(user, amount, stakedAt, unlockTime);
+          console.log(`📊 Staking position recorded: ${user} staked ${amount}`);
+        }
+      } else if (eventName === "Unstaked") {
+        const user = args.user;
+        const amount = args.amount;
+        
+        if (user && amount) {
+          try {
+            await this.config.storage.recordUnstake(user, amount);
+            console.log(`📊 Unstake recorded: ${user} unstaked ${amount}`);
+          } catch (error) {
+            // May fail if no position exists (e.g., event from before we started tracking)
+            console.warn(`Could not record unstake for ${user}:`, error);
+          }
+        }
+      }
+    } catch (error) {
+      console.error(`Error persisting staking event ${eventName}:`, error);
     }
   }
 
