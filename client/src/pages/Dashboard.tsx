@@ -26,6 +26,7 @@ import { getAssetDisplayName } from "@shared/assetConfig";
 import { PortfolioSummaryCard } from "@/components/dashboard/PortfolioSummaryCard";
 import { BoostImpactBanner } from "@/components/dashboard/BoostImpactBanner";
 import { PortfolioPerformanceChart } from "@/components/dashboard/PortfolioPerformanceChart";
+import StrategyAllocationCard from "@/components/StrategyAllocationCard";
 
 export default function Dashboard() {
   const [depositModalOpen, setDepositModalOpen] = useState(false);
@@ -525,6 +526,11 @@ export default function Dashboard() {
 
       <BoostImpactBanner walletAddress={evmAddress || address} />
 
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <StrategyAllocationCard />
+        <PortfolioPerformanceChart walletAddress={evmAddress || address} />
+      </div>
+
       <Card className="relative rounded-2xl border-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 overflow-hidden hover-elevate transition-all duration-200">
         <div className="absolute top-6 left-6 rounded-xl bg-primary/20 p-4 backdrop-blur-sm">
           <div className="relative">
@@ -698,8 +704,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-
-      <PortfolioPerformanceChart walletAddress={evmAddress || address} />
 
       <div className="space-y-6">
         <div className="space-y-2">

@@ -91,8 +91,8 @@ export const FLARE_CONTRACTS = {
     firelight: {
       // ⚠️ Firelight Phase 1 is mainnet-only
       // No testnet deployment available yet
-      launchVault: null, // Not available
-      stXRP: null, // Not available
+      stXRPVault: null, // Not available on testnet
+      stXRP: null, // Not available on testnet
       fxrpToken: "0xa3Bd00D652D0f28D2417339322A51d4Fbe2B22D3",
       
       // For testing, use mock contracts or wait for testnet announcement

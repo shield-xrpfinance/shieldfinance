@@ -31,6 +31,8 @@ import { yieldOptimizerService } from "./services/YieldOptimizerService";
 import { BridgeOrchestratorService } from "./services/BridgeOrchestratorService";
 import { RouteRegistry } from "./services/RouteRegistry";
 import { NETWORKS, BRIDGE_TOKENS, DEFAULT_ENABLED_NETWORKS, DEFAULT_ENABLED_TOKENS, type NetworkId, type BridgeTokenId } from "@shared/bridgeConfig";
+import { getFirelightDataService } from "./services/FirelightDataService";
+import { getCurrentNetwork, isFirelightEnabled, getNetworkConfig } from "./config/network-config";
 
 async function sendNotification(
   walletAddress: string,
@@ -531,6 +533,156 @@ export async function registerRoutes(
       res.json(vault);
     } catch (error) {
       res.status(500).json({ error: "Failed to fetch vault" });
+    }
+  });
+
+  // ============================================================
+  // STRATEGY ALLOCATION API ENDPOINTS
+  // ============================================================
+
+  /**
+   * GET /api/strategies/allocation
+   * Get strategy allocation breakdown for our vault
+   * 
+   * Returns the distribution of assets across:
+   * - Liquidity Buffer (idle FXRP in vault)
+   * - Firelight stXRP (mainnet only)
+   * - Kinetic Lending (future)
+   * 
+   * IMPORTANT: Shows OUR vault's allocations, NOT Firelight's global TVL
+   */
+  app.get("/api/strategies/allocation", async (req, res) => {
+    try {
+      const networkConfig = getNetworkConfig();
+      
+      // Get vault total assets (already normalized to decimals by VaultDataService)
+      let vaultTotalAssets = "0";
+      if (vaultDataService && vaultDataService.isReady()) {
+        const metrics = await vaultDataService.getOnChainMetrics();
+        if (metrics) {
+          // VaultDataService returns totalAssets in human-readable format (already divided by decimals)
+          vaultTotalAssets = metrics.totalAssets;
+        }
+      }
+      
+      // Parse to ensure it's a valid number
+      const totalAssetsNum = parseFloat(vaultTotalAssets) || 0;
+      const normalizedTotalAssets = totalAssetsNum.toFixed(6);
+      
+      // Get strategy allocations from FirelightDataService
+      const firelightService = getFirelightDataService();
+      
+      // Initialize if not ready (on mainnet only)
+      if (networkConfig.features.firelightEnabled && !firelightService.isReady()) {
+        await firelightService.initialize();
+      }
+      
+      // Get strategy address from environment (would be set after deployment)
+      const firelightStrategyAddress = process.env.FIRELIGHT_STRATEGY_ADDRESS;
+      
+      const allocations = await firelightService.getStrategyAllocations(
+        normalizedTotalAssets,
+        firelightStrategyAddress
+      );
+      
+      // Filter out disabled strategies for cleaner display
+      const activeAllocations = allocations.filter(a => a.enabled || parseFloat(a.deployed) > 0);
+      
+      res.json({
+        success: true,
+        network: networkConfig.network,
+        firelightEnabled: networkConfig.features.firelightEnabled,
+        vaultTotalAssets: normalizedTotalAssets,
+        allocations: activeAllocations,
+        lastUpdated: Date.now()
+      });
+    } catch (error) {
+      console.error("Failed to get strategy allocations:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch strategy allocations"
+      });
+    }
+  });
+
+  /**
+   * GET /api/strategies/firelight
+   * Get Firelight-specific metrics
+   * 
+   * Returns ONLY our allocation in Firelight stXRP vault (mainnet only)
+   * IMPORTANT: Does NOT expose Firelight's global TVL to avoid confusion
+   */
+  app.get("/api/strategies/firelight", async (req, res) => {
+    try {
+      if (!isFirelightEnabled()) {
+        return res.json({
+          success: true,
+          enabled: false,
+          reason: "Firelight is only available on mainnet",
+          network: getCurrentNetwork()
+        });
+      }
+      
+      const firelightService = getFirelightDataService();
+      
+      if (!firelightService.isReady()) {
+        await firelightService.initialize();
+      }
+      
+      // Get our strategy's allocation (NOT Firelight's global TVL)
+      const firelightStrategyAddress = process.env.FIRELIGHT_STRATEGY_ADDRESS;
+      
+      if (!firelightStrategyAddress) {
+        return res.json({
+          success: true,
+          enabled: true,
+          network: getCurrentNetwork(),
+          ourAllocation: null,
+          reason: "Firelight strategy not deployed yet"
+        });
+      }
+      
+      const ourAllocation = await firelightService.getOurAllocation(firelightStrategyAddress);
+      
+      res.json({
+        success: true,
+        enabled: true,
+        network: getCurrentNetwork(),
+        ourAllocation
+      });
+    } catch (error) {
+      console.error("Failed to get Firelight allocation:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch Firelight allocation"
+      });
+    }
+  });
+
+  /**
+   * GET /api/network/config
+   * Get current network configuration
+   */
+  app.get("/api/network/config", async (_req, res) => {
+    try {
+      const config = getNetworkConfig();
+      res.json({
+        success: true,
+        network: config.network,
+        chainId: config.chainId,
+        features: config.features,
+        contracts: {
+          shXRPVault: config.contracts.shXRPVault,
+          firelightStXRP: config.contracts.firelightStXRP,
+          fxrpToken: config.contracts.fxrpToken
+        }
+      });
+    } catch (error) {
+      console.error("Failed to get network config:", error);
+      res.status(500).json({
+        success: false,
+        error: "Failed to fetch network configuration"
+      });
     }
   });
 

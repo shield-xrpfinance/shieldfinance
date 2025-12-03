@@ -9,6 +9,46 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 
 ## Recent Changes (December 3, 2025)
 
+### Firelight Protocol Integration (Multi-Strategy Yield)
+**Backend Infrastructure**
+- Created `server/config/network-config.ts` for network-aware configuration (mainnet vs coston2)
+  - Automatic detection via FLARE_NETWORK environment variable
+  - Feature flags for Firelight enablement (mainnet-only)
+  - Centralized contract addresses per network
+- Created `server/services/FirelightDataService.ts` for querying OUR vault's Firelight allocation
+  - CRITICAL: Displays only our protocol's deployed amount, NOT Firelight's global $35M+ TVL
+  - ERC-4626 vault integration for stXRP staking position queries
+  - Strategy allocation breakdown: Buffer (10%), Kinetic (40%), Firelight (50%)
+
+**API Endpoints Added (routes.ts)**
+- `GET /api/strategies/allocation`: Strategy breakdown with our vault's deployed amounts
+- `GET /api/strategies/firelight`: Firelight-specific metrics (mainnet only)
+- `GET /api/network/config`: Current network configuration and enabled features
+
+**Frontend Components**
+- Created `StrategyAllocationCard.tsx`: Visual breakdown of vault yield strategies
+  - Shows Buffer (idle FXRP), Firelight stXRP, Kinetic Lending allocations
+  - Progress bars for each strategy's percentage
+  - "Powered by Firelight" external link for transparency
+- Created `FirelightBadge.tsx`: Reusable badge component for Firelight-powered features
+- Updated `Dashboard.tsx`: Integrated StrategyAllocationCard in two-column grid with PortfolioPerformanceChart
+
+**Smart Contract Updates (contracts/FirelightStrategy.sol)**
+- Rewrote with real ERC-4626 integration using deposit/redeem methods
+- Uses actual Firelight stXRP vault: 0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3 (mainnet)
+- TransparentUpgradeableProxy audited by OpenZeppelin + Coinspect
+
+**Key Files Modified**
+- shared/flare-contracts.ts: Added mainnet Firelight stXRP vault address
+- shared/flare-abis.ts: Contains ERC-4626 vault ABI for stXRP interaction
+- server/config/network-config.ts: Network configuration and feature flags
+- server/services/FirelightDataService.ts: Strategy allocation data service
+- client/src/components/StrategyAllocationCard.tsx: Strategy visualization
+- client/src/components/FirelightBadge.tsx: Firelight attribution badge
+- client/src/pages/Dashboard.tsx: Dashboard layout with strategy card
+
+---
+
 ### Wallet Address Handling Fix
 **Critical Bug Fix: SHIELD Staking Data Display**
 - Fixed issue where Dashboard, Portfolio, and Vaults pages showed 0 SHIELD staking data despite database having correct records
