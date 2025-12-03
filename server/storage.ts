@@ -481,9 +481,11 @@ export class DatabaseStorage implements IStorage {
 
   async getPositions(walletAddress?: string): Promise<Position[]> {
     if (walletAddress) {
+      // Use case-insensitive comparison for Ethereum addresses
+      const normalizedAddress = walletAddress.toLowerCase();
       return await db.select().from(positions).where(
         and(
-          eq(positions.walletAddress, walletAddress),
+          sql`lower(${positions.walletAddress}) = ${normalizedAddress}`,
           eq(positions.status, "active")
         )
       );
@@ -497,10 +499,12 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getPositionByWalletAndVault(walletAddress: string, vaultId: string): Promise<Position | undefined> {
+    // Use case-insensitive comparison for Ethereum addresses
+    const normalizedAddress = walletAddress.toLowerCase();
     const [position] = await db.select()
       .from(positions)
       .where(and(
-        eq(positions.walletAddress, walletAddress),
+        sql`lower(${positions.walletAddress}) = ${normalizedAddress}`,
         eq(positions.vaultId, vaultId)
       ))
       // No status filter - return closed positions too (will be reactivated on deposit)
@@ -531,10 +535,11 @@ export class DatabaseStorage implements IStorage {
 
   async getTransactions(limit: number = 50, walletAddress?: string): Promise<Transaction[]> {
     if (walletAddress) {
-      // Filter directly by wallet address column
+      // Use case-insensitive comparison for Ethereum addresses
+      const normalizedAddress = walletAddress.toLowerCase();
       return await db.select()
         .from(transactions)
-        .where(eq(transactions.walletAddress, walletAddress))
+        .where(sql`lower(${transactions.walletAddress}) = ${normalizedAddress}`)
         .orderBy(desc(transactions.createdAt))
         .limit(limit);
     }
@@ -1226,8 +1231,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStakeInfo(walletAddress: string): Promise<StakingPosition | null> {
+    // Use case-insensitive comparison for Ethereum addresses (0x...)
+    const normalizedAddress = walletAddress.toLowerCase();
     const position = await db.query.stakingPositions.findFirst({
-      where: eq(stakingPositions.walletAddress, walletAddress)
+      where: sql`lower(${stakingPositions.walletAddress}) = ${normalizedAddress}`
     });
     return position || null;
   }
@@ -1267,15 +1274,18 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Unstake amount exceeds staked balance");
     }
 
+    // Use case-insensitive comparison for Ethereum addresses
+    const normalizedAddress = walletAddress.toLowerCase();
+    
     if (newAmount === BigInt(0)) {
       // Delete the position if fully unstaked
       await db.delete(stakingPositions)
-        .where(eq(stakingPositions.walletAddress, walletAddress));
+        .where(sql`lower(${stakingPositions.walletAddress}) = ${normalizedAddress}`);
     } else {
       // Update the position with reduced amount
       await db.update(stakingPositions)
         .set({ amount: newAmount.toString() })
-        .where(eq(stakingPositions.walletAddress, walletAddress));
+        .where(sql`lower(${stakingPositions.walletAddress}) = ${normalizedAddress}`);
     }
   }
 
@@ -1286,11 +1296,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDashboardSnapshots(walletAddress: string, fromDate: Date, toDate: Date): Promise<DashboardSnapshot[]> {
+    // Use case-insensitive comparison for Ethereum addresses
+    const normalizedAddress = walletAddress.toLowerCase();
     return db.select()
       .from(dashboardSnapshots)
       .where(
         and(
-          eq(dashboardSnapshots.walletAddress, walletAddress),
+          sql`lower(${dashboardSnapshots.walletAddress}) = ${normalizedAddress}`,
           gte(dashboardSnapshots.snapshotDate, fromDate),
           lte(dashboardSnapshots.snapshotDate, toDate)
         )
@@ -1299,9 +1311,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getLatestDashboardSnapshot(walletAddress: string): Promise<DashboardSnapshot | undefined> {
+    // Use case-insensitive comparison for Ethereum addresses
+    const normalizedAddress = walletAddress.toLowerCase();
     const results = await db.select()
       .from(dashboardSnapshots)
-      .where(eq(dashboardSnapshots.walletAddress, walletAddress))
+      .where(sql`lower(${dashboardSnapshots.walletAddress}) = ${normalizedAddress}`)
       .orderBy(desc(dashboardSnapshots.snapshotDate))
       .limit(1);
     return results[0];
