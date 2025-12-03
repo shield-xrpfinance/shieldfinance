@@ -221,35 +221,82 @@ export class StrategyRebalancerService {
           totalAssets = BigInt(result[3]);
         }
       } catch (controllerError) {
-        console.warn("VaultController.getCurrentAllocation not available, falling back to vault queries");
-        
         totalAssets = await this.vaultContract.totalAssets();
         
         const asset = await this.vaultContract.asset();
         const provider = this.config.flareClient.getProvider();
-        const fxrpContract = new ethers.Contract(asset, ["function balanceOf(address) view returns (uint256)"], provider);
+        const fxrpContract = new ethers.Contract(
+          asset, 
+          ["function balanceOf(address) view returns (uint256)"], 
+          provider
+        );
         bufferAmount = await fxrpContract.balanceOf(this.vaultAddress);
         
-        const strategyCount = await this.vaultControllerContract?.getStrategyCount().catch(() => BigInt(0)) || BigInt(0);
+        const STRATEGY_ABI = [
+          "function totalAssets() view returns (uint256)",
+          "function name() view returns (string)"
+        ];
         
-        if (strategyCount > 0) {
-          for (let i = 0; i < Number(strategyCount); i++) {
-            try {
-              const stratAddress = await this.vaultControllerContract!.strategyList(i);
-              const stratName = await this.vaultControllerContract!.strategyNames(stratAddress).catch(() => "");
-              const stratInfo = await this.vaultContract.strategies(stratAddress).catch(() => null);
-              
-              if (stratInfo) {
-                const deployed = BigInt(stratInfo.totalDeployed || 0);
-                if (stratName.toLowerCase().includes("kinetic")) {
-                  kineticAmount = deployed;
-                } else if (stratName.toLowerCase().includes("firelight")) {
-                  firelightAmount = deployed;
-                }
+        let strategyCount = 0;
+        let strategyAddresses: string[] = [];
+        
+        if (this.vaultControllerContract) {
+          try {
+            strategyCount = Number(await this.vaultControllerContract.getStrategyCount());
+            for (let i = 0; i < strategyCount; i++) {
+              const addr = await this.vaultControllerContract.strategyList(i);
+              if (addr && addr !== ethers.ZeroAddress) {
+                strategyAddresses.push(addr);
               }
-            } catch (e) {
             }
+          } catch {
+            strategyCount = 0;
           }
+        }
+        
+        if (strategyAddresses.length === 0) {
+          try {
+            for (let i = 0; i < 10; i++) {
+              const addr = await this.vaultContract.strategyList(i);
+              if (addr && addr !== ethers.ZeroAddress) {
+                strategyAddresses.push(addr);
+              }
+            }
+          } catch {}
+        }
+        
+        for (const stratAddress of strategyAddresses) {
+          try {
+            const strategyContract = new ethers.Contract(stratAddress, STRATEGY_ABI, provider);
+            
+            let deployedAmount = BigInt(0);
+            try {
+              deployedAmount = await strategyContract.totalAssets();
+            } catch {
+              const stratInfo = await this.vaultContract.strategies(stratAddress).catch(() => null);
+              if (stratInfo) {
+                deployedAmount = BigInt(stratInfo.totalDeployed || 0);
+              }
+            }
+            
+            let stratName = "";
+            if (this.vaultControllerContract) {
+              try {
+                stratName = await this.vaultControllerContract.strategyNames(stratAddress);
+              } catch {}
+            }
+            if (!stratName) {
+              try {
+                stratName = await strategyContract.name();
+              } catch {}
+            }
+            
+            if (stratName.toLowerCase().includes("kinetic")) {
+              kineticAmount = deployedAmount;
+            } else if (stratName.toLowerCase().includes("firelight")) {
+              firelightAmount = deployedAmount;
+            }
+          } catch (e) {}
         }
       }
 
@@ -371,14 +418,15 @@ export class StrategyRebalancerService {
 
       if (!firelightEnabled) {
         const currentAllocation = await this.getCurrentAllocation();
-        console.log(`📊 [SIMULATION] Rebalance triggered on ${network}`);
+        console.log(`⚠️ [NOT_AVAILABLE] Rebalance triggered on ${network}`);
         console.log(`   Current buffer: ${currentAllocation.bufferPercent.toFixed(2)}%`);
-        console.log(`   Firelight disabled on testnet - simulating only`);
+        console.log(`   Firelight disabled on testnet - operation not available`);
 
         return {
-          success: true,
+          success: false,
           simulated: true,
-          message: `Simulated rebalance on ${network} (Firelight disabled). Current buffer: ${currentAllocation.bufferPercent.toFixed(2)}%`
+          error: "NOT_AVAILABLE",
+          message: `Rebalance not available on ${network} (Firelight disabled). Current buffer: ${currentAllocation.bufferPercent.toFixed(2)}%. Deploy strategies to mainnet for live operations.`
         };
       }
 
@@ -440,13 +488,14 @@ export class StrategyRebalancerService {
       }
 
       if (!firelightEnabled) {
-        console.log(`📊 [SIMULATION] Deploy ${ethers.formatUnits(deployAmount, FXRP_DECIMALS)} FXRP to strategies on ${network}`);
-        console.log(`   Firelight disabled on testnet - simulating only`);
+        console.log(`⚠️ [NOT_AVAILABLE] Deploy ${ethers.formatUnits(deployAmount, FXRP_DECIMALS)} FXRP to strategies on ${network}`);
+        console.log(`   Firelight disabled on testnet - operation not available`);
 
         return {
-          success: true,
+          success: false,
           simulated: true,
-          message: `Simulated deploy of ${ethers.formatUnits(deployAmount, FXRP_DECIMALS)} FXRP on ${network}`
+          error: "NOT_AVAILABLE",
+          message: `Deploy not available on ${network} (Firelight disabled). Would deploy ${ethers.formatUnits(deployAmount, FXRP_DECIMALS)} FXRP. Deploy strategies to mainnet for live operations.`
         };
       }
 
@@ -489,13 +538,14 @@ export class StrategyRebalancerService {
       const withdrawAmount = ethers.parseUnits(amount, FXRP_DECIMALS);
 
       if (!firelightEnabled) {
-        console.log(`📊 [SIMULATION] Withdraw ${amount} FXRP from strategies on ${network}`);
-        console.log(`   Firelight disabled on testnet - simulating only`);
+        console.log(`⚠️ [NOT_AVAILABLE] Withdraw ${amount} FXRP from strategies on ${network}`);
+        console.log(`   Firelight disabled on testnet - operation not available`);
 
         return {
-          success: true,
+          success: false,
           simulated: true,
-          message: `Simulated withdrawal of ${amount} FXRP on ${network}`
+          error: "NOT_AVAILABLE",
+          message: `Withdraw not available on ${network} (Firelight disabled). Would withdraw ${amount} FXRP. Deploy strategies to mainnet for live operations.`
         };
       }
 

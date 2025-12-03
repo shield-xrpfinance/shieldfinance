@@ -6345,6 +6345,12 @@ export async function registerRoutes(
           ...result,
           timestamp: new Date().toISOString()
         });
+      } else if (result.simulated && result.error === "NOT_AVAILABLE") {
+        res.status(501).json({
+          success: false,
+          ...result,
+          timestamp: new Date().toISOString()
+        });
       } else {
         res.status(500).json({
           success: false,
@@ -6400,6 +6406,12 @@ export async function registerRoutes(
           ...result,
           timestamp: new Date().toISOString()
         });
+      } else if (result.simulated && result.error === "NOT_AVAILABLE") {
+        res.status(501).json({
+          success: false,
+          ...result,
+          timestamp: new Date().toISOString()
+        });
       } else {
         res.status(500).json({
           success: false,
@@ -6451,6 +6463,12 @@ export async function registerRoutes(
       if (result.success) {
         res.json({
           success: true,
+          ...result,
+          timestamp: new Date().toISOString()
+        });
+      } else if (result.simulated && result.error === "NOT_AVAILABLE") {
+        res.status(501).json({
+          success: false,
           ...result,
           timestamp: new Date().toISOString()
         });
