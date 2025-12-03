@@ -335,7 +335,7 @@ await firelightStrategy.activate();
 
 **Shield Finance Team**
 - Website: https://shyield.finance
-- Twitter: @ShieldFinanceXRP
+- Twitter/X: [@ShieldFinanceX](https://x.com/ShieldFinanceX)
 - Email: partnerships@shyield.finance
 
 **Technical Contact**
