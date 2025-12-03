@@ -1,7 +1,7 @@
 # Firelight.finance Integration Guide
 
 **Last Updated:** December 3, 2025  
-**Status:** Mainnet Live (since November 11, 2025)
+**Status:** Mainnet Live (since December 3, 2025)
 
 ## Overview
 
@@ -14,7 +14,7 @@ Firelight is an institutional-grade liquid staking protocol for XRP built on Fla
 - Bug bounty via Immunefi
 - Estimated APY: 4-7%
 
-**Status:** Firelight launched on mainnet November 11, 2025. Contract addresses are now confirmed.
+**Status:** Firelight launched on mainnet December 3, 2025. Contract addresses are now confirmed.
 
 ---
 
