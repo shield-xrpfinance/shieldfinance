@@ -2161,11 +2161,14 @@ export async function registerRoutes(
    */
   app.get("/api/user/dashboard-summary", async (req, res) => {
     try {
-      const walletAddress = req.query.walletAddress as string;
+      let walletAddress = req.query.walletAddress as string;
       
       if (!walletAddress) {
         return res.status(400).json({ error: "walletAddress query parameter required" });
       }
+
+      // Normalize wallet address for consistency (case-insensitive for EVM addresses)
+      walletAddress = walletAddress.toLowerCase();
 
       const priceService = getPriceService();
       if (!priceService.isReady()) {
