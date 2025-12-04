@@ -107,6 +107,9 @@ export interface IStorage {
   getVaultDistribution(): Promise<Array<{ name: string; percentage: number }>>;
   getTopPerformingVaults(): Promise<Array<{ name: string; apy: string; riskLevel: string; asset: string }>>;
   
+  // Vault metrics
+  getUniqueDepositorsCount(): Promise<number>;
+  
   initializeVaults(): Promise<void>;
 }
 
@@ -739,6 +742,25 @@ export class DatabaseStorage implements IStorage {
         riskLevel: v.riskLevel,
         asset: v.asset,
       }));
+  }
+
+  async getUniqueDepositorsCount(): Promise<number> {
+    try {
+      // Count unique wallet addresses that have successful deposit transactions
+      const result = await db
+        .select({ count: sql<number>`count(distinct ${transactions.walletAddress})::int` })
+        .from(transactions)
+        .where(
+          and(
+            eq(transactions.type, "deposit"),
+            eq(transactions.status, "confirmed")
+          )
+        );
+      return result[0]?.count || 0;
+    } catch (error) {
+      console.error("Failed to get unique depositors count:", error);
+      return 0;
+    }
   }
 
   async getWithdrawalRequests(status?: string, walletAddress?: string): Promise<WithdrawalRequest[]> {

@@ -18,6 +18,8 @@ export interface EnrichedVault extends Vault {
   depositLimit?: string;
   paused?: boolean;
   isLive?: boolean;
+  onChainLiquidity?: string;
+  onChainDepositors?: number;
 }
 
 interface CacheEntry<T> {
@@ -127,22 +129,31 @@ export class VaultDataService {
       let onChainMetrics: VaultMetrics | null = null;
       let depositLimit: string | null = null;
       let paused: boolean | null = null;
+      let bufferLiquidity: string | null = null;
+      let depositorCount: number = 0;
 
       try {
         vaultAddress = this.getVaultAddress();
         onChainMetrics = await this.getOnChainMetrics(forceRefresh);
         
         const vaultContract = this.config.flareClient.getVaultReadContract(vaultAddress) as any;
-        const [depositLimitRaw, pausedVal] = await Promise.all([
+        const { ethers } = await import("ethers");
+        
+        // Fetch vault state in parallel
+        const [depositLimitRaw, pausedVal, fxrpBalance] = await Promise.all([
           vaultContract.depositLimit().catch(() => null),
-          vaultContract.paused().catch(() => null)
+          vaultContract.paused().catch(() => null),
+          this.getVaultBufferBalance(vaultAddress).catch(() => null)
         ]);
         
         if (depositLimitRaw !== null) {
-          const { ethers } = await import("ethers");
           depositLimit = ethers.formatUnits(depositLimitRaw, 6);
         }
         paused = pausedVal;
+        bufferLiquidity = fxrpBalance;
+        
+        // Get unique depositors count from database
+        depositorCount = await this.config.storage.getUniqueDepositorsCount();
       } catch (error) {
         console.warn("Could not fetch on-chain vault data:", error);
         vaultAddress = "";
@@ -171,6 +182,15 @@ export class VaultDataService {
         
         if (isShXRPVault && paused !== null) {
           enriched.paused = paused;
+        }
+        
+        if (isShXRPVault && bufferLiquidity !== null) {
+          enriched.onChainLiquidity = bufferLiquidity;
+          (enriched as any).liquidity = bufferLiquidity;
+        }
+        
+        if (isShXRPVault) {
+          enriched.onChainDepositors = depositorCount;
         }
 
         return enriched;
@@ -206,6 +226,34 @@ export class VaultDataService {
     const vaults = await this.getEnrichedVaults();
     const fxrpVault = vaults.find(v => v.asset === "FXRP" || v.name.toLowerCase().includes("fxrp") || v.isLive);
     return fxrpVault?.apy || "0";
+  }
+
+  /**
+   * Get the vault's buffer balance (idle FXRP available for withdrawals)
+   * This queries the FXRP token balance of the vault contract
+   */
+  async getVaultBufferBalance(vaultAddress: string): Promise<string | null> {
+    try {
+      const { ethers } = await import("ethers");
+      const provider = this.config.flareClient.getProvider();
+      
+      // Get FXRP token address
+      const fxrpAddress = await this.config.flareClient.getFAssetTokenAddress();
+      if (!fxrpAddress) {
+        console.warn("Could not get FXRP token address for buffer balance");
+        return null;
+      }
+      
+      // Simple ERC20 balanceOf ABI
+      const erc20Abi = ["function balanceOf(address owner) view returns (uint256)"];
+      const fxrpContract = new ethers.Contract(fxrpAddress, erc20Abi, provider);
+      
+      const balance = await fxrpContract.balanceOf(vaultAddress);
+      return ethers.formatUnits(balance, 6); // FXRP has 6 decimals
+    } catch (error) {
+      console.warn("Failed to get vault buffer balance:", error);
+      return null;
+    }
   }
 
   invalidateCache(): void {
