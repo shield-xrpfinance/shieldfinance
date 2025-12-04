@@ -107,6 +107,13 @@ export const TOOLTIP_CONTENT = {
     allocation: "View how your assets are distributed across different vaults and strategies.",
     health: "Portfolio health indicators show overall risk exposure and diversification status.",
   },
+  airdrop: {
+    tier: "Your tier is determined by total points earned during testnet. Bronze (0 pts) • Silver (500 pts) • Gold (2000 pts) • Diamond (5000 pts)",
+    multiplier: "Airdrop multiplier increases with tier: Bronze 1x • Silver 1.5x • Gold 2x • Diamond 3x. Your final airdrop allocation is (points / total points) × 2M SHIELD × multiplier",
+    progress: "Progress toward next tier by completing activities: deposits, staking, bridges, referrals, and bug reports.",
+    points: "Points are earned through testnet participation. Complete activities to accumulate points and unlock higher tiers.",
+    earlyAdopter: "OG status is awarded to early testers. OG users receive priority access to new features and bonus rewards.",
+  },
 } as const;
 
 export type TooltipCategory = keyof typeof TOOLTIP_CONTENT;
