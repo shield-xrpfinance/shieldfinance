@@ -337,6 +337,12 @@ export default function Airdrop() {
             </div>
           </div>
         </Card>
+
+        <ConnectWalletModal
+          open={connectModalOpen}
+          onOpenChange={setConnectModalOpen}
+          onConnect={() => {}}
+        />
       </div>
     );
   }
