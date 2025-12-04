@@ -11,7 +11,7 @@ import XamanSigningModal from "@/components/XamanSigningModal";
 import { ProgressStepsModal, type ProgressStep } from "@/components/ProgressStepsModal";
 import ConnectWalletEmptyState from "@/components/ConnectWalletEmptyState";
 import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
-import { Coins, TrendingUp, Vault, Users, Loader2, CheckCircle2, Wallet } from "lucide-react";
+import { Coins, Vault, Users, Loader2, CheckCircle2, Wallet } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
@@ -649,29 +649,6 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
-          </div>
-
-          <div className="grid grid-cols-3 gap-4 pt-4 border-t border-border/50">
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Average APY</p>
-              <p className="text-2xl font-bold tabular-nums" data-testid="stats-value-average-apy">8.2%</p>
-              <div className="flex items-center gap-1">
-                <TrendingUp className="h-4 w-4 text-chart-2" />
-                <span className="text-sm font-medium text-chart-2">+0.8%</span>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Active Vaults</p>
-              <p className="text-2xl font-bold tabular-nums" data-testid="stats-value-active-vaults">12</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Stakers</p>
-              <p className="text-2xl font-bold tabular-nums" data-testid="stats-value-total-stakers">3,421</p>
-              <div className="flex items-center gap-1">
-                <TrendingUp className="h-4 w-4 text-chart-2" />
-                <span className="text-sm font-medium text-chart-2">+5.2%</span>
-              </div>
-            </div>
           </div>
         </div>
       </Card>
