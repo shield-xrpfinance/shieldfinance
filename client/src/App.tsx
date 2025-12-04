@@ -34,6 +34,8 @@ import Optimize from "@/pages/Optimize";
 import Security from "@/pages/Security";
 import Leaderboard from "@/pages/Leaderboard";
 import PointsDashboard from "@/pages/PointsDashboard";
+import Terms from "@/pages/Terms";
+import Privacy from "@/pages/Privacy";
 import NotFound from "@/pages/not-found";
 
 function DashboardRouter() {
@@ -193,6 +195,8 @@ function AppContent() {
             <RouterSwitch>
               <Route path="/" component={Landing} />
               <Route path="/security" component={Security} />
+              <Route path="/terms" component={Terms} />
+              <Route path="/privacy" component={Privacy} />
               <Route component={NotFound} />
             </RouterSwitch>
           )}
