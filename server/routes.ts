@@ -2232,7 +2232,7 @@ export async function registerRoutes(
         const shieldPrice = prices.get("SHIELD") || 0.01;
         shieldStakedValueUsd = shieldAmount.mul(shieldPrice).toNumber();
         totalValueUsd = totalValueUsd.add(shieldStakedValueUsd);
-        boostPercentage = Math.min(shieldAmount.div(10000).toNumber(), 50);
+        boostPercentage = Math.min(shieldAmount.div(100).toNumber(), 50);
         assetBreakdown["SHIELD"] = shieldStakedValueUsd;
       }
 
