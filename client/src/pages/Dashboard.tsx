@@ -26,7 +26,6 @@ import { getAssetDisplayName } from "@shared/assetConfig";
 import { PortfolioSummaryCard } from "@/components/dashboard/PortfolioSummaryCard";
 import { BoostImpactBanner } from "@/components/dashboard/BoostImpactBanner";
 import { PortfolioPerformanceChart } from "@/components/dashboard/PortfolioPerformanceChart";
-import { PositionHistory } from "@/components/dashboard/PositionHistory";
 import StrategyAllocationCard from "@/components/StrategyAllocationCard";
 
 export default function Dashboard() {
@@ -531,8 +530,6 @@ export default function Dashboard() {
         <StrategyAllocationCard />
         <PortfolioPerformanceChart walletAddress={evmAddress || address} />
       </div>
-
-      <PositionHistory walletAddress={evmAddress || address} />
 
       <Card className="relative rounded-2xl border-2 bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8 overflow-hidden hover-elevate transition-all duration-200">
         <div className="absolute top-6 left-6 rounded-xl bg-primary/20 p-4 backdrop-blur-sm">
