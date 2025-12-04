@@ -7060,6 +7060,20 @@ export async function registerRoutes(
   // Import points service lazily to avoid circular dependencies
   const { pointsService } = await import("./services/PointsService");
 
+  // Get points configuration (public) - MUST be before :walletAddress route
+  app.get("/api/points/config", async (_req, res) => {
+    try {
+      const { POINTS_CONFIG, TIER_CONFIG } = await import("@shared/schema");
+      res.json({
+        activities: POINTS_CONFIG,
+        tiers: TIER_CONFIG,
+      });
+    } catch (error) {
+      console.error("[Points API] Failed to get config:", error);
+      res.status(500).json({ error: "Failed to get points config" });
+    }
+  });
+
   // Get user's points summary
   app.get("/api/points/:walletAddress", async (req, res) => {
     try {
@@ -7342,15 +7356,6 @@ export async function registerRoutes(
       console.error("[Points API] Failed to award points:", error);
       res.status(500).json({ error: "Failed to award points" });
     }
-  });
-
-  // Get points configuration (public)
-  app.get("/api/points/config", (_req, res) => {
-    const { POINTS_CONFIG, TIER_CONFIG } = require("@shared/schema");
-    res.json({
-      activities: POINTS_CONFIG,
-      tiers: TIER_CONFIG,
-    });
   });
 
   // Get user's airdrop proof (for claiming)
