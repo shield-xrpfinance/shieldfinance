@@ -357,7 +357,14 @@ export default function Airdrop() {
       const data = await response.json();
 
       if (data.success && data.intentUrl) {
-        window.open(data.intentUrl, '_blank', 'width=600,height=400');
+        // On mobile devices, use location.href to trigger native X app deep linking
+        // This opens the X app directly instead of a browser window requiring sign-in
+        if (isMobileDevice()) {
+          window.location.href = data.intentUrl;
+        } else {
+          // On desktop, use popup window for better UX
+          window.open(data.intentUrl, '_blank', 'width=600,height=400');
+        }
         
         // Store the pending share ID for verification later
         if (data.pendingShareId) {
