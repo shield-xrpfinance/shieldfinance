@@ -101,9 +101,9 @@ export function PortfolioSummaryCard({ walletAddress }: PortfolioSummaryCardProp
   return (
     <div className="space-y-6" data-testid="portfolio-summary-card">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Card 1: Portfolio Value with composition breakdown */}
+        {/* Card 1: Protocol Deposits with composition breakdown */}
         <MetricCard
-          label="Portfolio Value"
+          label="Protocol Deposits"
           value={formatUsdValue(summary?.totalValueUsd ?? 0)}
           icon={<Wallet className="h-5 w-5" />}
           tooltip={TOOLTIP_CONTENT.portfolio.totalValue}
