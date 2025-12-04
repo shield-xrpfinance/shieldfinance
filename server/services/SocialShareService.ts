@@ -152,21 +152,20 @@ export class SocialShareService {
     try {
       const client = new TwitterApi(updatedTokens.accessToken);
 
-      const appUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : 'https://shyield.finance';
+      // Always use production URL for shared links
+      const appUrl = 'https://shyield.finance';
 
       let tweetText: string;
       
       if (content.type === 'airdrop_claim') {
-        tweetText = `🎉 Just claimed my $SHIELD airdrop on @ShieldFinance_!\n\n` +
+        tweetText = `🎉 Just claimed my $SHIELD airdrop on @ShieldFinanceX!\n\n` +
           `💎 ${content.tier.charAt(0).toUpperCase() + content.tier.slice(1)} tier with ${content.totalPoints.toLocaleString()} points\n\n` +
           `Join the testnet and earn your share of 2M $SHIELD tokens!\n\n` +
           `👉 Use my code: ${content.referralCode}\n` +
           `🔗 ${appUrl}/app/airdrop?ref=${content.referralCode}\n\n` +
           `#ShieldFinance #XRP #Flare #Airdrop #DeFi`;
       } else {
-        tweetText = `🛡️ Earning points on @ShieldFinance_ testnet!\n\n` +
+        tweetText = `🛡️ Earning points on @ShieldFinanceX\n\n` +
           `📊 Current stats:\n` +
           `• ${content.totalPoints.toLocaleString()} points earned\n` +
           `• ${content.tier.charAt(0).toUpperCase() + content.tier.slice(1)} tier\n\n` +
@@ -232,14 +231,14 @@ export class SocialShareService {
     let tweetText: string;
     
     if (content.type === 'airdrop_claim') {
-      tweetText = `🎉 Just claimed my $SHIELD airdrop on @ShieldFinance_!\n\n` +
+      tweetText = `🎉 Just claimed my $SHIELD airdrop on @ShieldFinanceX!\n\n` +
         `💎 ${content.tier.charAt(0).toUpperCase() + content.tier.slice(1)} tier with ${content.totalPoints.toLocaleString()} points\n\n` +
         `Join the testnet and earn your share of 2M $SHIELD tokens!\n\n` +
         `👉 Use my code: ${content.referralCode}\n` +
         `🔗 ${appUrl}/app/airdrop?ref=${content.referralCode}\n\n` +
         `#ShieldFinance #XRP #Flare #Airdrop #DeFi`;
     } else {
-      tweetText = `🛡️ Earning points on @ShieldFinance_ testnet!\n\n` +
+      tweetText = `🛡️ Earning points on @ShieldFinanceX\n\n` +
         `📊 Current stats:\n` +
         `• ${content.totalPoints.toLocaleString()} points earned\n` +
         `• ${content.tier.charAt(0).toUpperCase() + content.tier.slice(1)} tier\n\n` +
