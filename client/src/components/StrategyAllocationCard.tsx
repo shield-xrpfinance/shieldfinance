@@ -25,7 +25,7 @@ import {
 import { useQuery } from "@tanstack/react-query";
 import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
 import { usePrices } from "@/hooks/usePrices";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { AssetIcon } from "@/components/AssetIcon";
 
 interface StrategyAllocation {
@@ -72,6 +72,8 @@ interface OpportunityCalloutProps {
 }
 
 function OpportunityCallout({ idleFxrp, idleFxrpUsd, vaultApy, fxrpPrice }: OpportunityCalloutProps) {
+  const [, setLocation] = useLocation();
+
   if (idleFxrp < 0.01) {
     return null;
   }
@@ -121,11 +123,9 @@ function OpportunityCallout({ idleFxrp, idleFxrpUsd, vaultApy, fxrpPrice }: Oppo
           <Coins className="h-3 w-3 inline mr-1" />
           Potential: <span className="text-chart-2 font-medium">~${potentialAnnualYieldUsd.toFixed(2)}/year</span>
         </div>
-        <Button size="sm" className="gap-1" asChild data-testid="button-deposit-opportunity">
-          <Link href="/app">
-            Deposit Now
-            <ArrowRight className="h-3 w-3" />
-          </Link>
+        <Button size="sm" className="gap-1" onClick={() => setLocation("/app")} data-testid="button-deposit-opportunity">
+          Deposit Now
+          <ArrowRight className="h-3 w-3" />
         </Button>
       </div>
     </div>
