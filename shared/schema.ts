@@ -772,6 +772,59 @@ export const airdropSnapshots = pgTable("airdrop_snapshots", {
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
+// Pending social shares - tracks shares awaiting tweet verification
+export const pendingSocialShareStatusEnum = pgEnum("pending_social_share_status", [
+  "pending",     // User initiated share, waiting for verification
+  "verified",    // Tweet found and verified, points awarded
+  "expired",     // Verification window expired (24 hours)
+  "failed",      // Verification attempted but tweet not found
+]);
+
+export const pendingSocialShares = pgTable("pending_social_shares", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  
+  // User identification
+  walletAddress: text("wallet_address").notNull(),
+  
+  // Share details
+  referralCode: text("referral_code").notNull(),
+  shareType: text("share_type").notNull().default("referral"), // 'referral' or 'airdrop_claim'
+  
+  // Expected tweet content for matching
+  expectedContent: text("expected_content").notNull(), // Key phrases to search for
+  
+  // Verification status
+  status: pendingSocialShareStatusEnum("status").notNull().default("pending"),
+  
+  // Verified tweet details (populated on success)
+  tweetId: text("tweet_id"),
+  twitterUsername: text("twitter_username"),
+  verifiedAt: timestamp("verified_at"),
+  
+  // Points awarded (10 for social_share)
+  pointsAwarded: integer("points_awarded").default(0),
+  
+  // Expiration tracking
+  expiresAt: timestamp("expires_at").notNull(), // 24 hours from creation
+  
+  // Error tracking
+  lastVerificationAttempt: timestamp("last_verification_attempt"),
+  verificationAttempts: integer("verification_attempts").notNull().default(0),
+  errorMessage: text("error_message"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  walletIdx: sql`CREATE INDEX IF NOT EXISTS idx_pending_social_shares_wallet ON ${table} (wallet_address)`,
+  statusIdx: sql`CREATE INDEX IF NOT EXISTS idx_pending_social_shares_status ON ${table} (status)`,
+  expiresAtIdx: sql`CREATE INDEX IF NOT EXISTS idx_pending_social_shares_expires ON ${table} (expires_at)`,
+}));
+
+export const insertPendingSocialShareSchema = createInsertSchema(pendingSocialShares).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -938,6 +991,9 @@ export type InsertUserPoints = z.infer<typeof insertUserPointsSchema>;
 export type UserPoints = typeof userPoints.$inferSelect;
 export type InsertAirdropSnapshot = z.infer<typeof insertAirdropSnapshotSchema>;
 export type AirdropSnapshot = typeof airdropSnapshots.$inferSelect;
+export type InsertPendingSocialShare = z.infer<typeof insertPendingSocialShareSchema>;
+export type PendingSocialShare = typeof pendingSocialShares.$inferSelect;
+export type PendingSocialShareStatus = 'pending' | 'verified' | 'expired' | 'failed';
 
 // Activity type for type safety
 export type TestnetActivityType = 
