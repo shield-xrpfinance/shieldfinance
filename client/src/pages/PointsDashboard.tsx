@@ -475,66 +475,68 @@ export default function PointsDashboard() {
               ))}
             </div>
           ) : activitiesData?.activities && activitiesData.activities.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Activity</TableHead>
-                  <TableHead className="text-right">Points</TableHead>
-                  <TableHead className="text-right">Date</TableHead>
-                  <TableHead className="text-right">Transaction</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {activitiesData.activities.map((activity) => {
-                  const ActivityIcon = getActivityIcon(activity.activityType);
-                  return (
-                    <TableRow key={activity.id} data-testid={`row-activity-${activity.id}`}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="rounded-full bg-muted p-2">
-                            <ActivityIcon className="h-4 w-4" />
+            <div className="overflow-x-auto -mx-6 sm:mx-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Activity</TableHead>
+                    <TableHead className="text-right">Points</TableHead>
+                    <TableHead className="text-right hidden sm:table-cell">Date</TableHead>
+                    <TableHead className="text-right hidden md:table-cell">Transaction</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {activitiesData.activities.map((activity) => {
+                    const ActivityIcon = getActivityIcon(activity.activityType);
+                    return (
+                      <TableRow key={activity.id} data-testid={`row-activity-${activity.id}`}>
+                        <TableCell>
+                          <div className="flex items-center gap-2 sm:gap-3">
+                            <div className="rounded-full bg-muted p-1.5 sm:p-2">
+                              <ActivityIcon className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-medium text-xs sm:text-base">{getActivityLabel(activity.activityType)}</p>
+                              {activity.description && (
+                                <p className="text-xs text-muted-foreground truncate">{activity.description}</p>
+                              )}
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-medium">{getActivityLabel(activity.activityType)}</p>
-                            {activity.description && (
-                              <p className="text-xs text-muted-foreground">{activity.description}</p>
-                            )}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="secondary" className="font-mono">
-                          +{activity.pointsEarned}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {format(new Date(activity.createdAt), "MMM d, yyyy")}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {activity.relatedTxHash ? (
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            asChild
-                            data-testid={`button-tx-${activity.id}`}
-                          >
-                            <a 
-                              href={getExplorerUrl(activity.relatedTxHash)} 
-                              target="_blank" 
-                              rel="noopener noreferrer"
+                        </TableCell>
+                        <TableCell className="text-right whitespace-nowrap">
+                          <Badge variant="secondary" className="font-mono text-xs sm:text-base">
+                            +{activity.pointsEarned}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground hidden sm:table-cell text-xs sm:text-base">
+                          {format(new Date(activity.createdAt), "MMM d, yyyy")}
+                        </TableCell>
+                        <TableCell className="text-right hidden md:table-cell">
+                          {activity.relatedTxHash ? (
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              asChild
+                              data-testid={`button-tx-${activity.id}`}
                             >
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+                              <a 
+                                href={getExplorerUrl(activity.relatedTxHash)} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                              >
+                                <ExternalLink className="h-4 w-4" />
+                              </a>
+                            </Button>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           ) : (
             <p className="text-center text-muted-foreground py-8">
               No activities yet. Start using the platform to earn points!
