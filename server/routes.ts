@@ -7459,7 +7459,7 @@ export async function registerRoutes(
     }
   });
 
-  // Generate share intent URL (no auth needed)
+  // Generate share intent URL (no auth needed) and award social points
   app.post("/api/twitter/intent", async (req, res) => {
     try {
       const { walletAddress, referralCode, totalPoints, tier, type } = req.body;
@@ -7476,9 +7476,35 @@ export async function registerRoutes(
         type: type || 'referral',
       });
 
+      // Award social share points when user clicks share (optimistic - they're about to share)
+      // Rate limit: only award once per hour per wallet
+      let pointsAwarded = false;
+      if (walletAddress) {
+        try {
+          const now = Date.now();
+          const lastShareKey = `last_social_share_${walletAddress.toLowerCase()}`;
+          const lastShare = (global as any)[lastShareKey] || 0;
+          const oneHour = 60 * 60 * 1000;
+          
+          if (now - lastShare > oneHour) {
+            await pointsService.logActivity({
+              walletAddress,
+              activityType: 'social_share',
+              description: `Shared ${type || 'referral'} on X`,
+            });
+            (global as any)[lastShareKey] = now;
+            pointsAwarded = true;
+            console.log(`[Twitter API] Awarded 10 social_share points to ${walletAddress}`);
+          }
+        } catch (pointsError) {
+          console.error("[Twitter API] Failed to award points:", pointsError);
+        }
+      }
+
       res.json({
         success: true,
         intentUrl,
+        pointsAwarded,
       });
     } catch (error) {
       console.error("[Twitter API] Failed to generate intent URL:", error);

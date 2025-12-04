@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { Button } from "@/components/ui/button";
@@ -325,10 +326,20 @@ export default function Airdrop() {
 
       if (data.success && data.intentUrl) {
         window.open(data.intentUrl, '_blank', 'width=600,height=400');
-        toast({
-          title: "Share on X",
-          description: "Complete the post on X to earn 10 points!",
-        });
+        if (data.pointsAwarded) {
+          toast({
+            title: "Points Earned!",
+            description: "You earned 10 social points for sharing!",
+          });
+          // Refresh points display
+          queryClient.invalidateQueries({ queryKey: ['/api/points', walletAddress] });
+          queryClient.invalidateQueries({ queryKey: ['/api/leaderboard'] });
+        } else {
+          toast({
+            title: "Share on X",
+            description: "Complete your post on X!",
+          });
+        }
       } else {
         throw new Error(data.error || 'Failed to generate share URL');
       }
