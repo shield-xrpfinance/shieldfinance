@@ -7393,6 +7393,249 @@ export async function registerRoutes(
     }
   });
 
+  // Admin: Preload points from existing testnet activity (deposits, staking, bridges)
+  app.post("/api/admin/points/preload", requireAdminAuth, async (req, res) => {
+    try {
+      console.log("[Admin] Starting points preload from testnet activity...");
+      
+      const { transactions, xrpToFxrpBridges, stakingPositions, testnetActivities, userPoints: userPointsTable, POINTS_CONFIG } = await import("@shared/schema");
+      const { inArray } = await import("drizzle-orm");
+      
+      // Get completed deposits
+      const depositTxs = await db.query.transactions.findMany({
+        where: and(
+          inArray(transactions.type, ["deposit", "direct_fxrp_deposit"]),
+          eq(transactions.status, "completed")
+        ),
+      });
+
+      // Get completed bridges
+      const bridges = await db.query.xrpToFxrpBridges.findMany({
+        where: eq(xrpToFxrpBridges.status, "completed"),
+      });
+
+      // Get staking positions
+      const stakingPos = await db.query.stakingPositions.findMany();
+
+      // Collect all unique wallet addresses
+      const walletSet = new Set<string>();
+      depositTxs.forEach(tx => {
+        if (tx.walletAddress) walletSet.add(tx.walletAddress.toLowerCase());
+      });
+      bridges.forEach(b => {
+        if (b.walletAddress) walletSet.add(b.walletAddress.toLowerCase());
+      });
+      stakingPos.forEach(s => {
+        if (s.walletAddress) walletSet.add(s.walletAddress.toLowerCase());
+      });
+
+      // Filter out test/mock wallets
+      const validWallets = Array.from(walletSet).filter(wallet => {
+        if (wallet === "0x9999999999999999999999999999999999999999") return false;
+        if (wallet === "0x1234567890123456789012345678901234567890") return false;
+        if (wallet.startsWith("0x000000")) return false;
+        return true;
+      });
+
+      let totalPointsAwarded = 0;
+      let usersProcessed = 0;
+      const results: any[] = [];
+
+      for (const walletAddress of validWallets) {
+        // Check if user already has points record
+        let existingPoints = await db.query.userPoints.findFirst({
+          where: eq(userPointsTable.walletAddress, walletAddress),
+        });
+
+        // Get existing activities for this wallet
+        const existingActivities = await db.query.testnetActivities.findMany({
+          where: eq(testnetActivities.walletAddress, walletAddress),
+        });
+
+        const existingActivityTypes = new Set(existingActivities.map(a => a.activityType));
+
+        // Calculate points from deposits
+        const userDeposits = depositTxs.filter(tx => tx.walletAddress.toLowerCase() === walletAddress);
+        let depositPoints = 0;
+        let firstDepositPoints = 0;
+        const depositActivities: any[] = [];
+
+        if (userDeposits.length > 0 && !existingActivityTypes.has("first_deposit")) {
+          firstDepositPoints = POINTS_CONFIG.first_deposit.base;
+          depositActivities.push({
+            walletAddress,
+            activityType: "first_deposit",
+            pointsEarned: firstDepositPoints,
+            relatedTxHash: userDeposits[0].txHash,
+            description: "First deposit bonus (retroactive)",
+            metadata: { preloaded: true, originalDate: userDeposits[0].createdAt },
+          });
+        }
+
+        for (const deposit of userDeposits) {
+          const txHash = deposit.txHash;
+          if (txHash && existingActivities.some(a => a.relatedTxHash === txHash)) {
+            continue;
+          }
+          const points = POINTS_CONFIG.deposit.base;
+          depositPoints += points;
+          depositActivities.push({
+            walletAddress,
+            activityType: "deposit",
+            pointsEarned: points,
+            relatedTxHash: txHash,
+            description: `Deposit of ${deposit.amount} (retroactive)`,
+            metadata: { preloaded: true, originalDate: deposit.createdAt, amount: deposit.amount },
+          });
+        }
+
+        // Calculate bridge points
+        const userBridges = bridges.filter(b => b.walletAddress.toLowerCase() === walletAddress);
+        let bridgePoints = 0;
+        const bridgeActivities: any[] = [];
+
+        for (const bridge of userBridges) {
+          const txHash = bridge.xrplTxHash;
+          if (txHash && existingActivities.some(a => a.relatedTxHash === txHash)) {
+            continue;
+          }
+          const points = POINTS_CONFIG.bridge_xrpl_flare.base;
+          bridgePoints += points;
+          bridgeActivities.push({
+            walletAddress,
+            activityType: "bridge_xrpl_flare",
+            pointsEarned: points,
+            relatedTxHash: txHash,
+            description: `Bridge ${bridge.xrpAmount} XRP → FXRP (retroactive)`,
+            metadata: { preloaded: true, originalDate: bridge.createdAt, xrpAmount: bridge.xrpAmount },
+          });
+        }
+
+        // Calculate staking points
+        const userStaking = stakingPos.filter(s => s.walletAddress?.toLowerCase() === walletAddress);
+        let stakingPoints = 0;
+        const stakingActivities: any[] = [];
+
+        for (const stake of userStaking) {
+          if (existingActivities.some(a => a.relatedPositionId === stake.id.toString())) {
+            continue;
+          }
+
+          let stakedAt: Date;
+          if (typeof stake.stakedAt === 'string') {
+            const numericTs = parseInt(stake.stakedAt);
+            if (!isNaN(numericTs) && numericTs > 1000000000) {
+              stakedAt = new Date(numericTs * 1000);
+            } else {
+              stakedAt = new Date(stake.stakedAt);
+            }
+          } else {
+            stakedAt = new Date(stake.stakedAt);
+          }
+
+          const now = new Date();
+          const daysStaked = Math.floor((now.getTime() - stakedAt.getTime()) / (1000 * 60 * 60 * 24));
+
+          if (daysStaked > 0) {
+            const points = Math.min(daysStaked * POINTS_CONFIG.stake_shield.base, 500);
+            stakingPoints += points;
+            stakingActivities.push({
+              walletAddress,
+              activityType: "stake_shield",
+              pointsEarned: points,
+              relatedPositionId: stake.id.toString(),
+              description: `SHIELD staking for ${daysStaked} days (retroactive)`,
+              metadata: { preloaded: true, originalDate: stakedAt, daysStaked, amount: stake.amount },
+            });
+          }
+        }
+
+        const totalUserPoints = firstDepositPoints + depositPoints + bridgePoints + stakingPoints;
+
+        if (totalUserPoints === 0) {
+          continue;
+        }
+
+        // Determine tier
+        let tier: "bronze" | "silver" | "gold" | "diamond" = "bronze";
+        let multiplier = "1.0";
+        const existingTotal = existingPoints?.totalPoints || 0;
+        const newTotal = existingTotal + totalUserPoints;
+
+        if (newTotal >= 5000) {
+          tier = "diamond";
+          multiplier = "3.0";
+        } else if (newTotal >= 2000) {
+          tier = "gold";
+          multiplier = "2.0";
+        } else if (newTotal >= 500) {
+          tier = "silver";
+          multiplier = "1.5";
+        }
+
+        // Insert or update user points
+        if (existingPoints) {
+          await db.update(userPointsTable)
+            .set({
+              totalPoints: newTotal,
+              depositPoints: (existingPoints.depositPoints || 0) + firstDepositPoints + depositPoints,
+              bridgePoints: (existingPoints.bridgePoints || 0) + bridgePoints,
+              stakingPoints: (existingPoints.stakingPoints || 0) + stakingPoints,
+              tier,
+              airdropMultiplier: multiplier,
+            })
+            .where(eq(userPointsTable.walletAddress, walletAddress));
+        } else {
+          const generateReferralCode = () => `SHIELD-${crypto.randomBytes(4).toString("hex").toUpperCase()}`;
+          await db.insert(userPointsTable).values({
+            walletAddress,
+            totalPoints: totalUserPoints,
+            depositPoints: firstDepositPoints + depositPoints,
+            bridgePoints,
+            stakingPoints,
+            referralPoints: 0,
+            bugReportPoints: 0,
+            socialPoints: 0,
+            otherPoints: 0,
+            tier,
+            airdropMultiplier: multiplier,
+            referralCode: generateReferralCode(),
+            referralCount: 0,
+            badges: [],
+            isOg: true,
+          });
+        }
+
+        // Insert activities
+        const allActivities = [...depositActivities, ...bridgeActivities, ...stakingActivities];
+        if (allActivities.length > 0) {
+          await db.insert(testnetActivities).values(allActivities);
+        }
+
+        results.push({
+          wallet: walletAddress.slice(0, 10) + "...",
+          pointsAwarded: totalUserPoints,
+          tier,
+        });
+
+        totalPointsAwarded += totalUserPoints;
+        usersProcessed++;
+      }
+
+      console.log(`[Admin] Preload complete: ${usersProcessed} users, ${totalPointsAwarded} points`);
+
+      res.json({
+        success: true,
+        usersProcessed,
+        totalPointsAwarded,
+        results,
+      });
+    } catch (error) {
+      console.error("[Admin] Points preload failed:", error);
+      res.status(500).json({ error: "Failed to preload points" });
+    }
+  });
+
   // Get airdrop stats (public)
   app.get("/api/airdrop/stats", async (req, res) => {
     try {
