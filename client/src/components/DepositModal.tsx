@@ -110,6 +110,12 @@ export default function DepositModal({
         USDC: balances?.balances.USDC || 0,
       };
 
+  // Helper to format balance from availableBalances (not from useWalletBalances)
+  const formatAvailableBalance = (asset: string): string => {
+    const balance = availableBalances[asset] || 0;
+    return balance.toFixed(6);
+  };
+
   const totalValue = Object.entries(amounts).reduce((sum, [asset, amount]) => {
     if (!amount) return sum;
     // For XRP, use rounded amount if available
@@ -643,7 +649,7 @@ export default function DepositModal({
                   </div>
                   <div className="flex items-center justify-between mt-1">
                     <p className="text-xs text-muted-foreground" data-testid={`text-available-${asset}`}>
-                      Available: {getBalanceFormatted(asset as "XRP" | "RLUSD" | "USDC")} {asset}
+                      Available: {formatAvailableBalance(asset)} {asset}
                     </p>
                     <Button
                       variant="ghost"
