@@ -422,7 +422,13 @@ export default function Airdrop() {
         const authData = await authResponse.json();
         
         if (authData.authUrl) {
-          window.open(authData.authUrl, '_blank', 'width=600,height=700');
+          // On mobile devices, use location.href to trigger native X app deep linking
+          if (isMobileDevice()) {
+            window.location.href = authData.authUrl;
+          } else {
+            // On desktop, use popup window for better UX
+            window.open(authData.authUrl, '_blank', 'width=600,height=700');
+          }
           toast({
             title: "Authorize on X",
             description: "Complete the authorization on X, then try verifying again.",
