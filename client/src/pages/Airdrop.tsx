@@ -208,6 +208,29 @@ export default function Airdrop() {
     }
   }, [isEvmConnected, evmAddress]);
 
+  // Fetch pending shares on mount to persist verify button across reloads
+  useEffect(() => {
+    const fetchPendingShares = async () => {
+      if (!walletAddress || !isTestnet) return;
+      
+      try {
+        const response = await fetch(`/api/twitter/pending-shares/${walletAddress}`);
+        const data = await response.json();
+        
+        if (data.success && data.pendingShares && data.pendingShares.length > 0) {
+          // Get the most recent pending share
+          const latestPending = data.pendingShares[0];
+          setPendingShareId(latestPending.id);
+          setSharePosted(true);
+        }
+      } catch (error) {
+        console.error('Failed to fetch pending shares:', error);
+      }
+    };
+    
+    fetchPendingShares();
+  }, [walletAddress, isTestnet]);
+
   const handleClaim = async () => {
     if (!evmAddress || !eligibility || !eligibility.proof || !walletConnectProvider) {
       toast({
