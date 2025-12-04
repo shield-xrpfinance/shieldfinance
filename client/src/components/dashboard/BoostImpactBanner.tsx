@@ -14,7 +14,7 @@ interface BoostImpactBannerProps {
   showCta?: boolean;
 }
 
-const MAX_BOOST_PERCENTAGE = 50;
+const MAX_BOOST_PERCENTAGE = 25;
 
 export function BoostImpactBanner({
   walletAddress,

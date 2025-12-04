@@ -510,7 +510,7 @@ export default function Staking() {
                 </Tooltip>
               </div>
               <p className="text-2xl font-bold text-muted-foreground font-mono tabular-nums">
-                50%
+                25%
               </p>
             </div>
           </div>

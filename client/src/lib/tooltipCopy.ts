@@ -58,13 +58,13 @@ export const TOOLTIP_CONTENT = {
   },
   shield: {
     token: "SHIELD is the governance and utility token for Shield Finance. Stake SHIELD to boost your vault yields.",
-    boost: "Stake SHIELD to receive up to 50% APY boost on all your vault deposits. More SHIELD = higher boost.",
-    boostFormula: "Boost % = min(SHIELD Staked / 10,000, 50%). Stake 10,000 SHIELD for maximum 50% boost.",
+    boost: "Stake SHIELD to receive up to 25% APY boost on all your vault deposits. More SHIELD = higher boost.",
+    boostFormula: "Boost % = min(SHIELD Staked / 100, 25%). Stake 2,500 SHIELD for maximum 25% boost.",
     boostEffect: "Your boost applies to all vaults simultaneously. A 25% boost on 8% base APY = 10% effective APY.",
     staking: "Staked SHIELD remains liquid - you can unstake at any time. Boost is calculated based on your current stake.",
     governance: "SHIELD holders can vote on protocol upgrades, fee changes, and new vault strategies.",
     earnings: "SHIELD stakers also earn a share of protocol revenue through the RevenueRouter contract.",
-    maxBoost: "Maximum boost is capped at 50% to ensure fair distribution of yields among all participants.",
+    maxBoost: "Maximum boost is capped at 25% to ensure fair distribution of yields among all participants.",
     unstaking: "You can unstake SHIELD at any time. Your boost will be recalculated immediately after unstaking.",
   },
   risk: {
