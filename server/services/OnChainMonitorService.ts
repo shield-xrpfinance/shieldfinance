@@ -413,6 +413,9 @@ export class OnChainMonitorService {
         await this.persistStakingEvent(eventConfig.name, args);
       }
 
+      // Create user-facing notifications for relevant events
+      await this.createUserNotificationFromEvent(contractName, eventConfig.name, args, event.transactionHash || "");
+
       if (eventConfig.notificationTemplate && this.config.alertingService) {
         await this.sendNotification(contractName, eventConfig, args, savedEvent.id);
       }
@@ -451,6 +454,130 @@ export class OnChainMonitorService {
       }
     } catch (error) {
       console.error(`Error persisting staking event ${eventName}:`, error);
+    }
+  }
+
+  /**
+   * Create user-facing notifications for on-chain events
+   * Maps blockchain events to user notifications in the notification center
+   */
+  private async createUserNotificationFromEvent(
+    contractName: string,
+    eventName: string,
+    args: Record<string, any>,
+    txHash: string
+  ): Promise<void> {
+    try {
+      // Extract user address based on event type
+      let userAddress: string | null = null;
+      let notificationType: string | null = null;
+      let title: string | null = null;
+      let message: string | null = null;
+      let metadata: Record<string, any> = {};
+
+      // ShXRPVault events
+      if (contractName === "ShXRPVault") {
+        if (eventName === "Deposit") {
+          // Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)
+          userAddress = args.owner;
+          notificationType = "deposit";
+          const assets = this.formatTokenAmount(args.assets, 6); // FXRP has 6 decimals
+          const shares = this.formatTokenAmount(args.shares, 18); // shXRP has 18 decimals
+          title = "Vault Deposit Confirmed";
+          message = `Your deposit of ${assets} FXRP has been confirmed. You received ${shares} shXRP vault shares.`;
+          metadata = { assets: args.assets, shares: args.shares, sender: args.sender };
+        } else if (eventName === "Withdraw") {
+          // Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)
+          userAddress = args.owner;
+          notificationType = "withdrawal";
+          const assets = this.formatTokenAmount(args.assets, 6);
+          const shares = this.formatTokenAmount(args.shares, 18);
+          title = "Vault Withdrawal Complete";
+          message = `Your withdrawal of ${assets} FXRP is complete. ${shares} shXRP shares were burned.`;
+          metadata = { assets: args.assets, shares: args.shares, receiver: args.receiver };
+        }
+      }
+
+      // StakingBoost events
+      if (contractName === "StakingBoost") {
+        if (eventName === "Staked") {
+          // Staked(address indexed user, uint256 amount, uint256 unlockTime)
+          userAddress = args.user;
+          notificationType = "boost";
+          const amount = this.formatTokenAmount(args.amount, 18); // SHIELD has 18 decimals
+          title = "SHIELD Staked Successfully";
+          message = `You staked ${amount} SHIELD. Your APY boost is now active!`;
+          metadata = { amount: args.amount, unlockTime: args.unlockTime };
+        } else if (eventName === "Unstaked") {
+          // Unstaked(address indexed user, uint256 amount)
+          userAddress = args.user;
+          notificationType = "boost";
+          const amount = this.formatTokenAmount(args.amount, 18);
+          title = "SHIELD Unstaked";
+          message = `You unstaked ${amount} SHIELD. Your APY boost has been updated.`;
+          metadata = { amount: args.amount };
+        } else if (eventName === "BoostUpdated") {
+          // BoostUpdated(address indexed user, uint256 newBoost)
+          userAddress = args.user;
+          notificationType = "boost";
+          // Handle BigInt or string newBoost value
+          const boostValue = args.newBoost?.toString() || "0";
+          const boostBps = parseInt(boostValue, 10);
+          const boostPercent = (boostBps / 100).toFixed(2);
+          title = "Boost Updated";
+          message = `Your APY boost is now ${boostPercent}%.`;
+          metadata = { newBoost: boostValue, boostPercent };
+        }
+      }
+
+      // RevenueRouter events (reward distributions)
+      if (contractName === "RevenueRouter" && eventName === "RevenueDistributed") {
+        // This is a protocol-wide event, not user-specific
+        // Skip creating individual notifications for this
+        return;
+      }
+
+      // Only create notification if we have a valid user address and content
+      if (userAddress && notificationType && title && message) {
+        // Normalize EVM addresses to lowercase for consistency (only hex addresses starting with 0x)
+        const normalizedAddress = userAddress.startsWith("0x") 
+          ? userAddress.toLowerCase() 
+          : userAddress;
+        
+        await this.config.storage.createUserNotification({
+          walletAddress: normalizedAddress,
+          type: notificationType,
+          title,
+          message,
+          metadata,
+          relatedTxHash: txHash || undefined,
+          read: false,
+        });
+
+        console.log(`🔔 User notification created: ${title} for ${normalizedAddress.slice(0, 10)}...`);
+      }
+    } catch (error) {
+      // Don't let notification failures break event processing
+      console.error(`Error creating user notification for ${contractName}.${eventName}:`, error);
+    }
+  }
+
+  /**
+   * Format token amount from wei to human-readable with proper decimals
+   */
+  private formatTokenAmount(amount: string | undefined, decimals: number): string {
+    if (!amount) return "0";
+    try {
+      const value = BigInt(amount);
+      const divisor = BigInt(10 ** decimals);
+      const integerPart = value / divisor;
+      const fractionalPart = value % divisor;
+      
+      // Format with up to 4 decimal places
+      const fractionalStr = fractionalPart.toString().padStart(decimals, '0').slice(0, 4);
+      return `${integerPart}.${fractionalStr}`.replace(/\.?0+$/, '') || "0";
+    } catch {
+      return "0";
     }
   }
 

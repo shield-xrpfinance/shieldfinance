@@ -2306,13 +2306,18 @@ export async function registerRoutes(
    */
   app.get("/api/user/notifications", async (req, res) => {
     try {
-      const walletAddress = req.query.walletAddress as string;
+      const rawWalletAddress = req.query.walletAddress as string;
       const limit = parseInt(req.query.limit as string) || 50;
       const unreadOnly = req.query.unreadOnly === "true";
       
-      if (!walletAddress) {
+      if (!rawWalletAddress) {
         return res.status(400).json({ error: "walletAddress query parameter required" });
       }
+
+      // Normalize EVM addresses to lowercase for case-insensitive matching (only 0x-prefixed addresses)
+      const walletAddress = rawWalletAddress.startsWith("0x") 
+        ? rawWalletAddress.toLowerCase() 
+        : rawWalletAddress;
 
       const notifications = await storage.getUserNotifications(walletAddress, limit, unreadOnly);
       const unreadCount = await storage.getUnreadNotificationCount(walletAddress);
@@ -2353,11 +2358,16 @@ export async function registerRoutes(
    */
   app.post("/api/user/notifications/read-all", async (req, res) => {
     try {
-      const { walletAddress } = req.body;
+      const { walletAddress: rawWalletAddress } = req.body;
       
-      if (!walletAddress) {
+      if (!rawWalletAddress) {
         return res.status(400).json({ error: "walletAddress required in request body" });
       }
+
+      // Normalize EVM addresses to lowercase for case-insensitive matching (only 0x-prefixed addresses)
+      const walletAddress = rawWalletAddress.startsWith("0x") 
+        ? rawWalletAddress.toLowerCase() 
+        : rawWalletAddress;
 
       await storage.markAllNotificationsAsRead(walletAddress);
       res.json({ success: true });
