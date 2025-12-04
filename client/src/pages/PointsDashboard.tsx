@@ -47,7 +47,7 @@ interface UserPointsWithRank extends UserPoints {
   nextTierProgress?: {
     currentTier: UserTier;
     nextTier: UserTier | null;
-    pointsToNext: number;
+    pointsNeeded: number;
     progressPercent: number;
   };
 }
@@ -242,7 +242,7 @@ export default function PointsDashboard() {
                   <div className="text-center p-4 rounded-lg bg-muted/50">
                     <p className="text-sm text-muted-foreground">Total Points</p>
                     <p className="text-3xl font-bold" data-testid="text-total-points">
-                      {userPointsData.totalPoints.toLocaleString()}
+                      {(userPointsData.totalPoints ?? 0).toLocaleString()}
                     </p>
                   </div>
                   <div className="text-center p-4 rounded-lg bg-muted/50">
@@ -403,7 +403,7 @@ export default function PointsDashboard() {
                       Progress to {userPointsData.nextTierProgress.nextTier.charAt(0).toUpperCase() + userPointsData.nextTierProgress.nextTier.slice(1)}
                     </span>
                     <span className="text-sm text-muted-foreground">
-                      {userPointsData.nextTierProgress.pointsToNext.toLocaleString()} points needed
+                      {(userPointsData.nextTierProgress.pointsNeeded ?? 0).toLocaleString()} points needed
                     </span>
                   </div>
                   <Progress 
@@ -445,7 +445,7 @@ export default function PointsDashboard() {
                       <Icon className="h-4 w-4 text-muted-foreground" />
                       <span className="text-sm text-muted-foreground">{item.label}</span>
                     </div>
-                    <p className="text-xl font-bold">{item.value.toLocaleString()}</p>
+                    <p className="text-xl font-bold">{(item.value ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">{percentage}% of total</p>
                   </div>
                 );
