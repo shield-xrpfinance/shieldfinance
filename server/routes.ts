@@ -25,7 +25,7 @@ import path from "path";
 import { readinessRegistry } from "./services/ReadinessRegistry";
 import crypto from "crypto";
 import { generateFDCProof } from "./utils/fdc-proof";
-import { globalRateLimiter, strictRateLimiter } from "./middleware/rateLimiter";
+import { globalRateLimiter, strictRateLimiter, faucetRateLimiter } from "./middleware/rateLimiter";
 import { analyticsService } from "./services/AnalyticsService";
 import { yieldOptimizerService } from "./services/YieldOptimizerService";
 import { BridgeOrchestratorService } from "./services/BridgeOrchestratorService";
@@ -7090,6 +7090,87 @@ export async function registerRoutes(
     } catch (error) {
       console.error("[Points API] Failed to get activities:", error);
       res.status(500).json({ error: "Failed to get activities" });
+    }
+  });
+
+  // External faucet integration endpoint
+  // Called by https://faucet.shyield.finance/ when users claim tokens
+  app.post("/api/points/activity/external", faucetRateLimiter, async (req, res) => {
+    try {
+      const { walletAddress, activityType, metadata, apiKey } = req.body;
+
+      // Validate required fields
+      if (!walletAddress || typeof walletAddress !== "string") {
+        return res.status(400).json({ error: "walletAddress is required and must be a string" });
+      }
+
+      if (!activityType || typeof activityType !== "string") {
+        return res.status(400).json({ error: "activityType is required and must be a string" });
+      }
+
+      // Validate wallet address format (EVM address)
+      const evmAddressRegex = /^0x[a-fA-F0-9]{40}$/;
+      if (!evmAddressRegex.test(walletAddress)) {
+        return res.status(400).json({ error: "Invalid wallet address format" });
+      }
+
+      // Optional API key validation
+      const faucetApiKey = process.env.FAUCET_API_KEY;
+      if (faucetApiKey) {
+        if (!apiKey) {
+          return res.status(401).json({ error: "API key required" });
+        }
+        // Use constant-time comparison to prevent timing attacks
+        const providedBuffer = Buffer.from(apiKey);
+        const expectedBuffer = Buffer.from(faucetApiKey);
+        if (providedBuffer.length !== expectedBuffer.length || 
+            !crypto.timingSafeEqual(providedBuffer, expectedBuffer)) {
+          console.warn(`⚠️  Invalid faucet API key from ${req.ip} for wallet ${walletAddress.slice(0, 10)}...`);
+          return res.status(401).json({ error: "Invalid API key" });
+        }
+      }
+
+      // Map external activity types to internal types
+      // Supports: faucet_claim, shield_faucet, flr_faucet (all map to faucet_claim)
+      const validFaucetTypes = ["faucet_claim", "shield_faucet", "flr_faucet"];
+      if (!validFaucetTypes.includes(activityType)) {
+        return res.status(400).json({ 
+          error: `Invalid activityType. Must be one of: ${validFaucetTypes.join(", ")}` 
+        });
+      }
+
+      // Build description based on metadata
+      let description = "Faucet token claim";
+      if (metadata?.tokenType) {
+        description = `${metadata.tokenType} faucet claim`;
+        if (metadata.amount) {
+          description += ` (${metadata.amount})`;
+        }
+      }
+
+      // Log activity and award points (always uses 'faucet_claim' internally)
+      const result = await pointsService.logActivity({
+        walletAddress,
+        activityType: "faucet_claim",
+        metadata: {
+          ...metadata,
+          originalActivityType: activityType,
+          source: "external_faucet",
+        },
+        description,
+      });
+
+      console.log(`✅ [External Faucet] ${result.pointsAwarded} pts awarded to ${walletAddress.slice(0, 10)}... for ${activityType}`);
+
+      res.json({
+        success: true,
+        pointsAwarded: result.pointsAwarded,
+        totalPoints: result.userPoints.totalPoints,
+        tier: result.userPoints.tier,
+      });
+    } catch (error) {
+      console.error("[External Faucet API] Failed to log activity:", error);
+      res.status(500).json({ error: "Failed to log activity" });
     }
   });
 

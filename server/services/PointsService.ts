@@ -186,6 +186,9 @@ export class PointsService {
       case "social_share":
         categoryColumn = "socialPoints";
         break;
+      case "faucet_claim":
+        categoryColumn = "otherPoints";
+        break;
       default:
         categoryColumn = "otherPoints";
     }

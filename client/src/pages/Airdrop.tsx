@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Progress } from "@/components/ui/progress";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 import {
   Gift,
   Wallet,
@@ -17,10 +20,21 @@ import {
   AlertCircle,
   Info,
   Coins,
+  Trophy,
+  Medal,
+  Crown,
+  Star,
+  Sparkles,
+  ArrowRight,
+  Users,
+  TrendingUp,
+  Clock,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ethers } from "ethers";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
+import type { UserTier } from "@shared/schema";
+import { TIER_CONFIG } from "@shared/schema";
 
 interface AirdropEligibility {
   eligible: boolean;
@@ -41,6 +55,92 @@ interface AirdropRoot {
   eligibleCount: number;
 }
 
+interface UserPointsData {
+  walletAddress: string;
+  totalPoints: number;
+  tier: 'none' | 'bronze' | 'silver' | 'gold' | 'diamond';
+  tierMultiplier: string;
+  airdropMultiplier: number;
+  referralCode: string;
+  referralCount: number;
+  rank: number;
+  nextTierProgress?: {
+    currentTier: string;
+    nextTier: string | null;
+    pointsToNext: number;
+    progressPercent: number;
+  };
+}
+
+interface LeaderboardStats {
+  totalParticipants: number;
+  totalPointsDistributed: number;
+  tierBreakdown: Record<UserTier, number>;
+}
+
+interface LeaderboardResponse {
+  leaderboard: any[];
+  stats: LeaderboardStats;
+}
+
+const TOTAL_AIRDROP_POOL = 2000000;
+
+const tierColors: Record<UserTier, string> = {
+  bronze: "bg-orange-600 text-white",
+  silver: "bg-gray-400 text-gray-900",
+  gold: "bg-yellow-500 text-yellow-900",
+  diamond: "bg-cyan-400 text-cyan-900",
+};
+
+const tierBorderColors: Record<UserTier, string> = {
+  bronze: "border-orange-600",
+  silver: "border-gray-400",
+  gold: "border-yellow-500",
+  diamond: "border-cyan-400",
+};
+
+const tierIcons: Record<UserTier, typeof Trophy> = {
+  bronze: Medal,
+  silver: Star,
+  gold: Crown,
+  diamond: Sparkles,
+};
+
+const tierOrder: UserTier[] = ["bronze", "silver", "gold", "diamond"];
+
+function getTierBadge(tier: UserTier, size: "sm" | "lg" = "sm") {
+  const TierIcon = tierIcons[tier];
+  const sizeClasses = size === "lg" ? "text-base px-4 py-1.5" : "";
+  return (
+    <Badge className={`${tierColors[tier]} gap-1 ${sizeClasses}`} data-testid={`badge-tier-${tier}`}>
+      <TierIcon className={size === "lg" ? "h-4 w-4" : "h-3 w-3"} />
+      {tier.charAt(0).toUpperCase() + tier.slice(1)}
+    </Badge>
+  );
+}
+
+function calculateProjectedAllocation(
+  userPoints: number, 
+  userMultiplier: number,
+  totalPointsDistributed: number,
+  totalParticipants: number
+): number {
+  if (totalPointsDistributed === 0 || totalParticipants === 0) {
+    return 0;
+  }
+  
+  const weightedUserPoints = userPoints * userMultiplier;
+  const avgMultiplier = 1.5;
+  const estimatedTotalWeightedPoints = totalPointsDistributed * avgMultiplier;
+  
+  if (estimatedTotalWeightedPoints === 0) {
+    return 0;
+  }
+  
+  const share = weightedUserPoints / estimatedTotalWeightedPoints;
+  return Math.round(share * TOTAL_AIRDROP_POOL);
+}
+
 export default function Airdrop() {
   const { address, evmAddress, isConnected, isEvmConnected, provider: providerType, walletConnectProvider } = useWallet();
   const { isTestnet } = useNetwork();
@@ -50,29 +150,41 @@ export default function Airdrop() {
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
 
-  // Fetch airdrop merkle root data
+  const walletAddress = address || evmAddress;
+
   const { data: rootData } = useQuery<AirdropRoot>({
     queryKey: ["/api/airdrop/root"],
-    enabled: true,
+    enabled: !isTestnet,
   });
 
-  // Check eligibility when wallet connects (using EVM address for Flare Network)
   const {
     data: eligibility,
     isLoading: checkingEligibility,
-    refetch: recheckEligibility,
   } = useQuery<AirdropEligibility>({
     queryKey: ["/api/airdrop/check", evmAddress],
-    enabled: !!evmAddress && isEvmConnected,
+    enabled: !!evmAddress && isEvmConnected && !isTestnet,
   });
 
-  // Derive hasClaimed directly from API response (backend checks on-chain status)
-  // Always sync with API response to handle wallet switching correctly
+  const { 
+    data: userPointsData, 
+    isLoading: isLoadingPoints 
+  } = useQuery<UserPointsData>({
+    queryKey: ["/api/points", walletAddress],
+    enabled: !!walletAddress && isTestnet,
+  });
+
+  const { 
+    data: leaderboardData, 
+    isLoading: isLoadingLeaderboard 
+  } = useQuery<LeaderboardResponse>({
+    queryKey: ["/api/leaderboard"],
+    enabled: isTestnet,
+  });
+
   useEffect(() => {
     setHasClaimed(Boolean(eligibility?.claimed));
   }, [eligibility]);
 
-  // Reset state when wallet disconnects or changes
   useEffect(() => {
     if (!isEvmConnected) {
       setHasClaimed(false);
@@ -93,7 +205,6 @@ export default function Airdrop() {
     try {
       setIsClaiming(true);
 
-      // MerkleDistributor contract address (set after deployment)
       const distributorAddress = import.meta.env.VITE_MERKLE_DISTRIBUTOR_ADDRESS;
       if (!distributorAddress || distributorAddress === "0x...") {
         throw new Error("Airdrop contract not deployed. Please contact support.");
@@ -104,7 +215,6 @@ export default function Airdrop() {
         "function hasClaimed(address account) external view returns (bool)",
       ];
 
-      // Create ethers provider and signer from WalletConnect
       const ethersProvider = new ethers.BrowserProvider(walletConnectProvider);
       const signer = await ethersProvider.getSigner();
       
@@ -114,7 +224,6 @@ export default function Airdrop() {
         signer
       );
 
-      // Double-check not already claimed
       const alreadyClaimed = await contract.hasClaimed(evmAddress);
       if (alreadyClaimed) {
         setHasClaimed(true);
@@ -126,14 +235,12 @@ export default function Airdrop() {
         return;
       }
 
-      // Parse amount (18 decimals for SHIELD token)
       if (!eligibility.amount) {
         throw new Error("Invalid airdrop amount");
       }
       
       const amountWei = ethers.parseEther(eligibility.amount);
 
-      // Submit claim transaction
       const tx = await contract.claim(amountWei, eligibility.proof);
 
       toast({
@@ -141,14 +248,13 @@ export default function Airdrop() {
         description: "Waiting for confirmation...",
       });
 
-      // Wait for confirmation
       const receipt = await tx.wait();
 
       setClaimTxHash(receipt.hash);
       setHasClaimed(true);
 
       toast({
-        title: "Claim Successful! 🎉",
+        title: "Claim Successful!",
         description: `You received ${eligibility.amount} SHIELD tokens!`,
       });
     } catch (error: any) {
@@ -180,9 +286,375 @@ export default function Airdrop() {
       : `https://flarescan.com/tx/${txHash}`;
   };
 
+  const projectedAllocation = userPointsData && leaderboardData?.stats
+    ? calculateProjectedAllocation(
+        userPointsData.totalPoints,
+        userPointsData.airdropMultiplier || 1,
+        leaderboardData.stats.totalPointsDistributed,
+        leaderboardData.stats.totalParticipants
+      )
+    : 0;
+
+  if (isTestnet) {
+    return (
+      <div className="space-y-6">
+        <div className="relative overflow-hidden rounded-lg border bg-gradient-to-br from-orange-500/10 via-yellow-500/5 to-background p-8">
+          <div className="absolute top-4 left-4 rounded-lg bg-orange-500/20 p-3 backdrop-blur-sm">
+            <div className="relative">
+              <div className="absolute inset-0 rounded-lg bg-orange-500/30 blur-xl" />
+              <Trophy className="relative h-8 w-8 text-orange-500" />
+            </div>
+          </div>
+
+          <div className="ml-16">
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-3xl font-bold" data-testid="text-testnet-airdrop-title">Testnet Points Airdrop</h1>
+              <Badge variant="outline" className="text-orange-500 border-orange-500">
+                Testnet
+              </Badge>
+            </div>
+            <p className="text-muted-foreground mt-2">
+              Earn points during testnet to claim your share of {TOTAL_AIRDROP_POOL.toLocaleString()} SHIELD tokens
+            </p>
+          </div>
+
+          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+              <p className="text-xs text-muted-foreground">Total Pool</p>
+              <p className="text-2xl font-bold font-mono" data-testid="text-total-pool">
+                {TOTAL_AIRDROP_POOL.toLocaleString()}
+              </p>
+              <p className="text-xs text-muted-foreground">SHIELD</p>
+            </div>
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+              <p className="text-xs text-muted-foreground">Participants</p>
+              {isLoadingLeaderboard ? (
+                <Skeleton className="h-8 w-20" />
+              ) : (
+                <p className="text-2xl font-bold font-mono text-green-500" data-testid="text-participants">
+                  {leaderboardData?.stats?.totalParticipants?.toLocaleString() || 0}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">testers</p>
+            </div>
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+              <p className="text-xs text-muted-foreground">Total Points</p>
+              {isLoadingLeaderboard ? (
+                <Skeleton className="h-8 w-24" />
+              ) : (
+                <p className="text-2xl font-bold font-mono text-primary" data-testid="text-total-points-distributed">
+                  {leaderboardData?.stats?.totalPointsDistributed?.toLocaleString() || 0}
+                </p>
+              )}
+              <p className="text-xs text-muted-foreground">distributed</p>
+            </div>
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+              <p className="text-xs text-muted-foreground">Status</p>
+              <div className="flex items-center gap-2 mt-1">
+                <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
+                <span className="font-semibold text-green-500" data-testid="text-testnet-status">Active</span>
+              </div>
+              <p className="text-xs text-muted-foreground">earning points</p>
+            </div>
+          </div>
+        </div>
+
+        <Alert className="border-orange-500 bg-orange-500/10">
+          <Coins className="h-4 w-4 text-orange-500" />
+          <AlertDescription className="flex flex-col gap-2">
+            <span>
+              <span className="font-semibold">Testnet Mode:</span> Earn points now to secure your airdrop allocation. 
+              Claims will be available on Flare Mainnet after testnet concludes.
+            </span>
+            <span>
+              Need test tokens to get started? Visit our{" "}
+              <a
+                href="https://faucet.shyield.finance/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 font-semibold underline hover:text-orange-500"
+                data-testid="link-faucet-testnet"
+              >
+                Testnet Faucet
+                <ExternalLink className="h-3 w-3" />
+              </a>
+            </span>
+          </AlertDescription>
+        </Alert>
+
+        {!isConnected ? (
+          <Card className="p-8" data-testid="card-connect-wallet-testnet">
+            <div className="text-center space-y-4">
+              <div className="flex justify-center">
+                <div className="rounded-full bg-muted p-6">
+                  <Wallet className="h-12 w-12 text-muted-foreground" />
+                </div>
+              </div>
+              <h2 className="text-2xl font-bold">Connect Your Wallet</h2>
+              <p className="text-muted-foreground max-w-md mx-auto">
+                Connect your wallet to view your testnet points and projected airdrop allocation.
+              </p>
+              <Button size="lg" onClick={() => setConnectModalOpen(true)} data-testid="button-connect-wallet-testnet">
+                <Wallet className="h-5 w-5 mr-2" />
+                Connect Wallet
+              </Button>
+            </div>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <Card 
+              className={`lg:col-span-2 ${userPointsData && userPointsData.tier !== 'none' ? tierBorderColors[userPointsData.tier as UserTier] : ""} border-2`} 
+              data-testid="card-points-summary-airdrop"
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Coins className="h-5 w-5 text-primary" />
+                  Your Airdrop Status
+                </CardTitle>
+                <CardDescription>
+                  Your current points and projected SHIELD allocation
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isLoadingPoints ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="h-24" />
+                      ))}
+                    </div>
+                  </div>
+                ) : userPointsData ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="text-center p-4 rounded-lg bg-muted/50">
+                        <p className="text-sm text-muted-foreground">Total Points</p>
+                        <p className="text-3xl font-bold" data-testid="text-user-points">
+                          {userPointsData.totalPoints.toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="text-center p-4 rounded-lg bg-muted/50">
+                        <p className="text-sm text-muted-foreground">Your Tier</p>
+                        <div className="mt-2" data-testid="badge-user-tier">
+                          {userPointsData.tier !== 'none' ? (
+                            getTierBadge(userPointsData.tier as UserTier, "lg")
+                          ) : (
+                            <Badge variant="outline">No Tier</Badge>
+                          )}
+                        </div>
+                      </div>
+                      <div className="text-center p-4 rounded-lg bg-muted/50">
+                        <p className="text-sm text-muted-foreground">Multiplier</p>
+                        <p className="text-3xl font-bold text-primary" data-testid="text-user-multiplier">
+                          {userPointsData.airdropMultiplier || 1}x
+                        </p>
+                      </div>
+                      <div className="text-center p-4 rounded-lg bg-muted/50">
+                        <p className="text-sm text-muted-foreground">Rank</p>
+                        <p className="text-3xl font-bold" data-testid="text-user-rank">
+                          #{userPointsData.rank || "—"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="p-4 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
+                      <div className="flex items-center justify-between flex-wrap gap-4">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Projected SHIELD Allocation</p>
+                          <p className="text-4xl font-bold text-primary" data-testid="text-projected-allocation">
+                            {projectedAllocation.toLocaleString()}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            Based on current points and tier multiplier
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-sm text-muted-foreground">Pool Share</p>
+                          <p className="text-2xl font-bold" data-testid="text-pool-share">
+                            {((projectedAllocation / TOTAL_AIRDROP_POOL) * 100).toFixed(3)}%
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">
+                      No points yet. Start using the platform to earn points!
+                    </p>
+                    <div className="flex flex-wrap justify-center gap-3 mt-4">
+                      <Button asChild data-testid="button-start-earning">
+                        <Link to="/app">
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                          Start Earning
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <div className="space-y-6">
+              <Card data-testid="card-tier-progress-airdrop">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Crown className="h-5 w-5 text-primary" />
+                    Tier Progress
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoadingPoints ? (
+                    <Skeleton className="h-24" />
+                  ) : userPointsData && userPointsData.tier !== 'none' ? (
+                    <div className="space-y-4">
+                      <div className="flex justify-between text-sm">
+                        {tierOrder.map((tier) => {
+                          const isAchieved = tierOrder.indexOf(tier) <= tierOrder.indexOf(userPointsData.tier as UserTier);
+                          return (
+                            <div key={tier} className={`text-center ${isAchieved ? "" : "opacity-40"}`}>
+                              {getTierBadge(tier)}
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {TIER_CONFIG[tier].multiplier}x
+                              </p>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="h-full bg-gradient-to-r from-orange-600 via-gray-400 via-yellow-500 to-cyan-400 transition-all"
+                          style={{ 
+                            width: `${Math.min(100, (userPointsData.totalPoints / TIER_CONFIG.diamond.minPoints) * 100)}%` 
+                          }}
+                          data-testid="progress-tier-bar"
+                        />
+                      </div>
+
+                      {userPointsData.nextTierProgress && userPointsData.nextTierProgress.nextTier && (
+                        <div className="p-3 rounded-lg bg-muted/50">
+                          <div className="flex items-center justify-between mb-2 text-sm">
+                            <span>
+                              Next: {userPointsData.nextTierProgress.nextTier.charAt(0).toUpperCase() + userPointsData.nextTierProgress.nextTier.slice(1)}
+                            </span>
+                            <span className="text-muted-foreground">
+                              {userPointsData.nextTierProgress.pointsToNext.toLocaleString()} pts
+                            </span>
+                          </div>
+                          <Progress 
+                            value={userPointsData.nextTierProgress.progressPercent} 
+                            className="h-2"
+                            data-testid="progress-next-tier-airdrop"
+                          />
+                        </div>
+                      )}
+
+                      {!userPointsData.nextTierProgress?.nextTier && (
+                        <div className="p-3 rounded-lg bg-cyan-500/10 border border-cyan-500/30 text-center">
+                          <Sparkles className="h-5 w-5 text-cyan-400 mx-auto mb-1" />
+                          <p className="text-sm font-medium text-cyan-400">Max Tier!</p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <p className="text-center text-muted-foreground py-4">
+                      Earn points to unlock tiers
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card data-testid="card-quick-links">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <TrendingUp className="h-5 w-5 text-primary" />
+                    Earn More Points
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button asChild className="w-full justify-start" variant="outline" data-testid="link-points-dashboard">
+                    <Link to="/app/points">
+                      <Coins className="h-4 w-4 mr-2" />
+                      Points Dashboard
+                      <ArrowRight className="h-4 w-4 ml-auto" />
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full justify-start" variant="outline" data-testid="link-leaderboard">
+                    <Link to="/app/leaderboard">
+                      <Trophy className="h-4 w-4 mr-2" />
+                      Leaderboard
+                      <ArrowRight className="h-4 w-4 ml-auto" />
+                    </Link>
+                  </Button>
+                  <Button 
+                    asChild 
+                    className="w-full justify-start" 
+                    variant="outline"
+                    data-testid="link-faucet-card"
+                  >
+                    <a href="https://faucet.shyield.finance/" target="_blank" rel="noopener noreferrer">
+                      <Gift className="h-4 w-4 mr-2" />
+                      Get Test Tokens
+                      <ExternalLink className="h-4 w-4 ml-auto" />
+                    </a>
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        <Card className="border-primary/30 bg-primary/5" data-testid="card-mainnet-info">
+          <CardContent className="flex items-start gap-4 pt-6">
+            <div className="rounded-lg bg-primary/20 p-2">
+              <Clock className="h-5 w-5 text-primary" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="font-semibold">Mainnet Claims Coming Soon</h3>
+              <p className="text-sm text-muted-foreground">
+                After the testnet period ends, your points will be converted to a SHIELD token allocation.
+                Claims will be available on Flare Mainnet using the MerkleDistributor contract.
+              </p>
+              <div className="flex flex-wrap gap-2 mt-3">
+                <Badge variant="outline" className="text-muted-foreground">
+                  <Users className="h-3 w-3 mr-1" />
+                  Points Snapshot
+                </Badge>
+                <Badge variant="outline" className="text-muted-foreground">
+                  <ArrowRight className="h-3 w-3 mr-1" />
+                  Merkle Proof
+                </Badge>
+                <Badge variant="outline" className="text-muted-foreground">
+                  <Coins className="h-3 w-3 mr-1" />
+                  Mainnet Claim
+                </Badge>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Alert className="border-muted-foreground/20 bg-muted/50">
+          <AlertCircle className="h-4 w-4" />
+          <AlertDescription className="text-xs leading-relaxed">
+            <strong>Important:</strong> Points earned during testnet determine your share of the {TOTAL_AIRDROP_POOL.toLocaleString()} SHIELD airdrop pool. 
+            Higher tiers earn multiplied allocations. Keep testing to maximize your rewards!
+          </AlertDescription>
+        </Alert>
+
+        <ConnectWalletModal
+          open={connectModalOpen}
+          onOpenChange={setConnectModalOpen}
+          onConnect={() => {}}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {/* Hero Section */}
       <div className="relative overflow-hidden rounded-lg border bg-gradient-to-br from-primary/10 via-primary/5 to-background p-8">
         <div className="absolute top-4 left-4 rounded-lg bg-primary/20 p-3 backdrop-blur-sm">
           <div className="relative">
@@ -232,7 +704,6 @@ export default function Airdrop() {
         )}
       </div>
 
-      {/* Bifrost Recommendation */}
       {!isConnected && (
         <Alert className="border-chart-3 bg-chart-3/10">
           <Info className="h-4 w-4 text-chart-3" />
@@ -251,33 +722,6 @@ export default function Airdrop() {
         </Alert>
       )}
 
-      {/* Testnet Mode - Faucet Link */}
-      {isTestnet && (
-        <Alert className="border-orange-500 bg-orange-500/10">
-          <Coins className="h-4 w-4 text-orange-500" />
-          <AlertDescription className="flex flex-col gap-2">
-            <span>
-              <span className="font-semibold">Testnet Mode:</span> Airdrop claims are only available on Flare Mainnet.
-            </span>
-            <span>
-              Need test tokens to explore the platform? Visit our{" "}
-              <a
-                href="https://faucet.shyield.finance/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1 font-semibold underline hover:text-orange-500"
-                data-testid="link-faucet"
-              >
-                Testnet Faucet
-                <ExternalLink className="h-3 w-3" />
-              </a>{" "}
-              to get free test SHIELD and FLR tokens.
-            </span>
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* EVM Address Connection Status */}
       {isConnected && !isEvmConnected && (
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
@@ -289,7 +733,6 @@ export default function Airdrop() {
         </Alert>
       )}
 
-      {/* Main Claim Card */}
       <Card className="p-8">
         {!isConnected ? (
           <div className="text-center space-y-4">
@@ -348,7 +791,7 @@ export default function Airdrop() {
                   <CheckCircle2 className="h-12 w-12 text-green-500" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold">You're Eligible! 🎉</h2>
+              <h2 className="text-2xl font-bold">You're Eligible!</h2>
               <p className="text-muted-foreground">
                 You can claim{" "}
                 <span className="font-bold text-foreground">
@@ -360,7 +803,6 @@ export default function Airdrop() {
 
             <Separator />
 
-            {/* Transaction Preview */}
             <div className="space-y-3">
               <h3 className="font-semibold flex items-center gap-2">
                 <Info className="h-4 w-4" />
@@ -376,7 +818,7 @@ export default function Airdrop() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Network:</span>
                   <span className="font-medium">
-                    {isTestnet ? "Coston2 Testnet" : "Flare Mainnet"}
+                    Flare Mainnet
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -395,17 +837,16 @@ export default function Airdrop() {
                 )}
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Gas Fee:</span>
-                  <span className="text-xs">Paid in FLR (≈ $0.01)</span>
+                  <span className="text-xs">Paid in FLR (approx $0.01)</span>
                 </div>
               </div>
             </div>
 
-            {/* Claim Button */}
             <Button
               size="lg"
               className="w-full"
               onClick={handleClaim}
-              disabled={isClaiming || isTestnet}
+              disabled={isClaiming}
               data-testid="button-claim-airdrop"
             >
               {isClaiming ? (
@@ -420,12 +861,6 @@ export default function Airdrop() {
                 </>
               )}
             </Button>
-
-            {isTestnet && (
-              <p className="text-xs text-center text-destructive">
-                Switch to Flare Mainnet to claim your airdrop
-              </p>
-            )}
           </div>
         ) : (
           <div className="text-center space-y-4">
@@ -447,7 +882,6 @@ export default function Airdrop() {
         )}
       </Card>
 
-      {/* Legal Disclaimer */}
       <Alert className="border-muted-foreground/20 bg-muted/50">
         <AlertCircle className="h-4 w-4" />
         <AlertDescription className="text-xs leading-relaxed">
@@ -457,13 +891,10 @@ export default function Airdrop() {
         </AlertDescription>
       </Alert>
 
-      {/* Connect Wallet Modal */}
       <ConnectWalletModal
         open={connectModalOpen}
         onOpenChange={setConnectModalOpen}
-        onConnect={() => {
-          // Connection handled in modal
-        }}
+        onConnect={() => {}}
       />
     </div>
   );

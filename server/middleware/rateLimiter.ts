@@ -136,4 +136,17 @@ export const strictRateLimiter = createRateLimiter({
   keyGenerator: (req: Request) => `strict:${getClientIp(req)}`,
 });
 
+const FAUCET_WINDOW_MS = 60 * 60 * 1000; // 1 hour
+const FAUCET_MAX_REQUESTS = 2; // max 2 faucet claims per wallet per hour
+
+export const faucetRateLimiter = createRateLimiter({
+  windowMs: FAUCET_WINDOW_MS,
+  maxRequests: FAUCET_MAX_REQUESTS,
+  message: "Maximum 2 faucet claims per wallet per hour. Please try again later.",
+  keyGenerator: (req: Request) => {
+    const walletAddress = req.body?.walletAddress?.toLowerCase() || getClientIp(req);
+    return `faucet:${walletAddress}`;
+  },
+});
+
 export { globalStore };

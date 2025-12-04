@@ -652,6 +652,7 @@ export const testnetActivityTypeEnum = pgEnum("testnet_activity_type", [
   "daily_login",        // Daily active user bonus (2 pts)
   "swap",               // Complete a swap (15 pts)
   "boost_activated",    // Activate SHIELD boost (30 pts)
+  "faucet_claim",       // Faucet token claim (15 pts)
 ]);
 
 // User tier enum for OG status
@@ -951,7 +952,8 @@ export type TestnetActivityType =
   | 'social_share'
   | 'daily_login'
   | 'swap'
-  | 'boost_activated';
+  | 'boost_activated'
+  | 'faucet_claim';
 
 // User tier type for type safety
 export type UserTier = 'bronze' | 'silver' | 'gold' | 'diamond';
@@ -970,6 +972,7 @@ export const POINTS_CONFIG: Record<TestnetActivityType, { base: number; descript
   daily_login: { base: 2, description: "Daily active user" },
   swap: { base: 15, description: "Complete a swap" },
   boost_activated: { base: 30, description: "Activate SHIELD boost" },
+  faucet_claim: { base: 15, description: "Faucet token claim" },
 };
 
 // Tier thresholds and multipliers
