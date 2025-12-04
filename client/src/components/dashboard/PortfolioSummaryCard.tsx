@@ -163,10 +163,10 @@ export function PortfolioSummaryCard({ walletAddress }: PortfolioSummaryCardProp
                       </Badge>
                       <div className="space-y-2">
                         <p className="text-xs text-muted-foreground">
-                          {pointsData.totalPoints.toLocaleString()} / {pointsData.nextTierProgress.needed.toLocaleString()} pts
+                          {pointsData.totalPoints.toLocaleString()} / {(pointsData.totalPoints + (pointsData.nextTierProgress?.pointsNeeded || 0)).toLocaleString()} pts
                         </p>
                         <Progress 
-                          value={pointsData.nextTierProgress.percentage} 
+                          value={pointsData.nextTierProgress?.progressPercent ?? 0} 
                           className="h-2"
                           data-testid="progress-tier"
                         />

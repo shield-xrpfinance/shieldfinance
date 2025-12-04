@@ -7,9 +7,9 @@ export interface UserPointsData {
   airdropMultiplier: number;
   rank: number;
   nextTierProgress: {
-    current: number;
-    needed: number;
-    percentage: number;
+    nextTier: "bronze" | "silver" | "gold" | "diamond" | null;
+    pointsNeeded: number;
+    progressPercent: number;
   };
   estimatedAirdrop: string;
   isOg: boolean;
