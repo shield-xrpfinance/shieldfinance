@@ -7459,7 +7459,7 @@ export async function registerRoutes(
     }
   });
 
-  // Generate share intent URL (no auth needed) and award social points
+  // Generate share intent URL and create pending share (points awarded after verification)
   app.post("/api/twitter/intent", async (req, res) => {
     try {
       const { walletAddress, referralCode, totalPoints, tier, type } = req.body;
@@ -7476,39 +7476,112 @@ export async function registerRoutes(
         type: type || 'referral',
       });
 
-      // Award social share points when user clicks share (optimistic - they're about to share)
-      // Rate limit: only award once per hour per wallet
-      let pointsAwarded = false;
+      // Create pending share - points only awarded after tweet verification
+      let pendingShareId: number | null = null;
       if (walletAddress) {
         try {
-          const now = Date.now();
-          const lastShareKey = `last_social_share_${walletAddress.toLowerCase()}`;
-          const lastShare = (global as any)[lastShareKey] || 0;
-          const oneHour = 60 * 60 * 1000;
+          // Check if user already has a pending share for this referral code
+          const existingPending = await socialShareService.getPendingShares(walletAddress);
+          const alreadyPending = existingPending.find(s => s.referralCode === referralCode);
           
-          if (now - lastShare > oneHour) {
-            await pointsService.logActivity({
+          if (alreadyPending) {
+            pendingShareId = alreadyPending.id;
+            console.log(`[Twitter API] Using existing pending share ${pendingShareId} for ${walletAddress}`);
+          } else {
+            const pendingShare = await socialShareService.createPendingShare({
               walletAddress,
-              activityType: 'social_share',
-              description: `Shared ${type || 'referral'} on X`,
+              referralCode,
+              totalPoints: totalPoints || 0,
+              tier: tier || 'bronze',
+              type: type || 'referral',
             });
-            (global as any)[lastShareKey] = now;
-            pointsAwarded = true;
-            console.log(`[Twitter API] Awarded 10 social_share points to ${walletAddress}`);
+            pendingShareId = pendingShare.id;
+            console.log(`[Twitter API] Created pending share ${pendingShareId} for ${walletAddress}`);
           }
-        } catch (pointsError) {
-          console.error("[Twitter API] Failed to award points:", pointsError);
+        } catch (pendingError) {
+          console.error("[Twitter API] Failed to create pending share:", pendingError);
         }
       }
 
       res.json({
         success: true,
         intentUrl,
-        pointsAwarded,
+        pendingShareId,
+        message: "Share initiated! After posting on X, click 'Verify Post' to earn 10 points.",
       });
     } catch (error) {
       console.error("[Twitter API] Failed to generate intent URL:", error);
       res.status(500).json({ error: "Failed to generate share URL" });
+    }
+  });
+
+  // Get pending shares for a wallet
+  app.get("/api/twitter/pending-shares/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      const pendingShares = await socialShareService.getPendingShares(walletAddress);
+      
+      res.json({
+        success: true,
+        pendingShares: pendingShares.map(share => ({
+          id: share.id,
+          referralCode: share.referralCode,
+          shareType: share.shareType,
+          status: share.status,
+          expiresAt: share.expiresAt,
+          createdAt: share.createdAt,
+          verificationAttempts: share.verificationAttempts,
+        })),
+      });
+    } catch (error) {
+      console.error("[Twitter API] Failed to get pending shares:", error);
+      res.status(500).json({ error: "Failed to get pending shares" });
+    }
+  });
+
+  // Verify a pending share - checks if tweet was actually posted
+  app.post("/api/twitter/verify-share", async (req, res) => {
+    try {
+      const { walletAddress, pendingShareId } = req.body;
+      
+      if (!walletAddress || !pendingShareId) {
+        return res.status(400).json({ error: "Wallet address and pending share ID required" });
+      }
+
+      // Check if user is connected to X
+      if (!socialShareService.isConnected(walletAddress)) {
+        return res.status(400).json({ 
+          error: "Please connect your X account first to verify your post.",
+          requiresAuth: true,
+        });
+      }
+
+      const result = await socialShareService.verifyTweetPosted(walletAddress, pendingShareId);
+      
+      if (!result.success) {
+        return res.status(400).json({
+          success: false,
+          error: result.error,
+          status: result.status,
+        });
+      }
+
+      res.json({
+        success: true,
+        tweetId: result.tweetId,
+        twitterUsername: result.twitterUsername,
+        pointsAwarded: result.pointsAwarded,
+        status: result.status,
+        message: `Tweet verified! You earned ${result.pointsAwarded} social points.`,
+      });
+    } catch (error) {
+      console.error("[Twitter API] Failed to verify share:", error);
+      res.status(500).json({ error: "Failed to verify tweet" });
     }
   });
 

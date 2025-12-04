@@ -407,10 +407,12 @@ export class SocialShareService {
       const { data: me } = await client.v2.me();
       
       // Get user's recent tweets (last 10)
-      const { data: tweets } = await client.v2.userTimeline(me.id, {
+      const timeline = await client.v2.userTimeline(me.id, {
         max_results: 10,
         'tweet.fields': ['created_at', 'text'],
       });
+      
+      const tweets = timeline.data?.data || [];
       
       if (!tweets || tweets.length === 0) {
         return { 
@@ -424,7 +426,7 @@ export class SocialShareService {
       const expectedMarkers = pendingShare.expectedContent.split(',');
       const referralCode = expectedMarkers[0]; // Primary identifier
       
-      const matchingTweet = tweets.find(tweet => {
+      const matchingTweet = tweets.find((tweet: { id: string; text: string }) => {
         const text = tweet.text.toLowerCase();
         const hasReferralCode = text.includes(referralCode.toLowerCase());
         const hasMention = text.includes('@shieldfinancex');
