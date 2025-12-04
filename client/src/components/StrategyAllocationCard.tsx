@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { Button } from "@/components/ui/button";
+import { Separator } from "@/components/ui/separator";
 import {
   Tooltip,
   TooltipContent,
@@ -15,9 +17,16 @@ import {
   Droplets,
   TrendingUp,
   Info,
-  ExternalLink
+  ExternalLink,
+  Sparkles,
+  ArrowRight,
+  Coins
 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
+import { usePrices } from "@/hooks/usePrices";
+import { Link } from "wouter";
+import { AssetIcon } from "@/components/AssetIcon";
 
 interface StrategyAllocation {
   name: string;
@@ -55,15 +64,94 @@ const strategyBgColors: Record<string, string> = {
   kinetic: "bg-purple-500/10",
 };
 
-interface StrategyAllocationCardProps {
-  className?: string;
+interface OpportunityCalloutProps {
+  idleFxrp: number;
+  idleFxrpUsd: number;
+  vaultApy: number;
+  fxrpPrice: number;
 }
 
-export default function StrategyAllocationCard({ className }: StrategyAllocationCardProps) {
+function OpportunityCallout({ idleFxrp, idleFxrpUsd, vaultApy, fxrpPrice }: OpportunityCalloutProps) {
+  if (idleFxrp < 0.01) {
+    return null;
+  }
+
+  const potentialAnnualYield = idleFxrp * (vaultApy / 100);
+  const potentialAnnualYieldUsd = potentialAnnualYield * fxrpPrice;
+
+  return (
+    <div 
+      className="p-4 rounded-lg bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 space-y-3"
+      data-testid="opportunity-callout"
+    >
+      <div className="flex items-start gap-3">
+        <div className="rounded-full bg-primary/20 p-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+        </div>
+        <div className="flex-1 space-y-1">
+          <p className="text-sm font-medium">Maximize Your Returns</p>
+          <p className="text-xs text-muted-foreground">
+            You have assets sitting idle that could be earning yield
+          </p>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-3 p-3 rounded-md bg-background/50">
+        <AssetIcon asset="FXRP" size={32} />
+        <div className="flex-1">
+          <div className="flex items-center gap-2">
+            <span className="font-medium text-sm">{idleFxrp.toFixed(2)} FXRP</span>
+            <Badge variant="secondary" className="text-xs">Idle</Badge>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            ${idleFxrpUsd.toFixed(2)} earning 0% APY
+          </p>
+        </div>
+        <div className="text-right">
+          <div className="flex items-center gap-1 text-chart-2">
+            <TrendingUp className="h-3 w-3" />
+            <span className="text-sm font-medium">+{vaultApy.toFixed(1)}%</span>
+          </div>
+          <p className="text-xs text-muted-foreground">potential APY</p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between pt-1">
+        <div className="text-xs text-muted-foreground">
+          <Coins className="h-3 w-3 inline mr-1" />
+          Potential: <span className="text-chart-2 font-medium">~${potentialAnnualYieldUsd.toFixed(2)}/year</span>
+        </div>
+        <Link href="/app">
+          <Button size="sm" className="gap-1" data-testid="button-deposit-opportunity">
+            Deposit Now
+            <ArrowRight className="h-3 w-3" />
+          </Button>
+        </Link>
+      </div>
+    </div>
+  );
+}
+
+interface StrategyAllocationCardProps {
+  className?: string;
+  walletAddress?: string | null;
+}
+
+export default function StrategyAllocationCard({ className, walletAddress }: StrategyAllocationCardProps) {
   const { data, isLoading, isError } = useQuery<StrategyAllocationResponse>({
     queryKey: ["/api/strategies/allocation"],
     refetchInterval: 30000,
   });
+
+  const balances = useComprehensiveBalance();
+  const { data: pricesData } = usePrices(['FXRP'], 30000);
+
+  const idleFxrp = parseFloat(balances.fxrp) || 0;
+  const idleFxrpUsd = balances.fxrpUsd || 0;
+  const fxrpPrice = pricesData?.prices?.FXRP || 2.2;
+
+  const firelightAllocation = data?.allocations?.find(a => a.slug === 'firelight');
+  const vaultApy = firelightAllocation?.apy || 6.2;
 
   if (isLoading) {
     return (
@@ -233,6 +321,18 @@ export default function StrategyAllocationCard({ className }: StrategyAllocation
               Firelight.finance
             </a>
           </p>
+        )}
+
+        {walletAddress && idleFxrp > 0.01 && (
+          <>
+            <Separator className="my-4" />
+            <OpportunityCallout 
+              idleFxrp={idleFxrp}
+              idleFxrpUsd={idleFxrpUsd}
+              vaultApy={vaultApy}
+              fxrpPrice={fxrpPrice}
+            />
+          </>
         )}
       </CardContent>
     </Card>

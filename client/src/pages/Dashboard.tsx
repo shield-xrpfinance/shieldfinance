@@ -527,7 +527,7 @@ export default function Dashboard() {
       <BoostImpactBanner walletAddress={evmAddress || address} />
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <StrategyAllocationCard />
+        <StrategyAllocationCard walletAddress={evmAddress || address} />
         <PortfolioPerformanceChart walletAddress={evmAddress || address} />
       </div>
 
