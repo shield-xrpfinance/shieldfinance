@@ -370,41 +370,41 @@ export default function Airdrop() {
             </p>
           </div>
 
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-2 sm:p-4">
               <p className="text-xs text-muted-foreground">Total Pool</p>
-              <p className="text-2xl font-bold font-mono" data-testid="text-total-pool">
+              <p className="text-lg sm:text-2xl font-bold font-mono" data-testid="text-total-pool">
                 {TOTAL_AIRDROP_POOL.toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground">SHIELD</p>
             </div>
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-2 sm:p-4">
               <p className="text-xs text-muted-foreground">Participants</p>
               {isLoadingLeaderboard ? (
-                <Skeleton className="h-8 w-20" />
+                <Skeleton className="h-6 sm:h-8 w-16 sm:w-20" />
               ) : (
-                <p className="text-2xl font-bold font-mono text-green-500" data-testid="text-participants">
+                <p className="text-lg sm:text-2xl font-bold font-mono text-green-500" data-testid="text-participants">
                   {leaderboardData?.stats?.totalParticipants?.toLocaleString() || 0}
                 </p>
               )}
               <p className="text-xs text-muted-foreground">testers</p>
             </div>
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-2 sm:p-4">
               <p className="text-xs text-muted-foreground">Total Points</p>
               {isLoadingLeaderboard ? (
-                <Skeleton className="h-8 w-24" />
+                <Skeleton className="h-6 sm:h-8 w-20 sm:w-24" />
               ) : (
-                <p className="text-2xl font-bold font-mono text-primary" data-testid="text-total-points-distributed">
+                <p className="text-lg sm:text-2xl font-bold font-mono text-primary" data-testid="text-total-points-distributed">
                   {leaderboardData?.stats?.totalPointsDistributed?.toLocaleString() || 0}
                 </p>
               )}
               <p className="text-xs text-muted-foreground">distributed</p>
             </div>
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-2 sm:p-4">
               <p className="text-xs text-muted-foreground">Status</p>
               <div className="flex items-center gap-2 mt-1">
                 <div className="h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-                <span className="font-semibold text-green-500" data-testid="text-testnet-status">Active</span>
+                <span className="text-sm sm:text-base font-semibold text-green-500" data-testid="text-testnet-status">Active</span>
               </div>
               <p className="text-xs text-muted-foreground">earning points</p>
             </div>
@@ -470,24 +470,24 @@ export default function Airdrop() {
               <CardContent>
                 {isLoadingPoints ? (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                       {Array.from({ length: 4 }).map((_, i) => (
-                        <Skeleton key={i} className="h-24" />
+                        <Skeleton key={i} className="h-20 sm:h-24" />
                       ))}
                     </div>
                   </div>
                 ) : userPointsData ? (
                   <div className="space-y-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="text-center p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground">Total Points</p>
-                        <p className="text-3xl font-bold" data-testid="text-user-points">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+                      <div className="text-center p-2 sm:p-4 rounded-lg bg-muted/50">
+                        <p className="text-xs sm:text-sm text-muted-foreground">Total Points</p>
+                        <p className="text-2xl sm:text-3xl font-bold" data-testid="text-user-points">
                           {userPointsData.totalPoints.toLocaleString()}
                         </p>
                       </div>
-                      <div className="text-center p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground">Your Tier</p>
-                        <div className="mt-2" data-testid="badge-user-tier">
+                      <div className="text-center p-2 sm:p-4 rounded-lg bg-muted/50">
+                        <p className="text-xs sm:text-sm text-muted-foreground">Your Tier</p>
+                        <div className="mt-1 sm:mt-2" data-testid="badge-user-tier">
                           {userPointsData.tier !== 'none' ? (
                             getTierBadge(userPointsData.tier as UserTier, "lg")
                           ) : (
@@ -495,15 +495,15 @@ export default function Airdrop() {
                           )}
                         </div>
                       </div>
-                      <div className="text-center p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground">Multiplier</p>
-                        <p className="text-3xl font-bold text-primary" data-testid="text-user-multiplier">
+                      <div className="text-center p-2 sm:p-4 rounded-lg bg-muted/50">
+                        <p className="text-xs sm:text-sm text-muted-foreground">Multiplier</p>
+                        <p className="text-2xl sm:text-3xl font-bold text-primary" data-testid="text-user-multiplier">
                           {userPointsData.airdropMultiplier || 1}x
                         </p>
                       </div>
-                      <div className="text-center p-4 rounded-lg bg-muted/50">
-                        <p className="text-sm text-muted-foreground">Rank</p>
-                        <p className="text-3xl font-bold" data-testid="text-user-rank">
+                      <div className="text-center p-2 sm:p-4 rounded-lg bg-muted/50">
+                        <p className="text-xs sm:text-sm text-muted-foreground">Rank</p>
+                        <p className="text-2xl sm:text-3xl font-bold" data-testid="text-user-rank">
                           #{userPointsData.rank || "—"}
                         </p>
                       </div>
@@ -511,20 +511,20 @@ export default function Airdrop() {
 
                     <Separator />
 
-                    <div className="p-4 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
-                      <div className="flex items-center justify-between flex-wrap gap-4">
+                    <div className="p-2 sm:p-4 rounded-lg bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/20">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <div>
-                          <p className="text-sm text-muted-foreground">Projected SHIELD Allocation</p>
-                          <p className="text-4xl font-bold text-primary" data-testid="text-projected-allocation">
+                          <p className="text-xs sm:text-sm text-muted-foreground">Projected SHIELD Allocation</p>
+                          <p className="text-2xl sm:text-4xl font-bold text-primary" data-testid="text-projected-allocation">
                             {projectedAllocation.toLocaleString()}
                           </p>
                           <p className="text-xs text-muted-foreground mt-1">
                             Based on current points and tier multiplier
                           </p>
                         </div>
-                        <div className="text-right">
-                          <p className="text-sm text-muted-foreground">Pool Share</p>
-                          <p className="text-2xl font-bold" data-testid="text-pool-share">
+                        <div className="text-left sm:text-right">
+                          <p className="text-xs sm:text-sm text-muted-foreground">Pool Share</p>
+                          <p className="text-xl sm:text-2xl font-bold" data-testid="text-pool-share">
                             {((projectedAllocation / TOTAL_AIRDROP_POOL) * 100).toFixed(3)}%
                           </p>
                         </div>
@@ -534,8 +534,8 @@ export default function Airdrop() {
                     <Separator />
 
                     <div className="space-y-3">
-                      <p className="text-sm font-medium text-muted-foreground">Points Breakdown</p>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="section-points-breakdown">
+                      <p className="text-xs sm:text-sm font-medium text-muted-foreground">Points Breakdown</p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3" data-testid="section-points-breakdown">
                         {([
                           { label: "Deposits", value: userPointsData.depositPoints, Icon: Coins },
                           { label: "Staking", value: userPointsData.stakingPoints, Icon: Lock },
@@ -547,14 +547,14 @@ export default function Airdrop() {
                         ] as { label: string; value: number; Icon: LucideIcon }[]).filter(item => item.value > 0).map((item) => (
                           <div 
                             key={item.label} 
-                            className="p-3 rounded-lg bg-muted/30 border"
+                            className="p-2 sm:p-3 rounded-lg bg-muted/30 border"
                             data-testid={`breakdown-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
                           >
                             <div className="flex items-center gap-2">
                               <item.Icon className="h-4 w-4 text-muted-foreground" />
                               <span className="text-xs text-muted-foreground">{item.label}</span>
                             </div>
-                            <p className="text-lg font-semibold mt-1">{item.value.toLocaleString()}</p>
+                            <p className="text-base sm:text-lg font-semibold mt-1">{item.value.toLocaleString()}</p>
                           </div>
                         ))}
                         {userPointsData.depositPoints === 0 && 
@@ -763,31 +763,31 @@ export default function Airdrop() {
         </div>
 
         {rootData && (
-          <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-2 sm:p-4">
               <p className="text-xs text-muted-foreground">Total Allocation</p>
-              <p className="text-2xl font-bold font-mono" data-testid="text-total-allocation">
+              <p className="text-lg sm:text-2xl font-bold font-mono" data-testid="text-total-allocation">
                 {Number(rootData.totalAmount).toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground">SHIELD</p>
             </div>
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-2 sm:p-4">
               <p className="text-xs text-muted-foreground">Remaining</p>
-              <p className="text-2xl font-bold font-mono text-green-500" data-testid="text-remaining-amount">
+              <p className="text-lg sm:text-2xl font-bold font-mono text-green-500" data-testid="text-remaining-amount">
                 {Number(rootData.remainingAmount || rootData.totalAmount).toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground">SHIELD</p>
             </div>
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-2 sm:p-4">
               <p className="text-xs text-muted-foreground">Claimed</p>
-              <p className="text-2xl font-bold font-mono text-orange-500" data-testid="text-total-claimed">
+              <p className="text-lg sm:text-2xl font-bold font-mono text-orange-500" data-testid="text-total-claimed">
                 {Number(rootData.totalClaimed || 0).toLocaleString()}
               </p>
               <p className="text-xs text-muted-foreground">SHIELD</p>
             </div>
-            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-4">
+            <div className="rounded-lg border bg-card/50 backdrop-blur-sm p-2 sm:p-4">
               <p className="text-xs text-muted-foreground">Claimants</p>
-              <p className="text-2xl font-bold font-mono" data-testid="text-claimed-count">
+              <p className="text-lg sm:text-2xl font-bold font-mono" data-testid="text-claimed-count">
                 {rootData.claimedCount || 0} / {rootData.totalEntries}
               </p>
               <p className="text-xs text-muted-foreground">addresses</p>
