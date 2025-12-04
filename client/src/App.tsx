@@ -32,6 +32,8 @@ import Staking from "@/pages/Staking";
 import Swap from "@/pages/Swap";
 import Optimize from "@/pages/Optimize";
 import Security from "@/pages/Security";
+import Leaderboard from "@/pages/Leaderboard";
+import PointsDashboard from "@/pages/PointsDashboard";
 import NotFound from "@/pages/not-found";
 
 function DashboardRouter() {
@@ -49,6 +51,8 @@ function DashboardRouter() {
       <Route path="/app/swap" component={Swap} />
       <Route path="/app/optimize" component={Optimize} />
       <Route path="/app/security" component={Security} />
+      <Route path="/app/leaderboard" component={Leaderboard} />
+      <Route path="/app/points" component={PointsDashboard} />
       <Route component={NotFound} />
     </RouterSwitch>
   );

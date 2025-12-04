@@ -634,6 +634,143 @@ export const crossChainBridgeQuotes = pgTable("cross_chain_bridge_quotes", {
   priceData: jsonb("price_data"), // Token prices at quote time
 });
 
+// =============================================================================
+// TESTNET POINTS & AIRDROP SYSTEM
+// =============================================================================
+
+// Activity type enum for testnet activities
+export const testnetActivityTypeEnum = pgEnum("testnet_activity_type", [
+  "first_deposit",      // First-time deposit bonus (100 pts)
+  "deposit",            // Regular deposit (10 pts per $10 equivalent)
+  "withdrawal",         // Complete withdrawal cycle (25 pts)
+  "stake_shield",       // SHIELD staking per day (5 pts)
+  "bridge_xrpl_flare",  // Bridge from XRPL to Flare (20 pts)
+  "bridge_flare_xrpl",  // Bridge from Flare to XRPL (20 pts)
+  "referral",           // Referral with verified deposit (50 pts)
+  "bug_report",         // Verified bug report (500 pts)
+  "social_share",       // Share on social media (10 pts)
+  "daily_login",        // Daily active user bonus (2 pts)
+  "swap",               // Complete a swap (15 pts)
+  "boost_activated",    // Activate SHIELD boost (30 pts)
+]);
+
+// User tier enum for OG status
+export const userTierEnum = pgEnum("user_tier", [
+  "bronze",   // 100+ points - Base multiplier (1x)
+  "silver",   // 500+ points - 1.5x multiplier
+  "gold",     // 2000+ points - 2x multiplier + OG badge
+  "diamond",  // 5000+ points - 3x multiplier + governance seat
+]);
+
+// Testnet activities tracking - logs every qualifying action
+export const testnetActivities = pgTable("testnet_activities", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  
+  // User identification
+  walletAddress: text("wallet_address").notNull(),
+  
+  // Activity details
+  activityType: testnetActivityTypeEnum("activity_type").notNull(),
+  pointsEarned: integer("points_earned").notNull(),
+  
+  // Related transaction (optional)
+  relatedTxHash: text("related_tx_hash"),
+  relatedVaultId: varchar("related_vault_id"),
+  relatedPositionId: varchar("related_position_id"),
+  
+  // Activity metadata (amount, referral info, etc.)
+  metadata: jsonb("metadata").default({}),
+  
+  // Description for display
+  description: text("description"),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+}, (table) => ({
+  walletIdx: sql`CREATE INDEX IF NOT EXISTS idx_testnet_activities_wallet ON ${table} (wallet_address)`,
+  typeIdx: sql`CREATE INDEX IF NOT EXISTS idx_testnet_activities_type ON ${table} (activity_type)`,
+  createdAtIdx: sql`CREATE INDEX IF NOT EXISTS idx_testnet_activities_created_at ON ${table} (created_at DESC)`,
+}));
+
+// User points summary - aggregated points and tier status
+export const userPoints = pgTable("user_points", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  
+  // User identification (unique per wallet)
+  walletAddress: text("wallet_address").notNull().unique(),
+  
+  // Points totals
+  totalPoints: integer("total_points").notNull().default(0),
+  
+  // Breakdown by activity type
+  depositPoints: integer("deposit_points").notNull().default(0),
+  stakingPoints: integer("staking_points").notNull().default(0),
+  bridgePoints: integer("bridge_points").notNull().default(0),
+  referralPoints: integer("referral_points").notNull().default(0),
+  bugReportPoints: integer("bug_report_points").notNull().default(0),
+  socialPoints: integer("social_points").notNull().default(0),
+  otherPoints: integer("other_points").notNull().default(0),
+  
+  // Current tier (calculated from totalPoints)
+  tier: userTierEnum("tier").notNull().default("bronze"),
+  
+  // Airdrop multiplier based on tier (1.0, 1.5, 2.0, 3.0)
+  airdropMultiplier: decimal("airdrop_multiplier", { precision: 3, scale: 1 }).notNull().default("1.0"),
+  
+  // Referral tracking
+  referralCode: text("referral_code").unique(),
+  referredBy: text("referred_by"), // Wallet address of referrer
+  referralCount: integer("referral_count").notNull().default(0),
+  
+  // Achievement badges (JSON array of badge IDs)
+  badges: jsonb("badges").default([]),
+  
+  // OG status for early adopters
+  isOg: boolean("is_og").notNull().default(false),
+  
+  // Snapshot for airdrop (frozen at cutoff date)
+  snapshotPoints: integer("snapshot_points"),
+  snapshotTier: userTierEnum("snapshot_tier"),
+  snapshotAt: timestamp("snapshot_at"),
+  
+  // Estimated airdrop allocation (SHIELD tokens)
+  estimatedAirdrop: decimal("estimated_airdrop", { precision: 18, scale: 6 }),
+  
+  // Timestamps
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  tierIdx: sql`CREATE INDEX IF NOT EXISTS idx_user_points_tier ON ${table} (tier)`,
+  totalPointsIdx: sql`CREATE INDEX IF NOT EXISTS idx_user_points_total ON ${table} (total_points DESC)`,
+  referralCodeIdx: sql`CREATE INDEX IF NOT EXISTS idx_user_points_referral_code ON ${table} (referral_code)`,
+}));
+
+// Airdrop snapshots - historical point snapshots for final distribution
+export const airdropSnapshots = pgTable("airdrop_snapshots", {
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
+  
+  // Snapshot metadata
+  snapshotName: text("snapshot_name").notNull(), // e.g., "mainnet_launch_v1"
+  snapshotDate: timestamp("snapshot_date").notNull(),
+  
+  // Total pool
+  totalShieldAllocated: decimal("total_shield_allocated", { precision: 18, scale: 6 }).notNull(),
+  totalPointsInPool: integer("total_points_in_pool").notNull(),
+  totalParticipants: integer("total_participants").notNull(),
+  
+  // Merkle root for on-chain verification
+  merkleRoot: text("merkle_root"),
+  
+  // Distribution status
+  isFinalized: boolean("is_finalized").notNull().default(false),
+  distributedAt: timestamp("distributed_at"),
+  
+  // Snapshot data (full allocation JSON for backup)
+  allocationData: jsonb("allocation_data"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const insertVaultSchema = createInsertSchema(vaults).omit({
   id: true,
 });
@@ -738,6 +875,19 @@ export const insertCrossChainBridgeQuoteSchema = createInsertSchema(crossChainBr
   createdAt: true,
 });
 
+export const insertTestnetActivitySchema = createInsertSchema(testnetActivities).omit({
+  createdAt: true,
+});
+
+export const insertUserPointsSchema = createInsertSchema(userPoints).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertAirdropSnapshotSchema = createInsertSchema(airdropSnapshots).omit({
+  createdAt: true,
+});
+
 export type InsertVault = z.infer<typeof insertVaultSchema>;
 export type Vault = typeof vaults.$inferSelect;
 export type InsertPosition = z.infer<typeof insertPositionSchema>;
@@ -781,6 +931,54 @@ export type InsertCrossChainBridgeLeg = z.infer<typeof insertCrossChainBridgeLeg
 export type CrossChainBridgeLeg = typeof crossChainBridgeLegs.$inferSelect;
 export type InsertCrossChainBridgeQuote = z.infer<typeof insertCrossChainBridgeQuoteSchema>;
 export type CrossChainBridgeQuote = typeof crossChainBridgeQuotes.$inferSelect;
+export type InsertTestnetActivity = z.infer<typeof insertTestnetActivitySchema>;
+export type TestnetActivity = typeof testnetActivities.$inferSelect;
+export type InsertUserPoints = z.infer<typeof insertUserPointsSchema>;
+export type UserPoints = typeof userPoints.$inferSelect;
+export type InsertAirdropSnapshot = z.infer<typeof insertAirdropSnapshotSchema>;
+export type AirdropSnapshot = typeof airdropSnapshots.$inferSelect;
+
+// Activity type for type safety
+export type TestnetActivityType = 
+  | 'first_deposit'
+  | 'deposit'
+  | 'withdrawal'
+  | 'stake_shield'
+  | 'bridge_xrpl_flare'
+  | 'bridge_flare_xrpl'
+  | 'referral'
+  | 'bug_report'
+  | 'social_share'
+  | 'daily_login'
+  | 'swap'
+  | 'boost_activated';
+
+// User tier type for type safety
+export type UserTier = 'bronze' | 'silver' | 'gold' | 'diamond';
+
+// Points configuration for each activity type
+export const POINTS_CONFIG: Record<TestnetActivityType, { base: number; description: string }> = {
+  first_deposit: { base: 100, description: "First deposit bonus" },
+  deposit: { base: 10, description: "Deposit (per $10 equivalent)" },
+  withdrawal: { base: 25, description: "Complete withdrawal cycle" },
+  stake_shield: { base: 5, description: "SHIELD staking (per day)" },
+  bridge_xrpl_flare: { base: 20, description: "Bridge XRPL → Flare" },
+  bridge_flare_xrpl: { base: 20, description: "Bridge Flare → XRPL" },
+  referral: { base: 50, description: "Referral with verified deposit" },
+  bug_report: { base: 500, description: "Verified bug report" },
+  social_share: { base: 10, description: "Share on social media" },
+  daily_login: { base: 2, description: "Daily active user" },
+  swap: { base: 15, description: "Complete a swap" },
+  boost_activated: { base: 30, description: "Activate SHIELD boost" },
+};
+
+// Tier thresholds and multipliers
+export const TIER_CONFIG: Record<UserTier, { minPoints: number; multiplier: number; badge: string }> = {
+  bronze: { minPoints: 0, multiplier: 1.0, badge: "Bronze Tester" },
+  silver: { minPoints: 500, multiplier: 1.5, badge: "Silver Tester" },
+  gold: { minPoints: 2000, multiplier: 2.0, badge: "Gold OG" },
+  diamond: { minPoints: 5000, multiplier: 3.0, badge: "Diamond OG" },
+};
 
 // Notification type enum for type safety
 export type NotificationType = 'deposit' | 'withdrawal' | 'reward' | 'boost' | 'system' | 'vault_event' | 'bridge';

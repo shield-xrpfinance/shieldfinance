@@ -17,7 +17,7 @@ import { getPriceService } from "./services/PriceService";
 import { getPositionService } from "./services/PositionService";
 import { WalletBalanceService } from "./services/WalletBalanceService";
 import { db } from "./db";
-import { fxrpToXrpRedemptions, onChainEvents, crossChainBridgeJobs } from "@shared/schema";
+import { fxrpToXrpRedemptions, onChainEvents, crossChainBridgeJobs, userPoints as userPointsTable } from "@shared/schema";
 import { eq, and, desc, sql } from "drizzle-orm";
 import { ethers } from "ethers";
 import fs from "fs";
@@ -7037,6 +7037,316 @@ export async function registerRoutes(
     } catch (error) {
       console.error("[FSwap] Failed to log bridge completion:", error);
       res.status(500).json({ error: "Failed to record bridge completion" });
+    }
+  });
+
+  // =============================================================================
+  // TESTNET POINTS & AIRDROP SYSTEM
+  // =============================================================================
+
+  // Import points service lazily to avoid circular dependencies
+  const { pointsService } = await import("./services/PointsService");
+
+  // Get user's points summary
+  app.get("/api/points/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      const userPointsData = await pointsService.getOrCreateUserPoints(walletAddress);
+      const rank = await pointsService.getUserRank(walletAddress);
+      const nextTierProgress = pointsService.getNextTierProgress(
+        userPointsData.totalPoints,
+        userPointsData.tier as any
+      );
+
+      res.json({
+        ...userPointsData,
+        rank,
+        nextTierProgress,
+      });
+    } catch (error) {
+      console.error("[Points API] Failed to get user points:", error);
+      res.status(500).json({ error: "Failed to get user points" });
+    }
+  });
+
+  // Get user's activity history
+  app.get("/api/points/:walletAddress/activities", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      const limit = parseInt(req.query.limit as string) || 50;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      const activities = await pointsService.getUserActivities(walletAddress, limit);
+      
+      res.json({ activities });
+    } catch (error) {
+      console.error("[Points API] Failed to get activities:", error);
+      res.status(500).json({ error: "Failed to get activities" });
+    }
+  });
+
+  // Get leaderboard (with pagination guards)
+  app.get("/api/leaderboard", async (req, res) => {
+    try {
+      const requestedLimit = parseInt(req.query.limit as string) || 100;
+      const limit = Math.min(Math.max(1, requestedLimit), 500); // Clamp between 1 and 500
+      
+      const leaderboard = await pointsService.getLeaderboard(limit);
+      const stats = await pointsService.getLeaderboardStats();
+
+      res.json({
+        leaderboard,
+        stats,
+      });
+    } catch (error) {
+      console.error("[Points API] Failed to get leaderboard:", error);
+      res.status(500).json({ error: "Failed to get leaderboard" });
+    }
+  });
+
+  // Validate referral code
+  app.get("/api/referral/validate/:code", async (req, res) => {
+    try {
+      const { code } = req.params;
+      
+      if (!code) {
+        return res.status(400).json({ error: "Referral code required" });
+      }
+
+      const referrer = await pointsService.validateReferralCode(code);
+      
+      if (!referrer) {
+        return res.status(404).json({ valid: false, error: "Invalid referral code" });
+      }
+
+      res.json({
+        valid: true,
+        referrerAddress: referrer.walletAddress,
+        referrerTier: referrer.tier,
+      });
+    } catch (error) {
+      console.error("[Points API] Failed to validate referral:", error);
+      res.status(500).json({ error: "Failed to validate referral code" });
+    }
+  });
+
+  // Apply referral code (when user signs up with referral) - idempotent with row locking
+  app.post("/api/referral/apply", async (req, res) => {
+    try {
+      const { walletAddress, referralCode } = req.body;
+      
+      if (!walletAddress || !referralCode) {
+        return res.status(400).json({ error: "Wallet address and referral code required" });
+      }
+
+      // Validate referral code
+      const referrer = await pointsService.validateReferralCode(referralCode);
+      if (!referrer) {
+        return res.status(404).json({ error: "Invalid referral code" });
+      }
+
+      // Prevent self-referral
+      if (walletAddress.toLowerCase() === referrer.walletAddress.toLowerCase()) {
+        return res.status(400).json({ error: "Cannot refer yourself" });
+      }
+
+      const normalizedAddress = walletAddress.toLowerCase();
+
+      // Use transaction with row lock (SELECT FOR UPDATE) to prevent race conditions
+      const result = await db.transaction(async (tx) => {
+        // Ensure user exists first (create if not)
+        await pointsService.getOrCreateUserPoints(normalizedAddress);
+        
+        // Lock the row and read current state within transaction
+        const [lockedUser] = await tx
+          .select({ referredBy: userPointsTable.referredBy })
+          .from(userPointsTable)
+          .where(eq(userPointsTable.walletAddress, normalizedAddress))
+          .for("update");
+        
+        if (!lockedUser) {
+          return { error: "User not found" };
+        }
+        
+        // Check if already referred (idempotent - return success if same referrer)
+        if (lockedUser.referredBy) {
+          if (lockedUser.referredBy.toLowerCase() === referrer.walletAddress.toLowerCase()) {
+            return { alreadyApplied: true, success: true };
+          }
+          return { error: "Already referred by another user" };
+        }
+
+        // Update referral relationship atomically (row is locked, so this is safe)
+        await tx.update(userPointsTable)
+          .set({ referredBy: referrer.walletAddress })
+          .where(eq(userPointsTable.walletAddress, normalizedAddress));
+
+        return { success: true };
+      });
+
+      if (result.error) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      if (result.alreadyApplied) {
+        return res.json({
+          success: true,
+          message: "Referral already applied.",
+          alreadyApplied: true,
+        });
+      }
+
+      // Create notification (outside transaction, non-critical)
+      await storage.createUserNotification({
+        walletAddress,
+        type: "system",
+        title: "Referral Applied",
+        message: `You were referred by ${referrer.walletAddress.slice(0, 10)}... Make your first deposit to activate referral bonuses for both of you!`,
+        metadata: { referrerAddress: referrer.walletAddress, referralCode },
+        read: false,
+      });
+
+      res.json({
+        success: true,
+        message: "Referral code applied. Complete your first deposit to activate bonuses.",
+      });
+    } catch (error) {
+      console.error("[Points API] Failed to apply referral:", error);
+      res.status(500).json({ error: "Failed to apply referral code" });
+    }
+  });
+
+  // Admin: Award points manually (for bug reports, etc.)
+  app.post("/api/admin/points/award", requireAdminAuth, async (req, res) => {
+    try {
+      const { walletAddress, activityType, points, description } = req.body;
+      
+      if (!walletAddress || !activityType) {
+        return res.status(400).json({ error: "Wallet address and activity type required" });
+      }
+
+      const result = await pointsService.logActivity({
+        walletAddress,
+        activityType,
+        customPoints: points,
+        description,
+      });
+
+      res.json({
+        success: true,
+        ...result,
+      });
+    } catch (error) {
+      console.error("[Points API] Failed to award points:", error);
+      res.status(500).json({ error: "Failed to award points" });
+    }
+  });
+
+  // Get points configuration (public)
+  app.get("/api/points/config", (_req, res) => {
+    const { POINTS_CONFIG, TIER_CONFIG } = require("@shared/schema");
+    res.json({
+      activities: POINTS_CONFIG,
+      tiers: TIER_CONFIG,
+    });
+  });
+
+  // Get user's airdrop proof (for claiming)
+  app.get("/api/airdrop/proof/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      // Read the merkle tree data file
+      const fs = await import("fs");
+      const path = await import("path");
+      const treeDataPath = path.join(process.cwd(), "data", "merkle-tree-points.json");
+      
+      if (!fs.existsSync(treeDataPath)) {
+        return res.status(404).json({ 
+          error: "Airdrop not yet generated",
+          message: "The airdrop merkle tree has not been generated yet. Please wait for the snapshot."
+        });
+      }
+
+      const { ethers } = await import("ethers");
+      const treeData = JSON.parse(fs.readFileSync(treeDataPath, "utf-8"));
+      const checksummed = ethers.getAddress(walletAddress);
+      
+      // Find user's entry
+      const userEntry = treeData.entries.find(
+        (e: any) => ethers.getAddress(e.address) === checksummed
+      );
+
+      if (!userEntry) {
+        return res.status(404).json({ 
+          error: "Not eligible",
+          message: "This wallet is not eligible for the airdrop or did not reach the minimum points threshold."
+        });
+      }
+
+      res.json({
+        eligible: true,
+        address: checksummed,
+        amount: userEntry.amount,
+        amountWei: ethers.parseEther(userEntry.amount).toString(),
+        proof: userEntry.proof,
+        merkleRoot: treeData.root,
+        rank: userEntry.index + 1,
+        totalParticipants: treeData.totalEntries,
+      });
+    } catch (error) {
+      console.error("[Airdrop API] Failed to get proof:", error);
+      res.status(500).json({ error: "Failed to get airdrop proof" });
+    }
+  });
+
+  // Get airdrop stats (public)
+  app.get("/api/airdrop/stats", async (req, res) => {
+    try {
+      const fs = await import("fs");
+      const path = await import("path");
+      const treeDataPath = path.join(process.cwd(), "data", "airdrop-allocation-points.json");
+      
+      if (!fs.existsSync(treeDataPath)) {
+        return res.json({
+          generated: false,
+          message: "Airdrop snapshot not yet taken",
+        });
+      }
+
+      const allocationData = JSON.parse(fs.readFileSync(treeDataPath, "utf-8"));
+      
+      // Calculate tier breakdown
+      const tierBreakdown = allocationData.allocations.reduce((acc: any, a: any) => {
+        const tier = a.tier || 'bronze';
+        acc[tier] = (acc[tier] || 0) + 1;
+        return acc;
+      }, {});
+
+      res.json({
+        generated: true,
+        generatedAt: allocationData.generatedAt,
+        merkleRoot: allocationData.merkleRoot,
+        totalShield: allocationData.totalShield,
+        totalParticipants: allocationData.totalParticipants,
+        minPointsThreshold: allocationData.minPointsThreshold,
+        tierBreakdown,
+      });
+    } catch (error) {
+      console.error("[Airdrop API] Failed to get stats:", error);
+      res.status(500).json({ error: "Failed to get airdrop stats" });
     }
   });
 
