@@ -79,7 +79,7 @@ interface UserPointsData {
   nextTierProgress?: {
     currentTier: string;
     nextTier: string | null;
-    pointsToNext: number;
+    pointsNeeded: number;
     progressPercent: number;
   };
 }
@@ -593,7 +593,7 @@ export default function Airdrop() {
                               Next: {userPointsData.nextTierProgress.nextTier.charAt(0).toUpperCase() + userPointsData.nextTierProgress.nextTier.slice(1)}
                             </span>
                             <span className="text-muted-foreground">
-                              {userPointsData.nextTierProgress.pointsToNext.toLocaleString()} pts
+                              {userPointsData.nextTierProgress.pointsNeeded.toLocaleString()} pts
                             </span>
                           </div>
                           <Progress 
@@ -847,7 +847,7 @@ export default function Airdrop() {
               <p className="text-muted-foreground">
                 You can claim{" "}
                 <span className="font-bold text-foreground">
-                  {Number(eligibility.amount).toLocaleString()} SHIELD
+                  {Number(eligibility?.amount || 0).toLocaleString()} SHIELD
                 </span>{" "}
                 tokens
               </p>
@@ -864,7 +864,7 @@ export default function Airdrop() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">You will receive:</span>
                   <span className="font-bold font-mono">
-                    {Number(eligibility.amount).toLocaleString()} SHIELD
+                    {Number(eligibility?.amount || 0).toLocaleString()} SHIELD
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -909,7 +909,7 @@ export default function Airdrop() {
               ) : (
                 <>
                   <Coins className="h-5 w-5 mr-2" />
-                  Claim {Number(eligibility.amount).toLocaleString()} SHIELD
+                  Claim {Number(eligibility?.amount || 0).toLocaleString()} SHIELD
                 </>
               )}
             </Button>
