@@ -134,13 +134,13 @@ export default function Leaderboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
         <div className="rounded-lg bg-primary/20 p-3">
           <Trophy className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Testnet Leaderboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold">Testnet Leaderboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Compete for points and climb the ranks during testnet
           </p>
         </div>
@@ -216,31 +216,31 @@ export default function Leaderboard() {
               </div>
             ) : userPointsData ? (
               <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-4">
-                  <div className="flex items-center gap-4">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-4">
+                  <div className="grid grid-cols-3 gap-4 flex-1 sm:flex sm:items-center sm:gap-4">
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground">Rank</p>
-                      <p className="text-3xl font-bold" data-testid="text-user-rank">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Rank</p>
+                      <p className="text-2xl sm:text-3xl font-bold" data-testid="text-user-rank">
                         #{userPointsData.rank || "—"}
                       </p>
                     </div>
-                    <div className="w-px h-12 bg-border" />
+                    <div className="hidden sm:block w-px h-12 bg-border" />
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground">Points</p>
-                      <p className="text-3xl font-bold" data-testid="text-user-points">
+                      <p className="text-xs sm:text-sm text-muted-foreground">Points</p>
+                      <p className="text-2xl sm:text-3xl font-bold" data-testid="text-user-points">
                         {(userPointsData.totalPoints ?? 0).toLocaleString()}
                       </p>
                     </div>
-                    <div className="w-px h-12 bg-border" />
+                    <div className="hidden sm:block w-px h-12 bg-border" />
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground">Tier</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Tier</p>
                       <div className="mt-1" data-testid="badge-user-tier">
                         {getTierBadge(userPointsData.tier)}
                       </div>
                     </div>
                   </div>
                   {userPointsData.isOg && (
-                    <Badge variant="outline" className="gap-1 border-yellow-500 text-yellow-500">
+                    <Badge variant="outline" className="gap-1 border-yellow-500 text-yellow-500 w-full sm:w-auto justify-center">
                       <Sparkles className="h-3 w-3" />
                       OG Status
                     </Badge>
@@ -288,57 +288,59 @@ export default function Leaderboard() {
               No participants yet. Be the first to earn points!
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-24">Rank</TableHead>
-                  <TableHead>Wallet</TableHead>
-                  <TableHead className="text-right">Points</TableHead>
-                  <TableHead className="text-center">Tier</TableHead>
-                  <TableHead className="text-center">Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {leaderboard.map((entry, index) => {
-                  const isCurrentUser = walletAddress && (
-                    entry.walletAddress.toLowerCase() === walletAddress.toLowerCase()
-                  );
-                  return (
-                    <TableRow 
-                      key={entry.walletAddress}
-                      className={isCurrentUser ? "bg-primary/10" : undefined}
-                      data-testid={`row-leaderboard-${index}`}
-                    >
-                      <TableCell>{getRankDisplay(entry.rank)}</TableCell>
-                      <TableCell>
-                        <span className="font-mono" data-testid={`text-wallet-${index}`}>
-                          {truncateAddress(entry.walletAddress)}
-                        </span>
-                        {isCurrentUser && (
-                          <Badge variant="secondary" className="ml-2">You</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell className="text-right font-bold" data-testid={`text-points-${index}`}>
-                        {(entry.totalPoints ?? 0).toLocaleString()}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {getTierBadge(entry.tier)}
-                      </TableCell>
-                      <TableCell className="text-center">
-                        {entry.isOg ? (
-                          <Badge variant="outline" className="gap-1 border-yellow-500 text-yellow-500">
-                            <Sparkles className="h-3 w-3" />
-                            OG
-                          </Badge>
-                        ) : (
-                          <span className="text-muted-foreground">—</span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  );
-                })}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto -mx-6 sm:mx-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-16 sm:w-24">Rank</TableHead>
+                    <TableHead className="min-w-24">Wallet</TableHead>
+                    <TableHead className="text-right min-w-20">Points</TableHead>
+                    <TableHead className="text-center hidden sm:table-cell min-w-20">Tier</TableHead>
+                    <TableHead className="text-center hidden md:table-cell min-w-16">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {leaderboard.map((entry, index) => {
+                    const isCurrentUser = walletAddress && (
+                      entry.walletAddress.toLowerCase() === walletAddress.toLowerCase()
+                    );
+                    return (
+                      <TableRow 
+                        key={entry.walletAddress}
+                        className={isCurrentUser ? "bg-primary/10" : undefined}
+                        data-testid={`row-leaderboard-${index}`}
+                      >
+                        <TableCell className="text-xs sm:text-base">{getRankDisplay(entry.rank)}</TableCell>
+                        <TableCell className="text-xs sm:text-base">
+                          <span className="font-mono" data-testid={`text-wallet-${index}`}>
+                            {truncateAddress(entry.walletAddress)}
+                          </span>
+                          {isCurrentUser && (
+                            <Badge variant="secondary" className="ml-1 sm:ml-2 text-xs">You</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-right font-bold text-xs sm:text-base" data-testid={`text-points-${index}`}>
+                          {(entry.totalPoints ?? 0).toLocaleString()}
+                        </TableCell>
+                        <TableCell className="text-center hidden sm:table-cell">
+                          {getTierBadge(entry.tier)}
+                        </TableCell>
+                        <TableCell className="text-center hidden md:table-cell">
+                          {entry.isOg ? (
+                            <Badge variant="outline" className="gap-1 border-yellow-500 text-yellow-500 text-xs">
+                              <Sparkles className="h-3 w-3" />
+                              OG
+                            </Badge>
+                          ) : (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

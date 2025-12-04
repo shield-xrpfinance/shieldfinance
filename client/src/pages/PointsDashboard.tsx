@@ -212,19 +212,19 @@ export default function PointsDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
         <div className="rounded-lg bg-primary/20 p-3">
           <Trophy className="h-6 w-6 text-primary" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold">Points Dashboard</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold">Points Dashboard</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">
             Track your testnet activity and earn points for the airdrop
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
         <Card className={`lg:col-span-2 ${userPointsData ? tierBorderColors[userPointsData.tier] : ""} border-2`} data-testid="card-points-summary">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -240,28 +240,28 @@ export default function PointsDashboard() {
               </div>
             ) : userPointsData ? (
               <div className="space-y-6">
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <div className="text-center p-4 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">Total Points</p>
-                    <p className="text-3xl font-bold" data-testid="text-total-points">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
+                  <div className="text-center p-2 sm:p-4 rounded-lg bg-muted/50">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Total Points</p>
+                    <p className="text-xl sm:text-3xl font-bold" data-testid="text-total-points">
                       {(userPointsData.totalPoints ?? 0).toLocaleString()}
                     </p>
                   </div>
-                  <div className="text-center p-4 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">Current Tier</p>
-                    <div className="mt-2" data-testid="badge-current-tier">
+                  <div className="text-center p-2 sm:p-4 rounded-lg bg-muted/50">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Current Tier</p>
+                    <div className="mt-1 sm:mt-2" data-testid="badge-current-tier">
                       {getTierBadge(userPointsData.tier, "lg")}
                     </div>
                   </div>
-                  <div className="text-center p-4 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">Airdrop Multiplier</p>
-                    <p className="text-3xl font-bold text-primary" data-testid="text-multiplier">
+                  <div className="text-center p-2 sm:p-4 rounded-lg bg-muted/50">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Airdrop Multiplier</p>
+                    <p className="text-xl sm:text-3xl font-bold text-primary" data-testid="text-multiplier">
                       {userPointsData.airdropMultiplier}x
                     </p>
                   </div>
-                  <div className="text-center p-4 rounded-lg bg-muted/50">
-                    <p className="text-sm text-muted-foreground">Leaderboard Rank</p>
-                    <p className="text-3xl font-bold" data-testid="text-rank">
+                  <div className="text-center p-2 sm:p-4 rounded-lg bg-muted/50">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Leaderboard Rank</p>
+                    <p className="text-xl sm:text-3xl font-bold" data-testid="text-rank">
                       #{userPointsData.rank || "—"}
                     </p>
                   </div>
@@ -302,9 +302,9 @@ export default function PointsDashboard() {
             ) : userPointsData?.referralCode ? (
               <div className="space-y-4">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Your Referral Code</p>
-                  <div className="flex items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-muted rounded-md font-mono text-lg" data-testid="text-referral-code">
+                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">Your Referral Code</p>
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <code className="flex-1 px-3 py-2 bg-muted rounded-md font-mono text-sm sm:text-base" data-testid="text-referral-code">
                       {userPointsData.referralCode}
                     </code>
                     <Button 
@@ -320,14 +320,14 @@ export default function PointsDashboard() {
                 
                 <Separator />
                 
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Referrals</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Referrals</p>
                     <p className="text-2xl font-bold" data-testid="text-referral-count">
                       {userPointsData.referralCount}
                     </p>
                   </div>
-                  <Button onClick={shareReferral} className="gap-2" data-testid="button-share-referral">
+                  <Button onClick={shareReferral} className="gap-2 w-full sm:w-auto" data-testid="button-share-referral">
                     <Share2 className="h-4 w-4" />
                     Share
                   </Button>
@@ -437,17 +437,17 @@ export default function PointsDashboard() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
               {pointsBreakdown.map((item) => {
                 const Icon = item.icon;
                 const percentage = userPointsData ? Math.round((item.value / userPointsData.totalPoints) * 100) : 0;
                 return (
-                  <div key={item.label} className="p-4 rounded-lg bg-muted/50" data-testid={`breakdown-${item.label.toLowerCase()}`}>
-                    <div className="flex items-center gap-2 mb-2">
+                  <div key={item.label} className="p-2 sm:p-4 rounded-lg bg-muted/50" data-testid={`breakdown-${item.label.toLowerCase()}`}>
+                    <div className="flex items-center gap-2 mb-1 sm:mb-2">
                       <Icon className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground">{item.label}</span>
+                      <span className="text-xs sm:text-sm text-muted-foreground">{item.label}</span>
                     </div>
-                    <p className="text-xl font-bold">{(item.value ?? 0).toLocaleString()}</p>
+                    <p className="text-lg sm:text-xl font-bold">{(item.value ?? 0).toLocaleString()}</p>
                     <p className="text-xs text-muted-foreground">{percentage}% of total</p>
                   </div>
                 );
