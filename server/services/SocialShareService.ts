@@ -220,17 +220,14 @@ export class SocialShareService {
   }
 
   generateShareUrl(referralCode: string): string {
-    const appUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : 'https://shyield.finance';
-    
+    // Always use production URL for shared links
+    const appUrl = 'https://shyield.finance';
     return `${appUrl}/app/airdrop?ref=${referralCode}`;
   }
 
   generateIntentUrl(content: ShareContent): string {
-    const appUrl = process.env.REPLIT_DEV_DOMAIN 
-      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-      : 'https://shyield.finance';
+    // Always use production URL for shared links (better for SEO and consistency)
+    const appUrl = 'https://shyield.finance';
 
     let tweetText: string;
     
