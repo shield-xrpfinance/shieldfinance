@@ -15,6 +15,7 @@ interface BoostImpactBannerProps {
 }
 
 const MAX_BOOST_PERCENTAGE = 25;
+const EXAMPLE_BASE_APY = 6.2; // Protocol average APY for example calculations
 
 export function BoostImpactBanner({
   walletAddress,
@@ -27,9 +28,17 @@ export function BoostImpactBanner({
 
   const summary = data?.summary;
   const boostPercentage = summary?.boostPercentage ?? 0;
-  const baseApy = summary?.baseApy ?? 0;
-  const effectiveApy = summary?.effectiveApy ?? 0;
+  const rawBaseApy = summary?.baseApy ?? 0;
+  const rawEffectiveApy = summary?.effectiveApy ?? 0;
   const isBoosted = boostPercentage > 0;
+  
+  // If user has boost but no vault positions, show example APY calculation
+  const hasNoVaultPositions = rawBaseApy === 0 && boostPercentage > 0;
+  const baseApy = hasNoVaultPositions ? EXAMPLE_BASE_APY : rawBaseApy;
+  const effectiveApy = hasNoVaultPositions 
+    ? EXAMPLE_BASE_APY * (1 + boostPercentage / 100) 
+    : rawEffectiveApy;
+  
   const { delta } = calculateBoostDelta(baseApy, effectiveApy);
   const boostProgress = Math.min((boostPercentage / MAX_BOOST_PERCENTAGE) * 100, 100);
 
@@ -156,7 +165,7 @@ export function BoostImpactBanner({
               <div className="flex items-center gap-3">
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
-                    Base APY
+                    {hasNoVaultPositions ? "Example Base APY" : "Base APY"}
                   </p>
                   <p
                     className="text-xl font-semibold font-mono tabular-nums"
@@ -168,7 +177,7 @@ export function BoostImpactBanner({
                 <ArrowRight className="h-5 w-5 text-muted-foreground shrink-0" />
                 <div>
                   <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">
-                    Boosted APY
+                    {hasNoVaultPositions ? "Example Boosted" : "Boosted APY"}
                   </p>
                   <div className="flex items-center gap-2">
                     <p
