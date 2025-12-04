@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useWallet } from "@/lib/walletContext";
@@ -36,6 +36,12 @@ import {
   Share2,
   type LucideIcon,
 } from "lucide-react";
+
+const isMobileDevice = (): boolean => {
+  if (typeof window === 'undefined') return false;
+  const userAgent = navigator.userAgent || navigator.vendor || (window as { opera?: string }).opera || '';
+  return /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(userAgent.toLowerCase());
+};
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ethers } from "ethers";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
