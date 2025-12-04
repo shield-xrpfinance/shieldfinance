@@ -121,12 +121,12 @@ function OpportunityCallout({ idleFxrp, idleFxrpUsd, vaultApy, fxrpPrice }: Oppo
           <Coins className="h-3 w-3 inline mr-1" />
           Potential: <span className="text-chart-2 font-medium">~${potentialAnnualYieldUsd.toFixed(2)}/year</span>
         </div>
-        <Link href="/app">
-          <Button size="sm" className="gap-1" data-testid="button-deposit-opportunity">
+        <Button size="sm" className="gap-1" asChild data-testid="button-deposit-opportunity">
+          <Link href="/app">
             Deposit Now
             <ArrowRight className="h-3 w-3" />
-          </Button>
-        </Link>
+          </Link>
+        </Button>
       </div>
     </div>
   );
