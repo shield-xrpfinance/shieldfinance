@@ -25,7 +25,7 @@ export const TOOLTIP_CONTENT = {
     tvl: "Total Value Locked (TVL) shows the total assets in this vault, read live from the blockchain. This includes both the vault buffer and assets deployed to yield strategies.",
     liquidity: "Buffer liquidity is the amount held in the vault contract for instant withdrawals. Assets above this are deployed to yield strategies. Updated live from on-chain data.",
     riskLevel: "Risk level is determined by vault strategy, asset volatility, smart contract audits, and historical performance.",
-    depositors: "Total unique depositors who have made confirmed deposits to this vault. Tracked across all time from transaction history.",
+    depositors: "Unique wallet addresses that have deposited to this vault, tracked from confirmed deposit transactions.",
     strategy: "The vault strategy determines how deposited assets are used to generate yield - through lending, liquidity provision, or staking.",
   },
   portfolio: {

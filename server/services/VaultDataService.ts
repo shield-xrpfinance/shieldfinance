@@ -57,33 +57,33 @@ export class VaultDataService {
   }
 
   private getVaultAddress(): string {
-    let vaultAddress: string | undefined;
-    
-    try {
-      const deploymentsDir = path.join(process.cwd(), "deployments");
-      const files = fs.readdirSync(deploymentsDir)
-        .filter(f => 
-          f.startsWith("coston2-") && 
-          f.endsWith(".json") && 
-          f !== "coston2-latest.json" &&
-          f !== "coston2-deployment.json" &&
-          /coston2-\d+\.json/.test(f)
-        )
-        .sort()
-        .reverse();
-      
-      if (files.length > 0) {
-        const latestDeployment = JSON.parse(
-          fs.readFileSync(path.join(deploymentsDir, files[0]), "utf-8")
-        );
-        vaultAddress = latestDeployment.contracts?.ShXRPVault?.address;
-      }
-    } catch (error) {
-      vaultAddress = process.env.VITE_SHXRP_VAULT_ADDRESS;
-    }
+    // Prioritize environment variable for consistency with other services
+    let vaultAddress: string | undefined = process.env.VITE_SHXRP_VAULT_ADDRESS;
     
     if (!vaultAddress || vaultAddress === "0x...") {
-      vaultAddress = process.env.VITE_SHXRP_VAULT_ADDRESS;
+      // Fallback to deployment files
+      try {
+        const deploymentsDir = path.join(process.cwd(), "deployments");
+        const files = fs.readdirSync(deploymentsDir)
+          .filter(f => 
+            f.startsWith("coston2-") && 
+            f.endsWith(".json") && 
+            f !== "coston2-latest.json" &&
+            f !== "coston2-deployment.json" &&
+            /coston2-\d+\.json/.test(f)
+          )
+          .sort()
+          .reverse();
+        
+        if (files.length > 0) {
+          const latestDeployment = JSON.parse(
+            fs.readFileSync(path.join(deploymentsDir, files[0]), "utf-8")
+          );
+          vaultAddress = latestDeployment.contracts?.ShXRPVault?.address;
+        }
+      } catch (error) {
+        // Ignore deployment file errors
+      }
     }
     
     if (!vaultAddress || vaultAddress === "0x...") {
@@ -117,6 +117,49 @@ export class VaultDataService {
     }
   }
 
+  private depositorsCache: CacheEntry<number> | null = null;
+  private readonly DEPOSITORS_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minute cache for depositors
+
+  /**
+   * Get unique depositor count - uses database records as primary source
+   * Falls back to on-chain totalSupply check if database has no records
+   */
+  async getUniqueDepositorsCount(): Promise<number> {
+    // Return cached data if still fresh
+    if (this.depositorsCache && 
+        Date.now() - this.depositorsCache.timestamp < this.DEPOSITORS_CACHE_TTL_MS) {
+      return this.depositorsCache.data;
+    }
+
+    try {
+      // Primary source: database records of confirmed deposits
+      const dbCount = await this.config.storage.getUniqueDepositorsCount();
+      
+      if (dbCount > 0) {
+        this.depositorsCache = { data: dbCount, timestamp: Date.now() };
+        console.log(`[VaultDataService] Found ${dbCount} unique depositors from database`);
+        return dbCount;
+      }
+      
+      // Fallback: if database has no records, check on-chain vault state
+      // This handles legacy deposits made before database tracking
+      const metrics = await this.getOnChainMetrics();
+      if (metrics && parseFloat(metrics.totalSupply) > 0) {
+        // Vault has shares minted, so there must be at least 1 depositor
+        const fallbackCount = 1;
+        this.depositorsCache = { data: fallbackCount, timestamp: Date.now() };
+        console.log(`[VaultDataService] Vault has ${metrics.totalSupply} shares, inferring ${fallbackCount} depositor(s)`);
+        return fallbackCount;
+      }
+      
+      this.depositorsCache = { data: 0, timestamp: Date.now() };
+      return 0;
+    } catch (error) {
+      console.warn("Failed to get depositors count:", error);
+      return this.depositorsCache?.data || 0;
+    }
+  }
+
   async getEnrichedVaults(forceRefresh: boolean = false): Promise<EnrichedVault[]> {
     if (!forceRefresh && this.enrichedVaultsCache && 
         Date.now() - this.enrichedVaultsCache.timestamp < this.VAULTS_CACHE_TTL_MS) {
@@ -140,10 +183,11 @@ export class VaultDataService {
         const { ethers } = await import("ethers");
         
         // Fetch vault state in parallel
-        const [depositLimitRaw, pausedVal, fxrpBalance] = await Promise.all([
+        const [depositLimitRaw, pausedVal, fxrpBalance, onChainDepositors] = await Promise.all([
           vaultContract.depositLimit().catch(() => null),
           vaultContract.paused().catch(() => null),
-          this.getVaultBufferBalance(vaultAddress).catch(() => null)
+          this.getVaultBufferBalance(vaultAddress).catch(() => null),
+          this.getUniqueDepositorsCount().catch(() => 0)
         ]);
         
         if (depositLimitRaw !== null) {
@@ -151,9 +195,7 @@ export class VaultDataService {
         }
         paused = pausedVal;
         bufferLiquidity = fxrpBalance;
-        
-        // Get unique depositors count from database
-        depositorCount = await this.config.storage.getUniqueDepositorsCount();
+        depositorCount = onChainDepositors;
       } catch (error) {
         console.warn("Could not fetch on-chain vault data:", error);
         vaultAddress = "";
