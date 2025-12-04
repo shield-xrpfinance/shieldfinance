@@ -49,7 +49,7 @@ interface UserPointsWithRank extends UserPoints {
   nextTierProgress?: {
     currentTier: UserTier;
     nextTier: UserTier | null;
-    pointsToNext: number;
+    pointsNeeded: number;
     progressPercent: number;
   };
 }
@@ -228,7 +228,7 @@ export default function Leaderboard() {
                     <div className="text-center">
                       <p className="text-sm text-muted-foreground">Points</p>
                       <p className="text-3xl font-bold" data-testid="text-user-points">
-                        {userPointsData.totalPoints.toLocaleString()}
+                        {(userPointsData.totalPoints ?? 0).toLocaleString()}
                       </p>
                     </div>
                     <div className="w-px h-12 bg-border" />
@@ -254,7 +254,7 @@ export default function Leaderboard() {
                         Progress to {userPointsData.nextTierProgress.nextTier.charAt(0).toUpperCase() + userPointsData.nextTierProgress.nextTier.slice(1)}
                       </span>
                       <span className="font-medium">
-                        {userPointsData.nextTierProgress.pointsToNext.toLocaleString()} points to go
+                        {(userPointsData.nextTierProgress.pointsNeeded ?? 0).toLocaleString()} points to go
                       </span>
                     </div>
                     <Progress 
@@ -319,7 +319,7 @@ export default function Leaderboard() {
                         )}
                       </TableCell>
                       <TableCell className="text-right font-bold" data-testid={`text-points-${index}`}>
-                        {entry.totalPoints.toLocaleString()}
+                        {(entry.totalPoints ?? 0).toLocaleString()}
                       </TableCell>
                       <TableCell className="text-center">
                         {getTierBadge(entry.tier)}
