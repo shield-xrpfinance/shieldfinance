@@ -162,6 +162,9 @@ export default function Airdrop() {
   const [claimTxHash, setClaimTxHash] = useState<string | null>(null);
   const [isClaiming, setIsClaiming] = useState(false);
   const [hasClaimed, setHasClaimed] = useState(false);
+  const [pendingShareId, setPendingShareId] = useState<number | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [sharePosted, setSharePosted] = useState(false);
 
   const walletAddress = address || evmAddress;
 
@@ -326,14 +329,15 @@ export default function Airdrop() {
 
       if (data.success && data.intentUrl) {
         window.open(data.intentUrl, '_blank', 'width=600,height=400');
-        if (data.pointsAwarded) {
+        
+        // Store the pending share ID for verification later
+        if (data.pendingShareId) {
+          setPendingShareId(data.pendingShareId);
+          setSharePosted(true);
           toast({
-            title: "Points Earned!",
-            description: "You earned 10 social points for sharing!",
+            title: "Share Posted!",
+            description: "After posting on X, click 'Verify Post' to earn 10 points!",
           });
-          // Refresh points display
-          queryClient.invalidateQueries({ queryKey: ['/api/points', walletAddress] });
-          queryClient.invalidateQueries({ queryKey: ['/api/leaderboard'] });
         } else {
           toast({
             title: "Share on X",
@@ -350,6 +354,89 @@ export default function Airdrop() {
         description: "Failed to open share dialog. Please try again.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleVerifyShare = async () => {
+    if (!walletAddress || !pendingShareId) {
+      toast({
+        title: "Error",
+        description: "No pending share to verify.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsVerifying(true);
+
+    try {
+      // First check if user is connected to X
+      const statusResponse = await fetch(`/api/twitter/status/${walletAddress}`);
+      const statusData = await statusResponse.json();
+      
+      if (!statusData.connected) {
+        // Need to connect to X first
+        toast({
+          title: "Connect to X",
+          description: "Please connect your X account first to verify your post.",
+        });
+        
+        // Open auth flow
+        const authResponse = await fetch(`/api/twitter/auth/${walletAddress}`);
+        const authData = await authResponse.json();
+        
+        if (authData.authUrl) {
+          window.open(authData.authUrl, '_blank', 'width=600,height=700');
+          toast({
+            title: "Authorize on X",
+            description: "Complete the authorization on X, then try verifying again.",
+          });
+        }
+        setIsVerifying(false);
+        return;
+      }
+
+      // User is connected, verify the tweet
+      const verifyResponse = await fetch('/api/twitter/verify-share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress,
+          pendingShareId,
+        }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (verifyData.success) {
+        toast({
+          title: "Verified!",
+          description: `Tweet verified! You earned ${verifyData.pointsAwarded} social points.`,
+        });
+        
+        // Clear pending share state
+        setPendingShareId(null);
+        setSharePosted(false);
+        
+        // Refresh points display
+        queryClient.invalidateQueries({ queryKey: ['/api/points', walletAddress] });
+        queryClient.invalidateQueries({ queryKey: ['/api/leaderboard'] });
+      } else {
+        toast({
+          title: "Verification Failed",
+          description: verifyData.error || "Could not verify your tweet. Please ensure you posted it.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Verification error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to verify tweet. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -802,15 +889,48 @@ export default function Airdrop() {
                       </p>
                     </div>
 
-                    <Button 
-                      className="w-full bg-sky-500 hover:bg-sky-600 text-white"
-                      onClick={() => handleShareOnX('referral')}
-                      data-testid="button-share-on-x"
-                    >
-                      <Share2 className="h-4 w-4 mr-2" />
-                      Share on X
-                      <ExternalLink className="h-4 w-4 ml-2" />
-                    </Button>
+                    <div className="flex flex-col gap-2">
+                      <Button 
+                        className="w-full bg-sky-500 hover:bg-sky-600 text-white"
+                        onClick={() => handleShareOnX('referral')}
+                        data-testid="button-share-on-x"
+                      >
+                        <Share2 className="h-4 w-4 mr-2" />
+                        Share on X
+                        <ExternalLink className="h-4 w-4 ml-2" />
+                      </Button>
+
+                      {sharePosted && pendingShareId && (
+                        <Button 
+                          className="w-full"
+                          variant="outline"
+                          onClick={handleVerifyShare}
+                          disabled={isVerifying}
+                          data-testid="button-verify-share"
+                        >
+                          {isVerifying ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                              Verifying...
+                            </>
+                          ) : (
+                            <>
+                              <CheckCircle2 className="h-4 w-4 mr-2" />
+                              Verify Post to Earn 10 Points
+                            </>
+                          )}
+                        </Button>
+                      )}
+                    </div>
+
+                    {sharePosted && pendingShareId && (
+                      <Alert className="border-sky-500/50 bg-sky-500/10">
+                        <Info className="h-4 w-4 text-sky-500" />
+                        <AlertDescription className="text-xs">
+                          Posted on X? Connect your X account and click "Verify Post" to earn your social share points.
+                        </AlertDescription>
+                      </Alert>
+                    )}
 
                     <p className="text-xs text-center text-muted-foreground">
                       {userPointsData.referralCount || 0} friends joined using your code
