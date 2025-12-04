@@ -16,7 +16,8 @@ import {
   Loader2, 
   XCircle, 
   ExternalLink,
-  AlertCircle 
+  AlertCircle,
+  PartyPopper
 } from "lucide-react";
 import { useNetwork } from "@/lib/networkContext";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -217,19 +218,44 @@ export default function WithdrawalProgressModal({
     }
   };
 
+  const isComplete = steps.every(s => s.status === "completed");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {ecosystem === "flare" ? "Direct Withdrawal" : "Bridged Withdrawal"} in Progress
+            {isComplete 
+              ? "Withdrawal Complete!" 
+              : `${ecosystem === "flare" ? "Direct Withdrawal" : "Bridged Withdrawal"} in Progress`}
           </DialogTitle>
           <DialogDescription>
-            Withdrawing {amount} {asset} from {vaultName}
+            {isComplete 
+              ? `Successfully withdrew ${amount} ${asset} from ${vaultName}`
+              : `Withdrawing ${amount} ${asset} from ${vaultName}`}
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-6 py-4">
+          {/* Success Banner when complete */}
+          {isComplete && (
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+              <div className="flex-shrink-0 p-2 rounded-full bg-green-500/20">
+                <PartyPopper className="h-6 w-6 text-green-500" />
+              </div>
+              <div>
+                <p className="font-medium text-green-600 dark:text-green-400">
+                  Funds received!
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {ecosystem === "flare" 
+                    ? "FXRP has been sent to your Flare wallet" 
+                    : "XRP has been sent to your XRPL wallet"}
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Overall Progress */}
           <div className="space-y-2">
             <div className="flex items-center justify-between text-sm">
@@ -308,13 +334,14 @@ export default function WithdrawalProgressModal({
         </div>
 
         {/* Close button only shown when complete or failed */}
-        {(steps.every(s => s.status === "completed") || error) && (
+        {(isComplete || error) && (
           <div className="flex justify-end">
             <Button
               onClick={() => onOpenChange(false)}
               variant={error ? "destructive" : "default"}
+              data-testid="button-withdrawal-close"
             >
-              {error ? "Close" : "Done"}
+              {error ? "Close" : "Close"}
             </Button>
           </div>
         )}
