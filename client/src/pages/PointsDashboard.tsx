@@ -34,6 +34,7 @@ import {
   TrendingUp,
   Zap,
   ArrowUpRight,
+  Droplets,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import EmptyState from "@/components/EmptyState";
@@ -104,6 +105,7 @@ function getActivityIcon(activityType: string) {
     daily_login: TrendingUp,
     swap: ArrowRight,
     boost_activated: Zap,
+    faucet_claim: Droplets,
   };
   return iconMap[activityType] || Coins;
 }
