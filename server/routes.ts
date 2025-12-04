@@ -7358,6 +7358,152 @@ export async function registerRoutes(
     }
   });
 
+  // =============================================================================
+  // X (TWITTER) SOCIAL SHARING INTEGRATION
+  // =============================================================================
+
+  const { socialShareService } = await import("./services/SocialShareService");
+
+  // Get X connection status and generate share URL
+  app.get("/api/twitter/status/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      const isConnected = socialShareService.isConnected(walletAddress);
+      
+      res.json({
+        connected: isConnected,
+        canPost: isConnected,
+      });
+    } catch (error) {
+      console.error("[Twitter API] Failed to get status:", error);
+      res.status(500).json({ error: "Failed to get Twitter status" });
+    }
+  });
+
+  // Start OAuth flow
+  app.get("/api/twitter/auth/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      const shareType = (req.query.type as string) || 'referral';
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      const { url, state } = socialShareService.generateAuthUrl(walletAddress, shareType);
+      
+      res.json({ authUrl: url, state });
+    } catch (error) {
+      console.error("[Twitter API] Failed to generate auth URL:", error);
+      res.status(500).json({ error: "Failed to start Twitter authorization" });
+    }
+  });
+
+  // OAuth callback
+  app.get("/api/twitter/callback", async (req, res) => {
+    try {
+      const { code, state } = req.query;
+      
+      if (!code || !state) {
+        return res.redirect("/app/airdrop?twitter_error=missing_params");
+      }
+
+      const result = await socialShareService.handleCallback(code as string, state as string);
+      
+      if (!result.success) {
+        return res.redirect(`/app/airdrop?twitter_error=${encodeURIComponent(result.error || 'unknown')}`);
+      }
+
+      // Redirect back to airdrop page with success and trigger post
+      res.redirect(`/app/airdrop?twitter_connected=true&share_type=${result.shareType || 'referral'}`);
+    } catch (error) {
+      console.error("[Twitter API] Callback error:", error);
+      res.redirect("/app/airdrop?twitter_error=callback_failed");
+    }
+  });
+
+  // Post a tweet (referral or airdrop claim)
+  app.post("/api/twitter/post", async (req, res) => {
+    try {
+      const { walletAddress, referralCode, totalPoints, tier, type } = req.body;
+      
+      if (!walletAddress || !referralCode) {
+        return res.status(400).json({ error: "Wallet address and referral code required" });
+      }
+
+      const result = await socialShareService.postReferralTweet({
+        walletAddress,
+        referralCode,
+        totalPoints: totalPoints || 0,
+        tier: tier || 'bronze',
+        type: type || 'referral',
+      });
+
+      if (!result.success) {
+        return res.status(400).json({ error: result.error });
+      }
+
+      res.json({
+        success: true,
+        tweetId: result.tweetId,
+        message: "Tweet posted successfully! You earned 10 social points.",
+      });
+    } catch (error) {
+      console.error("[Twitter API] Failed to post tweet:", error);
+      res.status(500).json({ error: "Failed to post tweet" });
+    }
+  });
+
+  // Generate share intent URL (no auth needed)
+  app.post("/api/twitter/intent", async (req, res) => {
+    try {
+      const { walletAddress, referralCode, totalPoints, tier, type } = req.body;
+      
+      if (!referralCode) {
+        return res.status(400).json({ error: "Referral code required" });
+      }
+
+      const intentUrl = socialShareService.generateIntentUrl({
+        walletAddress: walletAddress || '',
+        referralCode,
+        totalPoints: totalPoints || 0,
+        tier: tier || 'bronze',
+        type: type || 'referral',
+      });
+
+      res.json({
+        success: true,
+        intentUrl,
+      });
+    } catch (error) {
+      console.error("[Twitter API] Failed to generate intent URL:", error);
+      res.status(500).json({ error: "Failed to generate share URL" });
+    }
+  });
+
+  // Disconnect X account
+  app.post("/api/twitter/disconnect", async (req, res) => {
+    try {
+      const { walletAddress } = req.body;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      socialShareService.disconnect(walletAddress);
+      
+      res.json({ success: true, message: "X account disconnected" });
+    } catch (error) {
+      console.error("[Twitter API] Failed to disconnect:", error);
+      res.status(500).json({ error: "Failed to disconnect X account" });
+    }
+  });
+
   // Get user's airdrop proof (for claiming)
   app.get("/api/airdrop/proof/:walletAddress", async (req, res) => {
     try {

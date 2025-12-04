@@ -298,6 +298,50 @@ export default function Airdrop() {
       : `https://flarescan.com/tx/${txHash}`;
   };
 
+  const handleShareOnX = async (type: 'referral' | 'airdrop_claim') => {
+    if (!userPointsData || !userPointsData.referralCode) {
+      toast({
+        title: "Error",
+        description: "Unable to share. Please try again.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/twitter/intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress: walletAddress,
+          referralCode: userPointsData.referralCode,
+          totalPoints: userPointsData.totalPoints,
+          tier: userPointsData.tier,
+          type,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.intentUrl) {
+        window.open(data.intentUrl, '_blank', 'width=600,height=400');
+        toast({
+          title: "Share on X",
+          description: "Complete the post on X to earn 10 points!",
+        });
+      } else {
+        throw new Error(data.error || 'Failed to generate share URL');
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to open share dialog. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   const projectedAllocation = userPointsData && leaderboardData?.stats
     ? calculateProjectedAllocation(
         userPointsData.totalPoints,
@@ -695,6 +739,65 @@ export default function Airdrop() {
                   </Button>
                 </CardContent>
               </Card>
+
+              {userPointsData && userPointsData.referralCode && (
+                <Card className="border-sky-500/30 bg-sky-500/5" data-testid="card-share-on-x">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Share2 className="h-5 w-5 text-sky-500" />
+                      Share & Earn
+                    </CardTitle>
+                    <CardDescription>
+                      Share on X to earn 10 points and invite friends
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="p-3 rounded-lg bg-muted/50 border">
+                      <p className="text-xs text-muted-foreground mb-1">Your Referral Code</p>
+                      <div className="flex items-center justify-between">
+                        <p className="font-mono font-bold text-lg" data-testid="text-referral-code">
+                          {userPointsData.referralCode}
+                        </p>
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => {
+                            navigator.clipboard.writeText(userPointsData.referralCode);
+                            toast({
+                              title: "Copied!",
+                              description: "Referral code copied to clipboard",
+                            });
+                          }}
+                          data-testid="button-copy-referral"
+                        >
+                          Copy
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div className="text-center space-y-2">
+                      <p className="text-sm text-muted-foreground">
+                        <Users className="h-4 w-4 inline mr-1" />
+                        Invite friends and earn <span className="font-bold text-primary">50 points</span> per referral!
+                      </p>
+                    </div>
+
+                    <Button 
+                      className="w-full bg-sky-500 hover:bg-sky-600 text-white"
+                      onClick={() => handleShareOnX('referral')}
+                      data-testid="button-share-on-x"
+                    >
+                      <Share2 className="h-4 w-4 mr-2" />
+                      Share on X
+                      <ExternalLink className="h-4 w-4 ml-2" />
+                    </Button>
+
+                    <p className="text-xs text-center text-muted-foreground">
+                      {userPointsData.referralCount || 0} friends joined using your code
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
             </div>
           </div>
         )}
