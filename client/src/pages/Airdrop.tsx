@@ -307,6 +307,40 @@ export default function Airdrop() {
       )
     : 0;
 
+  if (!isTestnet) {
+    return (
+      <div className="space-y-6">
+        <Card className="p-8">
+          <div className="text-center space-y-6">
+            <div className="flex justify-center">
+              <div className="rounded-full bg-blue-500/20 p-6">
+                <AlertCircle className="h-12 w-12 text-blue-500" />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-3xl font-bold">Switch to Testnet</h2>
+              <p className="text-muted-foreground text-lg max-w-md mx-auto">
+                The airdrop program runs on Flare Testnet (Coston2). Toggle your network to testnet to earn points.
+              </p>
+            </div>
+            <Alert className="border-blue-500 bg-blue-500/10 text-left">
+              <Info className="h-4 w-4 text-blue-500" />
+              <AlertDescription>
+                <strong>How to switch:</strong> Open your wallet settings and select "Flare Testnet (Coston2)" or use your network selector. Once switched, you can earn points through deposits, staking, bridges, referrals, faucet claims, and bug reports.
+              </AlertDescription>
+            </Alert>
+            <div className="pt-4">
+              <Button size="lg" onClick={() => setConnectModalOpen(true)} data-testid="button-connect-testnet">
+                <Wallet className="h-5 w-5 mr-2" />
+                Connect & Switch to Testnet
+              </Button>
+            </div>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
   if (isTestnet) {
     return (
       <div className="space-y-6">
