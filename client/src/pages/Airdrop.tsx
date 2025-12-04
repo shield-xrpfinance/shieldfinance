@@ -29,6 +29,11 @@ import {
   Users,
   TrendingUp,
   Clock,
+  Lock,
+  ArrowLeftRight,
+  Bug,
+  Share2,
+  type LucideIcon,
 } from "lucide-react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { ethers } from "ethers";
@@ -58,6 +63,13 @@ interface AirdropRoot {
 interface UserPointsData {
   walletAddress: string;
   totalPoints: number;
+  depositPoints: number;
+  stakingPoints: number;
+  bridgePoints: number;
+  referralPoints: number;
+  bugReportPoints: number;
+  socialPoints: number;
+  otherPoints: number;
   tier: 'none' | 'bronze' | 'silver' | 'gold' | 'diamond';
   tierMultiplier: string;
   airdropMultiplier: number;
@@ -476,6 +488,46 @@ export default function Airdrop() {
                             {((projectedAllocation / TOTAL_AIRDROP_POOL) * 100).toFixed(3)}%
                           </p>
                         </div>
+                      </div>
+                    </div>
+
+                    <Separator />
+
+                    <div className="space-y-3">
+                      <p className="text-sm font-medium text-muted-foreground">Points Breakdown</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3" data-testid="section-points-breakdown">
+                        {([
+                          { label: "Deposits", value: userPointsData.depositPoints, Icon: Coins },
+                          { label: "Staking", value: userPointsData.stakingPoints, Icon: Lock },
+                          { label: "Bridges", value: userPointsData.bridgePoints, Icon: ArrowLeftRight },
+                          { label: "Referrals", value: userPointsData.referralPoints, Icon: Users },
+                          { label: "Bug Reports", value: userPointsData.bugReportPoints, Icon: Bug },
+                          { label: "Social", value: userPointsData.socialPoints, Icon: Share2 },
+                          { label: "Faucet & Other", value: userPointsData.otherPoints, Icon: Gift },
+                        ] as { label: string; value: number; Icon: LucideIcon }[]).filter(item => item.value > 0).map((item) => (
+                          <div 
+                            key={item.label} 
+                            className="p-3 rounded-lg bg-muted/30 border"
+                            data-testid={`breakdown-${item.label.toLowerCase().replace(/\s+/g, '-')}`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <item.Icon className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">{item.label}</span>
+                            </div>
+                            <p className="text-lg font-semibold mt-1">{item.value.toLocaleString()}</p>
+                          </div>
+                        ))}
+                        {userPointsData.depositPoints === 0 && 
+                         userPointsData.stakingPoints === 0 && 
+                         userPointsData.bridgePoints === 0 && 
+                         userPointsData.referralPoints === 0 && 
+                         userPointsData.bugReportPoints === 0 && 
+                         userPointsData.socialPoints === 0 && 
+                         userPointsData.otherPoints === 0 && (
+                          <div className="col-span-full text-center py-4 text-muted-foreground">
+                            <p className="text-sm">No activity yet. Start earning points!</p>
+                          </div>
+                        )}
                       </div>
                     </div>
                   </div>
