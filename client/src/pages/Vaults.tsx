@@ -157,9 +157,6 @@ export default function Vaults() {
     }
     
     const vaultDepositAssets = vaultAsset.split(",").map(a => a.trim());
-    if (vaultAsset === "FXRP") {
-      console.log(`✅ FXRP Vault detected: ${vault.name} → asset: ${vaultAsset}`);
-    }
     
     return {
       id: vault.id,
