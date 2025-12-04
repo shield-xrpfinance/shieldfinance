@@ -1,8 +1,8 @@
 import { TwitterApi } from 'twitter-api-v2';
 import crypto from 'crypto';
 import { db } from '../db';
-import { userPoints } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { userPoints, pendingSocialShares, type PendingSocialShare, type PendingSocialShareStatus } from '@shared/schema';
+import { eq, and, lt, sql } from 'drizzle-orm';
 
 interface TwitterTokens {
   accessToken: string;
@@ -16,6 +16,21 @@ interface ShareContent {
   totalPoints: number;
   tier: string;
   type: 'referral' | 'airdrop_claim';
+}
+
+interface PendingShareResult {
+  id: number;
+  expiresAt: Date;
+  expectedContent: string;
+}
+
+interface VerificationResult {
+  success: boolean;
+  tweetId?: string;
+  twitterUsername?: string;
+  pointsAwarded?: number;
+  error?: string;
+  status?: PendingSocialShareStatus;
 }
 
 const TWITTER_CLIENT_ID = process.env.TWITTER_CLIENT_ID || '';
@@ -249,6 +264,283 @@ export class SocialShareService {
     }
 
     return `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweetText)}`;
+  }
+
+  // ============================================================================
+  // PENDING SHARE & VERIFICATION METHODS
+  // ============================================================================
+
+  /**
+   * Create a pending share record when user initiates intent-based sharing.
+   * Points will only be awarded after tweet verification.
+   */
+  async createPendingShare(content: ShareContent): Promise<PendingShareResult> {
+    const normalizedAddress = content.walletAddress.toLowerCase();
+    
+    // Expected content markers to search for in the tweet
+    const expectedContent = `${content.referralCode},@ShieldFinanceX,#ShieldFinance`;
+    
+    // Expires in 24 hours
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    
+    const [pendingShare] = await db.insert(pendingSocialShares).values({
+      walletAddress: normalizedAddress,
+      referralCode: content.referralCode,
+      shareType: content.type,
+      expectedContent,
+      expiresAt,
+    }).returning();
+    
+    console.log(`[SocialShareService] Created pending share ${pendingShare.id} for ${normalizedAddress}`);
+    
+    return {
+      id: pendingShare.id,
+      expiresAt,
+      expectedContent,
+    };
+  }
+
+  /**
+   * Get pending shares for a wallet address
+   */
+  async getPendingShares(walletAddress: string): Promise<PendingSocialShare[]> {
+    const normalizedAddress = walletAddress.toLowerCase();
+    
+    return db.select()
+      .from(pendingSocialShares)
+      .where(
+        and(
+          eq(pendingSocialShares.walletAddress, normalizedAddress),
+          eq(pendingSocialShares.status, 'pending')
+        )
+      );
+  }
+
+  /**
+   * Get a specific pending share by ID
+   */
+  async getPendingShareById(shareId: number): Promise<PendingSocialShare | null> {
+    const [share] = await db.select()
+      .from(pendingSocialShares)
+      .where(eq(pendingSocialShares.id, shareId))
+      .limit(1);
+    
+    return share || null;
+  }
+
+  /**
+   * Verify that a tweet was actually posted by searching user's recent tweets.
+   * Awards points only if tweet is found and matches expected content.
+   */
+  async verifyTweetPosted(
+    walletAddress: string, 
+    pendingShareId: number
+  ): Promise<VerificationResult> {
+    const normalizedAddress = walletAddress.toLowerCase();
+    const tokens = tokenStore.get(normalizedAddress);
+    
+    if (!tokens) {
+      return { 
+        success: false, 
+        error: 'Not connected to X. Please connect your account first.',
+        status: 'pending'
+      };
+    }
+
+    // Get the pending share
+    const pendingShare = await this.getPendingShareById(pendingShareId);
+    if (!pendingShare) {
+      return { success: false, error: 'Pending share not found' };
+    }
+    
+    if (pendingShare.walletAddress !== normalizedAddress) {
+      return { success: false, error: 'Wallet address mismatch' };
+    }
+    
+    if (pendingShare.status !== 'pending') {
+      return { 
+        success: pendingShare.status === 'verified',
+        status: pendingShare.status as PendingSocialShareStatus,
+        tweetId: pendingShare.tweetId || undefined,
+        pointsAwarded: pendingShare.pointsAwarded || 0,
+        error: pendingShare.status === 'expired' ? 'Share verification expired' : 
+               pendingShare.status === 'failed' ? 'Tweet verification failed' : undefined
+      };
+    }
+    
+    // Check if expired
+    if (new Date() > pendingShare.expiresAt) {
+      await db.update(pendingSocialShares)
+        .set({ 
+          status: 'expired',
+          lastVerificationAttempt: new Date(),
+        })
+        .where(eq(pendingSocialShares.id, pendingShareId));
+      
+      return { success: false, status: 'expired', error: 'Verification window expired (24 hours)' };
+    }
+
+    // Refresh token if needed
+    const isValid = await this.refreshTokenIfNeeded(walletAddress);
+    if (!isValid) {
+      return { 
+        success: false, 
+        error: 'X session expired. Please reconnect.',
+        status: 'pending'
+      };
+    }
+
+    const updatedTokens = tokenStore.get(normalizedAddress)!;
+    
+    // Update verification attempt count
+    await db.update(pendingSocialShares)
+      .set({
+        lastVerificationAttempt: new Date(),
+        verificationAttempts: sql`${pendingSocialShares.verificationAttempts} + 1`,
+      })
+      .where(eq(pendingSocialShares.id, pendingShareId));
+
+    try {
+      const client = new TwitterApi(updatedTokens.accessToken);
+      
+      // Get authenticated user info
+      const { data: me } = await client.v2.me();
+      
+      // Get user's recent tweets (last 10)
+      const { data: tweets } = await client.v2.userTimeline(me.id, {
+        max_results: 10,
+        'tweet.fields': ['created_at', 'text'],
+      });
+      
+      if (!tweets || tweets.length === 0) {
+        return { 
+          success: false, 
+          error: 'No recent tweets found. Please post your share on X first.',
+          status: 'pending'
+        };
+      }
+
+      // Search for matching tweet - look for referral code and @ShieldFinanceX mention
+      const expectedMarkers = pendingShare.expectedContent.split(',');
+      const referralCode = expectedMarkers[0]; // Primary identifier
+      
+      const matchingTweet = tweets.find(tweet => {
+        const text = tweet.text.toLowerCase();
+        const hasReferralCode = text.includes(referralCode.toLowerCase());
+        const hasMention = text.includes('@shieldfinancex');
+        return hasReferralCode && hasMention;
+      });
+
+      if (!matchingTweet) {
+        // Check if they have too many attempts
+        const currentShare = await this.getPendingShareById(pendingShareId);
+        if (currentShare && currentShare.verificationAttempts >= 5) {
+          await db.update(pendingSocialShares)
+            .set({ 
+              status: 'failed',
+              errorMessage: 'Max verification attempts reached',
+            })
+            .where(eq(pendingSocialShares.id, pendingShareId));
+          
+          return { 
+            success: false, 
+            status: 'failed',
+            error: 'Maximum verification attempts reached. Please create a new share.'
+          };
+        }
+        
+        return { 
+          success: false, 
+          error: `Tweet not found. Make sure your post includes your referral code (${referralCode}) and mentions @ShieldFinanceX.`,
+          status: 'pending'
+        };
+      }
+
+      // Tweet found! Award points and update status
+      await db.update(pendingSocialShares)
+        .set({
+          status: 'verified',
+          tweetId: matchingTweet.id,
+          twitterUsername: me.username,
+          verifiedAt: new Date(),
+          pointsAwarded: 10,
+        })
+        .where(eq(pendingSocialShares.id, pendingShareId));
+
+      // Award social points
+      await this.awardSocialPoints(walletAddress);
+      
+      console.log(`[SocialShareService] Tweet verified for ${normalizedAddress}: ${matchingTweet.id}`);
+      
+      return {
+        success: true,
+        tweetId: matchingTweet.id,
+        twitterUsername: me.username,
+        pointsAwarded: 10,
+        status: 'verified',
+      };
+      
+    } catch (error: any) {
+      console.error('[SocialShareService] Tweet verification error:', error);
+      
+      let errorMessage = 'Failed to verify tweet. Please try again.';
+      
+      if (error.code === 429) {
+        errorMessage = 'Rate limit reached. Please try again in a few minutes.';
+      } else if (error.code === 401 || error.code === 403) {
+        errorMessage = 'X authorization expired. Please reconnect your account.';
+        tokenStore.delete(normalizedAddress);
+      }
+      
+      await db.update(pendingSocialShares)
+        .set({ errorMessage })
+        .where(eq(pendingSocialShares.id, pendingShareId));
+      
+      return { success: false, error: errorMessage, status: 'pending' };
+    }
+  }
+
+  /**
+   * Expire old pending shares (run periodically)
+   */
+  async expireOldShares(): Promise<number> {
+    const result = await db.update(pendingSocialShares)
+      .set({ status: 'expired' })
+      .where(
+        and(
+          eq(pendingSocialShares.status, 'pending'),
+          lt(pendingSocialShares.expiresAt, new Date())
+        )
+      )
+      .returning();
+    
+    if (result.length > 0) {
+      console.log(`[SocialShareService] Expired ${result.length} pending shares`);
+    }
+    
+    return result.length;
+  }
+
+  /**
+   * Check if user has already shared recently (prevent spam)
+   * Returns true if user has shared in the last 24 hours
+   */
+  async hasRecentShare(walletAddress: string): Promise<boolean> {
+    const normalizedAddress = walletAddress.toLowerCase();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+    
+    const [recent] = await db.select()
+      .from(pendingSocialShares)
+      .where(
+        and(
+          eq(pendingSocialShares.walletAddress, normalizedAddress),
+          eq(pendingSocialShares.status, 'verified'),
+          sql`${pendingSocialShares.verifiedAt} > ${oneDayAgo}`
+        )
+      )
+      .limit(1);
+    
+    return !!recent;
   }
 }
 
