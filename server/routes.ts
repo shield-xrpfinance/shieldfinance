@@ -18,7 +18,7 @@ import { getPositionService } from "./services/PositionService";
 import { WalletBalanceService } from "./services/WalletBalanceService";
 import { db } from "./db";
 import { fxrpToXrpRedemptions, onChainEvents, crossChainBridgeJobs, userPoints as userPointsTable } from "@shared/schema";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { ethers } from "ethers";
 import fs from "fs";
 import path from "path";
@@ -7636,6 +7636,194 @@ export async function registerRoutes(
     } catch (error) {
       console.error("[Admin] Points preload failed:", error);
       res.status(500).json({ error: "Failed to preload points" });
+    }
+  });
+
+  // Admin: Regenerate dashboard snapshots from transaction history
+  app.post("/api/admin/snapshots/regenerate", requireAdminAuth, async (req, res) => {
+    try {
+      console.log("[Admin] Starting dashboard snapshots regeneration from transaction history...");
+      
+      const { transactions, positions, dashboardSnapshots, vaults } = await import("@shared/schema");
+      const { inArray } = await import("drizzle-orm");
+      
+      // Get all transactions ordered by date
+      const allTransactions = await db.select()
+        .from(transactions)
+        .where(eq(transactions.status, "completed"))
+        .orderBy(asc(transactions.createdAt));
+      
+      if (allTransactions.length === 0) {
+        return res.json({ 
+          success: true, 
+          message: "No transactions found to process",
+          snapshotsCreated: 0 
+        });
+      }
+
+      // Get all vaults for base APY
+      const allVaults = await db.select().from(vaults);
+      const defaultBaseApy = allVaults.length > 0 ? parseFloat(allVaults[0].apy || "6.2") : 6.2;
+      
+      // Group transactions by wallet and date
+      const walletDateMap = new Map<string, Map<string, { deposits: number; withdrawals: number; date: Date }>>();
+      
+      for (const tx of allTransactions) {
+        const wallet = tx.walletAddress.toLowerCase();
+        const dateStr = new Date(tx.createdAt).toISOString().split('T')[0];
+        
+        if (!walletDateMap.has(wallet)) {
+          walletDateMap.set(wallet, new Map());
+        }
+        
+        const walletDates = walletDateMap.get(wallet)!;
+        if (!walletDates.has(dateStr)) {
+          walletDates.set(dateStr, { deposits: 0, withdrawals: 0, date: new Date(dateStr) });
+        }
+        
+        const dayData = walletDates.get(dateStr)!;
+        const amount = parseFloat(tx.amount);
+        
+        if (tx.type.includes('deposit')) {
+          dayData.deposits += amount;
+        } else if (tx.type.includes('withdrawal')) {
+          dayData.withdrawals += amount;
+        }
+      }
+      
+      // Clear existing snapshots
+      await db.delete(dashboardSnapshots);
+      console.log("[Admin] Cleared existing snapshots");
+      
+      let snapshotsCreated = 0;
+      const XRP_PRICE = 2.35; // Approximate price for USD conversion
+      
+      // Generate snapshots for each wallet
+      for (const [walletAddress, dateMap] of walletDateMap) {
+        // Skip test wallets
+        if (walletAddress === "0x9999999999999999999999999999999999999999" ||
+            walletAddress === "0x1234567890123456789012345678901234567890" ||
+            walletAddress.startsWith("0x000000")) {
+          continue;
+        }
+        
+        // Sort dates chronologically
+        const sortedDates = Array.from(dateMap.entries()).sort((a, b) => 
+          a[1].date.getTime() - b[1].date.getTime()
+        );
+        
+        let runningBalance = 0;
+        
+        for (const [dateStr, dayData] of sortedDates) {
+          runningBalance += dayData.deposits - dayData.withdrawals;
+          if (runningBalance < 0) runningBalance = 0;
+          
+          const stakedValueUsd = runningBalance * XRP_PRICE;
+          const totalValueUsd = stakedValueUsd;
+          
+          await storage.createDashboardSnapshot({
+            walletAddress,
+            snapshotDate: dayData.date,
+            totalValueUsd: totalValueUsd.toFixed(2),
+            stakedValueUsd: stakedValueUsd.toFixed(2),
+            shieldStakedValueUsd: "0",
+            rewardsValueUsd: "0",
+            assetBreakdown: { FXRP: stakedValueUsd },
+            effectiveApy: defaultBaseApy.toFixed(2),
+            baseApy: defaultBaseApy.toFixed(2),
+            boostPercentage: "0",
+          });
+          snapshotsCreated++;
+        }
+      }
+      
+      console.log(`[Admin] Dashboard snapshots regeneration complete: ${snapshotsCreated} snapshots created`);
+      
+      res.json({
+        success: true,
+        message: "Dashboard snapshots regenerated successfully",
+        snapshotsCreated,
+        walletsProcessed: walletDateMap.size,
+      });
+    } catch (error) {
+      console.error("[Admin] Snapshots regeneration failed:", error);
+      res.status(500).json({ error: "Failed to regenerate snapshots" });
+    }
+  });
+
+  // Get position history (including closed/withdrawn positions)
+  app.get("/api/positions/history/:walletAddress", async (req, res) => {
+    try {
+      const { walletAddress } = req.params;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+      
+      const normalizedAddress = walletAddress.toLowerCase();
+      
+      // Get all transactions for this wallet to build position history
+      const { transactions, vaults, positions } = await import("@shared/schema");
+      
+      // Get all positions (including closed)
+      const allPositions = await db.select({
+        position: positions,
+        vault: vaults,
+      })
+        .from(positions)
+        .leftJoin(vaults, eq(positions.vaultId, vaults.id))
+        .where(sql`lower(${positions.walletAddress}) = ${normalizedAddress}`);
+      
+      // Get all transactions for context
+      const allTransactions = await db.select()
+        .from(transactions)
+        .where(sql`lower(${transactions.walletAddress}) = ${normalizedAddress}`)
+        .orderBy(desc(transactions.createdAt));
+      
+      // Build position history with transaction details
+      const positionHistory = allPositions.map(({ position, vault }) => {
+        const positionTxs = allTransactions.filter(tx => tx.positionId === position.id);
+        const deposits = positionTxs.filter(tx => tx.type.includes('deposit'));
+        const withdrawals = positionTxs.filter(tx => tx.type.includes('withdrawal'));
+        
+        const totalDeposited = deposits.reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+        const totalWithdrawn = withdrawals.reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+        
+        return {
+          id: position.id,
+          vaultId: position.vaultId,
+          vaultName: vault?.name || "Unknown Vault",
+          vaultAsset: vault?.asset || "FXRP",
+          currentAmount: parseFloat(position.amount),
+          rewards: parseFloat(position.rewards),
+          status: position.status,
+          createdAt: position.createdAt,
+          totalDeposited,
+          totalWithdrawn,
+          netChange: totalDeposited - totalWithdrawn,
+          transactionCount: positionTxs.length,
+          lastActivity: positionTxs.length > 0 ? positionTxs[0].createdAt : position.createdAt,
+        };
+      });
+      
+      // Separate active and closed positions
+      const activePositions = positionHistory.filter(p => p.status === 'active' && p.currentAmount > 0);
+      const closedPositions = positionHistory.filter(p => p.status !== 'active' || p.currentAmount === 0);
+      
+      res.json({
+        walletAddress,
+        activePositions,
+        closedPositions,
+        totalPositions: positionHistory.length,
+        summary: {
+          totalActiveValue: activePositions.reduce((sum, p) => sum + p.currentAmount, 0),
+          totalHistoricalDeposits: positionHistory.reduce((sum, p) => sum + p.totalDeposited, 0),
+          totalHistoricalWithdrawals: positionHistory.reduce((sum, p) => sum + p.totalWithdrawn, 0),
+        }
+      });
+    } catch (error) {
+      console.error("Failed to get position history:", error);
+      res.status(500).json({ error: "Failed to get position history" });
     }
   });
 
