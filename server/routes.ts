@@ -7530,6 +7530,79 @@ export async function registerRoutes(
     }
   });
 
+  // Generate personalized share card image with rate limiting
+  const shareCardRateLimits = new Map<string, { count: number; resetTime: number }>();
+  const SHARE_CARD_RATE_LIMIT = 10; // requests per minute
+  const SHARE_CARD_RATE_WINDOW = 60000; // 1 minute
+  
+  // Periodic cleanup of rate limit entries (every 5 minutes)
+  setInterval(() => {
+    const now = Date.now();
+    for (const [ip, data] of shareCardRateLimits.entries()) {
+      if (now > data.resetTime) {
+        shareCardRateLimits.delete(ip);
+      }
+    }
+  }, 5 * 60 * 1000);
+  
+  app.get("/api/share-card/:referralCode", async (req, res) => {
+    try {
+      const clientIp = req.ip || req.socket.remoteAddress || 'unknown';
+      const now = Date.now();
+      
+      // Rate limiting
+      const rateData = shareCardRateLimits.get(clientIp);
+      if (rateData) {
+        if (now < rateData.resetTime) {
+          if (rateData.count >= SHARE_CARD_RATE_LIMIT) {
+            return res.status(429).json({ error: "Too many requests. Please try again later." });
+          }
+          rateData.count++;
+        } else {
+          shareCardRateLimits.set(clientIp, { count: 1, resetTime: now + SHARE_CARD_RATE_WINDOW });
+        }
+      } else {
+        shareCardRateLimits.set(clientIp, { count: 1, resetTime: now + SHARE_CARD_RATE_WINDOW });
+      }
+
+      const { referralCode } = req.params;
+      const pointsParam = req.query.points as string;
+      const tierParam = req.query.tier as string;
+      
+      // Parse points safely
+      const points = pointsParam ? Math.max(0, Math.min(999999999, parseInt(pointsParam, 10) || 0)) : 0;
+      
+      // Validate tier
+      const validTiers = ['bronze', 'silver', 'gold', 'diamond'];
+      const tier = validTiers.includes(tierParam?.toLowerCase()) ? tierParam.toLowerCase() : 'bronze';
+
+      const { shareCardGenerator } = await import("./services/ShareCardGenerator");
+      
+      const imageBuffer = await shareCardGenerator.generateCard({
+        referralCode,
+        points,
+        tier,
+      });
+
+      res.set({
+        'Content-Type': 'image/png',
+        'Content-Length': imageBuffer.length,
+        'Cache-Control': 'public, max-age=3600',
+        'X-Content-Type-Options': 'nosniff',
+      });
+      
+      res.send(imageBuffer);
+    } catch (error: any) {
+      console.error("[Share Card] Failed to generate:", error);
+      
+      if (error.message?.includes('Invalid share card data')) {
+        return res.status(400).json({ error: "Invalid parameters" });
+      }
+      
+      res.status(500).json({ error: "Failed to generate share card" });
+    }
+  });
+
   // Get user's airdrop proof (for claiming)
   app.get("/api/airdrop/proof/:walletAddress", async (req, res) => {
     try {

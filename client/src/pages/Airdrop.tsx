@@ -759,10 +759,19 @@ export default function Airdrop() {
                       Share & Earn
                     </CardTitle>
                     <CardDescription>
-                      Share on X to earn 10 points and invite friends
+                      Share your personalized card on X to earn 10 points
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
+                    <div className="rounded-xl overflow-hidden border border-sky-500/30 shadow-lg">
+                      <img 
+                        src={`/api/share-card/${userPointsData.referralCode}?points=${userPointsData.totalPoints || 0}&tier=${userPointsData.tier || 'bronze'}`}
+                        alt="Your personalized share card"
+                        className="w-full h-auto"
+                        data-testid="img-share-card-preview"
+                      />
+                    </div>
+
                     <div className="p-3 rounded-lg bg-muted/50 border">
                       <p className="text-xs text-muted-foreground mb-1">Your Referral Code</p>
                       <div className="flex items-center justify-between">
