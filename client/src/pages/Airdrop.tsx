@@ -34,6 +34,7 @@ import {
   ArrowLeftRight,
   Bug,
   Share2,
+  BookOpen,
   type LucideIcon,
 } from "lucide-react";
 
@@ -617,6 +618,28 @@ export default function Airdrop() {
             </span>
           </AlertDescription>
         </Alert>
+
+        <Card className="border-primary/30 bg-primary/5 hover-elevate" data-testid="card-testers-guide-cta">
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <BookOpen className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <p className="font-medium">New to testnet? Read the Testers Guide</p>
+                  <p className="text-sm text-muted-foreground">Learn how to earn points and maximize your airdrop</p>
+                </div>
+              </div>
+              <Link href="/app/testers-guide">
+                <Button variant="outline" className="gap-2" data-testid="button-testers-guide">
+                  View Guide
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardContent>
+        </Card>
 
         {!isConnected ? (
           <Card className="p-8" data-testid="card-connect-wallet-testnet">

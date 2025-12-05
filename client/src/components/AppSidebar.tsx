@@ -71,12 +71,6 @@ const menuItems = [
     icon: Gift,
   },
   {
-    title: "Testers Guide",
-    url: "/app/testers-guide",
-    icon: BookOpen,
-    testnetOnly: true,
-  },
-  {
     title: "Transactions",
     url: "/app/transactions",
     icon: History,
@@ -199,7 +193,6 @@ export function AppSidebar() {
               {menuItems
                 .filter((item) => {
                   if (item.xrplOnly && walletType === "evm") return false;
-                  if (item.testnetOnly && !isTestnet) return false;
                   return true;
                 })
                 .map((item) => {
