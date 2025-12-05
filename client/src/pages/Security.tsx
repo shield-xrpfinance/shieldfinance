@@ -212,7 +212,7 @@ export default function SecurityPage() {
               
               <div className="p-4 bg-card rounded-lg border-dashed border border-border flex items-center justify-center text-muted-foreground text-sm flex-wrap gap-2">
                 <span>7 additional findings resolved</span>
-                <a href="/attached_assets/Shield Finance Audit Remediation Verification_1764500884263.pdf" target="_blank" rel="noopener noreferrer">
+                <a href="https://cdn.prod.website-files.com/62981c5a83fb0e4287b30cdd/692cb480442715f1b44e0f52_Shield%20Finance.pdf" target="_blank" rel="noopener noreferrer">
                   <Button variant="ghost" className="text-primary h-auto p-0" data-testid="button-view-report">
                     View Full Report <ExternalLink className="w-3 h-3 ml-1" />
                   </Button>
