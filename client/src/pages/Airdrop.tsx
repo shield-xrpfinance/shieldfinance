@@ -128,6 +128,24 @@ const tierIcons: Record<UserTier, typeof Trophy> = {
 
 const tierOrder: UserTier[] = ["bronze", "silver", "gold", "diamond"];
 
+const TIER_THRESHOLDS = [0, 500, 2000, 5000];
+const SEGMENT_SIZE = 25;
+
+function getTierProgressPercent(totalPoints: number): number {
+  if (totalPoints <= TIER_THRESHOLDS[0]) return 0;
+  if (totalPoints >= TIER_THRESHOLDS[3]) {
+    const overflow = ((totalPoints - TIER_THRESHOLDS[3]) / TIER_THRESHOLDS[3]) * SEGMENT_SIZE;
+    return Math.min(75 + overflow, 100);
+  }
+  if (totalPoints < TIER_THRESHOLDS[1]) {
+    return (totalPoints / TIER_THRESHOLDS[1]) * SEGMENT_SIZE;
+  }
+  if (totalPoints < TIER_THRESHOLDS[2]) {
+    return SEGMENT_SIZE + ((totalPoints - TIER_THRESHOLDS[1]) / (TIER_THRESHOLDS[2] - TIER_THRESHOLDS[1])) * SEGMENT_SIZE;
+  }
+  return SEGMENT_SIZE * 2 + ((totalPoints - TIER_THRESHOLDS[2]) / (TIER_THRESHOLDS[3] - TIER_THRESHOLDS[2])) * SEGMENT_SIZE;
+}
+
 function getTierBadge(tier: UserTier, size: "sm" | "lg" = "sm") {
   const TierIcon = tierIcons[tier];
   const sizeClasses = size === "lg" ? "text-base px-4 py-1.5" : "";
@@ -823,11 +841,19 @@ export default function Airdrop() {
                         })}
                       </div>
 
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                      <div 
+                        className="h-2 rounded-full overflow-hidden relative"
+                        style={{
+                          background: 'linear-gradient(to right, rgba(234,88,12,0.2) 0%, rgba(234,88,12,0.2) 25%, rgba(156,163,175,0.2) 25%, rgba(156,163,175,0.2) 50%, rgba(234,179,8,0.2) 50%, rgba(234,179,8,0.2) 75%, rgba(34,211,238,0.2) 75%, rgba(34,211,238,0.2) 100%)'
+                        }}
+                      >
                         <div 
-                          className="h-full bg-gradient-to-r from-orange-600 via-gray-400 via-yellow-500 to-cyan-400 transition-all"
+                          className="h-full transition-all absolute top-0 left-0"
                           style={{ 
-                            width: `${Math.min(100, (userPointsData.totalPoints / TIER_CONFIG.diamond.minPoints) * 100)}%` 
+                            width: `${getTierProgressPercent(userPointsData.totalPoints)}%`,
+                            background: userPointsData.tier === 'diamond' ? '#22d3ee' : 
+                                        userPointsData.tier === 'gold' ? '#eab308' : 
+                                        userPointsData.tier === 'silver' ? '#9ca3af' : '#ea580c'
                           }}
                           data-testid="progress-tier-bar"
                         />
