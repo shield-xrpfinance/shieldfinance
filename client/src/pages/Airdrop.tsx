@@ -827,36 +827,18 @@ export default function Airdrop() {
                     <Skeleton className="h-24" />
                   ) : userPointsData && userPointsData.tier !== 'none' ? (
                     <div className="space-y-4">
-                      <div className="flex justify-between text-sm">
+                      <div className="grid grid-cols-2 gap-3 text-sm">
                         {tierOrder.map((tier) => {
                           const isAchieved = tierOrder.indexOf(tier) <= tierOrder.indexOf(userPointsData.tier as UserTier);
                           return (
-                            <div key={tier} className={`text-center ${isAchieved ? "" : "opacity-40"}`}>
+                            <div key={tier} className={`flex items-center gap-2 p-2 rounded-lg bg-muted/30 ${isAchieved ? "" : "opacity-40"}`}>
                               {getTierBadge(tier)}
-                              <p className="text-xs text-muted-foreground mt-1">
+                              <span className="text-xs text-muted-foreground">
                                 {TIER_CONFIG[tier].multiplier}x
-                              </p>
+                              </span>
                             </div>
                           );
                         })}
-                      </div>
-
-                      <div 
-                        className="h-2 rounded-full overflow-hidden relative"
-                        style={{
-                          background: 'linear-gradient(to right, rgba(234,88,12,0.2) 0%, rgba(234,88,12,0.2) 25%, rgba(156,163,175,0.2) 25%, rgba(156,163,175,0.2) 50%, rgba(234,179,8,0.2) 50%, rgba(234,179,8,0.2) 75%, rgba(34,211,238,0.2) 75%, rgba(34,211,238,0.2) 100%)'
-                        }}
-                      >
-                        <div 
-                          className="h-full transition-all absolute top-0 left-0"
-                          style={{ 
-                            width: `${getTierProgressPercent(userPointsData.totalPoints)}%`,
-                            background: userPointsData.tier === 'diamond' ? '#22d3ee' : 
-                                        userPointsData.tier === 'gold' ? '#eab308' : 
-                                        userPointsData.tier === 'silver' ? '#9ca3af' : '#ea580c'
-                          }}
-                          data-testid="progress-tier-bar"
-                        />
                       </div>
 
                       {userPointsData.nextTierProgress && userPointsData.nextTierProgress.nextTier && (
