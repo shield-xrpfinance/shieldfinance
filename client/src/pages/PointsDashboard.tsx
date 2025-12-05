@@ -542,9 +542,10 @@ export default function PointsDashboard() {
                 
                 <div className="h-3 bg-muted rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-gradient-to-r from-orange-600 via-gray-400 via-yellow-500 to-cyan-400 transition-all"
+                    className="h-full transition-all"
                     style={{ 
-                      width: `${Math.min(100, (userPointsData.totalPoints / TIER_CONFIG.diamond.minPoints) * 100)}%` 
+                      width: `${Math.min(100, (userPointsData.totalPoints / TIER_CONFIG.diamond.minPoints) * 100)}%`,
+                      background: 'linear-gradient(to right, #ea580c 0%, #ea580c 10%, #9ca3af 10%, #9ca3af 40%, #eab308 40%, #eab308 80%, #22d3ee 80%, #22d3ee 100%)'
                     }}
                     data-testid="progress-tier-visual"
                   />
