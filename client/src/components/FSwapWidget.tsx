@@ -20,7 +20,7 @@ const CHAIN_ID_MAP: Record<string, string> = {
   polygon: "eip155:137",
 };
 
-const DEFAULT_API_KEY = import.meta.env.VITE_FSWAP_API_KEY || "";
+const FSWAP_API_KEY = "ak_505fbee71c6da93f344977b16aaa3b9d4c00d35b2685001d07255278d4af11f1";
 
 export function FSwapWidget({
   className,
@@ -67,7 +67,10 @@ export function FSwapWidget({
     url.searchParams.set("destChainId", mappedDest);
   }
   
-  url.searchParams.set("apiKey", apiKey || DEFAULT_API_KEY);
+  const effectiveApiKey = apiKey || FSWAP_API_KEY;
+  if (effectiveApiKey) {
+    url.searchParams.set("apiKey", effectiveApiKey);
+  }
 
   useEffect(() => {
     if (!onSwapComplete) return;
@@ -121,6 +124,7 @@ export function FSwapWidgetCard({
           sourceChainId="xrpl"
           destChainId="flare"
           onSwapComplete={onSwapComplete}
+          apiKey={FSWAP_API_KEY}
         />
       </CardContent>
     </Card>

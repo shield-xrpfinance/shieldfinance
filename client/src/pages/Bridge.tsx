@@ -120,6 +120,7 @@ export default function Bridge() {
             sourceChainId="xrpl"
             destChainId="flare"
             onSwapComplete={handleFSwapComplete}
+            apiKey="ak_505fbee71c6da93f344977b16aaa3b9d4c00d35b2685001d07255278d4af11f1"
           />
         </CardContent>
       </Card>
