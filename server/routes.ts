@@ -8365,12 +8365,12 @@ export async function registerRoutes(
     const host = req.headers['x-forwarded-host'] || req.headers.host || 'shyield.finance';
     const baseUrl = `${protocol}://${host}`;
     
-    // Use production URL for share cards (better for SEO consistency)
-    const shareCardUrl = `https://shyield.finance/api/share-card/${encodeURIComponent(ref)}`;
+    // Use static social share image for consistent branding
+    const socialImageUrl = `https://shyield.finance/social-share-image.jpg`;
     const pageUrl = `https://shyield.finance/app/airdrop?ref=${encodeURIComponent(ref)}`;
     
     // Fallback to current domain for development
-    const devShareCardUrl = `${baseUrl}/api/share-card/${encodeURIComponent(ref)}`;
+    const devSocialImageUrl = `${baseUrl}/social-share-image.jpg`;
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -8384,15 +8384,15 @@ export async function registerRoutes(
   <meta name="twitter:site" content="@ShieldFinanceX">
   <meta name="twitter:title" content="Join me on Shield Finance Testnet!">
   <meta name="twitter:description" content="Earn points and compete for a share of 2M $SHIELD tokens. Use my referral code: ${ref}">
-  <meta name="twitter:image" content="${devShareCardUrl}">
-  <meta name="twitter:image:alt" content="Shield Finance Airdrop - Referral ${ref}">
+  <meta name="twitter:image" content="${devSocialImageUrl}">
+  <meta name="twitter:image:alt" content="Shield Finance Airdrop - Earn SHIELD Tokens">
   
   <!-- OpenGraph Meta Tags (Facebook, LinkedIn, etc) -->
   <meta property="og:type" content="website">
   <meta property="og:url" content="${pageUrl}">
   <meta property="og:title" content="Join me on Shield Finance Testnet!">
   <meta property="og:description" content="Earn points and compete for a share of 2M $SHIELD tokens. Use my referral code: ${ref}">
-  <meta property="og:image" content="${devShareCardUrl}">
+  <meta property="og:image" content="${devSocialImageUrl}">
   <meta property="og:image:width" content="1200">
   <meta property="og:image:height" content="630">
   <meta property="og:site_name" content="Shield Finance">
