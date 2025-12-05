@@ -157,7 +157,6 @@ export default function PortfolioTable({
             <TableHead className="text-right">Deposited</TableHead>
             <TableHead className="text-right">Current Value</TableHead>
             <TableHead className="text-right">Rewards</TableHead>
-            <TableHead className="text-center">Escrow</TableHead>
             <TableHead className="text-right">APY</TableHead>
             <TableHead className="text-right">Actions</TableHead>
           </TableRow>
@@ -165,15 +164,12 @@ export default function PortfolioTable({
         <TableBody>
           {positions.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+              <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
                 No active positions
               </TableCell>
             </TableRow>
           ) : (
             positions.map((position) => {
-              const escrow = getPositionEscrow(position.id);
-              const isXRP = position.asset?.includes("XRP");
-              
               return (
                 <TableRow key={position.id} data-testid={`row-position-${position.id}`}>
                   <TableCell>
@@ -205,106 +201,6 @@ export default function PortfolioTable({
                   </TableCell>
                   <TableCell className="text-right font-mono tabular-nums text-chart-2">
                     +{position.rewards} {position.asset?.split(",")[0] || "XRP"}
-                  </TableCell>
-                  <TableCell className="text-center">
-                    {isXRP && escrow ? (
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <div className="inline-flex flex-col items-center gap-1">
-                            <Badge 
-                              variant={getEscrowStatusVariant(escrow.status)}
-                              className={getEscrowStatusColor(escrow.status)}
-                              data-testid={`badge-escrow-status-${position.id}`}
-                            >
-                              <Lock className="h-3 w-3 mr-1" />
-                              {escrow.status.charAt(0).toUpperCase() + escrow.status.slice(1)}
-                            </Badge>
-                            <span className="text-xs text-muted-foreground" data-testid={`text-escrow-amount-${position.id}`}>
-                              {parseFloat(escrow.amount).toFixed(2)} XRP
-                            </span>
-                          </div>
-                        </TooltipTrigger>
-                        <TooltipContent className="max-w-xs">
-                          <div className="space-y-2">
-                            <div className="flex items-center gap-2 font-semibold text-sm">
-                              <Lock className="h-4 w-4" />
-                              {getEscrowTooltipTitle(escrow.status)}
-                            </div>
-                            <p className="text-xs text-muted-foreground">
-                              {getEscrowTooltipDescription(escrow)}
-                            </p>
-                            <div className="space-y-1 text-xs">
-                              <div className="flex justify-between gap-4">
-                                <span className="text-muted-foreground">Amount:</span>
-                                <span className="font-mono">{parseFloat(escrow.amount).toFixed(6)} XRP</span>
-                              </div>
-                              {escrow.status === "pending" && (
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-muted-foreground">Release:</span>
-                                  <span>{formatReleaseTime(escrow.finishAfter)}</span>
-                                </div>
-                              )}
-                              {escrow.status === "finished" && escrow.finishedAt && (
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-muted-foreground">Released:</span>
-                                  <span>{formatCompletionTime(escrow.finishedAt)}</span>
-                                </div>
-                              )}
-                              {escrow.status === "cancelled" && escrow.cancelledAt && (
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-muted-foreground">Cancelled:</span>
-                                  <span>{formatCompletionTime(escrow.cancelledAt)}</span>
-                                </div>
-                              )}
-                              {escrow.createTxHash && (
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-muted-foreground">Create Tx:</span>
-                                  <a 
-                                    href={getXrplExplorerUrl(escrow.createTxHash, network)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1 text-primary hover:underline"
-                                  >
-                                    {escrow.createTxHash.substring(0, 8)}...
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                </div>
-                              )}
-                              {escrow.status === "finished" && escrow.finishTxHash && (
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-muted-foreground">Finish Tx:</span>
-                                  <a 
-                                    href={getXrplExplorerUrl(escrow.finishTxHash, network)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1 text-primary hover:underline"
-                                  >
-                                    {escrow.finishTxHash.substring(0, 8)}...
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                </div>
-                              )}
-                              {escrow.status === "cancelled" && escrow.cancelTxHash && (
-                                <div className="flex justify-between gap-4">
-                                  <span className="text-muted-foreground">Cancel Tx:</span>
-                                  <a 
-                                    href={getXrplExplorerUrl(escrow.cancelTxHash, network)}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-1 text-primary hover:underline"
-                                  >
-                                    {escrow.cancelTxHash.substring(0, 8)}...
-                                    <ExternalLink className="h-3 w-3" />
-                                  </a>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </TooltipContent>
-                      </Tooltip>
-                    ) : (
-                      <span className="text-xs text-muted-foreground">—</span>
-                    )}
                   </TableCell>
                   <TableCell className="text-right">
                     {boostPercentage > 0 ? (
