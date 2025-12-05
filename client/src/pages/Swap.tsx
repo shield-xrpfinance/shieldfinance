@@ -563,6 +563,24 @@ export default function Swap() {
         title: "Swap Successful!",
         description: `Swapped ${swapInputAmount} ${swapInputSymbol} for ${outputAmount} ${swapOutputSymbol}`,
       });
+
+      // Log swap for points (best effort - don't block on failure)
+      try {
+        await fetch("/api/points/log-swap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            walletAddress: evmAddress,
+            fromToken: swapInputSymbol,
+            toToken: swapOutputSymbol,
+            fromAmount: swapInputAmount,
+            toAmount: outputAmount,
+            txHash: swapTxHash,
+          }),
+        });
+      } catch (pointsError) {
+        console.log("Failed to log swap points (non-critical):", pointsError);
+      }
     } catch (error: any) {
       console.error("Swap error:", error);
       console.error("Swap error details:", { 

@@ -26,6 +26,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Production Readiness**: Fast server startup, asynchronous service initialization, health endpoints, API readiness guards, API rate limiting, and RPC failover utility.
 - **Self-Healing Infrastructure**: ServiceSupervisor with auto-restart, ResilientRpcAdapter with multi-endpoint failover, XrplConnectionPool with automatic reconnection, CacheFallbackService for graceful degradation, ReconciliationService for state consistency, and FeatureFlagService for dynamic feature control.
 - **Admin Security**: Mutating endpoints protected with `X-Admin-Key` header.
+- **Testnet Points System**: Comprehensive points tracking with automatic referral via URL parameters, daily login rewards on wallet connect, swap points logging, staking daily rewards scheduler (5pts/day for active stakers), tier-based multipliers (Bronze 1x, Silver 1.5x, Gold 2x, Diamond 3x) for future SHIELD airdrop.
 
 ### Data Storage
 - **Database**: PostgreSQL (Neon serverless) with Drizzle ORM.

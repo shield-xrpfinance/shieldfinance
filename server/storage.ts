@@ -72,6 +72,7 @@ export interface IStorage {
   setServiceState(key: string, value: string): Promise<void>;
   
   getStakeInfo(walletAddress: string): Promise<StakingPosition | null>;
+  getAllActiveStakers(): Promise<StakingPosition[]>;
   recordStake(walletAddress: string, amount: string, stakedAt: string, unlockTime: string): Promise<void>;
   recordUnstake(walletAddress: string, amount: string): Promise<void>;
   
@@ -1271,6 +1272,13 @@ export class DatabaseStorage implements IStorage {
       where: sql`lower(${stakingPositions.walletAddress}) = ${normalizedAddress}`
     });
     return position || null;
+  }
+
+  async getAllActiveStakers(): Promise<StakingPosition[]> {
+    // Get all staking positions with amount > 0
+    return db.select()
+      .from(stakingPositions)
+      .where(sql`${stakingPositions.amount}::numeric > 0`);
   }
 
   async recordStake(walletAddress: string, amount: string, stakedAt: string, unlockTime: string): Promise<void> {

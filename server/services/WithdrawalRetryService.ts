@@ -233,6 +233,40 @@ export class WithdrawalRetryService {
                 });
 
                 console.log(`      ✅ Updated userStatus to 'completed'`);
+
+                // Award withdrawal points (25 pts) and create notification
+                try {
+                  const { pointsService } = await import("./PointsService");
+                  const walletAddress = redemption.walletAddress;
+                  
+                  const pointsResult = await pointsService.awardWithdrawalPoints({
+                    walletAddress,
+                    txHash: redemption.xrplPayoutTxHash,
+                    redemptionId: redemption.id,
+                    amount: redemption.shareAmount,
+                  });
+                  
+                  if (pointsResult) {
+                    console.log(`      🎯 Awarded ${pointsResult.pointsAwarded} withdrawal points to ${walletAddress.slice(0, 10)}...`);
+                    
+                    // Create notification for withdrawal points
+                    await this.config.storage.createUserNotification({
+                      walletAddress: walletAddress.toLowerCase(),
+                      type: "reward",
+                      title: "Withdrawal Points Earned!",
+                      message: `You earned ${pointsResult.pointsAwarded} points for completing a withdrawal.`,
+                      metadata: { 
+                        activityType: "withdrawal",
+                        pointsEarned: pointsResult.pointsAwarded,
+                        redemptionId: redemption.id,
+                      },
+                      read: false,
+                    });
+                  }
+                } catch (pointsError) {
+                  // Don't fail the withdrawal confirmation if points fail
+                  console.error("      ⚠️  Failed to award withdrawal points:", pointsError);
+                }
               }
             }
           } catch (error: any) {
@@ -259,14 +293,15 @@ export class WithdrawalRetryService {
    * @returns true if retry succeeded, false if failed or skipped
    */
   private async retryRedemptionConfirmation(redemptionId: string): Promise<boolean> {
+    // Fetch redemption first to track retry count for error handling
+    const redemption = await this.config.storage.getRedemptionById(redemptionId);
+    if (!redemption) {
+      console.warn(`   ⚠️  Redemption ${redemptionId} not found, skipping`);
+      return false;
+    }
+
     try {
       console.log(`\n   🔧 Retrying redemption confirmation: ${redemptionId}`);
-
-      const redemption = await this.config.storage.getRedemptionById(redemptionId);
-      if (!redemption) {
-        console.warn(`   ⚠️  Redemption ${redemptionId} not found, skipping`);
-        return false;
-      }
 
       console.log(`      Current Status: ${redemption.status}`);
       console.log(`      Backend Status: ${redemption.backendStatus}`);

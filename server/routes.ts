@@ -4710,6 +4710,34 @@ export async function registerRoutes(
         { shieldAmount: amountNum.toFixed(2), boostPercentage: newBoostPercentage, action: "staked" },
         mockTxHash
       );
+
+      // Award boost_activated points (one-time, 30 pts)
+      try {
+        const { pointsService } = await import("./services/PointsService");
+        const boostResult = await pointsService.awardBoostActivatedPoints({
+          walletAddress: address,
+          txHash: mockTxHash,
+          shieldAmount: amountNum.toFixed(2),
+          boostPercentage: newBoostPercentage,
+        });
+        
+        if (boostResult) {
+          console.log(`🚀 Boost activated: ${boostResult.pointsAwarded} pts to ${address.slice(0, 10)}...`);
+          
+          // Create notification for boost points (separate from staking notification)
+          await storage.createUserNotification({
+            walletAddress: address.toLowerCase(),
+            type: "reward",
+            title: "Boost Activation Points!",
+            message: `You earned ${boostResult.pointsAwarded} bonus points for activating your first SHIELD boost!`,
+            metadata: { activityType: "boost_activated", pointsEarned: boostResult.pointsAwarded },
+            read: false,
+          });
+        }
+      } catch (boostError) {
+        // Don't fail the stake if points fail
+        console.error("Failed to award boost points:", boostError);
+      }
       
       res.json({
         success: true,
@@ -7195,6 +7223,101 @@ export async function registerRoutes(
     }
   });
 
+  // Daily login - award points for daily active users (2 pts, once per day)
+  app.post("/api/points/daily-login", async (req, res) => {
+    try {
+      const { walletAddress } = req.body;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      const result = await pointsService.awardDailyLoginPoints(walletAddress);
+      
+      if (!result) {
+        // Already claimed today
+        return res.json({
+          success: true,
+          alreadyClaimed: true,
+          message: "Daily login bonus already claimed today",
+        });
+      }
+
+      // Create notification for daily login
+      await storage.createUserNotification({
+        walletAddress: walletAddress.toLowerCase(),
+        type: "reward",
+        title: "Daily Login Bonus!",
+        message: `You earned ${result.pointsAwarded} points for logging in today.`,
+        metadata: { activityType: "daily_login", pointsEarned: result.pointsAwarded },
+        read: false,
+      });
+
+      console.log(`🎯 Daily login: ${result.pointsAwarded} pts to ${walletAddress.slice(0, 10)}...`);
+
+      res.json({
+        success: true,
+        pointsAwarded: result.pointsAwarded,
+        totalPoints: result.userPoints.totalPoints,
+        tier: result.userPoints.tier,
+      });
+    } catch (error) {
+      console.error("[Points API] Failed to award daily login:", error);
+      res.status(500).json({ error: "Failed to process daily login" });
+    }
+  });
+
+  // Log swap completion - award points when user completes a swap (15 pts)
+  app.post("/api/points/log-swap", async (req, res) => {
+    try {
+      const { walletAddress, txHash, fromToken, toToken, amount } = req.body;
+      
+      if (!walletAddress) {
+        return res.status(400).json({ error: "Wallet address required" });
+      }
+
+      const result = await pointsService.awardSwapPoints({
+        walletAddress,
+        txHash,
+        fromToken,
+        toToken,
+        amount,
+      });
+      
+      if (!result) {
+        return res.status(500).json({ error: "Failed to award swap points" });
+      }
+
+      // Create notification for swap
+      await storage.createUserNotification({
+        walletAddress: walletAddress.toLowerCase(),
+        type: "reward",
+        title: "Swap Points Earned!",
+        message: `You earned ${result.pointsAwarded} points for completing a swap.`,
+        metadata: { 
+          activityType: "swap", 
+          pointsEarned: result.pointsAwarded,
+          fromToken,
+          toToken,
+          amount,
+        },
+        read: false,
+      });
+
+      console.log(`🔄 Swap: ${result.pointsAwarded} pts to ${walletAddress.slice(0, 10)}... (${fromToken} → ${toToken})`);
+
+      res.json({
+        success: true,
+        pointsAwarded: result.pointsAwarded,
+        totalPoints: result.userPoints.totalPoints,
+        tier: result.userPoints.tier,
+      });
+    } catch (error) {
+      console.error("[Points API] Failed to log swap:", error);
+      res.status(500).json({ error: "Failed to log swap" });
+    }
+  });
+
   // Get leaderboard (with pagination guards)
   app.get("/api/leaderboard", async (req, res) => {
     try {
@@ -8332,6 +8455,53 @@ export async function registerRoutes(
 
     res.type('html').send(html);
   });
+
+  // Staking Daily Rewards Scheduler - awards 5 points daily to all active stakers
+  // Runs once daily at server startup time + every 24 hours
+  const STAKING_REWARDS_INTERVAL = 24 * 60 * 60 * 1000; // 24 hours
+  
+  const runStakingDailyRewards = async () => {
+    try {
+      console.log("🎯 [Staking Rewards] Running daily staking rewards distribution...");
+      
+      const { pointsService } = await import("./services/PointsService");
+      const activeStakers = await storage.getAllActiveStakers();
+      
+      if (activeStakers.length === 0) {
+        console.log("🎯 [Staking Rewards] No active stakers found");
+        return;
+      }
+      
+      console.log(`🎯 [Staking Rewards] Found ${activeStakers.length} active stakers`);
+      
+      let awarded = 0;
+      let skipped = 0;
+      
+      for (const staker of activeStakers) {
+        try {
+          // Award 5 points for daily staking bonus (uses stake_shield activity type)
+          const result = await pointsService.awardStakingDailyPoints(staker.walletAddress);
+          
+          if (result === null) {
+            skipped++; // Already received today
+          } else {
+            awarded++;
+          }
+        } catch (error) {
+          console.error(`🎯 [Staking Rewards] Failed for ${staker.walletAddress}:`, error);
+        }
+      }
+      
+      console.log(`🎯 [Staking Rewards] Complete: ${awarded} awarded, ${skipped} already received today`);
+    } catch (error) {
+      console.error("🎯 [Staking Rewards] Error running daily staking rewards:", error);
+    }
+  };
+  
+  // Run after 1 minute delay (allow server to fully start)
+  setTimeout(runStakingDailyRewards, 60 * 1000);
+  // Then run every 24 hours
+  setInterval(runStakingDailyRewards, STAKING_REWARDS_INTERVAL);
 
   const httpServer = createServer(app);
   return httpServer;

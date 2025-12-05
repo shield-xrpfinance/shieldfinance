@@ -352,6 +352,138 @@ export class PointsService {
   }
 
   /**
+   * Award withdrawal points (25 pts for completing a withdrawal cycle)
+   */
+  async awardWithdrawalPoints(params: {
+    walletAddress: string;
+    txHash?: string;
+    redemptionId?: string;
+    amount?: string;
+  }): Promise<{ activity: TestnetActivity; userPoints: UserPoints; pointsAwarded: number } | null> {
+    return this.logActivity({
+      walletAddress: params.walletAddress,
+      activityType: "withdrawal",
+      relatedTxHash: params.txHash,
+      metadata: { redemptionId: params.redemptionId, amount: params.amount },
+      description: "Withdrawal cycle completed",
+    });
+  }
+
+  /**
+   * Award daily login points (2 pts, once per day per wallet)
+   * Returns null if already claimed today
+   */
+  async awardDailyLoginPoints(walletAddress: string): Promise<{ activity: TestnetActivity; userPoints: UserPoints; pointsAwarded: number } | null> {
+    const normalizedAddress = walletAddress.toLowerCase();
+    
+    // Check if user already claimed daily login today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const existingActivity = await db.query.testnetActivities.findFirst({
+      where: and(
+        eq(testnetActivities.walletAddress, normalizedAddress),
+        eq(testnetActivities.activityType, "daily_login"),
+        sql`${testnetActivities.createdAt} >= ${today}`
+      ),
+    });
+    
+    if (existingActivity) {
+      console.log(`⏭️  Daily login already claimed today for ${normalizedAddress.slice(0, 10)}...`);
+      return null;
+    }
+    
+    return this.logActivity({
+      walletAddress: normalizedAddress,
+      activityType: "daily_login",
+      description: "Daily active user bonus",
+    });
+  }
+
+  /**
+   * Award swap points (15 pts per swap)
+   */
+  async awardSwapPoints(params: {
+    walletAddress: string;
+    txHash?: string;
+    fromToken?: string;
+    toToken?: string;
+    amount?: string;
+  }): Promise<{ activity: TestnetActivity; userPoints: UserPoints; pointsAwarded: number } | null> {
+    return this.logActivity({
+      walletAddress: params.walletAddress,
+      activityType: "swap",
+      relatedTxHash: params.txHash,
+      metadata: { fromToken: params.fromToken, toToken: params.toToken, amount: params.amount },
+      description: `Swap ${params.fromToken || "tokens"} → ${params.toToken || "tokens"}`,
+    });
+  }
+
+  /**
+   * Award boost activated points (30 pts, one-time per wallet)
+   */
+  async awardBoostActivatedPoints(params: {
+    walletAddress: string;
+    txHash?: string;
+    shieldAmount?: string;
+    boostPercentage?: number;
+  }): Promise<{ activity: TestnetActivity; userPoints: UserPoints; pointsAwarded: number } | null> {
+    const normalizedAddress = params.walletAddress.toLowerCase();
+    
+    // Check if user already received boost_activated points (one-time only)
+    const existingActivity = await db.query.testnetActivities.findFirst({
+      where: and(
+        eq(testnetActivities.walletAddress, normalizedAddress),
+        eq(testnetActivities.activityType, "boost_activated"),
+      ),
+    });
+    
+    if (existingActivity) {
+      console.log(`⏭️  Boost activation already awarded for ${normalizedAddress.slice(0, 10)}...`);
+      return null;
+    }
+    
+    return this.logActivity({
+      walletAddress: normalizedAddress,
+      activityType: "boost_activated",
+      relatedTxHash: params.txHash,
+      metadata: { shieldAmount: params.shieldAmount, boostPercentage: params.boostPercentage },
+      description: `Activated SHIELD boost (+${params.boostPercentage || 0}% APY)`,
+    });
+  }
+
+  /**
+   * Award SHIELD staking daily points (5 pts per day while staking)
+   * Called by scheduled job, awards once per 24h per wallet
+   */
+  async awardStakingDailyPoints(walletAddress: string): Promise<{ activity: TestnetActivity; userPoints: UserPoints; pointsAwarded: number } | null> {
+    const normalizedAddress = walletAddress.toLowerCase();
+    
+    // Check if user already received staking points today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const existingActivity = await db.query.testnetActivities.findFirst({
+      where: and(
+        eq(testnetActivities.walletAddress, normalizedAddress),
+        eq(testnetActivities.activityType, "stake_shield"),
+        sql`${testnetActivities.createdAt} >= ${today}`
+      ),
+    });
+    
+    if (existingActivity) {
+      console.log(`⏭️  Staking daily points already awarded today for ${normalizedAddress.slice(0, 10)}...`);
+      return null;
+    }
+    
+    return this.logActivity({
+      walletAddress: normalizedAddress,
+      activityType: "stake_shield",
+      description: "SHIELD staking daily reward",
+    });
+  }
+
+  /**
    * Get user's activity history
    */
   async getUserActivities(
