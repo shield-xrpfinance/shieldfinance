@@ -2,7 +2,7 @@ import { TwitterApi } from 'twitter-api-v2';
 import crypto from 'crypto';
 import { db } from '../db';
 import { userPoints, pendingSocialShares, type PendingSocialShare, type PendingSocialShareStatus } from '@shared/schema';
-import { eq, and, lt, sql } from 'drizzle-orm';
+import { eq, and, lt, desc, sql } from 'drizzle-orm';
 
 interface TwitterTokens {
   accessToken: string;
@@ -301,7 +301,7 @@ export class SocialShareService {
   }
 
   /**
-   * Get pending shares for a wallet address
+   * Get pending shares for a wallet address, sorted by most recent first
    */
   async getPendingShares(walletAddress: string): Promise<PendingSocialShare[]> {
     const normalizedAddress = walletAddress.toLowerCase();
@@ -313,7 +313,8 @@ export class SocialShareService {
           eq(pendingSocialShares.walletAddress, normalizedAddress),
           eq(pendingSocialShares.status, 'pending')
         )
-      );
+      )
+      .orderBy(desc(pendingSocialShares.createdAt));
   }
 
   /**

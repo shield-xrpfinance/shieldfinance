@@ -1,6 +1,7 @@
 import puppeteer, { Browser, Page } from 'puppeteer';
 import path from 'path';
 import fs from 'fs';
+import { execSync } from 'child_process';
 import { z } from 'zod';
 
 const ShareCardDataSchema = z.object({
@@ -91,7 +92,8 @@ export class ShareCardGenerator {
     const now = Date.now();
     
     // Remove expired entries
-    for (const [key, entry] of this.cache.entries()) {
+    const entries = Array.from(this.cache.entries());
+    for (const [key, entry] of entries) {
       if (now - entry.timestamp > CACHE_TTL) {
         try {
           if (fs.existsSync(entry.path)) {
@@ -128,6 +130,33 @@ export class ShareCardGenerator {
     return new Promise(resolve => setTimeout(resolve, ms));
   }
 
+  private getChromiumPath(): string {
+    // Try to find system chromium
+    try {
+      const chromiumPath = execSync('which chromium', { encoding: 'utf-8' }).trim();
+      if (chromiumPath && fs.existsSync(chromiumPath)) {
+        return chromiumPath;
+      }
+    } catch (e) {
+      // which failed, try common paths
+    }
+    
+    // Common Nix paths
+    const commonPaths = [
+      '/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromium-125.0.6422.141/bin/chromium',
+      '/run/current-system/sw/bin/chromium',
+      process.env.PUPPETEER_EXECUTABLE_PATH || '',
+    ].filter(Boolean);
+    
+    for (const p of commonPaths) {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    }
+    
+    throw new Error('Could not find Chromium. Please install chromium system package.');
+  }
+
   private async getBrowser(): Promise<Browser> {
     if (this.isShuttingDown) {
       throw new Error('ShareCardGenerator is shutting down');
@@ -141,6 +170,9 @@ export class ShareCardGenerator {
       return this.browserLaunchPromise;
     }
 
+    const executablePath = this.getChromiumPath();
+    console.log(`[ShareCardGenerator] Using Chromium at: ${executablePath}`);
+
     this.browserLaunchPromise = (async () => {
       let lastError: Error | null = null;
       
@@ -149,6 +181,7 @@ export class ShareCardGenerator {
           console.log(`[ShareCardGenerator] Launching browser (attempt ${attempt}/${MAX_LAUNCH_RETRIES})...`);
           this.browser = await puppeteer.launch({
             headless: true,
+            executablePath,
             timeout: BROWSER_LAUNCH_TIMEOUT,
             args: [
               '--no-sandbox',

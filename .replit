@@ -4,7 +4,7 @@ hidden = [".config", ".git", "generated-icon.png", "node_modules", "dist"]
 
 [nix]
 channel = "stable-24_05"
-packages = ["glib", "nss", "nspr", "at-spi2-atk", "cups", "dbus", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libX11", "xorg.libxcb", "pango", "cairo", "expat", "mesa", "alsa-lib", "libdrm", "libxkbcommon"]
+packages = ["glib", "nss", "nspr", "at-spi2-atk", "cups", "dbus", "xorg.libXcomposite", "xorg.libXdamage", "xorg.libXext", "xorg.libXfixes", "xorg.libXrandr", "xorg.libX11", "xorg.libxcb", "pango", "cairo", "expat", "mesa", "alsa-lib", "libdrm", "libxkbcommon", "chromium"]
 
 [deployment]
 deploymentTarget = "autoscale"
