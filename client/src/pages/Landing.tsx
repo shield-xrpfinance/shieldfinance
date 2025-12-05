@@ -559,8 +559,8 @@ export default function Landing() {
             </p>
           </div>
 
-          <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ${latestUpdatesAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }}>
-            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-xapp">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <Card className={`p-6 glassmorphic transition-all hover:scale-105 ${latestUpdatesAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.1s' }} data-testid="card-update-xapp">
               <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
                 <Smartphone className="h-6 w-6 text-primary" />
               </div>
@@ -571,7 +571,7 @@ export default function Landing() {
               <div className="text-xs text-primary font-medium" data-testid="badge-update-xapp">Native SDK Integration</div>
             </Card>
 
-            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-wallets">
+            <Card className={`p-6 glassmorphic transition-all hover:scale-105 ${latestUpdatesAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.2s' }} data-testid="card-update-wallets">
               <div className="h-12 w-12 rounded-lg bg-chart-2/10 flex items-center justify-center mb-4">
                 <Wallet className="h-6 w-6 text-chart-2" />
               </div>
@@ -582,20 +582,9 @@ export default function Landing() {
               <div className="text-xs text-chart-2 font-medium" data-testid="badge-update-wallets">XRPL + EVM Ecosystems</div>
             </Card>
 
-            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-tour">
+            <Card className={`p-6 glassmorphic transition-all hover:scale-105 ${latestUpdatesAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.3s' }} data-testid="card-update-airdrop">
               <div className="h-12 w-12 rounded-lg bg-chart-3/10 flex items-center justify-center mb-4">
-                <Compass className="h-6 w-6 text-chart-3" />
-              </div>
-              <h3 className="text-lg font-semibold mb-2" data-testid="title-update-tour">Interactive Guided Tour</h3>
-              <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-tour">
-                Personalized onboarding experience that guides new users through the platform with scenario-based flows
-              </p>
-              <div className="text-xs text-chart-3 font-medium" data-testid="badge-update-tour">New User Friendly</div>
-            </Card>
-
-            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-airdrop">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <PartyPopper className="h-6 w-6 text-primary" />
+                <PartyPopper className="h-6 w-6 text-chart-3" />
               </div>
               <h3 className="text-lg font-semibold mb-2" data-testid="title-update-airdrop">SHIELD Token Airdrop</h3>
               <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-airdrop">
@@ -609,31 +598,31 @@ export default function Landing() {
               </Link>
             </Card>
 
-            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-realtime">
-              <div className="h-12 w-12 rounded-lg bg-chart-2/10 flex items-center justify-center mb-4">
-                <Activity className="h-6 w-6 text-chart-2" />
+            <Card className={`p-6 glassmorphic transition-all hover:scale-105 ${latestUpdatesAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.4s' }} data-testid="card-update-realtime">
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Activity className="h-6 w-6 text-primary" />
               </div>
               <h3 className="text-lg font-semibold mb-2" data-testid="title-update-realtime">Real-Time On-Chain Data</h3>
               <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-realtime">
                 Live TVL, APY tracking, and position verification directly from smart contracts with on-chain balance checks
               </p>
-              <div className="text-xs text-chart-2 font-medium" data-testid="badge-update-realtime">Live Contract Data</div>
+              <div className="text-xs text-primary font-medium" data-testid="badge-update-realtime">Live Contract Data</div>
             </Card>
 
-            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-swap">
-              <div className="h-12 w-12 rounded-lg bg-chart-3/10 flex items-center justify-center mb-4">
-                <RefreshCw className="h-6 w-6 text-chart-3" />
+            <Card className={`p-6 glassmorphic transition-all hover:scale-105 ${latestUpdatesAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.5s' }} data-testid="card-update-swap">
+              <div className="h-12 w-12 rounded-lg bg-chart-2/10 flex items-center justify-center mb-4">
+                <RefreshCw className="h-6 w-6 text-chart-2" />
               </div>
               <h3 className="text-lg font-semibold mb-2" data-testid="title-update-swap">Multi-Asset Swap</h3>
               <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-swap">
                 Swap between tokens with real-time quotes and approval flows powered by SparkDEX V3 router
               </p>
-              <div className="text-xs text-chart-3 font-medium" data-testid="badge-update-swap">SparkDEX Integration</div>
+              <div className="text-xs text-chart-2 font-medium" data-testid="badge-update-swap">SparkDEX Integration</div>
             </Card>
 
-            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-bridge">
-              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
-                <Globe className="h-6 w-6 text-primary" />
+            <Card className={`p-6 glassmorphic transition-all hover:scale-105 ${latestUpdatesAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`} style={{ animationDelay: '0.6s' }} data-testid="card-update-bridge">
+              <div className="h-12 w-12 rounded-lg bg-chart-3/10 flex items-center justify-center mb-4">
+                <Globe className="h-6 w-6 text-chart-3" />
               </div>
               <h3 className="text-lg font-semibold mb-2" data-testid="title-update-bridge">Multi-Chain Bridge</h3>
               <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-bridge">
