@@ -1077,3 +1077,159 @@ export interface BridgeHistoryEntry {
   completedAt: string | null; // ISO date string or null
   errorMessage: string | null;
 }
+
+// ========== RWA MARKETPLACE SCHEMA ==========
+
+// Order type enum
+export const rwaOrderTypeEnum = pgEnum("rwa_order_type", [
+  "buy",
+  "sell"
+]);
+
+// Order status enum
+export const rwaOrderStatusEnum = pgEnum("rwa_order_status", [
+  "open",       // Active and available for matching
+  "partial",    // Partially filled
+  "filled",     // Completely filled
+  "cancelled",  // Cancelled by user
+  "expired"     // Expired (time-based orders)
+]);
+
+// Trade status enum
+export const rwaTradeStatusEnum = pgEnum("rwa_trade_status", [
+  "pending",    // Trade matched, awaiting settlement
+  "settling",   // Settlement in progress
+  "completed",  // Successfully settled
+  "failed"      // Settlement failed
+]);
+
+// RWA Listings - Available tokenized assets for trading
+export const rwaListings = pgTable("rwa_listings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  assetKey: text("asset_key").notNull(), // Matches AssetKey from assetConfig (e.g., "T-BILLS", "GOLD")
+  name: text("name").notNull(),
+  description: text("description"),
+  category: text("category").notNull(), // "treasury", "commodity", "credit", "equity", "fund"
+  
+  // Pricing
+  currentPrice: decimal("current_price", { precision: 18, scale: 6 }).notNull(), // USD price
+  priceChange24h: decimal("price_change_24h", { precision: 10, scale: 4 }).default("0"),
+  
+  // Market metrics
+  marketCap: decimal("market_cap", { precision: 18, scale: 2 }),
+  volume24h: decimal("volume_24h", { precision: 18, scale: 2 }).default("0"),
+  totalSupply: decimal("total_supply", { precision: 18, scale: 6 }),
+  circulatingSupply: decimal("circulating_supply", { precision: 18, scale: 6 }),
+  
+  // Yield info (for yield-bearing assets)
+  apy: decimal("apy", { precision: 5, scale: 2 }),
+  yieldFrequency: text("yield_frequency"), // "daily", "monthly", "quarterly"
+  
+  // Underlying asset info
+  underlyingAsset: text("underlying_asset"), // e.g., "US Treasury 3-Month Bills"
+  issuer: text("issuer"), // e.g., "Backed Finance", "Ondo Finance"
+  custodian: text("custodian"),
+  
+  // Compliance
+  kycRequired: boolean("kyc_required").notNull().default(false),
+  accreditationRequired: boolean("accreditation_required").notNull().default(false),
+  jurisdictionRestrictions: text("jurisdiction_restrictions").array(), // Countries excluded
+  
+  // Trading parameters
+  minOrderSize: decimal("min_order_size", { precision: 18, scale: 6 }).default("0.01"),
+  maxOrderSize: decimal("max_order_size", { precision: 18, scale: 6 }),
+  tradingEnabled: boolean("trading_enabled").notNull().default(true),
+  
+  // Status and metadata
+  status: text("status").notNull().default("active"), // "active", "suspended", "delisted"
+  iconUrl: text("icon_url"),
+  websiteUrl: text("website_url"),
+  documentationUrl: text("documentation_url"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// RWA Orders - Buy/sell orders placed by users
+export const rwaOrders = pgTable("rwa_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: varchar("wallet_address").notNull(),
+  listingId: varchar("listing_id").notNull().references(() => rwaListings.id),
+  
+  orderType: rwaOrderTypeEnum("order_type").notNull(),
+  status: rwaOrderStatusEnum("order_status").notNull().default("open"),
+  
+  // Order amounts
+  quantity: decimal("quantity", { precision: 18, scale: 6 }).notNull(), // Amount of RWA tokens
+  price: decimal("price", { precision: 18, scale: 6 }).notNull(), // Price per token in USD
+  filledQuantity: decimal("filled_quantity", { precision: 18, scale: 6 }).notNull().default("0"),
+  
+  // Payment token (what user pays/receives)
+  paymentToken: text("payment_token").notNull().default("USDC"), // USDC, RLUSD, etc.
+  
+  // Expiration (optional)
+  expiresAt: timestamp("expires_at"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+});
+
+// RWA Trades - Matched trades between buyers and sellers
+export const rwaTrades = pgTable("rwa_trades", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  listingId: varchar("listing_id").notNull().references(() => rwaListings.id),
+  buyOrderId: varchar("buy_order_id").notNull().references(() => rwaOrders.id),
+  sellOrderId: varchar("sell_order_id").references(() => rwaOrders.id), // Null for instant buys from pool
+  
+  buyerAddress: varchar("buyer_address").notNull(),
+  sellerAddress: varchar("seller_address"), // Null for instant buys from pool
+  
+  quantity: decimal("quantity", { precision: 18, scale: 6 }).notNull(),
+  price: decimal("price", { precision: 18, scale: 6 }).notNull(),
+  totalValue: decimal("total_value", { precision: 18, scale: 6 }).notNull(), // quantity * price
+  
+  // Fees
+  protocolFee: decimal("protocol_fee", { precision: 18, scale: 6 }).default("0"),
+  
+  status: rwaTradeStatusEnum("trade_status").notNull().default("pending"),
+  
+  // Transaction hashes
+  txHash: text("tx_hash"),
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  settledAt: timestamp("settled_at"),
+});
+
+// RWA Holdings - User's current holdings of RWA tokens
+export const rwaHoldings = pgTable("rwa_holdings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletAddress: varchar("wallet_address").notNull(),
+  listingId: varchar("listing_id").notNull().references(() => rwaListings.id),
+  
+  quantity: decimal("quantity", { precision: 18, scale: 6 }).notNull(),
+  averageCost: decimal("average_cost", { precision: 18, scale: 6 }).notNull(), // Average buy price
+  
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  updatedAt: timestamp("updated_at").notNull().defaultNow(),
+}, (table) => ({
+  uniqueWalletListing: unique().on(table.walletAddress, table.listingId),
+}));
+
+// Insert schemas
+export const insertRwaListingSchema = createInsertSchema(rwaListings).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertRwaOrderSchema = createInsertSchema(rwaOrders).omit({ id: true, createdAt: true, updatedAt: true, filledQuantity: true });
+export const insertRwaTradeSchema = createInsertSchema(rwaTrades).omit({ id: true, createdAt: true, settledAt: true });
+export const insertRwaHoldingSchema = createInsertSchema(rwaHoldings).omit({ id: true, createdAt: true, updatedAt: true });
+
+// Types
+export type RwaListing = typeof rwaListings.$inferSelect;
+export type InsertRwaListing = z.infer<typeof insertRwaListingSchema>;
+export type RwaOrder = typeof rwaOrders.$inferSelect;
+export type InsertRwaOrder = z.infer<typeof insertRwaOrderSchema>;
+export type RwaTrade = typeof rwaTrades.$inferSelect;
+export type InsertRwaTrade = z.infer<typeof insertRwaTradeSchema>;
+export type RwaHolding = typeof rwaHoldings.$inferSelect;
+export type InsertRwaHolding = z.infer<typeof insertRwaHoldingSchema>;
+
+// RWA Category type
+export type RwaCategory = "treasury" | "commodity" | "credit" | "equity" | "fund";
