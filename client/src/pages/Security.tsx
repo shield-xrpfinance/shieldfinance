@@ -280,7 +280,7 @@ export default function SecurityPage() {
             title="Verified on Explorer"
             description="Check contract source code verification on Flare Coston2."
             action="View Contracts"
-            href="https://coston2-explorer.flare.network/address/0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4"
+            href="https://coston2-explorer.flare.network/address/0x9dF4C13fd100a8025c663B6aa2eB600193aE5FB3"
           />
           <AuditReportLink />
           <div className="group block p-6 rounded-xl bg-card border border-border opacity-70" data-testid="link-bug-bounty">

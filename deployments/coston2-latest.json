@@ -30,9 +30,23 @@
       "deploymentTx": "Part of deploy-all-contracts-10m.ts execution"
     },
     "StakingBoost": {
+      "address": "0x9dF4C13fd100a8025c663B6aa2eB600193aE5FB3",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x9dF4C13fd100a8025c663B6aa2eB600193aE5FB3",
+      "status": "✅ Active (V2 with testnet lock bypass + chainId guard)",
+      "deploymentTx": "Part of deploy-staking-boost-v2.ts execution",
+      "testnetLockBypass": true,
+      "securityNote": "chainId guard prevents enabling bypass on mainnet"
+    },
+    "StakingBoostV2_NoChainIdGuard": {
+      "address": "0x0683C56C23D09cea7B2336dF7e50c7e29FC1dece",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x0683C56C23D09cea7B2336dF7e50c7e29FC1dece",
+      "status": "❌ DEPRECATED - Replaced by V2 with chainId guard",
+      "deploymentTx": "Part of deploy-staking-boost-v2.ts execution"
+    },
+    "StakingBoostV1_Deprecated": {
       "address": "0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4",
       "explorerUrl": "https://coston2-explorer.flare.network/address/0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4",
-      "status": "✅ Active",
+      "status": "❌ DEPRECATED - Replaced by V2",
       "deploymentTx": "Part of deploy-all-contracts-10m.ts execution"
     },
     "MerkleDistributor": {

@@ -848,12 +848,12 @@ export default function Staking() {
                 <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> Contract
               </h3>
               <a 
-                href={`${COSTON2_EXPLORER}/address/0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4`}
+                href={`${COSTON2_EXPLORER}/address/0x9dF4C13fd100a8025c663B6aa2eB600193aE5FB3`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-primary underline font-mono text-[8px] sm:text-[10px] lg:text-xs break-all"
               >
-                0xC7C50...2B4
+                0x9dF4C...FB3
               </a>
             </div>
           </div>

@@ -3,7 +3,7 @@ import { ethers } from "ethers";
 import { useWallet } from "@/lib/walletContext";
 import { useWalletClient, useSwitchChain } from "wagmi";
 
-const STAKING_BOOST_ADDRESS = "0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4";
+const STAKING_BOOST_ADDRESS = "0x9dF4C13fd100a8025c663B6aa2eB600193aE5FB3";
 const SHIELD_TOKEN_ADDRESS = "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616";
 
 // Note: StakingBoost contract is only deployed on Coston2 testnet.

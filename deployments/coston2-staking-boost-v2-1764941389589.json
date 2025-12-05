@@ -1,0 +1,21 @@
+{
+  "network": "coston2",
+  "chainId": 114,
+  "timestamp": "2025-12-05T13:29:49.587Z",
+  "deployer": "0x105A22E3fF06ee17020A510fa5113B5C6d9FEb2D",
+  "version": "2.1.0",
+  "note": "StakingBoost V2 with testnet lock bypass feature",
+  "contracts": {
+    "StakingBoost": {
+      "address": "0x9dF4C13fd100a8025c663B6aa2eB600193aE5FB3",
+      "explorerUrl": "https://coston2-explorer.flare.network/address/0x9dF4C13fd100a8025c663B6aa2eB600193aE5FB3",
+      "testnetLockBypass": true
+    }
+  },
+  "linkedContracts": {
+    "SHIELD_TOKEN": "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616",
+    "FXRP_TOKEN": "0x0b6A3645c240605887a5532109323A3E12273dc7",
+    "SHXRP_VAULT": "0x82d74B5fb005F7469e479C224E446bB89031e17F",
+    "REVENUE_ROUTER": "0x262582942Dcf97F59Cb0fe61e5852DDa10fD6fFB"
+  }
+}

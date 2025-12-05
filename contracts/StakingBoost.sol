@@ -117,6 +117,10 @@ contract StakingBoost is ReentrancyGuard, Ownable {
     /// @dev Default 2500 = 25% max boost
     uint256 public globalBoostCapBps = 2500;
     
+    /// @notice Testnet-only: bypass lock period for testing unstake functionality
+    /// @dev Should NEVER be enabled on mainnet. Owner can toggle for testnet testing.
+    bool public testnetLockBypass = false;
+    
     // ========================================
     // EVENTS
     // ========================================
@@ -129,6 +133,7 @@ contract StakingBoost is ReentrancyGuard, Ownable {
     event GlobalBoostCapUpdated(uint256 oldCap, uint256 newCap);
     event OrphanedRewardsDistributed(uint256 amount, uint256 newRewardPerToken);
     event TokensRecovered(address indexed token, address indexed to, uint256 amount);
+    event TestnetLockBypassUpdated(bool enabled);
     
     // ========================================
     // MODIFIERS
@@ -263,10 +268,14 @@ contract StakingBoost is ReentrancyGuard, Ownable {
     function withdraw(uint256 amount) external nonReentrant updateReward(msg.sender) {
         Stake storage userStake = stakes[msg.sender];
         require(userStake.amount >= amount, "Insufficient stake");
-        require(
-            block.timestamp >= userStake.stakedAt + LOCK_PERIOD,
-            "Tokens still locked"
-        );
+        
+        // Check lock period unless testnet bypass is enabled
+        if (!testnetLockBypass) {
+            require(
+                block.timestamp >= userStake.stakedAt + LOCK_PERIOD,
+                "Tokens still locked"
+            );
+        }
         
         // Update stake
         userStake.amount -= amount;
@@ -542,6 +551,29 @@ contract StakingBoost is ReentrancyGuard, Ownable {
         uint256 oldCap = globalBoostCapBps;
         globalBoostCapBps = newCapBps;
         emit GlobalBoostCapUpdated(oldCap, newCapBps);
+    }
+    
+    /**
+     * @dev Toggle testnet lock bypass (TESTNET ONLY)
+     * 
+     * SECURITY: This function can ONLY enable bypass on testnet chains (Coston2: chainId 114).
+     * It will revert if called on mainnet (Flare: chainId 14).
+     * This prevents accidental or malicious bypass of the 30-day lock on production.
+     * 
+     * It allows users to unstake immediately without waiting for the 30-day lock period.
+     * Use only for testing the unstake functionality on testnet.
+     * 
+     * @param enabled Whether to enable or disable the lock bypass
+     */
+    function setTestnetLockBypass(bool enabled) external onlyOwner {
+        // SECURITY: Only allow enabling on testnet chains
+        // Coston2 (Flare testnet) = 114
+        // Flare mainnet = 14
+        if (enabled) {
+            require(block.chainid == 114, "Lock bypass only allowed on Coston2 testnet");
+        }
+        testnetLockBypass = enabled;
+        emit TestnetLockBypassUpdated(enabled);
     }
     
     /**
