@@ -682,6 +682,7 @@ export default function Dashboard() {
         )}
       </div>
 
+{/* APY Performance section hidden until real yield is being earned
       <div className="space-y-6">
         <div className="space-y-2">
           <h2 className="text-3xl font-bold tracking-tight">APY Performance</h2>
@@ -696,6 +697,7 @@ export default function Dashboard() {
           />
         </div>
       </div>
+*/}
 
       {selectedVault && (
         <DepositModal
