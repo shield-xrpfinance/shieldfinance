@@ -283,13 +283,16 @@ export default function SecurityPage() {
             href="https://coston2-explorer.flare.network/address/0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4"
           />
           <AuditReportLink />
-          <LinkCard 
-            icon={<Bug className="w-6 h-6 text-green-600 dark:text-green-400" />}
-            title="Bug Bounty"
-            description="Report vulnerabilities responsibly for rewards."
-            action="Learn More"
-            href="#"
-          />
+          <div className="group block p-6 rounded-xl bg-card border border-border opacity-70" data-testid="link-bug-bounty">
+            <div className="mb-4 p-3 bg-secondary w-fit rounded-lg border border-border">
+              <Bug className="w-6 h-6 text-green-600 dark:text-green-400" />
+            </div>
+            <h3 className="font-bold text-lg text-foreground mb-2">Bug Bounty</h3>
+            <p className="text-muted-foreground text-sm mb-4">Report vulnerabilities responsibly for rewards.</p>
+            <div className="flex items-center text-sm font-medium text-muted-foreground">
+              <Badge variant="outline" className="text-xs">Coming Soon</Badge>
+            </div>
+          </div>
         </motion.div>
 
         <footer className="text-center border-t border-border pt-12 pb-8">
