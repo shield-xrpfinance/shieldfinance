@@ -24,7 +24,7 @@ function getNotificationRoute(type: NotificationType): string {
     case "deposit":
       return "/app/portfolio";
     case "withdrawal":
-      return "/app/vaults";
+      return "/app/transactions";
     case "reward":
       return "/app/airdrop";
     case "boost":
