@@ -545,7 +545,7 @@ export default function PointsDashboard() {
                     className="h-full transition-all"
                     style={{ 
                       width: `${Math.min(100, (userPointsData.totalPoints / TIER_CONFIG.diamond.minPoints) * 100)}%`,
-                      background: 'linear-gradient(to right, #ea580c 0%, #ea580c 10%, #9ca3af 10%, #9ca3af 40%, #eab308 40%, #eab308 80%, #22d3ee 80%, #22d3ee 100%)'
+                      background: 'linear-gradient(to right, #ea580c 0%, #ea580c 25%, #9ca3af 25%, #9ca3af 50%, #eab308 50%, #eab308 75%, #22d3ee 75%, #22d3ee 100%)'
                     }}
                     data-testid="progress-tier-visual"
                   />
