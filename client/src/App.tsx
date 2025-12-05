@@ -87,6 +87,16 @@ function Header({ onConnectWallet }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <a 
+          href="https://xpert.page/p/shieldfinance" 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="flex items-center gap-2 px-3 py-1.5 bg-white hover:bg-gray-50 text-gray-900 border border-gray-200 rounded-lg transition-colors text-sm"
+          data-testid="link-support"
+        >
+          <img src="https://img.xpert.page/assets/xpert_Icon_Black_24x24.png" alt="Support" className="h-4 w-4" />
+          <span className="hidden sm:inline">Support</span>
+        </a>
         <NotificationCenter />
         <ControlCenter onConnectWallet={onConnectWallet} />
       </div>
