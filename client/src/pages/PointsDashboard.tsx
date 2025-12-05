@@ -83,6 +83,24 @@ const tierIcons: Record<UserTier, typeof Trophy> = {
 
 const tierOrder: UserTier[] = ["bronze", "silver", "gold", "diamond"];
 
+const TIER_THRESHOLDS = [0, 500, 2000, 5000];
+const SEGMENT_SIZE = 25;
+
+function getTierProgressPercent(totalPoints: number): number {
+  if (totalPoints <= TIER_THRESHOLDS[0]) return 0;
+  if (totalPoints >= TIER_THRESHOLDS[3]) {
+    const overflow = ((totalPoints - TIER_THRESHOLDS[3]) / TIER_THRESHOLDS[3]) * SEGMENT_SIZE;
+    return Math.min(75 + overflow, 100);
+  }
+  if (totalPoints < TIER_THRESHOLDS[1]) {
+    return (totalPoints / TIER_THRESHOLDS[1]) * SEGMENT_SIZE;
+  }
+  if (totalPoints < TIER_THRESHOLDS[2]) {
+    return SEGMENT_SIZE + ((totalPoints - TIER_THRESHOLDS[1]) / (TIER_THRESHOLDS[2] - TIER_THRESHOLDS[1])) * SEGMENT_SIZE;
+  }
+  return SEGMENT_SIZE * 2 + ((totalPoints - TIER_THRESHOLDS[2]) / (TIER_THRESHOLDS[3] - TIER_THRESHOLDS[2])) * SEGMENT_SIZE;
+}
+
 function getTierBadge(tier: UserTier, size: "sm" | "lg" = "sm") {
   const TierIcon = tierIcons[tier];
   const sizeClasses = size === "lg" ? "text-base px-4 py-1.5" : "";
@@ -549,7 +567,7 @@ export default function PointsDashboard() {
                   <div 
                     className="h-full transition-all absolute top-0 left-0"
                     style={{ 
-                      width: `${Math.min(100, (userPointsData.totalPoints / TIER_CONFIG.diamond.minPoints) * 100)}%`,
+                      width: `${getTierProgressPercent(userPointsData.totalPoints)}%`,
                       background: userPointsData.tier === 'diamond' ? '#22d3ee' : 
                                   userPointsData.tier === 'gold' ? '#eab308' : 
                                   userPointsData.tier === 'silver' ? '#9ca3af' : '#ea580c'
