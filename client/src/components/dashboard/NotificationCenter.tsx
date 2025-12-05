@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { Bell, Check, CheckCheck, Gift, Zap, ArrowUpRight, ArrowDownRight, Info, ArrowRight } from "lucide-react";
+import { Bell, Check, CheckCheck, Gift, Zap, ArrowUpRight, ArrowDownRight, Info, ArrowRight, Lock, Unlock, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,7 +28,11 @@ function getNotificationRoute(type: NotificationType): string {
     case "reward":
       return "/app/airdrop";
     case "boost":
-      return "/app/stake";
+    case "stake":
+    case "unstake":
+      return "/app/staking";
+    case "bridge":
+      return "/app/bridge";
     case "system":
     default:
       return "/app";
@@ -45,6 +49,12 @@ function NotificationIcon({ type }: { type: NotificationType }) {
       return <Gift className="h-4 w-4 text-yellow-500" />;
     case "boost":
       return <Zap className="h-4 w-4 text-purple-500" />;
+    case "stake":
+      return <Lock className="h-4 w-4 text-primary" />;
+    case "unstake":
+      return <Unlock className="h-4 w-4 text-orange-500" />;
+    case "bridge":
+      return <ArrowLeftRight className="h-4 w-4 text-cyan-500" />;
     case "system":
     default:
       return <Info className="h-4 w-4 text-muted-foreground" />;

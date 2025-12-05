@@ -6,6 +6,9 @@ export type NotificationType =
   | "withdrawal"
   | "reward"
   | "boost"
+  | "stake"
+  | "unstake"
+  | "bridge"
   | "system";
 
 export interface Notification {
@@ -122,6 +125,12 @@ export function getNotificationIcon(type: NotificationType): string {
       return "gift";
     case "boost":
       return "zap";
+    case "stake":
+      return "lock";
+    case "unstake":
+      return "unlock";
+    case "bridge":
+      return "arrow-right-left";
     case "system":
       return "bell";
     default:
@@ -139,6 +148,12 @@ export function getNotificationColor(type: NotificationType): string {
       return "text-yellow-500";
     case "boost":
       return "text-purple-500";
+    case "stake":
+      return "text-primary";
+    case "unstake":
+      return "text-orange-500";
+    case "bridge":
+      return "text-cyan-500";
     case "system":
       return "text-gray-500";
     default:

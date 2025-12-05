@@ -2396,6 +2396,49 @@ export async function registerRoutes(
     }
   });
 
+  /**
+   * POST /api/user/notifications
+   * Create a notification for a user
+   * Body: { walletAddress, type, title, message, metadata?, relatedTxHash? }
+   */
+  app.post("/api/user/notifications", async (req, res) => {
+    try {
+      const { walletAddress: rawWalletAddress, type, title, message, metadata, relatedTxHash } = req.body;
+      
+      if (!rawWalletAddress || !type || !title || !message) {
+        return res.status(400).json({ 
+          error: "walletAddress, type, title, and message are required" 
+        });
+      }
+
+      // Validate notification type
+      const validTypes = ["deposit", "withdrawal", "reward", "boost", "stake", "unstake", "bridge", "system"];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ error: `Invalid notification type. Must be one of: ${validTypes.join(", ")}` });
+      }
+
+      // Normalize EVM addresses to lowercase
+      const walletAddress = rawWalletAddress.startsWith("0x") 
+        ? rawWalletAddress.toLowerCase() 
+        : rawWalletAddress;
+
+      await storage.createNotification({
+        walletAddress,
+        type,
+        title,
+        message,
+        metadata: metadata || {},
+        relatedTxHash,
+        read: false,
+      });
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Failed to create notification:", error);
+      res.status(500).json({ error: "Failed to create notification" });
+    }
+  });
+
   // ============================================================
   // USER SETTINGS API ENDPOINTS
   // ============================================================
