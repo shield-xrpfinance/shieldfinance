@@ -319,13 +319,13 @@ export default function Staking() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-7xl">
-      <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
+    <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-6 lg:py-8 max-w-7xl">
+      <div className="mb-4 sm:mb-6">
+        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-1 sm:mb-2 flex items-center gap-2 sm:gap-3">
           <img 
             src={shieldLogo} 
             alt="Shield Finance" 
-            className="h-10 w-10"
+            className="h-7 w-7 sm:h-9 sm:w-9 lg:h-10 lg:w-10"
             data-testid="logo-staking-header"
           />
           SHIELD Staking
@@ -336,7 +336,7 @@ export default function Staking() {
                 className="text-muted-foreground hover:text-foreground transition-colors"
                 aria-label="Learn about SHIELD token"
               >
-                <HelpCircle className="h-5 w-5" />
+                <HelpCircle className="h-4 w-4 sm:h-5 sm:w-5" />
               </button>
             </TooltipTrigger>
             <TooltipContent className="max-w-xs">
@@ -344,93 +344,95 @@ export default function Staking() {
             </TooltipContent>
           </Tooltip>
         </h1>
-        <p className="text-muted-foreground text-lg">
-          Stake SHIELD tokens to boost your shXRP APY rewards
+        <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">
+          Stake SHIELD to boost your shXRP APY rewards
         </p>
       </div>
 
-      <Alert className="mb-4 border-green-500/20 bg-green-500/5 backdrop-blur-md">
-        <Info className="h-5 w-5 text-green-500" />
-        <AlertDescription className="text-base ml-2">
-          <strong>On-Chain Staking Active</strong> - Your stakes are secured by the StakingBoost smart contract 
-          on Flare Coston2 testnet. All transactions require wallet signature.
-        </AlertDescription>
-      </Alert>
-
-      <Alert className="mb-8 border-primary/20 bg-primary/5 backdrop-blur-md">
-        <Info className="h-5 w-5 text-primary" />
-        <AlertDescription className="text-base ml-2">
-          <strong>Boost Formula:</strong> Stake 100 SHIELD = +1% APY on all your shXRP deposits. 
-          Example: 500 SHIELD staked = +5% APY boost!
+      <Alert className="mb-4 sm:mb-6 border-primary/20 bg-gradient-to-r from-green-500/5 to-primary/5 backdrop-blur-md">
+        <Info className="h-4 w-4 sm:h-5 sm:w-5 text-primary flex-shrink-0" />
+        <AlertDescription className="text-xs sm:text-sm ml-2">
+          <span className="hidden sm:inline"><strong>On-Chain Staking</strong> on Flare Coston2. </span>
+          <strong className="sm:font-normal">Boost Formula:</strong> 100 SHIELD = +1% APY on shXRP deposits
         </AlertDescription>
       </Alert>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-          <Skeleton className="h-48 rounded-2xl" />
-          <Skeleton className="h-48 rounded-2xl" />
-          <Skeleton className="h-48 rounded-2xl" />
-          <Skeleton className="h-48 rounded-2xl" />
-          <Skeleton className="h-48 rounded-2xl" />
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
+          <Skeleton className="h-[88px] sm:h-[100px] lg:h-32 rounded-lg sm:rounded-xl lg:rounded-2xl" />
+          <Skeleton className="h-[88px] sm:h-[100px] lg:h-32 rounded-lg sm:rounded-xl lg:rounded-2xl" />
+          <Skeleton className="h-[88px] sm:h-[100px] lg:h-32 rounded-lg sm:rounded-xl lg:rounded-2xl" />
+          <Skeleton className="h-[88px] sm:h-[100px] lg:h-32 rounded-lg sm:rounded-xl lg:rounded-2xl" />
+          <Skeleton className="h-[88px] sm:h-[100px] lg:h-32 rounded-lg sm:rounded-xl lg:rounded-2xl col-span-2 sm:col-span-1" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 sm:gap-4 lg:gap-6 mb-4 sm:mb-6">
           <GlassStatsCard
-            label="Your SHIELD Balance"
-            value={parseFloat(shieldBalance).toFixed(4)}
-            icon={<img src={shieldLogo} alt="Shield" className="h-6 w-6" />}
+            label="SHIELD Balance"
+            value={parseFloat(shieldBalance).toFixed(2)}
+            icon={<img src={shieldLogo} alt="Shield" className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />}
+            compact
           />
           <GlassStatsCard
-            label="Your Staked Balance"
-            value={`${stakedBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} SHIELD`}
-            icon={<img src={shieldLogo} alt="Shield" className="h-6 w-6" />}
+            label="Staked"
+            value={`${stakedBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })}`}
+            icon={<img src={shieldLogo} alt="Shield" className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />}
+            compact
           />
           <GlassStatsCard
-            label="Current APY Boost"
+            label="APY Boost"
             value={`+${boostPercentage}%`}
-            icon={<TrendingUp className="h-6 w-6" />}
+            icon={<TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />}
+            compact
           />
           <GlassStatsCard
-            label="Effective shXRP APY"
+            label="Effective APY"
             value={`${(baseShxrpApy + boostPercentage).toFixed(1)}%`}
-            icon={<Coins className="h-6 w-6 text-green-500" />}
+            icon={<Coins className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6 text-green-500" />}
+            compact
           />
           <GlassStatsCard
             label="Lock Status"
             value={isLocked ? timeRemaining : "Unlocked"}
-            icon={isLocked ? <Lock className="h-6 w-6" /> : <Unlock className="h-6 w-6" />}
+            icon={isLocked ? <Lock className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" /> : <Unlock className="h-4 w-4 sm:h-5 sm:w-5 lg:h-6 lg:w-6" />}
+            compact
           />
         </div>
       )}
 
       {stakedBalance > 0 && (
-        <Card className="mb-8 backdrop-blur-md bg-gradient-to-r from-green-500/10 to-primary/10 border-green-500/30">
-          <CardContent className="pt-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 rounded-full bg-green-500/20">
-                <TrendingUp className="h-6 w-6 text-green-500" />
+        <Card className="mb-4 sm:mb-6 backdrop-blur-md bg-gradient-to-r from-green-500/10 to-primary/10 border-green-500/30">
+          <CardContent className="p-3 sm:p-4 lg:pt-6">
+            <div className="flex items-start sm:items-center gap-3 sm:gap-4">
+              <div className="p-2 sm:p-3 rounded-full bg-green-500/20 flex-shrink-0">
+                <TrendingUp className="h-4 w-4 sm:h-6 sm:w-6 text-green-500" />
               </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-lg">Your Rewards Are Active</h3>
-                <p className="text-sm text-muted-foreground">
-                  Your {stakedBalance.toLocaleString()} SHIELD stake gives you +{boostPercentage}% APY boost. 
-                  Combined with the base {baseShxrpApy}% APY, your shXRP deposits earn <strong className="text-green-500">{(baseShxrpApy + boostPercentage).toFixed(1)}% APY</strong>.
+              <div className="flex-1 min-w-0">
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <h3 className="font-semibold text-sm sm:text-base lg:text-lg">Rewards Active</h3>
+                  <Badge variant="outline" className="text-green-500 border-green-500/50 text-[10px] sm:text-xs">
+                    +{boostPercentage}% Boost
+                  </Badge>
+                </div>
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                  <span className="hidden sm:inline">{stakedBalance.toLocaleString()} SHIELD staked. </span>
+                  Total shXRP APY: <strong className="text-green-500">{(baseShxrpApy + boostPercentage).toFixed(1)}%</strong>
                 </p>
               </div>
-              <div className="text-right hidden sm:block">
-                <p className="text-xs text-muted-foreground">Rewards Accrue In</p>
-                <p className="text-lg font-bold text-green-500">shXRP Vault</p>
+              <div className="text-right hidden md:block flex-shrink-0">
+                <p className="text-xs text-muted-foreground">Rewards In</p>
+                <p className="text-sm lg:text-lg font-bold text-green-500">shXRP Vault</p>
               </div>
             </div>
           </CardContent>
         </Card>
       )}
 
-      <Card className="mb-8 backdrop-blur-md bg-card/95 border-2" data-testid="card-boost-impact">
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <Zap className="h-5 w-5 text-primary" />
-            <CardTitle>Boost Impact Preview</CardTitle>
+      <Card className="mb-4 sm:mb-6 lg:mb-8 backdrop-blur-md bg-card/95 border-2" data-testid="card-boost-impact">
+        <CardHeader className="p-3 sm:p-4 lg:p-6 pb-2 sm:pb-3">
+          <div className="flex flex-wrap items-center gap-2">
+            <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            <CardTitle className="text-base sm:text-lg">Boost Impact</CardTitle>
             <Tooltip>
               <TooltipTrigger asChild>
                 <button
@@ -439,7 +441,7 @@ export default function Staking() {
                   aria-label="Learn about boost effect"
                   data-testid="tooltip-shield-boost"
                 >
-                  <HelpCircle className="h-4 w-4" />
+                  <HelpCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 </button>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
@@ -447,20 +449,20 @@ export default function Staking() {
               </TooltipContent>
             </Tooltip>
           </div>
-          <CardDescription>
-            See how your SHIELD stake boosts APY across all vaults
+          <CardDescription className="text-xs sm:text-sm">
+            How SHIELD staking boosts your vault APY
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div className="p-4 rounded-lg bg-muted/50 border">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Current Boost</span>
+        <CardContent className="p-3 sm:p-4 lg:p-6 pt-0 space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-3 gap-2 sm:gap-4">
+            <div className="p-2 sm:p-4 rounded-lg bg-muted/50 border">
+              <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Boost</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      className="text-muted-foreground hover:text-foreground transition-colors hidden sm:inline-flex"
                       aria-label="Learn about boost formula"
                       data-testid="tooltip-boost-formula"
                     >
@@ -472,33 +474,28 @@ export default function Staking() {
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <p className="text-2xl font-bold text-primary font-mono tabular-nums">
+              <p className="text-lg sm:text-xl lg:text-2xl font-bold text-primary font-mono tabular-nums">
                 +{boostPercentage.toFixed(1)}%
               </p>
             </div>
-            <div className="p-4 rounded-lg bg-muted/50 border">
-              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">Example Calculation</p>
-              <div className="flex items-center gap-2" data-testid="text-boost-example">
-                <span className="text-lg font-semibold font-mono tabular-nums">8%</span>
-                <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                <span className="text-lg font-semibold font-mono tabular-nums text-chart-2">
+            <div className="p-2 sm:p-4 rounded-lg bg-muted/50 border">
+              <p className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground mb-1">Example</p>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-0.5 sm:gap-2" data-testid="text-boost-example">
+                <span className="text-sm sm:text-lg font-semibold font-mono tabular-nums">8%</span>
+                <ArrowRight className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground hidden sm:block" />
+                <span className="text-sm sm:text-lg font-semibold font-mono tabular-nums text-chart-2">
                   {(8 * (1 + boostPercentage / 100)).toFixed(1)}%
                 </span>
-                {boostPercentage > 0 && (
-                  <Badge variant="outline" className="text-chart-2 border-chart-2/50 ml-1">
-                    +{((boostPercentage / 100) * 100).toFixed(0)}%
-                  </Badge>
-                )}
               </div>
             </div>
-            <div className="p-4 rounded-lg bg-muted/50 border">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Max Boost</span>
+            <div className="p-2 sm:p-4 rounded-lg bg-muted/50 border">
+              <div className="flex items-center gap-1 sm:gap-2 mb-1">
+                <span className="text-[10px] sm:text-xs font-medium uppercase tracking-wide text-muted-foreground">Max</span>
                 <Tooltip>
                   <TooltipTrigger asChild>
                     <button
                       type="button"
-                      className="text-muted-foreground hover:text-foreground transition-colors"
+                      className="text-muted-foreground hover:text-foreground transition-colors hidden sm:inline-flex"
                       aria-label="Learn about maximum boost"
                     >
                       <HelpCircle className="h-3 w-3" />
@@ -509,15 +506,15 @@ export default function Staking() {
                   </TooltipContent>
                 </Tooltip>
               </div>
-              <p className="text-2xl font-bold text-muted-foreground font-mono tabular-nums">
+              <p className="text-lg sm:text-xl lg:text-2xl font-bold text-muted-foreground font-mono tabular-nums">
                 25%
               </p>
             </div>
           </div>
 
           <div>
-            <div className="flex items-center gap-2 mb-3">
-              <h4 className="font-semibold text-sm">Vault Yield Preview</h4>
+            <div className="flex items-center gap-2 mb-2 sm:mb-3">
+              <h4 className="font-semibold text-xs sm:text-sm">Vault Yield Preview</h4>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
@@ -525,7 +522,7 @@ export default function Staking() {
                     className="text-muted-foreground hover:text-foreground transition-colors"
                     aria-label="Learn about SHIELD staking"
                   >
-                    <HelpCircle className="h-3.5 w-3.5" />
+                    <HelpCircle className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent className="max-w-xs">
@@ -536,28 +533,21 @@ export default function Staking() {
             
             {vaultsLoading ? (
               <div className="space-y-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-8 sm:h-10 w-full" />
+                <Skeleton className="h-8 sm:h-10 w-full" />
               </div>
             ) : activeVaults.length > 0 ? (
-              <div className="rounded-lg border overflow-hidden">
-                <Table>
+              <div className="rounded-lg border overflow-hidden overflow-x-auto">
+                <Table className="text-xs sm:text-sm">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="w-[40%]">Vault</TableHead>
-                      <TableHead className="text-right">Base APY</TableHead>
-                      <TableHead className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          Boosted APY
-                          {boostPercentage > 0 && (
-                            <Badge variant="default" className="bg-chart-2 text-chart-2-foreground border-transparent text-[10px] px-1 py-0">
-                              +{boostPercentage.toFixed(0)}%
-                            </Badge>
-                          )}
-                        </div>
+                      <TableHead className="w-[35%] sm:w-[40%] px-2 sm:px-4">Vault</TableHead>
+                      <TableHead className="text-right px-2 sm:px-4">Base</TableHead>
+                      <TableHead className="text-right px-2 sm:px-4">
+                        <span className="hidden sm:inline">Boosted</span>
+                        <span className="sm:hidden">Boost</span>
                       </TableHead>
-                      <TableHead className="text-right hidden sm:table-cell">Extra Yield</TableHead>
+                      <TableHead className="text-right hidden sm:table-cell px-2 sm:px-4">Extra</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -567,21 +557,21 @@ export default function Staking() {
                       const extraYield = boostedApy - baseApy;
                       return (
                         <TableRow key={vault.id} data-testid={`row-vault-${vault.id}`}>
-                          <TableCell className="font-medium">
-                            <div className="flex items-center gap-2">
-                              <Coins className="h-4 w-4 text-muted-foreground" />
-                              {vault.name}
+                          <TableCell className="font-medium px-2 sm:px-4 py-2 sm:py-4">
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <Coins className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground flex-shrink-0" />
+                              <span className="truncate">{vault.name}</span>
                             </div>
                           </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums">
+                          <TableCell className="text-right font-mono tabular-nums px-2 sm:px-4 py-2 sm:py-4">
                             {baseApy.toFixed(1)}%
                           </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums">
+                          <TableCell className="text-right font-mono tabular-nums px-2 sm:px-4 py-2 sm:py-4">
                             <span className={boostPercentage > 0 ? "text-chart-2 font-semibold" : ""}>
                               {boostedApy.toFixed(1)}%
                             </span>
                           </TableCell>
-                          <TableCell className="text-right font-mono tabular-nums hidden sm:table-cell">
+                          <TableCell className="text-right font-mono tabular-nums hidden sm:table-cell px-2 sm:px-4 py-2 sm:py-4">
                             {boostPercentage > 0 ? (
                               <span className="text-chart-2">+{extraYield.toFixed(2)}%</span>
                             ) : (
@@ -595,17 +585,17 @@ export default function Staking() {
                 </Table>
               </div>
             ) : (
-              <div className="text-center py-6 text-muted-foreground">
+              <div className="text-center py-4 sm:py-6 text-muted-foreground text-xs sm:text-sm">
                 <p>No active vaults available</p>
               </div>
             )}
 
             {boostPercentage > 0 && activeVaults.length > 0 && (
-              <div className="mt-4 p-3 rounded-lg bg-chart-2/10 border border-chart-2/20">
+              <div className="mt-3 sm:mt-4 p-2 sm:p-3 rounded-lg bg-chart-2/10 border border-chart-2/20">
                 <div className="flex items-center gap-2">
-                  <Zap className="h-4 w-4 text-chart-2" />
-                  <span className="text-sm font-medium">
-                    Your +{boostPercentage.toFixed(1)}% boost applies to all {activeVaults.length} vaults simultaneously
+                  <Zap className="h-3 w-3 sm:h-4 sm:w-4 text-chart-2 flex-shrink-0" />
+                  <span className="text-xs sm:text-sm font-medium">
+                    +{boostPercentage.toFixed(1)}% boost on all {activeVaults.length} vaults
                   </span>
                 </div>
               </div>
@@ -614,20 +604,20 @@ export default function Staking() {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 lg:gap-8">
         <Card className="backdrop-blur-md bg-card/95 border-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <img src={shieldLogo} alt="Shield" className="h-5 w-5" />
+          <CardHeader className="p-3 sm:p-4 lg:p-6 pb-2 sm:pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <img src={shieldLogo} alt="Shield" className="h-4 w-4 sm:h-5 sm:w-5" />
               Stake SHIELD
             </CardTitle>
-            <CardDescription>
-              Lock your SHIELD tokens for 30 days to earn APY boosts
+            <CardDescription className="text-xs sm:text-sm">
+              Lock tokens for 30 days to earn APY boosts
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="stake-amount">Amount to Stake</Label>
+          <CardContent className="p-3 sm:p-4 lg:p-6 pt-0 space-y-3 sm:space-y-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="stake-amount" className="text-xs sm:text-sm">Amount to Stake</Label>
               <Input
                 id="stake-amount"
                 type="number"
@@ -637,33 +627,33 @@ export default function Staking() {
                 min="0"
                 step="1"
                 disabled={isStaking}
+                className="h-9 sm:h-10"
                 data-testid="input-stake-amount"
               />
-              <p className="text-xs text-muted-foreground">
-                Available: {parseFloat(shieldBalance).toFixed(4)} SHIELD
+              <p className="text-[10px] sm:text-xs text-muted-foreground">
+                Available: {parseFloat(shieldBalance).toFixed(2)} SHIELD
               </p>
             </div>
 
-            <div className="p-4 rounded-lg bg-accent/10 border border-accent/20">
+            <div className="p-2.5 sm:p-4 rounded-lg bg-accent/10 border border-accent/20">
               <div className="flex items-start gap-2">
-                <Clock className="h-5 w-5 text-accent mt-0.5" />
-                <div className="flex-1">
-                  <p className="font-medium text-sm">30-Day Lock Period</p>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Your tokens will be locked for 30 days. You can add more SHIELD anytime, 
-                    which will reset the lock period.
+                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-accent mt-0.5 flex-shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-xs sm:text-sm">30-Day Lock</p>
+                  <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+                    Tokens locked for 30 days. Adding more resets the lock.
                   </p>
                 </div>
               </div>
             </div>
 
             {stakeAmount && parseFloat(stakeAmount) > 0 && (
-              <div className="p-4 rounded-lg bg-primary/10 border border-primary/20 backdrop-blur-md">
-                <p className="text-sm font-medium">Estimated Boost</p>
-                <p className="text-2xl font-bold text-primary mt-1">
+              <div className="p-2.5 sm:p-4 rounded-lg bg-primary/10 border border-primary/20 backdrop-blur-md">
+                <p className="text-xs sm:text-sm font-medium">Estimated Boost</p>
+                <p className="text-xl sm:text-2xl font-bold text-primary mt-0.5 sm:mt-1">
                   +{Math.floor(parseFloat(stakeAmount) / 100)}% APY
                 </p>
-                <p className="text-xs text-muted-foreground mt-1">
+                <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
                   on all shXRP deposits
                 </p>
               </div>
@@ -672,14 +662,14 @@ export default function Staking() {
             <Button
               onClick={handleStake}
               className="w-full"
-              size="lg"
               disabled={!stakeAmount || parseFloat(stakeAmount) <= 0 || isStaking || parseFloat(stakeAmount) > parseFloat(shieldBalance)}
               data-testid="button-stake"
             >
               {isStaking ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Awaiting Wallet Approval...
+                  <span className="hidden sm:inline">Awaiting Wallet...</span>
+                  <span className="sm:hidden">Processing...</span>
                 </>
               ) : (
                 "Lock for 30 Days"
@@ -689,20 +679,20 @@ export default function Staking() {
         </Card>
 
         <Card className="backdrop-blur-md bg-card/95 border-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Unlock className="h-5 w-5 text-muted-foreground" />
-              Unstake SHIELD
+          <CardHeader className="p-3 sm:p-4 lg:p-6 pb-2 sm:pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Unlock className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
+              Withdraw SHIELD
             </CardTitle>
-            <CardDescription>
-              Withdraw your staked SHIELD tokens after the lock period
+            <CardDescription className="text-xs sm:text-sm">
+              Withdraw staked tokens after the lock period
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="unstake-amount">Amount to Unstake</Label>
+          <CardContent className="p-3 sm:p-4 lg:p-6 pt-0 space-y-3 sm:space-y-4">
+            <div className="space-y-1.5 sm:space-y-2">
+              <Label htmlFor="withdraw-amount" className="text-xs sm:text-sm">Amount to Withdraw</Label>
               <Input
-                id="unstake-amount"
+                id="withdraw-amount"
                 type="number"
                 placeholder="100"
                 value={unstakeAmount}
@@ -711,62 +701,89 @@ export default function Staking() {
                 max={stakedBalance.toString()}
                 step="1"
                 disabled={isLocked || isUnstaking}
-                data-testid="input-unstake-amount"
+                className="h-9 sm:h-10"
+                data-testid="input-withdraw-amount"
               />
-              <p className="text-xs text-muted-foreground">
-                Available: {stakedBalance.toLocaleString(undefined, { maximumFractionDigits: 2 })} SHIELD
-              </p>
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-[10px] sm:text-xs text-muted-foreground">
+                  Available: {stakedBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} SHIELD
+                </p>
+                {stakedBalance > 0 && !isLocked && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 px-1.5 text-[10px] sm:text-xs text-primary"
+                    onClick={() => setUnstakeAmount(stakedBalance.toString())}
+                    data-testid="button-max-withdraw"
+                  >
+                    Max
+                  </Button>
+                )}
+              </div>
             </div>
 
-            {isLocked && (
-              <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20">
-                <div className="flex items-start gap-2">
-                  <Lock className="h-5 w-5 text-destructive mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm text-destructive">Tokens Locked</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Your tokens will unlock in {timeRemaining}
+            {(() => {
+              if (stakedBalance === 0) {
+                return (
+                  <div className="p-2.5 sm:p-4 rounded-lg bg-muted/50 border">
+                    <p className="text-xs sm:text-sm text-muted-foreground text-center">
+                      Stake SHIELD first to have tokens available to withdraw
                     </p>
                   </div>
-                </div>
-              </div>
-            )}
-
-            {!isLocked && stakedBalance > 0 && (
-              <div className="p-4 rounded-lg bg-green-500/10 border border-green-500/20">
-                <div className="flex items-start gap-2">
-                  <Unlock className="h-5 w-5 text-green-500 mt-0.5" />
-                  <div className="flex-1">
-                    <p className="font-medium text-sm text-green-500">Ready to Unstake</p>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Your lock period has ended. You can unstake anytime.
-                    </p>
+                );
+              }
+              if (isLocked) {
+                return (
+                  <div className="p-2.5 sm:p-4 rounded-lg bg-destructive/10 border border-destructive/20">
+                    <div className="flex items-start gap-2">
+                      <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-destructive mt-0.5 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-xs sm:text-sm text-destructive">Tokens Locked</p>
+                        <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+                          Available to withdraw in {timeRemaining}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
+              return (
+                <div className="p-2.5 sm:p-4 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <div className="flex items-start gap-2">
+                    <Unlock className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-xs sm:text-sm text-green-500">Ready to Withdraw</p>
+                      <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
+                        Lock period ended. Withdraw your SHIELD anytime.
+                      </p>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             <Button
               onClick={handleUnstake}
               className="w-full"
-              size="lg"
-              variant="secondary"
+              variant={!isLocked && stakedBalance > 0 ? "default" : "secondary"}
               disabled={
                 isLocked || 
+                stakedBalance === 0 ||
                 !unstakeAmount || 
                 parseFloat(unstakeAmount) <= 0 || 
                 parseFloat(unstakeAmount) > stakedBalance ||
                 isUnstaking
               }
-              data-testid="button-unstake"
+              data-testid="button-withdraw"
             >
               {isUnstaking ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Awaiting Wallet Approval...
+                  <span className="hidden sm:inline">Processing Withdrawal...</span>
+                  <span className="sm:hidden">Processing...</span>
                 </>
               ) : (
-                "Unstake SHIELD"
+                "Withdraw SHIELD"
               )}
             </Button>
           </CardContent>
@@ -774,18 +791,18 @@ export default function Staking() {
       </div>
 
       {lastTxHash && (
-        <Alert className="mt-8 border-green-500/20 bg-green-500/5">
-          <Info className="h-5 w-5 text-green-500" />
-          <AlertDescription className="ml-2">
-            <div className="flex items-center gap-2">
-              <span>Last transaction:</span>
+        <Alert className="mt-4 sm:mt-6 lg:mt-8 border-green-500/20 bg-green-500/5">
+          <Info className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 flex-shrink-0" />
+          <AlertDescription className="ml-2 text-xs sm:text-sm">
+            <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+              <span>Transaction:</span>
               <a 
                 href={`${COSTON2_EXPLORER}/tx/${lastTxHash}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-primary underline font-mono text-sm"
+                className="flex items-center gap-1 text-primary underline font-mono text-[10px] sm:text-sm"
               >
-                {lastTxHash.slice(0, 10)}...{lastTxHash.slice(-8)}
+                {lastTxHash.slice(0, 8)}...{lastTxHash.slice(-6)}
                 <ExternalLink className="h-3 w-3" />
               </a>
             </div>
@@ -793,67 +810,60 @@ export default function Staking() {
         </Alert>
       )}
 
-      <Card className="mt-8 backdrop-blur-md bg-card/95 border-2">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Info className="h-5 w-5 text-primary" />
-            How SHIELD Staking Boosts Work
+      <Card className="mt-4 sm:mt-6 lg:mt-8 backdrop-blur-md bg-card/95 border-2">
+        <CardHeader className="p-3 sm:p-4 lg:p-6 pb-2 sm:pb-3">
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Info className="h-4 w-4 sm:h-5 sm:w-5 text-primary" />
+            How Staking Boosts Work
           </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <Lock className="h-4 w-4" /> Lock Period
+        <CardContent className="p-3 sm:p-4 lg:p-6 pt-0 space-y-3 sm:space-y-4">
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
+            <div className="p-2.5 sm:p-4 rounded-lg bg-muted/30 border">
+              <h3 className="font-semibold text-xs sm:text-sm mb-1 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
+                <Lock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> Lock Period
               </h3>
-              <p className="text-sm text-muted-foreground">
-                Stake SHIELD for a 30-day lock period. During this time, your tokens cannot be withdrawn 
-                but continue earning boost benefits.
+              <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground">
+                30-day lock. Tokens earn boost benefits during lock.
               </p>
             </div>
-            <div>
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <TrendingUp className="h-4 w-4" /> Boost Formula
+            <div className="p-2.5 sm:p-4 rounded-lg bg-muted/30 border">
+              <h3 className="font-semibold text-xs sm:text-sm mb-1 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
+                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> Formula
               </h3>
-              <p className="text-sm text-muted-foreground">
-                For every 100 SHIELD staked, you receive +1% APY boost on ALL your shXRP deposits. 
-                Stake 500 SHIELD = +5% APY!
+              <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground">
+                100 SHIELD = +1% APY on all shXRP deposits.
               </p>
             </div>
-            <div>
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <Shield className="h-4 w-4" /> On-Chain Security
+            <div className="p-2.5 sm:p-4 rounded-lg bg-muted/30 border">
+              <h3 className="font-semibold text-xs sm:text-sm mb-1 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
+                <Shield className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> Security
               </h3>
-              <p className="text-sm text-muted-foreground">
-                Your staked tokens are secured by the StakingBoost smart contract on Flare Coston2. 
-                All transactions are verifiable on the blockchain.
+              <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground">
+                On-chain StakingBoost contract on Flare Coston2.
               </p>
             </div>
-            <div>
-              <h3 className="font-semibold mb-2 flex items-center gap-2">
-                <ExternalLink className="h-4 w-4" /> Contract Address
+            <div className="p-2.5 sm:p-4 rounded-lg bg-muted/30 border">
+              <h3 className="font-semibold text-xs sm:text-sm mb-1 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
+                <ExternalLink className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> Contract
               </h3>
-              <p className="text-sm text-muted-foreground">
-                <a 
-                  href={`${COSTON2_EXPLORER}/address/0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary underline font-mono text-xs break-all"
-                >
-                  0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4
-                </a>
-              </p>
+              <a 
+                href={`${COSTON2_EXPLORER}/address/0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline font-mono text-[8px] sm:text-[10px] lg:text-xs break-all"
+              >
+                0xC7C50...2B4
+              </a>
             </div>
           </div>
 
-          <div className="mt-6 p-4 rounded-lg bg-primary/10 border border-primary/20 backdrop-blur-md">
-            <h4 className="font-semibold text-sm mb-2">Example Scenario</h4>
-            <div className="space-y-1 text-sm text-muted-foreground">
-              <p>You have 10,000 FXRP in shXRP vault earning 7% base APY</p>
-              <p>You stake 500 SHIELD tokens</p>
-              <p>Your boost: +5% APY (500 SHIELD / 100 = 5)</p>
-              <p>Your total APY: 7% + 5% = <span className="text-primary font-semibold">12% APY</span></p>
-              <p>Annual earnings increase: ~$500 additional per year!</p>
+          <div className="p-2.5 sm:p-4 rounded-lg bg-primary/10 border border-primary/20 backdrop-blur-md">
+            <h4 className="font-semibold text-xs sm:text-sm mb-1.5 sm:mb-2">Example</h4>
+            <div className="space-y-0.5 sm:space-y-1 text-[10px] sm:text-xs lg:text-sm text-muted-foreground">
+              <p>10,000 FXRP in shXRP vault @ 7% base APY</p>
+              <p>+ 500 SHIELD staked = +5% boost</p>
+              <p className="font-medium text-foreground">Total: <span className="text-primary">12% APY</span></p>
             </div>
           </div>
         </CardContent>
