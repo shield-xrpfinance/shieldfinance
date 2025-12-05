@@ -7291,7 +7291,15 @@ export async function registerRoutes(
           .set({ referredBy: referrer.walletAddress })
           .where(eq(userPointsTable.walletAddress, normalizedAddress));
 
-        return { success: true };
+        // Increment referrer's referral count immediately
+        await tx.update(userPointsTable)
+          .set({ 
+            referralCount: sql`${userPointsTable.referralCount} + 1`,
+            updatedAt: new Date(),
+          })
+          .where(eq(userPointsTable.walletAddress, referrer.walletAddress.toLowerCase()));
+
+        return { success: true, referrerAddress: referrer.walletAddress };
       });
 
       if (result.error) {
@@ -7306,19 +7314,33 @@ export async function registerRoutes(
         });
       }
 
-      // Create notification (outside transaction, non-critical)
+      console.log(`🎁 Referral applied: ${normalizedAddress.slice(0, 10)}... was referred by ${result.referrerAddress?.slice(0, 10)}...`);
+
+      // Create notifications (outside transaction, non-critical)
       await storage.createUserNotification({
         walletAddress,
         type: "system",
         title: "Referral Applied",
-        message: `You were referred by ${referrer.walletAddress.slice(0, 10)}... Make your first deposit to activate referral bonuses for both of you!`,
-        metadata: { referrerAddress: referrer.walletAddress, referralCode },
+        message: `You were referred by ${result.referrerAddress?.slice(0, 10)}... Make your first deposit to earn bonus points!`,
+        metadata: { referrerAddress: result.referrerAddress, referralCode },
         read: false,
       });
 
+      // Notify the referrer
+      if (result.referrerAddress) {
+        await storage.createUserNotification({
+          walletAddress: result.referrerAddress,
+          type: "reward",
+          title: "New Referral!",
+          message: `Someone joined using your referral link! Your referral count has been updated.`,
+          metadata: { referredAddress: normalizedAddress },
+          read: false,
+        });
+      }
+
       res.json({
         success: true,
-        message: "Referral code applied. Complete your first deposit to activate bonuses.",
+        message: "Referral applied successfully!",
       });
     } catch (error) {
       console.error("[Points API] Failed to apply referral:", error);

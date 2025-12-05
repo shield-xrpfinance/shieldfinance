@@ -17,6 +17,7 @@ import { ReownProvider } from "@/lib/ReownProvider";
 import { GeoProvider } from "@/lib/geoContext";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import { GeoRestrictionModal } from "@/components/GeoRestrictionModal";
+import { ReferralHandler } from "@/components/ReferralHandler";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import Landing from "@/pages/Landing";
@@ -153,6 +154,7 @@ function DashboardLayout() {
         <WalletProvider>
           <EcosystemSync />
           <WalletDisconnectHandler />
+          <ReferralHandler />
           <CurrencyProvider>
             <SidebarProvider style={style as React.CSSProperties}>
               <div className="flex h-screen w-full">
