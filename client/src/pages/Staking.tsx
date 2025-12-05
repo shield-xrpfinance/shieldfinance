@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useWallet } from "@/lib/walletContext";
 import { useComprehensiveBalance } from "@/hooks/useComprehensiveBalance";
 import { useStakingContract, OnChainStakeInfo } from "@/hooks/useStakingContract";
@@ -34,6 +35,24 @@ export default function Staking() {
   const [isStaking, setIsStaking] = useState(false);
   const [isUnstaking, setIsUnstaking] = useState(false);
   const [lastTxHash, setLastTxHash] = useState<string | null>(null);
+
+  // Mutation to create notifications
+  const createNotificationMutation = useMutation({
+    mutationFn: async (data: { type: string; title: string; message: string; relatedTxHash?: string }) => {
+      if (!evmAddress) return;
+      return apiRequest("POST", "/api/user/notifications", {
+        walletAddress: evmAddress,
+        type: data.type,
+        title: data.title,
+        message: data.message,
+        relatedTxHash: data.relatedTxHash,
+        metadata: {},
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/notifications"] });
+    },
+  });
 
   const { data: onChainStakeInfo, isLoading, refetch: refetchStakeInfo } = useQuery<OnChainStakeInfo | null>({
     queryKey: ['staking-contract', evmAddress],
@@ -159,11 +178,14 @@ export default function Staking() {
 
       if (result.success && result.txHash) {
         setLastTxHash(result.txHash);
+        const lockMessage = testnetLockBypass 
+          ? "Your SHIELD tokens have been staked (Testnet Mode - No Lock)"
+          : "Your SHIELD tokens have been staked for 30 days";
         toast({
           title: "Stake Successful!",
           description: (
             <div className="flex flex-col gap-2">
-              <span>Your SHIELD tokens have been staked for 30 days</span>
+              <span>{lockMessage}</span>
               <a 
                 href={`${COSTON2_EXPLORER}/tx/${result.txHash}`}
                 target="_blank"
@@ -174,6 +196,13 @@ export default function Staking() {
               </a>
             </div>
           ),
+        });
+        // Create notification for stake
+        createNotificationMutation.mutate({
+          type: "stake",
+          title: "SHIELD Staked",
+          message: `Successfully staked ${stakeAmount} SHIELD tokens`,
+          relatedTxHash: result.txHash,
         });
         setStakeAmount("");
         refetchStakeInfo();
@@ -193,7 +222,7 @@ export default function Staking() {
     } finally {
       setIsStaking(false);
     }
-  }, [stakeAmount, isEvmConnected, walletConnectProvider, provider, shieldBalance, stakingContract, toast, refetchStakeInfo]);
+  }, [stakeAmount, isEvmConnected, walletConnectProvider, provider, shieldBalance, stakingContract, toast, refetchStakeInfo, testnetLockBypass, createNotificationMutation]);
 
   const handleUnstake = useCallback(async () => {
     if (!unstakeAmount || parseFloat(unstakeAmount) <= 0) {
@@ -263,6 +292,13 @@ export default function Staking() {
             </div>
           ),
         });
+        // Create notification for unstake
+        createNotificationMutation.mutate({
+          type: "unstake",
+          title: "SHIELD Unstaked",
+          message: `Successfully unstaked ${unstakeAmount} SHIELD tokens`,
+          relatedTxHash: result.txHash,
+        });
         setUnstakeAmount("");
         refetchStakeInfo();
       } else {
@@ -281,7 +317,7 @@ export default function Staking() {
     } finally {
       setIsUnstaking(false);
     }
-  }, [unstakeAmount, isLocked, timeRemaining, isEvmConnected, walletConnectProvider, provider, stakedBalance, stakingContract, toast, refetchStakeInfo]);
+  }, [unstakeAmount, isLocked, timeRemaining, isEvmConnected, walletConnectProvider, provider, stakedBalance, stakingContract, toast, refetchStakeInfo, createNotificationMutation]);
 
   if (!isConnected) {
     return (

@@ -1,7 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { insertPositionSchema, type NotificationType } from "@shared/schema";
+import { insertPositionSchema, insertUserNotificationSchema, type NotificationType } from "@shared/schema";
 import { XummSdk } from "xumm-sdk";
 import { Client } from "xrpl";
 import type { BridgeService } from "./services/BridgeService";
@@ -2403,26 +2403,42 @@ export async function registerRoutes(
    */
   app.post("/api/user/notifications", async (req, res) => {
     try {
-      const { walletAddress: rawWalletAddress, type, title, message, metadata, relatedTxHash } = req.body;
+      // Validate request body with Zod schema
+      const validTypes = ["deposit", "withdrawal", "reward", "boost", "stake", "unstake", "bridge", "system"];
       
-      if (!rawWalletAddress || !type || !title || !message) {
+      // Parse and validate the request body
+      const parseResult = insertUserNotificationSchema.safeParse({
+        ...req.body,
+        read: false,
+        metadata: req.body.metadata || {},
+      });
+      
+      if (!parseResult.success) {
         return res.status(400).json({ 
-          error: "walletAddress, type, title, and message are required" 
+          error: "Invalid request body",
+          details: parseResult.error.flatten().fieldErrors,
         });
       }
 
+      const { walletAddress: rawWalletAddress, type, title, message, metadata, relatedTxHash } = parseResult.data;
+
       // Validate notification type
-      const validTypes = ["deposit", "withdrawal", "reward", "boost", "stake", "unstake", "bridge", "system"];
       if (!validTypes.includes(type)) {
         return res.status(400).json({ error: `Invalid notification type. Must be one of: ${validTypes.join(", ")}` });
       }
 
-      // Normalize EVM addresses to lowercase
-      const walletAddress = rawWalletAddress.startsWith("0x") 
-        ? rawWalletAddress.toLowerCase() 
-        : rawWalletAddress;
+      // Normalize EVM addresses using ethers checksum, then lowercase for consistent storage
+      let walletAddress = rawWalletAddress;
+      if (rawWalletAddress.startsWith("0x")) {
+        try {
+          // Use ethers.getAddress to validate and checksum the address, then lowercase
+          walletAddress = ethers.getAddress(rawWalletAddress).toLowerCase();
+        } catch {
+          return res.status(400).json({ error: "Invalid EVM wallet address" });
+        }
+      }
 
-      await storage.createNotification({
+      await storage.createUserNotification({
         walletAddress,
         type,
         title,
