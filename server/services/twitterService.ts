@@ -55,6 +55,12 @@ class TwitterService {
       return { success: true, tweetId: tweet.data.id };
     } catch (error: any) {
       console.error('❌ Error posting tweet:', error.message || error);
+      if (error.data) {
+        console.error('   Twitter API response:', JSON.stringify(error.data, null, 2));
+      }
+      if (error.code) {
+        console.error('   Error code:', error.code);
+      }
       return { success: false, error: error.message || 'Failed to post tweet' };
     }
   }
