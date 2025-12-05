@@ -253,6 +253,17 @@ export class PointsService {
         metadata: { amountUsd: params.amountUsd },
         description: "First deposit bonus - Welcome to Shield Finance!",
       });
+
+      // Check if user was referred by someone and award referral points
+      const userRecord = await this.getOrCreateUserPoints(normalizedAddress);
+      if (userRecord.referredBy) {
+        console.log(`🎁 Processing referral: ${userRecord.referredBy.slice(0, 10)}... referred ${normalizedAddress.slice(0, 10)}...`);
+        await this.processReferral({
+          referrerAddress: userRecord.referredBy,
+          referredAddress: normalizedAddress,
+          depositTxHash: params.txHash,
+        });
+      }
     }
 
     // Calculate deposit points (10 pts per $10)
