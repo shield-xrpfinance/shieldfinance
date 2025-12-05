@@ -682,17 +682,17 @@ export default function Staking() {
           <CardHeader className="p-3 sm:p-4 lg:p-6 pb-2 sm:pb-3">
             <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
               <Unlock className="h-4 w-4 sm:h-5 sm:w-5 text-muted-foreground" />
-              Withdraw SHIELD
+              Unstake SHIELD
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Withdraw staked tokens after the lock period
+              Remove tokens from staking after lock period
             </CardDescription>
           </CardHeader>
           <CardContent className="p-3 sm:p-4 lg:p-6 pt-0 space-y-3 sm:space-y-4">
             <div className="space-y-1.5 sm:space-y-2">
-              <Label htmlFor="withdraw-amount" className="text-xs sm:text-sm">Amount to Withdraw</Label>
+              <Label htmlFor="unstake-amount" className="text-xs sm:text-sm">Amount to Unstake</Label>
               <Input
-                id="withdraw-amount"
+                id="unstake-amount"
                 type="number"
                 placeholder="100"
                 value={unstakeAmount}
@@ -702,11 +702,11 @@ export default function Staking() {
                 step="1"
                 disabled={isLocked || isUnstaking}
                 className="h-9 sm:h-10"
-                data-testid="input-withdraw-amount"
+                data-testid="input-unstake-amount"
               />
               <div className="flex items-center justify-between gap-2">
                 <p className="text-[10px] sm:text-xs text-muted-foreground">
-                  Available: {stakedBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} SHIELD
+                  Staked: {stakedBalance.toLocaleString(undefined, { maximumFractionDigits: 0 })} SHIELD
                 </p>
                 {stakedBalance > 0 && !isLocked && (
                   <Button
@@ -714,7 +714,7 @@ export default function Staking() {
                     size="sm"
                     className="h-5 px-1.5 text-[10px] sm:text-xs text-primary"
                     onClick={() => setUnstakeAmount(stakedBalance.toString())}
-                    data-testid="button-max-withdraw"
+                    data-testid="button-max-unstake"
                   >
                     Max
                   </Button>
@@ -727,7 +727,7 @@ export default function Staking() {
                 return (
                   <div className="p-2.5 sm:p-4 rounded-lg bg-muted/50 border">
                     <p className="text-xs sm:text-sm text-muted-foreground text-center">
-                      Stake SHIELD first to have tokens available to withdraw
+                      No SHIELD staked yet
                     </p>
                   </div>
                 );
@@ -740,7 +740,7 @@ export default function Staking() {
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-xs sm:text-sm text-destructive">Tokens Locked</p>
                         <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-                          Available to withdraw in {timeRemaining}
+                          Unlocks in {timeRemaining}
                         </p>
                       </div>
                     </div>
@@ -752,9 +752,9 @@ export default function Staking() {
                   <div className="flex items-start gap-2">
                     <Unlock className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 mt-0.5 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-xs sm:text-sm text-green-500">Ready to Withdraw</p>
+                      <p className="font-medium text-xs sm:text-sm text-green-500">Ready to Unstake</p>
                       <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-                        Lock period ended. Withdraw your SHIELD anytime.
+                        Lock period ended. Unstake anytime.
                       </p>
                     </div>
                   </div>
@@ -774,16 +774,16 @@ export default function Staking() {
                 parseFloat(unstakeAmount) > stakedBalance ||
                 isUnstaking
               }
-              data-testid="button-withdraw"
+              data-testid="button-unstake"
             >
               {isUnstaking ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span className="hidden sm:inline">Processing Withdrawal...</span>
-                  <span className="sm:hidden">Processing...</span>
+                  <span className="hidden sm:inline">Unstaking...</span>
+                  <span className="sm:hidden">Unstaking...</span>
                 </>
               ) : (
-                "Withdraw SHIELD"
+                "Unstake SHIELD"
               )}
             </Button>
           </CardContent>
