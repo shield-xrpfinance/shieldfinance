@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import {
   Table,
   TableBody,
@@ -25,8 +25,6 @@ import {
   Sparkles,
   Gift,
   Users,
-  Copy,
-  Check,
   Share2,
   ExternalLink,
   ArrowRight,
@@ -35,6 +33,9 @@ import {
   Zap,
   ArrowUpRight,
   Droplets,
+  Loader2,
+  CheckCircle2,
+  Info,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import EmptyState from "@/components/EmptyState";
@@ -118,8 +119,10 @@ export default function PointsDashboard() {
   const { address, evmAddress, isConnected } = useWallet();
   const { isTestnet } = useNetwork();
   const { toast } = useToast();
-  const [copied, setCopied] = useState(false);
   const [connectModalOpen, setConnectModalOpen] = useState(false);
+  const [pendingShareId, setPendingShareId] = useState<number | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [sharePosted, setSharePosted] = useState(false);
   
   const walletAddress = address || evmAddress;
 
@@ -133,42 +136,126 @@ export default function PointsDashboard() {
     enabled: !!walletAddress,
   });
 
-  const copyReferralCode = async () => {
-    if (!userPointsData?.referralCode) return;
-    
-    try {
-      await navigator.clipboard.writeText(userPointsData.referralCode);
-      setCopied(true);
+  useEffect(() => {
+    const fetchPendingShares = async () => {
+      if (!walletAddress) return;
+      
+      try {
+        const response = await fetch(`/api/twitter/pending-shares/${walletAddress}`);
+        const data = await response.json();
+        
+        if (data.success && data.pendingShares && data.pendingShares.length > 0) {
+          const latestPending = data.pendingShares[0];
+          setPendingShareId(latestPending.id);
+          setSharePosted(true);
+        }
+      } catch (error) {
+        console.error('Failed to fetch pending shares:', error);
+      }
+    };
+
+    fetchPendingShares();
+  }, [walletAddress]);
+
+  const handleShareOnX = async () => {
+    if (!userPointsData || !userPointsData.referralCode) {
       toast({
-        title: "Copied!",
-        description: "Referral code copied to clipboard",
+        title: "Error",
+        description: "Unable to share. Please try again.",
+        variant: "destructive",
       });
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/twitter/share-url', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress,
+          type: 'referral',
+          referralCode: userPointsData.referralCode,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success && data.shareUrl) {
+        window.open(data.shareUrl, '_blank', 'noopener,noreferrer');
+        
+        if (data.pendingShareId) {
+          setPendingShareId(data.pendingShareId);
+          setSharePosted(true);
+          toast({
+            title: "Share Posted!",
+            description: "Click 'Verify Post' after sharing to earn points.",
+          });
+        } else {
+          toast({
+            title: "Share on X",
+            description: "Complete your post on X to earn points.",
+          });
+        }
+      } else {
+        throw new Error(data.error || 'Failed to generate share URL');
+      }
+    } catch (error) {
+      console.error('Share error:', error);
       toast({
-        title: "Failed to copy",
-        description: "Please copy the code manually",
+        title: "Error",
+        description: "Failed to open share dialog. Please try again.",
         variant: "destructive",
       });
     }
   };
 
-  const shareReferral = () => {
-    const referralLink = `${window.location.origin}/app?ref=${userPointsData?.referralCode}`;
-    const text = `Join me on Shield Finance testnet and earn points for the upcoming airdrop! Use my referral code: ${userPointsData?.referralCode}`;
-    
-    if (navigator.share) {
-      navigator.share({
-        title: "Shield Finance Referral",
-        text,
-        url: referralLink,
-      }).catch(() => {});
-    } else {
-      navigator.clipboard.writeText(`${text}\n${referralLink}`);
+  const handleVerifyShare = async () => {
+    if (!walletAddress || !pendingShareId) {
       toast({
-        title: "Copied!",
-        description: "Referral link copied to clipboard",
+        title: "Error",
+        description: "No pending share to verify.",
+        variant: "destructive",
       });
+      return;
+    }
+
+    setIsVerifying(true);
+
+    try {
+      const verifyResponse = await fetch('/api/twitter/verify-share', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          walletAddress,
+          pendingShareId,
+        }),
+      });
+
+      const verifyData = await verifyResponse.json();
+
+      if (verifyData.success) {
+        setPendingShareId(null);
+        setSharePosted(false);
+        toast({
+          title: "Verified!",
+          description: `You earned ${verifyData.pointsAwarded || 10} points for sharing!`,
+        });
+      } else {
+        toast({
+          title: "Verification Failed",
+          description: verifyData.error || "Could not verify your share. Please try again.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Verify error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to verify share. Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsVerifying(false);
     }
   };
 
@@ -283,58 +370,114 @@ export default function PointsDashboard() {
           </CardContent>
         </Card>
 
-        <Card data-testid="card-referral">
+        <Card className="border-sky-500/30 bg-sky-500/5" data-testid="card-referral">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-primary" />
-              Referral Program
+              <Share2 className="h-5 w-5 text-sky-500" />
+              Share & Earn
             </CardTitle>
             <CardDescription>
-              Invite friends and earn {POINTS_CONFIG.referral.base} points per referral
+              Share your personalized card on X to earn 10 points
             </CardDescription>
           </CardHeader>
           <CardContent>
             {isLoadingPoints ? (
               <div className="space-y-4">
+                <Skeleton className="h-32 w-full" />
                 <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-8 w-full" />
               </div>
             ) : userPointsData?.referralCode ? (
               <div className="space-y-4">
-                <div>
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">Your Referral Code</p>
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <code className="flex-1 px-3 py-2 bg-muted rounded-md font-mono text-sm sm:text-base" data-testid="text-referral-code">
+                <div className="rounded-xl overflow-hidden border border-sky-500/30 shadow-lg">
+                  <img 
+                    src={`/api/share-card/${userPointsData.referralCode}?points=${userPointsData.totalPoints || 0}&tier=${userPointsData.tier || 'bronze'}`}
+                    alt="Your personalized share card"
+                    className="w-full h-auto"
+                    data-testid="img-share-card-preview"
+                  />
+                </div>
+
+                <div className="p-3 rounded-lg bg-muted/50 border">
+                  <p className="text-xs text-muted-foreground mb-1">Your Referral Code</p>
+                  <div className="flex items-center justify-between">
+                    <p className="font-mono font-bold text-lg" data-testid="text-referral-code">
                       {userPointsData.referralCode}
-                    </code>
+                    </p>
                     <Button 
-                      size="icon" 
-                      variant="outline" 
-                      onClick={copyReferralCode}
+                      variant="ghost" 
+                      size="sm"
+                      onClick={() => {
+                        if (userPointsData.referralCode) {
+                          navigator.clipboard.writeText(userPointsData.referralCode);
+                          toast({
+                            title: "Copied!",
+                            description: "Referral code copied to clipboard",
+                          });
+                        }
+                      }}
                       data-testid="button-copy-referral"
                     >
-                      {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                      Copy
                     </Button>
                   </div>
                 </div>
                 
-                <Separator />
-                
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Referrals</p>
-                    <p className="text-2xl font-bold" data-testid="text-referral-count">
-                      {userPointsData.referralCount}
-                    </p>
-                  </div>
-                  <Button onClick={shareReferral} className="gap-2 w-full sm:w-auto" data-testid="button-share-referral">
-                    <Share2 className="h-4 w-4" />
-                    Share
-                  </Button>
+                <div className="text-center space-y-2">
+                  <p className="text-sm text-muted-foreground">
+                    <Users className="h-4 w-4 inline mr-1" />
+                    Invite friends and earn <span className="font-bold text-primary">{POINTS_CONFIG.referral.base} points</span> per referral!
+                  </p>
                 </div>
 
+                <div className="flex flex-col gap-2">
+                  <Button 
+                    className="w-full bg-sky-500 hover:bg-sky-600 text-white"
+                    onClick={handleShareOnX}
+                    data-testid="button-share-on-x"
+                  >
+                    <Share2 className="h-4 w-4 mr-2" />
+                    Share on X
+                    <ExternalLink className="h-4 w-4 ml-2" />
+                  </Button>
+
+                  {sharePosted && pendingShareId && (
+                    <Button 
+                      className="w-full"
+                      variant="outline"
+                      onClick={handleVerifyShare}
+                      disabled={isVerifying}
+                      data-testid="button-verify-share"
+                    >
+                      {isVerifying ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          Verifying...
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Verify Post to Earn 10 Points
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </div>
+
+                {sharePosted && pendingShareId && (
+                  <Alert className="border-sky-500/50 bg-sky-500/10">
+                    <Info className="h-4 w-4 text-sky-500" />
+                    <AlertDescription className="text-xs">
+                      Posted on X? Connect your X account and click "Verify Post" to earn your social share points.
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <p className="text-xs text-center text-muted-foreground">
+                  {userPointsData.referralCount || 0} friends joined using your code
+                </p>
+
                 {userPointsData.referredBy && (
-                  <div className="pt-2 text-sm text-muted-foreground">
+                  <div className="pt-2 text-sm text-muted-foreground text-center">
                     Referred by: <span className="font-mono">{userPointsData.referredBy.slice(0, 10)}...</span>
                   </div>
                 )}
