@@ -1,6 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
+import { Link } from "wouter";
 import {
   Coins,
   Trophy,
@@ -11,6 +13,7 @@ import {
   Gift,
   Sparkles,
   ArrowRight,
+  ArrowLeft,
   CheckCircle2,
   Star,
   Crown,
@@ -40,6 +43,13 @@ const EARNING_ACTIVITIES = [
 export default function TestersGuide() {
   return (
     <div className="container max-w-4xl mx-auto py-8 px-4 space-y-8">
+      <Link href="/app/airdrop">
+        <Button variant="ghost" size="sm" className="gap-2 mb-4" data-testid="button-back-to-airdrop">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Airdrop
+        </Button>
+      </Link>
+
       <div className="text-center space-y-4">
         <div className="flex justify-center">
           <div className="p-4 rounded-full bg-primary/10">

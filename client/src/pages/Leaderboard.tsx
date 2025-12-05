@@ -2,8 +2,10 @@ import { useQuery } from "@tanstack/react-query";
 import { useWallet } from "@/lib/walletContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Link } from "wouter";
 import {
   Table,
   TableBody,
@@ -21,6 +23,7 @@ import {
   Star,
   Sparkles,
   Award,
+  ArrowLeft,
 } from "lucide-react";
 import type { UserPoints, UserTier } from "@shared/schema";
 import { TIER_CONFIG } from "@shared/schema";
@@ -134,6 +137,13 @@ export default function Leaderboard() {
 
   return (
     <div className="space-y-6">
+      <Link href="/app/airdrop">
+        <Button variant="ghost" size="sm" className="gap-2" data-testid="button-back-to-airdrop">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Airdrop
+        </Button>
+      </Link>
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
         <div className="rounded-lg bg-primary/20 p-3">
           <Trophy className="h-6 w-6 text-primary" />

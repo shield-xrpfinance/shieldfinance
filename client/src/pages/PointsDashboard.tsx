@@ -28,6 +28,7 @@ import {
   Share2,
   ExternalLink,
   ArrowRight,
+  ArrowLeft,
   Wallet,
   TrendingUp,
   Zap,
@@ -38,6 +39,7 @@ import {
   Info,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Link } from "wouter";
 import EmptyState from "@/components/EmptyState";
 import ConnectWalletModal from "@/components/ConnectWalletModal";
 import type { UserPoints, TestnetActivity, UserTier } from "@shared/schema";
@@ -299,6 +301,13 @@ export default function PointsDashboard() {
 
   return (
     <div className="space-y-6">
+      <Link href="/app/airdrop">
+        <Button variant="ghost" size="sm" className="gap-2" data-testid="button-back-to-airdrop">
+          <ArrowLeft className="h-4 w-4" />
+          Back to Airdrop
+        </Button>
+      </Link>
+
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
         <div className="rounded-lg bg-primary/20 p-3">
           <Trophy className="h-6 w-6 text-primary" />
