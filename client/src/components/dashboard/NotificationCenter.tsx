@@ -22,6 +22,7 @@ import { cn } from "@/lib/utils";
 function getNotificationRoute(type: NotificationType): string {
   switch (type) {
     case "deposit":
+      return "/app/portfolio";
     case "withdrawal":
       return "/app/vaults";
     case "reward":
