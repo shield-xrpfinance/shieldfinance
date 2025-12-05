@@ -398,20 +398,21 @@ export default function PointsDashboard() {
                 </div>
 
                 <div className="p-3 rounded-lg bg-muted/50 border">
-                  <p className="text-xs text-muted-foreground mb-1">Your Referral Code</p>
-                  <div className="flex items-center justify-between">
-                    <p className="font-mono font-bold text-lg" data-testid="text-referral-code">
-                      {userPointsData.referralCode}
+                  <p className="text-xs text-muted-foreground mb-1">Your Referral Link</p>
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-mono text-sm truncate flex-1" data-testid="text-referral-code">
+                      {`${window.location.origin}/app?ref=${userPointsData.referralCode}`}
                     </p>
                     <Button 
                       variant="ghost" 
                       size="sm"
                       onClick={() => {
                         if (userPointsData.referralCode) {
-                          navigator.clipboard.writeText(userPointsData.referralCode);
+                          const referralUrl = `${window.location.origin}/app?ref=${userPointsData.referralCode}`;
+                          navigator.clipboard.writeText(referralUrl);
                           toast({
                             title: "Copied!",
-                            description: "Referral code copied to clipboard",
+                            description: "Referral link copied to clipboard",
                           });
                         }
                       }}
