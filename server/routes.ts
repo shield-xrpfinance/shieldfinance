@@ -17,7 +17,7 @@ import { getPriceService } from "./services/PriceService";
 import { getPositionService } from "./services/PositionService";
 import { WalletBalanceService } from "./services/WalletBalanceService";
 import { db } from "./db";
-import { fxrpToXrpRedemptions, onChainEvents, crossChainBridgeJobs, userPoints as userPointsTable } from "@shared/schema";
+import { fxrpToXrpRedemptions, onChainEvents, crossChainBridgeJobs, userPoints as userPointsTable, rwaListings, rwaOrders, rwaTrades, rwaHoldings } from "@shared/schema";
 import { eq, and, desc, asc, sql } from "drizzle-orm";
 import { ethers } from "ethers";
 import fs from "fs";
@@ -8315,6 +8315,336 @@ export async function registerRoutes(
 </html>`;
 
     res.type('html').send(html);
+  });
+
+  // ========== RWA MARKETPLACE API ==========
+  
+  // Get all RWA listings with optional category filter
+  app.get("/api/rwa/listings", async (req, res) => {
+    try {
+      const category = req.query.category as string | undefined;
+      const status = req.query.status as string || 'active';
+      
+      const listings = await db.query.rwaListings.findMany({
+        where: category 
+          ? and(
+              eq(rwaListings.category, category),
+              eq(rwaListings.status, status)
+            )
+          : eq(rwaListings.status, status),
+        orderBy: [desc(rwaListings.volume24h)],
+      });
+      
+      res.json(listings);
+    } catch (error) {
+      console.error("[RWA API] Failed to get listings:", error);
+      res.status(500).json({ error: "Failed to get RWA listings" });
+    }
+  });
+
+  // Get single RWA listing details
+  app.get("/api/rwa/listings/:id", async (req, res) => {
+    try {
+      const listing = await db.query.rwaListings.findFirst({
+        where: eq(rwaListings.id, req.params.id),
+      });
+      
+      if (!listing) {
+        return res.status(404).json({ error: "Listing not found" });
+      }
+      
+      res.json(listing);
+    } catch (error) {
+      console.error("[RWA API] Failed to get listing:", error);
+      res.status(500).json({ error: "Failed to get RWA listing" });
+    }
+  });
+
+  // Get market stats summary
+  app.get("/api/rwa/stats", async (req, res) => {
+    try {
+      const listings = await db.query.rwaListings.findMany({
+        where: eq(rwaListings.status, 'active'),
+      });
+      
+      const totalMarketCap = listings.reduce((sum, l) => 
+        sum + parseFloat(l.marketCap || '0'), 0
+      );
+      const totalVolume24h = listings.reduce((sum, l) => 
+        sum + parseFloat(l.volume24h || '0'), 0
+      );
+      const avgApy = listings.filter(l => l.apy).length > 0
+        ? listings.reduce((sum, l) => sum + parseFloat(l.apy || '0'), 0) / 
+          listings.filter(l => l.apy).length
+        : 0;
+      
+      const categoryBreakdown = listings.reduce((acc, l) => {
+        acc[l.category] = (acc[l.category] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      res.json({
+        totalListings: listings.length,
+        totalMarketCap,
+        totalVolume24h,
+        avgApy,
+        categoryBreakdown,
+      });
+    } catch (error) {
+      console.error("[RWA API] Failed to get stats:", error);
+      res.status(500).json({ error: "Failed to get RWA stats" });
+    }
+  });
+
+  // Get user's RWA holdings
+  app.get("/api/rwa/holdings/:walletAddress", async (req, res) => {
+    try {
+      const walletAddress = req.params.walletAddress.toLowerCase();
+      
+      const holdings = await db.query.rwaHoldings.findMany({
+        where: eq(rwaHoldings.walletAddress, walletAddress),
+        with: {
+          listing: true,
+        },
+      });
+      
+      // Calculate current values
+      const holdingsWithValues = holdings.map(h => {
+        const currentPrice = parseFloat(h.listing?.currentPrice || '0');
+        const quantity = parseFloat(h.quantity);
+        const avgCost = parseFloat(h.averageCost);
+        const currentValue = quantity * currentPrice;
+        const costBasis = quantity * avgCost;
+        const unrealizedPnl = currentValue - costBasis;
+        const unrealizedPnlPercent = costBasis > 0 ? (unrealizedPnl / costBasis) * 100 : 0;
+        
+        return {
+          ...h,
+          currentValue,
+          costBasis,
+          unrealizedPnl,
+          unrealizedPnlPercent,
+        };
+      });
+      
+      res.json(holdingsWithValues);
+    } catch (error) {
+      console.error("[RWA API] Failed to get holdings:", error);
+      res.status(500).json({ error: "Failed to get RWA holdings" });
+    }
+  });
+
+  // Get open orders for a listing
+  app.get("/api/rwa/orders/:listingId", async (req, res) => {
+    try {
+      const orders = await db.query.rwaOrders.findMany({
+        where: and(
+          eq(rwaOrders.listingId, req.params.listingId),
+          eq(rwaOrders.status, 'open')
+        ),
+        orderBy: [desc(rwaOrders.createdAt)],
+        limit: 50,
+      });
+      
+      res.json(orders);
+    } catch (error) {
+      console.error("[RWA API] Failed to get orders:", error);
+      res.status(500).json({ error: "Failed to get orders" });
+    }
+  });
+
+  // Place a buy/sell order
+  app.post("/api/rwa/orders", async (req, res) => {
+    try {
+      const { walletAddress, listingId, orderType, quantity, price, paymentToken } = req.body;
+      
+      if (!walletAddress || !listingId || !orderType || !quantity || !price) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+      
+      // Verify listing exists and is tradeable
+      const listing = await db.query.rwaListings.findFirst({
+        where: eq(rwaListings.id, listingId),
+      });
+      
+      if (!listing) {
+        return res.status(404).json({ error: "Listing not found" });
+      }
+      
+      if (!listing.tradingEnabled) {
+        return res.status(400).json({ error: "Trading is disabled for this asset" });
+      }
+      
+      // Check min/max order size
+      const orderQuantity = parseFloat(quantity);
+      const minSize = parseFloat(listing.minOrderSize || '0');
+      const maxSize = listing.maxOrderSize ? parseFloat(listing.maxOrderSize) : Infinity;
+      
+      if (orderQuantity < minSize) {
+        return res.status(400).json({ error: `Minimum order size is ${minSize}` });
+      }
+      
+      if (orderQuantity > maxSize) {
+        return res.status(400).json({ error: `Maximum order size is ${maxSize}` });
+      }
+      
+      const [order] = await db.insert(rwaOrders).values({
+        walletAddress: walletAddress.toLowerCase(),
+        listingId,
+        orderType,
+        quantity,
+        price,
+        paymentToken: paymentToken || 'USDC',
+        status: 'open',
+      }).returning();
+      
+      // For instant execution (market orders at listing price), create a trade immediately
+      const listingPrice = parseFloat(listing.currentPrice);
+      const orderPrice = parseFloat(price);
+      
+      if (orderType === 'buy' && orderPrice >= listingPrice) {
+        // Execute as market buy
+        const totalValue = orderQuantity * listingPrice;
+        const protocolFee = totalValue * 0.001; // 0.1% fee
+        
+        const [trade] = await db.insert(rwaTrades).values({
+          listingId,
+          buyOrderId: order.id,
+          buyerAddress: walletAddress.toLowerCase(),
+          quantity,
+          price: listing.currentPrice,
+          totalValue: totalValue.toString(),
+          protocolFee: protocolFee.toString(),
+          status: 'completed',
+          settledAt: new Date(),
+        }).returning();
+        
+        // Update order status
+        await db.update(rwaOrders)
+          .set({ 
+            status: 'filled', 
+            filledQuantity: quantity,
+            updatedAt: new Date() 
+          })
+          .where(eq(rwaOrders.id, order.id));
+        
+        // Update or create holding
+        const existingHolding = await db.query.rwaHoldings.findFirst({
+          where: and(
+            eq(rwaHoldings.walletAddress, walletAddress.toLowerCase()),
+            eq(rwaHoldings.listingId, listingId)
+          ),
+        });
+        
+        if (existingHolding) {
+          // Update existing holding with weighted average cost
+          const existingQty = parseFloat(existingHolding.quantity);
+          const existingCost = parseFloat(existingHolding.averageCost);
+          const newTotalQty = existingQty + orderQuantity;
+          const newAvgCost = ((existingQty * existingCost) + (orderQuantity * listingPrice)) / newTotalQty;
+          
+          await db.update(rwaHoldings)
+            .set({
+              quantity: newTotalQty.toString(),
+              averageCost: newAvgCost.toString(),
+              updatedAt: new Date(),
+            })
+            .where(eq(rwaHoldings.id, existingHolding.id));
+        } else {
+          await db.insert(rwaHoldings).values({
+            walletAddress: walletAddress.toLowerCase(),
+            listingId,
+            quantity,
+            averageCost: listing.currentPrice,
+          });
+        }
+        
+        // Update listing volume
+        await db.update(rwaListings)
+          .set({
+            volume24h: sql`${rwaListings.volume24h} + ${totalValue}`,
+            updatedAt: new Date(),
+          })
+          .where(eq(rwaListings.id, listingId));
+        
+        return res.json({
+          order: { ...order, status: 'filled' },
+          trade,
+          message: "Order executed immediately",
+        });
+      }
+      
+      res.json({ order, message: "Order placed successfully" });
+    } catch (error) {
+      console.error("[RWA API] Failed to place order:", error);
+      res.status(500).json({ error: "Failed to place order" });
+    }
+  });
+
+  // Cancel an order
+  app.delete("/api/rwa/orders/:orderId", async (req, res) => {
+    try {
+      const { walletAddress } = req.body;
+      
+      const order = await db.query.rwaOrders.findFirst({
+        where: eq(rwaOrders.id, req.params.orderId),
+      });
+      
+      if (!order) {
+        return res.status(404).json({ error: "Order not found" });
+      }
+      
+      if (order.walletAddress.toLowerCase() !== walletAddress?.toLowerCase()) {
+        return res.status(403).json({ error: "Not authorized to cancel this order" });
+      }
+      
+      if (order.status !== 'open' && order.status !== 'partial') {
+        return res.status(400).json({ error: "Order cannot be cancelled" });
+      }
+      
+      await db.update(rwaOrders)
+        .set({ status: 'cancelled', updatedAt: new Date() })
+        .where(eq(rwaOrders.id, req.params.orderId));
+      
+      res.json({ message: "Order cancelled" });
+    } catch (error) {
+      console.error("[RWA API] Failed to cancel order:", error);
+      res.status(500).json({ error: "Failed to cancel order" });
+    }
+  });
+
+  // Get recent trades for a listing
+  app.get("/api/rwa/trades/:listingId", async (req, res) => {
+    try {
+      const trades = await db.query.rwaTrades.findMany({
+        where: eq(rwaTrades.listingId, req.params.listingId),
+        orderBy: [desc(rwaTrades.createdAt)],
+        limit: 50,
+      });
+      
+      res.json(trades);
+    } catch (error) {
+      console.error("[RWA API] Failed to get trades:", error);
+      res.status(500).json({ error: "Failed to get trades" });
+    }
+  });
+
+  // Get user's trade history
+  app.get("/api/rwa/trades/history/:walletAddress", async (req, res) => {
+    try {
+      const walletAddress = req.params.walletAddress.toLowerCase();
+      
+      const trades = await db.query.rwaTrades.findMany({
+        where: eq(rwaTrades.buyerAddress, walletAddress),
+        orderBy: [desc(rwaTrades.createdAt)],
+        limit: 100,
+      });
+      
+      res.json(trades);
+    } catch (error) {
+      console.error("[RWA API] Failed to get trade history:", error);
+      res.status(500).json({ error: "Failed to get trade history" });
+    }
   });
 
   const httpServer = createServer(app);
