@@ -77,5 +77,10 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **SparkDEX V3**: Uniswap V2-compatible DEX on Flare Network for token swaps.
 - **Luminite FSwap Widget**: Multi-chain bridge widget for cross-network asset transfers.
 
+### Social Media & Community
+- **Twitter API (twitter-api-v2)**: Automated thank-you tweets for xpert.page donations.
+- **Xpert.page Webhook**: Donation notifications trigger automated tweets at `/api/webhooks/xpert-donation`.
+- **Required Secrets**: `TWITTER_API_KEY`, `TWITTER_API_SECRET`, `TWITTER_ACCESS_TOKEN`, `TWITTER_ACCESS_SECRET`, `XPERT_WEBHOOK_SECRET`.
+
 ### RWA & Tokenized Securities (Future Integration)
 - **RWA.xyz Integration**: Planned for real-world asset data feeds.
