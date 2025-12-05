@@ -33,6 +33,7 @@ import { RouteRegistry } from "./services/RouteRegistry";
 import { NETWORKS, BRIDGE_TOKENS, DEFAULT_ENABLED_NETWORKS, DEFAULT_ENABLED_TOKENS, type NetworkId, type BridgeTokenId } from "@shared/bridgeConfig";
 import { getFirelightDataService } from "./services/FirelightDataService";
 import { getCurrentNetwork, isFirelightEnabled, getNetworkConfig } from "./config/network-config";
+import { twitterService } from "./services/twitterService";
 
 async function sendNotification(
   walletAddress: string,
@@ -8513,6 +8514,94 @@ export async function registerRoutes(
 </html>`;
 
     res.type('html').send(html);
+  });
+
+  // ===========================================
+  // XPERT.PAGE DONATION WEBHOOK
+  // ===========================================
+  // Receives donation notifications from xpert.page and posts thank-you tweets
+  // Requires XPERT_WEBHOOK_SECRET environment variable for authentication
+  
+  app.post("/api/webhooks/xpert-donation", async (req, res) => {
+    try {
+      // Authenticate webhook request
+      const webhookSecret = process.env.XPERT_WEBHOOK_SECRET;
+      const providedSecret = req.headers['x-webhook-secret'] || req.body.secret;
+      
+      if (!webhookSecret) {
+        console.warn("⚠️ [Xpert Donation] XPERT_WEBHOOK_SECRET not configured");
+        return res.status(503).json({
+          success: false,
+          error: "Webhook not configured. Set XPERT_WEBHOOK_SECRET environment variable."
+        });
+      }
+      
+      if (!providedSecret || providedSecret !== webhookSecret) {
+        console.warn("🚫 [Xpert Donation] Unauthorized webhook attempt");
+        return res.status(401).json({
+          success: false,
+          error: "Unauthorized: Invalid webhook secret"
+        });
+      }
+      
+      const { name, amount, currency, message } = req.body;
+      
+      // Log incoming webhook (sanitized)
+      console.log("🎁 [Xpert Donation] Received authenticated webhook:", { 
+        name: name ? name.substring(0, 50) : 'Anonymous', 
+        amount, 
+        currency 
+      });
+      
+      // Validate required fields
+      if (!amount || !currency) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Missing required fields: amount and currency" 
+        });
+      }
+      
+      // Check if Twitter service is configured
+      if (!twitterService.isReady()) {
+        console.warn("⚠️ [Xpert Donation] Twitter service not configured");
+        return res.status(503).json({
+          success: false,
+          error: "Twitter service not configured. Please set Twitter API credentials."
+        });
+      }
+      
+      // Sanitize inputs (truncate long names)
+      const sanitizedName = name ? String(name).substring(0, 50).trim() : "Anonymous";
+      
+      // Post thank-you tweet
+      const result = await twitterService.postDonationThankYou({
+        name: sanitizedName,
+        amount: String(amount),
+        currency: String(currency).substring(0, 10),
+        message: message ? String(message).substring(0, 100) : undefined,
+      });
+      
+      if (result.success) {
+        console.log("🐦 [Xpert Donation] Thank-you tweet posted:", result.tweetId);
+        return res.json({ 
+          success: true, 
+          tweetId: result.tweetId,
+          message: "Thank-you tweet posted successfully" 
+        });
+      } else {
+        console.error("❌ [Xpert Donation] Failed to post tweet:", result.error);
+        return res.status(500).json({ 
+          success: false, 
+          error: result.error 
+        });
+      }
+    } catch (error: any) {
+      console.error("❌ [Xpert Donation] Webhook error:", error);
+      return res.status(500).json({ 
+        success: false, 
+        error: error.message || "Internal server error" 
+      });
+    }
   });
 
   // Staking Daily Rewards Scheduler - awards 5 points daily to all active stakers
