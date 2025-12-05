@@ -189,9 +189,28 @@
   border-left: 1px solid hsl(var(--border));
 }
 
-/* Modal overlay - subtle darkening */
+/* Modal overlay - dark semi-transparent background to highlight elements */
+.shepherd-modal-overlay-container {
+  fill: rgba(0, 0, 0, 0.75) !important;
+  background: transparent !important;
+}
+
 .shepherd-modal-overlay-container.shepherd-modal-is-visible {
-  opacity: 0.6;
+  opacity: 1 !important;
+}
+
+/* Ensure the shepherd element floats above everything */
+.shepherd-element {
+  z-index: 10001 !important;
+}
+
+/* Position dialog to not block highlighted content - bottom right by default */
+.shield-tour-step.shepherd-element:not([data-popper-placement]) {
+  position: fixed !important;
+  bottom: 2rem !important;
+  right: 2rem !important;
+  left: auto !important;
+  top: auto !important;
 }
 
 /* Progress indicator */
