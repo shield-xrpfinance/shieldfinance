@@ -282,13 +282,7 @@ export default function SecurityPage() {
             action="View Contracts"
             href="https://coston2-explorer.flare.network/address/0xC7C50b1871D33B2E761AD5eDa2241bb7C86252B4"
           />
-          <LinkCard 
-            icon={<Lock className="w-6 h-6 text-primary" />}
-            title="Full Audit Report"
-            description="Download the complete PDF report with technical details."
-            action="Download PDF"
-            href="/attached_assets/Shield Finance Audit Remediation Verification_1764500884263.pdf"
-          />
+          <AuditReportLink />
           <LinkCard 
             icon={<Bug className="w-6 h-6 text-green-600 dark:text-green-400" />}
             title="Bug Bounty"
@@ -395,6 +389,42 @@ function LinkCard({ icon, title, description, action, href }: {
       <p className="text-muted-foreground text-sm mb-4">{description}</p>
       <div className="flex items-center text-sm font-medium text-muted-foreground group-hover:text-foreground">
         {action} <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
+      </div>
+    </a>
+  );
+}
+
+const EXTERNAL_AUDIT_URL = "https://cdn.prod.website-files.com/62981c5a83fb0e4287b30cdd/692cb480442715f1b44e0f52_Shield%20Finance.pdf";
+const FALLBACK_AUDIT_URL = "/shield-finance-audit.pdf";
+
+function AuditReportLink() {
+  const handleClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    
+    try {
+      const response = await fetch(EXTERNAL_AUDIT_URL, { method: 'HEAD', mode: 'no-cors' });
+      window.open(EXTERNAL_AUDIT_URL, '_blank');
+    } catch {
+      window.open(FALLBACK_AUDIT_URL, '_blank');
+    }
+  };
+
+  return (
+    <a 
+      href={EXTERNAL_AUDIT_URL}
+      onClick={handleClick}
+      target="_blank" 
+      rel="noopener noreferrer" 
+      className="group block p-6 rounded-xl bg-card border border-border hover:bg-secondary/50 hover:border-primary/30 transition-all duration-300 hover:-translate-y-1" 
+      data-testid="link-full-audit-report"
+    >
+      <div className="mb-4 p-3 bg-secondary w-fit rounded-lg border border-border group-hover:scale-110 transition-transform">
+        <Lock className="w-6 h-6 text-primary" />
+      </div>
+      <h3 className="font-bold text-lg text-foreground mb-2 group-hover:text-primary transition-colors">Full Audit Report</h3>
+      <p className="text-muted-foreground text-sm mb-4">Download the complete PDF report with technical details.</p>
+      <div className="flex items-center text-sm font-medium text-muted-foreground group-hover:text-foreground">
+        Download PDF <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
       </div>
     </a>
   );
