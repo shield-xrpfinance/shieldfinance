@@ -10,7 +10,7 @@ import {
   SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import { LayoutDashboard, Vault, Wallet, History, BarChart3, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles, Zap, Vote, ShieldCheck, ArrowLeftRight, Building2 } from "lucide-react";
+import { LayoutDashboard, Vault, Wallet, History, BarChart3, HelpCircle, ArrowRight, BookOpen, Activity, Gift, Shield, Sparkles, Zap, Vote, ShieldCheck, ArrowLeftRight } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
@@ -80,11 +80,6 @@ const menuItems = [
     url: "/app/bridge-tracking",
     icon: Activity,
     xrplOnly: true,
-  },
-  {
-    title: "Marketplace",
-    url: "/app/marketplace",
-    icon: Building2,
   },
   {
     title: "Analytics",
