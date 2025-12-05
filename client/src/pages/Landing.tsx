@@ -35,7 +35,8 @@ import {
   BadgeCheck,
   Activity,
   Droplets,
-  Vote
+  Vote,
+  Globe
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
@@ -628,6 +629,22 @@ export default function Landing() {
                 Swap between tokens with real-time quotes and approval flows powered by SparkDEX V3 router
               </p>
               <div className="text-xs text-chart-3 font-medium" data-testid="badge-update-swap">SparkDEX Integration</div>
+            </Card>
+
+            <Card className="p-6 glassmorphic transition-all hover:scale-105" data-testid="card-update-bridge">
+              <div className="h-12 w-12 rounded-lg bg-primary/10 flex items-center justify-center mb-4">
+                <Globe className="h-6 w-6 text-primary" />
+              </div>
+              <h3 className="text-lg font-semibold mb-2" data-testid="title-update-bridge">Multi-Chain Bridge</h3>
+              <p className="text-sm text-muted-foreground mb-3" data-testid="text-update-bridge">
+                Bridge assets between XRPL, Flare, Ethereum, Base, Arbitrum, and more with real-time transaction tracking
+              </p>
+              <Link href="/app/bridge">
+                <Button variant="outline" size="sm" className="mt-2" data-testid="button-bridge">
+                  Bridge Assets
+                  <ArrowRight className="ml-2 h-3 w-3" />
+                </Button>
+              </Link>
             </Card>
           </div>
         </div>
