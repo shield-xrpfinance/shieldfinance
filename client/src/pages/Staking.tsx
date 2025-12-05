@@ -71,6 +71,7 @@ export default function Staking() {
     ? Number(onChainStakeInfo.unlockTime) 
     : 0;
   const isLocked = onChainStakeInfo?.isLocked ?? false;
+  const testnetLockBypass = onChainStakeInfo?.testnetLockBypass ?? false;
   const timeUntilUnlock = isLocked ? unlockTime - Math.floor(Date.now() / 1000) : 0;
 
   const formatTimeRemaining = (seconds: number): string => {
@@ -436,7 +437,9 @@ export default function Staking() {
               Stake SHIELD
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Lock tokens for 30 days to earn APY boosts
+              {testnetLockBypass 
+                ? 'Stake tokens to earn APY boosts (no lock on testnet)' 
+                : 'Lock tokens for 30 days to earn APY boosts'}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-3 sm:p-4 lg:p-6 pt-0 space-y-3 sm:space-y-4">
@@ -459,13 +462,28 @@ export default function Staking() {
               </p>
             </div>
 
-            <div className="p-2.5 sm:p-4 rounded-lg bg-accent/10 border border-accent/20">
+            <div className={`p-2.5 sm:p-4 rounded-lg border ${testnetLockBypass ? 'bg-green-500/10 border-green-500/20' : 'bg-accent/10 border-accent/20'}`}>
               <div className="flex items-start gap-2">
-                <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-accent mt-0.5 flex-shrink-0" />
+                {testnetLockBypass ? (
+                  <Unlock className="h-4 w-4 sm:h-5 sm:w-5 text-green-500 mt-0.5 flex-shrink-0" />
+                ) : (
+                  <Clock className="h-4 w-4 sm:h-5 sm:w-5 text-accent mt-0.5 flex-shrink-0" />
+                )}
                 <div className="flex-1 min-w-0">
-                  <p className="font-medium text-xs sm:text-sm">30-Day Lock</p>
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-xs sm:text-sm">
+                      {testnetLockBypass ? 'Testnet Mode' : '30-Day Lock'}
+                    </p>
+                    {testnetLockBypass && (
+                      <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 border-green-500/30 text-green-500">
+                        No Lock
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-                    Tokens locked for 30 days. Adding more resets the lock.
+                    {testnetLockBypass 
+                      ? 'Lock bypass enabled for testing. Unstake anytime.' 
+                      : 'Tokens locked for 30 days. Adding more resets the lock.'}
                   </p>
                 </div>
               </div>
@@ -495,6 +513,8 @@ export default function Staking() {
                   <span className="hidden sm:inline">Awaiting Wallet...</span>
                   <span className="sm:hidden">Processing...</span>
                 </>
+              ) : testnetLockBypass ? (
+                "Stake SHIELD"
               ) : (
                 "Lock for 30 Days"
               )}
@@ -509,7 +529,9 @@ export default function Staking() {
               Unstake SHIELD
             </CardTitle>
             <CardDescription className="text-xs sm:text-sm">
-              Remove tokens from staking after lock period
+              {testnetLockBypass 
+                ? 'Remove tokens from staking anytime (testnet mode)' 
+                : 'Remove tokens from staking after lock period'}
             </CardDescription>
           </CardHeader>
           <CardContent className="p-3 sm:p-4 lg:p-6 pt-0 space-y-3 sm:space-y-4">
@@ -821,10 +843,17 @@ export default function Staking() {
           <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:gap-6">
             <div className="p-2.5 sm:p-4 rounded-lg bg-muted/30 border">
               <h3 className="font-semibold text-xs sm:text-sm mb-1 sm:mb-2 flex items-center gap-1.5 sm:gap-2">
-                <Lock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" /> Lock Period
+                {testnetLockBypass ? (
+                  <Unlock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0 text-green-500" />
+                ) : (
+                  <Lock className="h-3 w-3 sm:h-4 sm:w-4 flex-shrink-0" />
+                )}
+                {testnetLockBypass ? 'Testnet Mode' : 'Lock Period'}
               </h3>
               <p className="text-[10px] sm:text-xs lg:text-sm text-muted-foreground">
-                30-day lock. Tokens earn boost benefits during lock.
+                {testnetLockBypass 
+                  ? 'No lock required. Unstake anytime for testing.' 
+                  : '30-day lock. Tokens earn boost benefits during lock.'}
               </p>
             </div>
             <div className="p-2.5 sm:p-4 rounded-lg bg-muted/30 border">

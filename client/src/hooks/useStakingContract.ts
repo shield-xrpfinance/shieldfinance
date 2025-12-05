@@ -24,6 +24,7 @@ const STAKING_BOOST_ABI = [
   "function getStakeInfo(address user) external view returns (uint256 amount, uint256 stakedAt, uint256 unlockTime)",
   "function getBoost(address user) external view returns (uint256)",
   "function stakes(address) external view returns (uint256 amount, uint256 stakedAt)",
+  "function testnetLockBypass() external view returns (bool)",
 ];
 
 export interface OnChainStakeInfo {
@@ -32,6 +33,7 @@ export interface OnChainStakeInfo {
   unlockTime: bigint;
   boostBps: bigint;
   isLocked: boolean;
+  testnetLockBypass: boolean;
 }
 
 export interface StakingContractHook {
@@ -148,8 +150,18 @@ export function useStakingContract(): StakingContractHook {
       const [amount, stakedAt, unlockTime] = await stakingContract.getStakeInfo(evmAddress);
       const boostBps = await stakingContract.getBoost(evmAddress);
       
+      // Check if testnet lock bypass is enabled
+      let bypassEnabled = false;
+      try {
+        bypassEnabled = await stakingContract.testnetLockBypass();
+      } catch (e) {
+        // Older contract version may not have this function
+        console.log("testnetLockBypass not available on contract");
+      }
+      
       const currentTimestamp = BigInt(Math.floor(Date.now() / 1000));
-      const isLocked = stakedAt > BigInt(0) && currentTimestamp < unlockTime;
+      // If bypass is enabled, tokens are never locked
+      const isLocked = !bypassEnabled && stakedAt > BigInt(0) && currentTimestamp < unlockTime;
 
       return {
         amount,
@@ -157,6 +169,7 @@ export function useStakingContract(): StakingContractHook {
         unlockTime,
         boostBps,
         isLocked,
+        testnetLockBypass: bypassEnabled,
       };
     } catch (err) {
       console.error("Failed to get stake info from contract:", err);
