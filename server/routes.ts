@@ -8401,16 +8401,28 @@ export async function registerRoutes(
     try {
       const walletAddress = req.params.walletAddress.toLowerCase();
       
+      // Get holdings without relations (Drizzle query relations require explicit relation definitions)
       const holdings = await db.query.rwaHoldings.findMany({
         where: eq(rwaHoldings.walletAddress, walletAddress),
-        with: {
-          listing: true,
-        },
       });
+      
+      // Get all listing IDs from holdings
+      const listingIds = [...new Set(holdings.map(h => h.listingId))];
+      
+      // Fetch listings for these holdings
+      const listings = listingIds.length > 0 
+        ? await db.query.rwaListings.findMany({
+            where: sql`${rwaListings.id} IN (${sql.join(listingIds.map(id => sql`${id}`), sql`, `)})`
+          })
+        : [];
+      
+      // Create a lookup map
+      const listingMap = new Map(listings.map(l => [l.id, l]));
       
       // Calculate current values
       const holdingsWithValues = holdings.map(h => {
-        const currentPrice = parseFloat(h.listing?.currentPrice || '0');
+        const listing = listingMap.get(h.listingId);
+        const currentPrice = parseFloat(listing?.currentPrice || '0');
         const quantity = parseFloat(h.quantity);
         const avgCost = parseFloat(h.averageCost);
         const currentValue = quantity * currentPrice;
@@ -8420,6 +8432,7 @@ export async function registerRoutes(
         
         return {
           ...h,
+          listing,
           currentValue,
           costBasis,
           unrealizedPnl,
