@@ -47,6 +47,7 @@ import xrpLogo from "@assets/xrp.148c3b50_1762588566535.png";
 import xamanLogo from "@assets/xaman-wallet-icon.svg";
 import walletConnectLogo from "@assets/walletconnect-logo.svg";
 import mobileScreenshot from "@assets/IMG_2860_1764436010804.jpg";
+import shieldTokenLogo from "@assets/shield_logo_1763760253079.png";
 
 export default function Landing() {
   const shieldLogo = useShieldLogo();
@@ -1191,8 +1192,8 @@ export default function Landing() {
             <div className="relative">
               <Card className="p-8 glassmorphic" data-testid="card-token-details">
                 <div className="text-center mb-8">
-                  <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                    <Shield className="h-10 w-10 text-primary" />
+                  <div className="h-20 w-20 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-4 overflow-hidden">
+                    <img src={shieldTokenLogo} alt="SHIELD Token" className="h-16 w-16 object-contain" />
                   </div>
                   <h3 className="text-2xl font-bold mb-2" data-testid="title-token-name">$SHIELD</h3>
                   <p className="text-muted-foreground text-sm" data-testid="text-token-subtitle">Governance Token</p>
