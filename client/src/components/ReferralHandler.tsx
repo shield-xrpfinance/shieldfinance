@@ -53,8 +53,8 @@ export function ReferralHandler() {
       })
         .then(res => res.json())
         .then(data => {
-          if (data.success && !data.alreadyCompleted) {
-            console.log(`🌟 ReferralHandler: Daily login points awarded (+${data.points})`);
+          if (data.success && !data.alreadyClaimed && data.pointsAwarded) {
+            console.log(`🌟 ReferralHandler: Daily login points awarded (+${data.pointsAwarded})`);
           }
         })
         .catch(err => {
