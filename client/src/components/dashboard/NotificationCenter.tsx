@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Bell, Check, CheckCheck, Gift, Zap, ArrowUpRight, ArrowDownRight, Info } from "lucide-react";
+import { useLocation } from "wouter";
+import { Bell, Check, CheckCheck, Gift, Zap, ArrowUpRight, ArrowDownRight, Info, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -17,6 +18,24 @@ import {
 } from "@/hooks/useNotifications";
 import { useWallet } from "@/lib/walletContext";
 import { cn } from "@/lib/utils";
+
+function getNotificationRoute(type: NotificationType): string {
+  switch (type) {
+    case "deposit":
+    case "withdrawal":
+    case "vault_event":
+      return "/app/vaults";
+    case "reward":
+      return "/app/airdrop";
+    case "boost":
+      return "/app/stake";
+    case "bridge":
+      return "/app/bridge";
+    case "system":
+    default:
+      return "/app";
+  }
+}
 
 function NotificationIcon({ type }: { type: NotificationType }) {
   switch (type) {
@@ -37,16 +56,28 @@ function NotificationIcon({ type }: { type: NotificationType }) {
 function NotificationItem({
   notification,
   onMarkAsRead,
+  onNavigate,
 }: {
   notification: Notification;
   onMarkAsRead: (id: number) => void;
+  onNavigate: (route: string) => void;
 }) {
+  const route = getNotificationRoute(notification.type);
+
+  const handleClick = () => {
+    if (!notification.read) {
+      onMarkAsRead(notification.id);
+    }
+    onNavigate(route);
+  };
+
   return (
     <div
       className={cn(
-        "flex items-start gap-3 p-3 rounded-lg transition-colors",
+        "flex items-start gap-3 p-3 rounded-lg transition-colors cursor-pointer group hover-elevate",
         !notification.read && "bg-primary/5"
       )}
+      onClick={handleClick}
       data-testid={`notification-item-${notification.id}`}
     >
       <div className="flex-shrink-0 mt-0.5">
@@ -66,20 +97,23 @@ function NotificationItem({
           {formatNotificationTime(notification.createdAt)}
         </p>
       </div>
-      {!notification.read && (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-6 w-6 flex-shrink-0"
-          onClick={(e) => {
-            e.stopPropagation();
-            onMarkAsRead(notification.id);
-          }}
-          data-testid={`button-mark-read-${notification.id}`}
-        >
-          <Check className="h-3 w-3" />
-        </Button>
-      )}
+      <div className="flex items-center gap-1 flex-shrink-0">
+        {!notification.read && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            onClick={(e) => {
+              e.stopPropagation();
+              onMarkAsRead(notification.id);
+            }}
+            data-testid={`button-mark-read-${notification.id}`}
+          >
+            <Check className="h-3 w-3" />
+          </Button>
+        )}
+        <ArrowRight className="h-3 w-3 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity" />
+      </div>
     </div>
   );
 }
@@ -100,6 +134,7 @@ export function NotificationCenter() {
   const { address, evmAddress, isConnected } = useWallet();
   const walletAddress = address || evmAddress;
   const [isOpen, setIsOpen] = useState(false);
+  const [, setLocation] = useLocation();
 
   const {
     notifications,
@@ -114,6 +149,11 @@ export function NotificationCenter() {
     refetchInterval: 30000,
     limit: 50,
   });
+
+  const handleNavigate = (route: string) => {
+    setIsOpen(false);
+    setLocation(route);
+  };
 
   if (!isConnected) {
     return null;
@@ -186,6 +226,7 @@ export function NotificationCenter() {
                   key={notification.id}
                   notification={notification}
                   onMarkAsRead={markAsRead}
+                  onNavigate={handleNavigate}
                 />
               ))}
             </div>
