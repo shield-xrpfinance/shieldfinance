@@ -1,6 +1,6 @@
 /* Shield Finance Shepherd.js Theme */
 /* Aligned with design_guidelines.md - Material Design + DeFi patterns */
-/* Uses CSS variables from index.css for theme consistency */
+/* Dark mode explicit colors to override Shepherd.js defaults */
 
 .shepherd-element.shield-tour-step {
   z-index: 10000 !important;
@@ -10,25 +10,50 @@
   z-index: 9999 !important;
 }
 
-/* Main tooltip container - uses card styling from design system */
-/* Override default Shepherd.js white backgrounds */
-.shepherd-content,
-.shield-tour-step .shepherd-content,
-.shepherd-element .shepherd-content {
-  background: hsl(var(--card)) !important;
-  background-color: hsl(var(--card)) !important;
-  border: 1px solid hsl(var(--border)) !important;
-  border-radius: 0.5rem;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.2);
+/* Force dark background on all shepherd elements in dark mode */
+.dark .shepherd-content,
+.dark .shepherd-element .shepherd-content,
+.dark .shield-tour-step .shepherd-content,
+.dark .shepherd-element.shield-tour-step .shepherd-content {
+  background: #141416 !important;
+  background-color: #141416 !important;
+  border: 1px solid #2a2a2e !important;
+  border-radius: 0.5rem !important;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.5), 0 2px 4px -2px rgb(0 0 0 / 0.4) !important;
   max-width: 400px;
   overflow: hidden;
   font-family: Inter, system-ui, -apple-system, sans-serif;
 }
 
-/* Header section - uses card background for consistency */
-.shepherd-header,
-.shield-tour-step .shepherd-header,
-.shepherd-element .shepherd-header {
+/* Light mode styles */
+:root .shepherd-content,
+:root .shepherd-element .shepherd-content {
+  background: hsl(var(--card)) !important;
+  background-color: hsl(var(--card)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  max-width: 400px;
+  overflow: hidden;
+  font-family: Inter, system-ui, -apple-system, sans-serif;
+}
+
+/* Header section - dark mode */
+.dark .shepherd-header,
+.dark .shepherd-element .shepherd-header,
+.dark .shield-tour-step .shepherd-header {
+  background: #141416 !important;
+  background-color: #141416 !important;
+  padding: 1rem 1.5rem 0.75rem 1.5rem;
+  border-bottom: 1px solid #2a2a2e !important;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+/* Header section - light mode */
+:root .shepherd-header,
+:root .shepherd-element .shepherd-header {
   background: hsl(var(--card)) !important;
   background-color: hsl(var(--card)) !important;
   padding: 1rem 1.5rem 0.75rem 1.5rem;
@@ -67,10 +92,21 @@
   background: hsl(var(--accent));
 }
 
-/* Content/text section */
-.shepherd-text,
-.shield-tour-step .shepherd-text,
-.shepherd-element .shepherd-text {
+/* Content/text section - dark mode */
+.dark .shepherd-text,
+.dark .shield-tour-step .shepherd-text,
+.dark .shepherd-element .shepherd-text {
+  color: #ffffff !important;
+  padding: 1rem 1.5rem 1.25rem 1.5rem;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  background: #141416 !important;
+  background-color: #141416 !important;
+}
+
+/* Content/text section - light mode */
+:root .shepherd-text,
+:root .shepherd-element .shepherd-text {
   color: hsl(var(--card-foreground)) !important;
   padding: 1rem 1.5rem 1.25rem 1.5rem;
   font-size: 0.875rem;
@@ -121,10 +157,22 @@
   border-top: 1px solid hsl(var(--border));
 }
 
-/* Footer/buttons section */
-.shepherd-footer,
-.shield-tour-step .shepherd-footer,
-.shepherd-element .shepherd-footer {
+/* Footer/buttons section - dark mode */
+.dark .shepherd-footer,
+.dark .shield-tour-step .shepherd-footer,
+.dark .shepherd-element .shepherd-footer {
+  padding: 0.75rem 1.5rem 1rem 1.5rem;
+  border-top: 1px solid #2a2a2e !important;
+  background: #141416 !important;
+  background-color: #141416 !important;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+/* Footer/buttons section - light mode */
+:root .shepherd-footer,
+:root .shepherd-element .shepherd-footer {
   padding: 0.75rem 1.5rem 1rem 1.5rem;
   border-top: 1px solid hsl(var(--border)) !important;
   background: hsl(var(--card)) !important;
