@@ -23,14 +23,11 @@ function getNotificationRoute(type: NotificationType): string {
   switch (type) {
     case "deposit":
     case "withdrawal":
-    case "vault_event":
       return "/app/vaults";
     case "reward":
       return "/app/airdrop";
     case "boost":
       return "/app/stake";
-    case "bridge":
-      return "/app/bridge";
     case "system":
     default:
       return "/app";
@@ -56,17 +53,25 @@ function NotificationIcon({ type }: { type: NotificationType }) {
 function NotificationItem({
   notification,
   onMarkAsRead,
+  onMarkAsReadAsync,
   onNavigate,
+  isMarking,
 }: {
   notification: Notification;
   onMarkAsRead: (id: number) => void;
+  onMarkAsReadAsync: (id: number) => Promise<unknown>;
   onNavigate: (route: string) => void;
+  isMarking: boolean;
 }) {
   const route = getNotificationRoute(notification.type);
 
-  const handleClick = () => {
+  const handleClick = async () => {
     if (!notification.read) {
-      onMarkAsRead(notification.id);
+      try {
+        await onMarkAsReadAsync(notification.id);
+      } catch {
+        // If marking as read fails, still navigate
+      }
     }
     onNavigate(route);
   };
@@ -75,7 +80,8 @@ function NotificationItem({
     <div
       className={cn(
         "flex items-start gap-3 p-3 rounded-lg transition-colors cursor-pointer group hover-elevate",
-        !notification.read && "bg-primary/5"
+        !notification.read && "bg-primary/5",
+        isMarking && "opacity-50 pointer-events-none"
       )}
       onClick={handleClick}
       data-testid={`notification-item-${notification.id}`}
@@ -141,6 +147,7 @@ export function NotificationCenter() {
     unreadCount,
     isLoading,
     markAsRead,
+    markAsReadAsync,
     markAllAsRead,
     isMarking,
   } = useNotifications({
@@ -226,7 +233,9 @@ export function NotificationCenter() {
                   key={notification.id}
                   notification={notification}
                   onMarkAsRead={markAsRead}
+                  onMarkAsReadAsync={markAsReadAsync}
                   onNavigate={handleNavigate}
+                  isMarking={isMarking}
                 />
               ))}
             </div>

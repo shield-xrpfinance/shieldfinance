@@ -104,6 +104,7 @@ export function useNotifications({
     notifications: query.data?.notifications || [],
     unreadCount: query.data?.unreadCount || 0,
     markAsRead: markAsReadMutation.mutate,
+    markAsReadAsync: markAsReadMutation.mutateAsync,
     markAllAsRead: markAllAsReadMutation.mutate,
     deleteNotification: deleteNotificationMutation.mutate,
     isMarking: markAsReadMutation.isPending || markAllAsReadMutation.isPending,
