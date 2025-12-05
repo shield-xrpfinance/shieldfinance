@@ -47,6 +47,7 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Multi-Strategy Architecture**: VaultController manages allocation across FirelightStrategy (50% - FXRP staking on Firelight.finance), KineticStrategy (40% - FXRP lending), and 10% buffer. VaultController.executeCompound() tracks actual yield by comparing strategy totalAssets before/after report.
 - **Mainnet Deployment**: `scripts/deploy-mainnet-strategies.ts` provides production deployment with Firelight integration (mainnet stXRP: 0x4C18Ff3C89632c3Dd62E796c0aFA5c07c4c1B2b3), security checklist, and multi-sig role transfer instructions.
 - **Testnet Validation**: MockStrategy (`0x1a8c6d2BfD132bCf75B54B3d23CA4c0542957A45`) deployed on Coston2 for testing vault mechanics. Simulation validated: deposit, rebalance, yield tracking, and withdrawal all work correctly.
+- **StakingBoost V2**: Contract (`0x9dF4C13fd100a8025c663B6aa2eB600193aE5FB3`) deployed with testnet lock bypass feature. Owner can toggle `testnetLockBypass` to skip 30-day lock for testing. Security: chainId guard ensures bypass can ONLY be enabled on Coston2 (chainId 114), preventing mainnet bypass.
 
 ## External Dependencies
 
