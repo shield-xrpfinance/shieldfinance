@@ -540,12 +540,19 @@ export default function PointsDashboard() {
                   })}
                 </div>
                 
-                <div className="h-3 bg-muted rounded-full overflow-hidden">
+                <div 
+                  className="h-3 rounded-full overflow-hidden relative"
+                  style={{
+                    background: 'linear-gradient(to right, rgba(234,88,12,0.2) 0%, rgba(234,88,12,0.2) 25%, rgba(156,163,175,0.2) 25%, rgba(156,163,175,0.2) 50%, rgba(234,179,8,0.2) 50%, rgba(234,179,8,0.2) 75%, rgba(34,211,238,0.2) 75%, rgba(34,211,238,0.2) 100%)'
+                  }}
+                >
                   <div 
-                    className="h-full transition-all"
+                    className="h-full transition-all absolute top-0 left-0"
                     style={{ 
                       width: `${Math.min(100, (userPointsData.totalPoints / TIER_CONFIG.diamond.minPoints) * 100)}%`,
-                      background: 'linear-gradient(to right, #ea580c 0%, #ea580c 25%, #9ca3af 25%, #9ca3af 50%, #eab308 50%, #eab308 75%, #22d3ee 75%, #22d3ee 100%)'
+                      background: userPointsData.tier === 'diamond' ? '#22d3ee' : 
+                                  userPointsData.tier === 'gold' ? '#eab308' : 
+                                  userPointsData.tier === 'silver' ? '#9ca3af' : '#ea580c'
                     }}
                     data-testid="progress-tier-visual"
                   />
