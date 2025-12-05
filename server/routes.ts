@@ -7611,7 +7611,8 @@ export async function registerRoutes(
   // Periodic cleanup of rate limit entries (every 5 minutes)
   setInterval(() => {
     const now = Date.now();
-    for (const [ip, data] of shareCardRateLimits.entries()) {
+    const entries = Array.from(shareCardRateLimits.entries());
+    for (const [ip, data] of entries) {
       if (now > data.resetTime) {
         shareCardRateLimits.delete(ip);
       }
@@ -8032,7 +8033,8 @@ export async function registerRoutes(
       const XRP_PRICE = 2.35; // Approximate price for USD conversion
       
       // Generate snapshots for each wallet
-      for (const [walletAddress, dateMap] of walletDateMap) {
+      const walletEntries = Array.from(walletDateMap.entries());
+      for (const [walletAddress, dateMap] of walletEntries) {
         // Skip test wallets
         if (walletAddress === "0x9999999999999999999999999999999999999999" ||
             walletAddress === "0x1234567890123456789012345678901234567890" ||
@@ -8196,6 +8198,123 @@ export async function registerRoutes(
       console.error("[Airdrop API] Failed to get stats:", error);
       res.status(500).json({ error: "Failed to get airdrop stats" });
     }
+  });
+
+  // Twitter Card meta tags for share URLs - serves HTML with OG/Twitter meta for crawlers
+  // This allows personalized share cards to appear when users share referral links on X
+  app.get("/app/airdrop", (req, res, next) => {
+    const ref = req.query.ref as string;
+    
+    // Check if already loaded (to prevent redirect loop) - must be FIRST
+    if (req.query._loaded === '1') {
+      return next(); // Let Vite/SPA handle it
+    }
+    
+    // Only intercept if there's a referral code
+    if (!ref || typeof ref !== 'string' || ref.length < 3) {
+      return next(); // Let the SPA handle it
+    }
+
+    // Validate referral code format
+    const validRefCode = /^[A-Za-z0-9\-_]+$/.test(ref);
+    if (!validRefCode) {
+      return next();
+    }
+
+    // Get base URL for the share card image
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+    const host = req.headers['x-forwarded-host'] || req.headers.host || 'shyield.finance';
+    const baseUrl = `${protocol}://${host}`;
+    
+    // Use production URL for share cards (better for SEO consistency)
+    const shareCardUrl = `https://shyield.finance/api/share-card/${encodeURIComponent(ref)}`;
+    const pageUrl = `https://shyield.finance/app/airdrop?ref=${encodeURIComponent(ref)}`;
+    
+    // Fallback to current domain for development
+    const devShareCardUrl = `${baseUrl}/api/share-card/${encodeURIComponent(ref)}`;
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Join Shield Finance Airdrop | Earn $SHIELD Tokens</title>
+  
+  <!-- Twitter Card Meta Tags -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:site" content="@ShieldFinanceX">
+  <meta name="twitter:title" content="Join me on Shield Finance Testnet!">
+  <meta name="twitter:description" content="Earn points and compete for a share of 2M $SHIELD tokens. Use my referral code: ${ref}">
+  <meta name="twitter:image" content="${devShareCardUrl}">
+  <meta name="twitter:image:alt" content="Shield Finance Airdrop - Referral ${ref}">
+  
+  <!-- OpenGraph Meta Tags (Facebook, LinkedIn, etc) -->
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="${pageUrl}">
+  <meta property="og:title" content="Join me on Shield Finance Testnet!">
+  <meta property="og:description" content="Earn points and compete for a share of 2M $SHIELD tokens. Use my referral code: ${ref}">
+  <meta property="og:image" content="${devShareCardUrl}">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:site_name" content="Shield Finance">
+  
+  <!-- Redirect to SPA after meta tags are parsed -->
+  <script>
+    // Allow crawlers to see meta tags, then load SPA for real users
+    if (typeof window !== 'undefined') {
+      // Check if this is a real user (not a crawler)
+      var userAgent = navigator.userAgent.toLowerCase();
+      var isCrawler = /bot|crawl|spider|slurp|facebook|twitter|linkedin|whatsapp|telegram|discord/i.test(userAgent);
+      
+      if (!isCrawler) {
+        // For real users, load the SPA normally
+        window.location.replace('/app/airdrop?ref=${encodeURIComponent(ref)}&_loaded=1');
+      }
+    }
+  </script>
+  
+  <style>
+    body { 
+      font-family: system-ui, -apple-system, sans-serif; 
+      background: linear-gradient(135deg, #0a0a0f 0%, #1a1a2e 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0;
+      text-align: center;
+    }
+    .container { max-width: 600px; padding: 40px 20px; }
+    h1 { color: #00ffff; margin-bottom: 20px; }
+    p { color: #aaa; line-height: 1.6; }
+    a { color: #00ffff; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .btn {
+      display: inline-block;
+      background: linear-gradient(135deg, #00ffff, #0080ff);
+      color: #000;
+      padding: 15px 40px;
+      border-radius: 8px;
+      font-weight: bold;
+      margin-top: 20px;
+      text-decoration: none;
+    }
+    .btn:hover { opacity: 0.9; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Shield Finance Airdrop</h1>
+    <p>You've been invited to join the Shield Finance testnet!</p>
+    <p>Earn points through deposits, staking, and referrals to compete for a share of <strong>2,000,000 $SHIELD tokens</strong>.</p>
+    <p>Referral Code: <strong>${ref}</strong></p>
+    <a href="/app/airdrop?ref=${encodeURIComponent(ref)}&_loaded=1" class="btn">Join Now</a>
+  </div>
+</body>
+</html>`;
+
+    res.type('html').send(html);
   });
 
   const httpServer = createServer(app);
