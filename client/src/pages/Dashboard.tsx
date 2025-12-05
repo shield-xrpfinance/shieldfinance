@@ -124,7 +124,7 @@ export default function Dashboard() {
       liquidity: formatCurrency(vault.liquidity),
       lockPeriod: vault.lockPeriod,
       riskLevel: vault.riskLevel as "low" | "medium" | "high",
-      depositors: 0,
+      depositors: (vault as any).onChainDepositors || 0,
       status: vault.status.charAt(0).toUpperCase() + vault.status.slice(1),
       depositAssets: (vault.asset || "XRP").split(",").map(a => a.trim()),
       comingSoon: (vault as any).comingSoon || false,
