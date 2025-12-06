@@ -91,11 +91,12 @@ cast call <SHIELD_TOKEN_ADDRESS> "totalSupply()" --rpc-url <FLARE_RPC>
 
 ### Step 2: Deploy RevenueRouter
 **Contract:** `RevenueRouter.sol`  
-**Constructor:** `(address _shieldToken, address _wflr, address _router)`  
+**Constructor:** `(address _shieldToken, address _fxrpToken, address _router, uint256 _initialPrice)`  
 **Parameters:**
 - `_shieldToken`: Address from Step 1
-- `_wflr`: 0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d (Flare mainnet)
+- `_fxrpToken`: FXRP address (mainnet: 0xAd552A648C74D49E10027AB8a618A3ad4901c5bE)
 - `_router`: 0x8a1E35F5c98C4E85B36B7B253222eE17773b2781 (SparkDEX V3 SwapRouter)
+- `_initialPrice`: Initial FXRP/SHIELD price (scaled by 1e18), e.g., 1e16 = $0.01
 
 ```bash
 # Set SHIELD_TOKEN_ADDRESS in .env first
@@ -106,8 +107,9 @@ npx hardhat run scripts/deploy-shield-finance.ts --network flare
 ```
 ✅ RevenueRouter deployed: 0x...
    SHIELD Token: <SHIELD_TOKEN_ADDRESS>
-   wFLR: 0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d
+   FXRP Token: 0xAd552A648C74D49E10027AB8a618A3ad4901c5bE
    Router: 0x8a1E35F5c98C4E85B36B7B253222eE17773b2781
+   Initial Price: 1e16 (0.01 FXRP per SHIELD)
 ```
 
 **Verification:**
@@ -115,12 +117,13 @@ npx hardhat run scripts/deploy-shield-finance.ts --network flare
 # Verify constructor args
 npx hardhat verify --network flare <REVENUE_ROUTER_ADDRESS> \
   <SHIELD_TOKEN_ADDRESS> \
-  0x1D80c49BbBCd1C0911346656B529DF9E5c2F783d \
-  0x8a1E35F5c98C4E85B36B7B253222eE17773b2781
+  0xAd552A648C74D49E10027AB8a618A3ad4901c5bE \
+  0x8a1E35F5c98C4E85B36B7B253222eE17773b2781 \
+  10000000000000000
 
 # Check immutable addresses
 cast call <REVENUE_ROUTER_ADDRESS> "shieldToken()" --rpc-url <FLARE_RPC>
-cast call <REVENUE_ROUTER_ADDRESS> "wflr()" --rpc-url <FLARE_RPC>
+cast call <REVENUE_ROUTER_ADDRESS> "fxrpToken()" --rpc-url <FLARE_RPC>
 cast call <REVENUE_ROUTER_ADDRESS> "router()" --rpc-url <FLARE_RPC>
 ```
 
@@ -380,15 +383,26 @@ npx hardhat run scripts/verify-token-distribution.ts --network flare
 ## Contract Configuration
 
 ### RevenueRouter Configuration
-**Purpose:** Routes vault revenue (50% buyback & burn, 50% reserves)
+**Purpose:** Routes vault FXRP revenue (50% buyback & burn, 40% staker boost, 10% reserves)
 
-**No configuration needed** - contract is immutable after deployment.
+**Configurable Parameters:**
+- `burnAllocationBps`: % of revenue for SHIELD buyback & burn (default: 5000 = 50%)
+- `boostAllocationBps`: % of revenue for staker boost (default: 4000 = 40%)
+- `maxSlippageBps`: Max slippage on FXRP→SHIELD swaps (default: 500 = 5%, max: 2000 = 20%)
+- `minDistributionThreshold`: Minimum FXRP balance before distribution (default: 1e6 = 1 FXRP)
 
 **Revenue Flow:**
-1. Vaults send wFLR fees to RevenueRouter
-2. Anyone calls `distribute()` to trigger buyback & burn
-3. 50% swapped to SHIELD via SparkDEX V3 and burned
-4. 50% kept as protocol reserves (owner withdrawable)
+1. ShXRPVault sends FXRP fees to RevenueRouter
+2. Anyone calls `distribute()` when balance > threshold
+3. 50% swapped FXRP → SHIELD via SparkDEX V3 and burned
+4. 40% sent as FXRP directly to StakingBoost for staker rewards
+5. 10% kept as protocol reserves (owner withdrawable)
+
+**Security Features:**
+- `forceApprove()` used for all token approvals (SafeERC20)
+- Allowances cleared after each operation (prevents residual approval attacks)
+- Configurable slippage protection with price tracking
+- `rescueTokens()` blocks FXRP extraction (operational token)
 
 **Weekly Burn Automation:**
 ```bash
@@ -582,6 +596,6 @@ LP_LOCK_DURATION=31536000  # 365 days
 
 ---
 
-**Deployment Version:** 1.0.0  
-**Last Updated:** November 21, 2025  
-**Status:** Production Ready (176/176 tests passing)
+**Deployment Version:** 1.1.0  
+**Last Updated:** December 6, 2025  
+**Status:** Production Ready (150/150 tests passing)

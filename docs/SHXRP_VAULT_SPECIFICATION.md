@@ -1,8 +1,8 @@
 # ShXRPVault Specification Document
 
-**Version:** 1.1  
-**Date:** December 2025  
-**Status:** Pre-Audit  
+**Version:** 1.2  
+**Date:** December 6, 2025  
+**Status:** Pre-Audit (Security Hardened)  
 
 ## 1. Overview
 
@@ -66,7 +66,7 @@ ShXRPVault is an ERC-4626 compliant tokenized vault for liquid staking of XRP on
 
 | Contract | Purpose | Interface |
 |----------|---------|-----------|
-| RevenueRouter | Fee distribution (burn + boost) | Immutable, receives FXRP fees immediately |
+| RevenueRouter | Fee distribution (burn + boost + reserves) | Receives FXRP fees immediately, distributes 50/40/10 |
 | StakingBoost | APY boost for SHIELD stakers | IStakingBoost.getBoost(), donateOnBehalf() |
 | IStrategy | Yield strategy interface | deploy(), withdraw(), report(), totalAssets() |
 | FXRP | Underlying asset (6 decimals) | Standard ERC-20 |

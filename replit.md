@@ -37,8 +37,13 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Separation of Concerns**: Monorepo structure (`/client`, `/server`, `/shared`).
 - **Smart Accounts**: ERC-4337 account abstraction using Etherspot Prime SDK for gasless transactions.
 - **Asset Configuration**: Network-aware asset configuration system for automatic token switching between mainnet and testnet, supporting crypto assets and future RWA/tokenized securities.
-- **Smart Contracts (Solidity on Flare Network)**: Developed with Hardhat and OpenZeppelin Contracts. Key contracts include `ShXRPVault.sol` (ERC-4626), `VaultController.sol`, `StakingBoost.sol`, `RevenueRouter.sol`, `ShieldToken.sol`, and `FirelightStrategy.sol`.
+- **Smart Contracts (Solidity on Flare Network)**: Developed with Hardhat and OpenZeppelin Contracts. Key contracts include `ShXRPVault.sol` (ERC-4626), `VaultController.sol`, `StakingBoost.sol`, `RevenueRouter.sol`, `BuybackBurn.sol`, `ShieldToken.sol`, and `FirelightStrategy.sol`.
 - **StakingBoost ↔ ShXRPVault ↔ RevenueRouter Architecture**: A circular dependency solution for deploying and linking these core contracts for yield boosting and fee distribution.
+- **Revenue System (Dec 2025 Security Hardened)**:
+  - **RevenueRouter.sol**: Accepts FXRP from vault fees, distributes 50% to SHIELD buyback/burn, 40% direct FXRP to StakingBoost, 10% reserves.
+  - **BuybackBurn.sol**: Accepts wFLR from external sources, swaps to SHIELD via SparkDEX V3, burns tokens.
+  - **Security Features**: SafeERC20 forceApprove(), allowance clearing after operations, configurable slippage protection (max 20%), price tracking, rescue restrictions for operational tokens.
+  - **Test Coverage**: 150 tests passing (99 ShXRPVault + 21 BuybackBurn + 30 RevenueRouter), no Slither findings.
 - **Airdrop System**: Faucet API and MerkleDistributor contract for SHIELD token distribution.
 - **Multi-Asset Swap**: Full swap feature with SparkDEX V3 router.
 - **Multi-Chain Bridge**: Luminite FSwap widget integration for bridging assets across XRPL, Flare, Ethereum, Base, Arbitrum, and other chains.

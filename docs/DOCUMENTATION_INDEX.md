@@ -33,7 +33,9 @@ docs/
 ├── protocol/           # Token & smart contract documentation
 │   ├── SHIELD_TOKENOMICS.md      # Token economics & distribution
 │   ├── SHIELD_DEPLOYMENT.md      # Contract deployment guide
-│   └── SHIELD_SECURITY_CHECKLIST.md  # Pre-deployment security
+│   ├── SHIELD_SECURITY_CHECKLIST.md  # Pre-deployment security
+│   ├── STAKING_BOOST_SPEC.md     # SHIELD staking for APY boost
+│   └── REVENUE_SYSTEM_SPEC.md    # BuybackBurn & RevenueRouter
 │
 ├── integration/        # External service integrations
 │   ├── FASSETS_INTEGRATION_GUIDE.md  # XRP → FXRP bridging
@@ -102,6 +104,16 @@ docs/
 - StakingBoost ↔ ShXRPVault integration
 - Circular dependency deployment solution
 - Security considerations and test coverage
+
+### [REVENUE_SYSTEM_SPEC.md](protocol/REVENUE_SYSTEM_SPEC.md)
+**Purpose**: Technical specification for revenue distribution contracts  
+**Contents**:
+- BuybackBurn contract (wFLR → SHIELD burn)
+- RevenueRouter contract (FXRP → burn + boost + reserves)
+- SafeERC20 forceApprove security patterns
+- Slippage protection with price tracking
+- Allowance clearing for security
+- 51 comprehensive tests (21 + 30)
 
 ---
 
@@ -306,4 +318,4 @@ Archived diagnostic scripts are in `/scripts/archive`.
 
 ---
 
-Last Updated: December 3, 2025
+Last Updated: December 6, 2025

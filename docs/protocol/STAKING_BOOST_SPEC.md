@@ -182,14 +182,32 @@ function setStakingBoost(address _stakingBoost) external onlyOwner;
 function donateOnBehalf(address user, uint256 fxrpAmount) external returns (uint256 shares);
 ```
 
-### RevenueRouter.sol Additions
+### RevenueRouter.sol (FXRP-Based)
 
 ```solidity
-uint256 public boostAllocationBps = 4000; // 40%
+// Input token: FXRP (from vault fees)
+IERC20 public immutable fxrpToken;
 
+// Allocations
+uint256 public burnAllocationBps = 5000;  // 50% → SHIELD buyback & burn
+uint256 public boostAllocationBps = 4000; // 40% → Direct FXRP to StakingBoost
+
+// Security features
+uint256 public maxSlippageBps = 500;      // 5% max slippage
+uint256 public lastKnownPrice;            // FXRP/SHIELD price tracking
+
+// Core distribution
+function distribute() external;            // Distributes FXRP balance
 function setBoostAllocation(uint256 bps) external onlyOwner;
-function _swapAndDistributeBoost(uint256 wflrAmount) internal;
+function setBurnAllocation(uint256 bps) external onlyOwner;
+
+// Internal flow:
+// 1. burnAmount → _swapAndBurnShield() → FXRP→SHIELD swap → burn
+// 2. boostAmount → _distributeBoost() → Direct FXRP to StakingBoost
+// 3. remainder → Protocol reserves
 ```
+
+**Key Change (Dec 2025):** RevenueRouter now accepts FXRP directly from vault fees (not wFLR). StakingBoost receives FXRP directly for reward distribution, eliminating an extra swap step.
 
 ---
 
@@ -336,4 +354,4 @@ To upgrade StakingBoost:
 
 ---
 
-Last Updated: November 27, 2025
+Last Updated: December 6, 2025
