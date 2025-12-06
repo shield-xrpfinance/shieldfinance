@@ -465,7 +465,7 @@ function ChainSelector({
 
 const PAYMENT_TOKENS: Record<number, { symbol: string; name: string; decimals: number; native: boolean; address: string }[]> = {
   114: [ // Flare/Coston2 - Only Mock USDC (contract's payment token)
-    { symbol: "USDC.e", name: "Mock USDC (Testnet)", decimals: 6, native: false, address: "0x4Ba749c96F6B0c9AddF3a339eb7E79A5f92C7C39" },
+    { symbol: "USDC.e", name: "Mock USDC (Testnet)", decimals: 6, native: false, address: "0x6c6f38C14F75d94fCa6342290C72573F9743aB56" },
   ],
   84532: [ // Base Sepolia - Circle's testnet USDC
     { symbol: "USDC", name: "USD Coin", decimals: 6, native: false, address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" },

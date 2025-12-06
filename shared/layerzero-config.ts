@@ -111,10 +111,10 @@ export const SHIELD_CONTRACTS = {
   testnet: {
     coston2: {
       shieldToken: "0x061Cf4B8fa61bAc17AeB6990002daB1A7C438616", // Existing testnet SHIELD
-      oftAdapter: "0x3E4A8f72c319ae72444316c87048104C0f79535A",
-      presale: "0x72a81115F2af91e5766707ea4A8e499D269c15a0",
+      oftAdapter: "0x71b09760Cb4E9cC207b3d348459Dd8302e9DB6A5",
+      presale: "0xa0F04b0325fcB411cc21f0cD336eFc9aC5BEeB47",
       zapPresale: "0x0000000000000000000000000000000000000000", // Skipped for testnet
-      paymentToken: "0x4Ba749c96F6B0c9AddF3a339eb7E79A5f92C7C39", // Mock USDC
+      paymentToken: "0x6c6f38C14F75d94fCa6342290C72573F9743aB56", // Mock USDC
     },
     baseSepolia: {
       shieldOFT: "0x0000000000000000000000000000000000000000",
@@ -223,7 +223,7 @@ export const LZ_EID = {
 // Payment tokens (USDC) per chain
 export const PAYMENT_TOKENS = {
   testnets: {
-    coston2: "0x4Ba749c96F6B0c9AddF3a339eb7E79A5f92C7C39", // Mock USDC on Coston2
+    coston2: "0x6c6f38C14F75d94fCa6342290C72573F9743aB56", // Mock USDC on Coston2
     baseSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // USDC on Base Sepolia
     arbitrumSepolia: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC on Arbitrum Sepolia
     sepolia: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // USDC on Sepolia
