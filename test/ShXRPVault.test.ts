@@ -400,31 +400,25 @@ describe("ShXRPVault", function () {
       expect(maxRedeemValue).to.equal(shares);
     });
 
-    // ERC-4626 COMPLIANCE GAP: Per spec, maxWithdraw/maxRedeem SHOULD return 0 when paused
-    // These tests are SKIPPED until the vault is fixed to enforce compliance
-    // TODO: Fix vault to return 0 from maxWithdraw/maxRedeem when paused, then unskip
-    it.skip("[COMPLIANCE-FIX-REQUIRED] maxWithdraw should return 0 when paused (ERC-4626 compliance)", async function () {
-      // SKIPPED: Vault needs override for maxWithdraw to return 0 when paused
-      // Unskip after implementing: override maxWithdraw() to return 0 if paused()
+    // ERC-4626 COMPLIANCE: Vault overrides maxWithdraw/maxRedeem to return 0 when paused
+    it("maxWithdraw should return 0 when paused (ERC-4626 compliance)", async function () {
       const depositAmount = toFxrp(1000);
       await fxrp.connect(user1).approve(await vault.getAddress(), depositAmount);
       await vault.connect(user1).deposit(depositAmount, user1.address);
       await vault.pause();
       
-      // ERC-4626 compliant assertion (will pass after vault fix)
+      // ERC-4626 compliant: must return 0 when paused
       const maxWithdrawPaused = await vault.maxWithdraw(user1.address);
       expect(maxWithdrawPaused).to.equal(0);
     });
 
-    it.skip("[COMPLIANCE-FIX-REQUIRED] maxRedeem should return 0 when paused (ERC-4626 compliance)", async function () {
-      // SKIPPED: Vault needs override for maxRedeem to return 0 when paused
-      // Unskip after implementing: override maxRedeem() to return 0 if paused()
+    it("maxRedeem should return 0 when paused (ERC-4626 compliance)", async function () {
       const depositAmount = toFxrp(1000);
       await fxrp.connect(user1).approve(await vault.getAddress(), depositAmount);
       await vault.connect(user1).deposit(depositAmount, user1.address);
       await vault.pause();
       
-      // ERC-4626 compliant assertion (will pass after vault fix)
+      // ERC-4626 compliant: must return 0 when paused
       const maxRedeemPaused = await vault.maxRedeem(user1.address);
       expect(maxRedeemPaused).to.equal(0);
     });

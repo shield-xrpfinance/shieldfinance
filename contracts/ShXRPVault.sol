@@ -309,6 +309,40 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     }
     
     /**
+     * @dev Override maxWithdraw for ERC-4626 pause compliance
+     * 
+     * ERC-4626 Requirement:
+     * When vault is paused, maxWithdraw MUST return 0 to indicate
+     * no withdrawals are possible.
+     * 
+     * @param owner Address to check maximum withdrawable assets for
+     * @return Maximum amount of assets the owner can withdraw (0 if paused)
+     */
+    function maxWithdraw(address owner) public view virtual override returns (uint256) {
+        if (paused()) {
+            return 0;
+        }
+        return super.maxWithdraw(owner);
+    }
+    
+    /**
+     * @dev Override maxRedeem for ERC-4626 pause compliance
+     * 
+     * ERC-4626 Requirement:
+     * When vault is paused, maxRedeem MUST return 0 to indicate
+     * no redemptions are possible.
+     * 
+     * @param owner Address to check maximum redeemable shares for
+     * @return Maximum amount of shares the owner can redeem (0 if paused)
+     */
+    function maxRedeem(address owner) public view virtual override returns (uint256) {
+        if (paused()) {
+            return 0;
+        }
+        return super.maxRedeem(owner);
+    }
+    
+    /**
      * @dev Calculate total assets under management
      * 
      * ERC-4626 Required Function
@@ -1061,8 +1095,8 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         uint256 vaultBalanceBefore = fxrp.balanceOf(address(this));
         require(vaultBalanceBefore >= amount, "Insufficient vault balance");
         
-        // Approve strategy to pull FXRP from vault
-        fxrp.approve(strategy, amount);
+        // Approve strategy to pull FXRP from vault (using SafeERC20)
+        fxrp.forceApprove(strategy, amount);
         
         // Strategy pulls FXRP and deploys to external protocol
         // This ensures vault balance decreases atomically
@@ -1077,9 +1111,9 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         // Update tracking with actual deployed amount
         strategies[strategy].totalDeployed += actualDeployed;
         
-        // Clear any leftover approval
+        // Clear any leftover approval (using SafeERC20)
         if (fxrp.allowance(address(this), strategy) > 0) {
-            fxrp.approve(strategy, 0);
+            fxrp.forceApprove(strategy, 0);
         }
         
         emit DeployedToStrategy(strategy, actualDeployed);
