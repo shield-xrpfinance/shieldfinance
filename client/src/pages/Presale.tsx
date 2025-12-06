@@ -487,7 +487,7 @@ const MOCK_BALANCES: Record<string, string> = {
   FXRP: "5,000.00",
   "USDC.e": "500.00",
   WFLR: "0.00",
-  ETH: "0.25",
+  ETH: "0.10",
   USDC: "100.00",
   WETH: "0.00",
   ARB: "50.00",
