@@ -65,6 +65,30 @@ interface DeploymentResult {
   lzEndpoint: string;
 }
 
+async function configurePresaleStages(presale: any): Promise<void> {
+  const now = Math.floor(Date.now() / 1000);
+  const stageDuration = 7 * 24 * 60 * 60; // 7 days per stage
+  
+  // Stage allocations in SHIELD tokens (18 decimals)
+  // Total presale allocation: 20M SHIELD (20% of 100M supply)
+  const SHIELD_DECIMALS = BigInt(10 ** 18);
+  const stage1Allocation = BigInt(4_000_000) * SHIELD_DECIMALS;  // 4M SHIELD
+  const stage2Allocation = BigInt(5_000_000) * SHIELD_DECIMALS;  // 5M SHIELD
+  const stage3Allocation = BigInt(5_000_000) * SHIELD_DECIMALS;  // 5M SHIELD
+  const stage4Allocation = BigInt(6_000_000) * SHIELD_DECIMALS;  // 6M SHIELD
+
+  console.log("   Adding presale stages...");
+  await presale.addStage(PRESALE_CONFIG.stage1Price, stage1Allocation, now, now + stageDuration);
+  await presale.addStage(PRESALE_CONFIG.stage2Price, stage2Allocation, now + stageDuration, now + 2 * stageDuration);
+  await presale.addStage(PRESALE_CONFIG.stage3Price, stage3Allocation, now + 2 * stageDuration, now + 3 * stageDuration);
+  await presale.addStage(PRESALE_CONFIG.stage4Price, stage4Allocation, now + 3 * stageDuration, now + 4 * stageDuration);
+  console.log("   Added 4 presale stages");
+
+  // Disable allowlist for testnet (easier testing)
+  await presale.setAllowlistEnabled(false);
+  console.log("   Disabled allowlist for testnet");
+}
+
 async function main() {
   const network = hre.network.name;
   console.log(`\n🚀 Deploying SHIELD Presale to ${network}...\n`);
@@ -125,6 +149,9 @@ async function deployFlareCoston2(deployer: any): Promise<DeploymentResult> {
   const Presale = await hre.ethers.getContractFactory("ShieldPresale");
   const presale = await Presale.deploy(
     paymentToken,
+    PRESALE_CONFIG.hardCap,
+    PRESALE_CONFIG.minPurchase,
+    PRESALE_CONFIG.maxPurchaseKyc,
     deployer.address
   );
   await presale.waitForDeployment();
@@ -146,6 +173,8 @@ async function deployFlareCoston2(deployer: any): Promise<DeploymentResult> {
   // Add WFLR as supported token for zap
   await zapPresale.addSupportedToken(wrappedNative, 3000); // 0.3% fee
   console.log("   Added WFLR to ZapPresale supported tokens");
+
+  await configurePresaleStages(presale);
 
   return {
     network: "coston2",
@@ -180,6 +209,9 @@ async function deployBaseSepolia(deployer: any): Promise<DeploymentResult> {
   const Presale = await hre.ethers.getContractFactory("ShieldPresale");
   const presale = await Presale.deploy(
     paymentToken,
+    PRESALE_CONFIG.hardCap,
+    PRESALE_CONFIG.minPurchase,
+    PRESALE_CONFIG.maxPurchaseKyc,
     deployer.address
   );
   await presale.waitForDeployment();
@@ -201,6 +233,8 @@ async function deployBaseSepolia(deployer: any): Promise<DeploymentResult> {
   // Add WETH as supported token
   await zapPresale.addSupportedToken(wrappedNative, 3000);
   console.log("   Added WETH to ZapPresale supported tokens");
+
+  await configurePresaleStages(presale);
 
   return {
     network: "baseSepolia",
@@ -235,6 +269,9 @@ async function deployArbitrumSepolia(deployer: any): Promise<DeploymentResult> {
   const Presale = await hre.ethers.getContractFactory("ShieldPresale");
   const presale = await Presale.deploy(
     paymentToken,
+    PRESALE_CONFIG.hardCap,
+    PRESALE_CONFIG.minPurchase,
+    PRESALE_CONFIG.maxPurchaseKyc,
     deployer.address
   );
   await presale.waitForDeployment();
@@ -255,6 +292,8 @@ async function deployArbitrumSepolia(deployer: any): Promise<DeploymentResult> {
   
   await zapPresale.addSupportedToken(wrappedNative, 3000);
   console.log("   Added WETH to ZapPresale supported tokens");
+
+  await configurePresaleStages(presale);
 
   return {
     network: "arbitrumSepolia",
@@ -289,6 +328,9 @@ async function deploySepolia(deployer: any): Promise<DeploymentResult> {
   const Presale = await hre.ethers.getContractFactory("ShieldPresale");
   const presale = await Presale.deploy(
     paymentToken,
+    PRESALE_CONFIG.hardCap,
+    PRESALE_CONFIG.minPurchase,
+    PRESALE_CONFIG.maxPurchaseKyc,
     deployer.address
   );
   await presale.waitForDeployment();
@@ -309,6 +351,8 @@ async function deploySepolia(deployer: any): Promise<DeploymentResult> {
   
   await zapPresale.addSupportedToken(wrappedNative, 3000);
   console.log("   Added WETH to ZapPresale supported tokens");
+
+  await configurePresaleStages(presale);
 
   return {
     network: "sepolia",

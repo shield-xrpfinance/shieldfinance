@@ -49,6 +49,17 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **Testnet Validation**: MockStrategy (`0x1a8c6d2BfD132bCf75B54B3d23CA4c0542957A45`) deployed on Coston2 for testing vault mechanics. Simulation validated: deposit, rebalance, yield tracking, and withdrawal all work correctly.
 - **StakingBoost V2**: Contract (`0x9dF4C13fd100a8025c663B6aa2eB600193aE5FB3`) deployed with testnet lock bypass feature. Owner can toggle `testnetLockBypass` to skip 30-day lock for testing. Security: chainId guard ensures bypass can ONLY be enabled on Coston2 (chainId 114), preventing mainnet bypass.
 
+### Multi-Chain SHIELD Presale System
+- **LayerZero v2 OFT Standard**: SHIELD is an Omnichain Fungible Token supporting cross-chain transfers between Flare (home chain), Base, Arbitrum, and Ethereum.
+- **OFT Architecture**: ShieldOFTAdapter on Flare (locks/unlocks tokens), ShieldOFT on other chains (mints/burns).
+- **Presale Contracts**: ShieldPresale.sol with 4 stages ($0.005-$0.02), vesting (20% TGE, 80% over 6 months), Merkle tree allowlist, KYC tiers.
+- **ZapPresale**: Enables any-token purchases via DEX swaps (SparkDEX on Flare, Uniswap V3 on others).
+- **Deployment Scripts**: `scripts/presale/deploy-presale-testnets.ts` deploys to Coston2, Base Sepolia, Arbitrum Sepolia, Sepolia.
+- **Peer Wiring**: `scripts/presale/wire-layerzero-peers.ts` connects OFT contracts across chains with fail-fast validation.
+- **Frontend**: Presale page at `/app/presale` with countdown timer, price trajectory, multi-token selector, bridge UI, referral system.
+- **Referral System**: 5% bonus for both referrer and referee.
+- **KYC Tiers**: $1K limit without KYC, $50K with KYC verification.
+
 ## External Dependencies
 
 ### Blockchain & Wallet Integration

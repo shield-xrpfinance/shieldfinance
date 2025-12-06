@@ -56,6 +56,37 @@ function addressToBytes32(address: string): string {
   return ethers.zeroPadValue(address, 32);
 }
 
+function validateDeployedAddresses(contracts: any, isTestnet: boolean): void {
+  const errors: string[] = [];
+  
+  if (isTestnet) {
+    if (!contracts.coston2?.shieldOFTAdapter) errors.push("coston2.shieldOFTAdapter");
+    if (!contracts.baseSepolia?.shieldOFT) errors.push("baseSepolia.shieldOFT");
+    if (!contracts.arbitrumSepolia?.shieldOFT) errors.push("arbitrumSepolia.shieldOFT");
+    if (!contracts.sepolia?.shieldOFT) errors.push("sepolia.shieldOFT");
+  } else {
+    if (!contracts.flare?.shieldOFTAdapter) errors.push("flare.shieldOFTAdapter");
+    if (!contracts.base?.shieldOFT) errors.push("base.shieldOFT");
+    if (!contracts.arbitrum?.shieldOFT) errors.push("arbitrum.shieldOFT");
+    if (!contracts.mainnet?.shieldOFT) errors.push("mainnet.shieldOFT");
+  }
+
+  if (errors.length > 0) {
+    const allowPartial = process.argv.includes("--allow-partial");
+    const message = `Missing deployed contract addresses: ${errors.join(", ")}`;
+    
+    if (allowPartial) {
+      console.warn(`⚠️  WARNING: ${message}`);
+      console.warn("   Continuing with --allow-partial flag. Peer wiring will be incomplete.\n");
+    } else {
+      console.error(`❌ ERROR: ${message}`);
+      console.error("   Deploy contracts to all chains first, then update DEPLOYED_CONTRACTS.");
+      console.error("   Or use --allow-partial flag to wire only available peers.\n");
+      process.exit(1);
+    }
+  }
+}
+
 async function main() {
   const network = hre.network.name;
   const isTestnet = ["coston2", "baseSepolia", "arbitrumSepolia", "sepolia"].includes(network);
@@ -67,6 +98,8 @@ async function main() {
 
   const contracts = isTestnet ? DEPLOYED_CONTRACTS.testnets : DEPLOYED_CONTRACTS.mainnets;
   const eids = isTestnet ? LZ_EID.testnets : LZ_EID.mainnets;
+
+  validateDeployedAddresses(contracts, isTestnet);
 
   // Get the local contract address based on network
   let localContractAddress: string;

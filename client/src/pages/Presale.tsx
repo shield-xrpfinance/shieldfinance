@@ -477,6 +477,11 @@ const PAYMENT_TOKENS: Record<number, { symbol: string; name: string; decimals: n
   ],
 };
 
+// TODO: Replace with real contract integration after deployment
+// These hooks will call the deployed ShieldPresale contracts
+// - Use wagmi useReadContract for on-chain data
+// - Use TanStack Query for API data (presale stats, user purchases)
+// - Connect to deployed presale contracts on each chain
 const MOCK_BALANCES: Record<string, string> = {
   FLR: "1,234.56",
   FXRP: "5,000.00",
@@ -488,6 +493,7 @@ const MOCK_BALANCES: Record<string, string> = {
   ARB: "50.00",
 };
 
+// TODO: Replace with CoinGecko/DeFiLlama price feeds
 const MOCK_PRICES: Record<string, number> = {
   FLR: 0.015,
   FXRP: 2.15,
