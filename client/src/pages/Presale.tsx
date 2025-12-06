@@ -139,6 +139,194 @@ function StageIndicator({ currentStage }: { currentStage: number }) {
   );
 }
 
+function PriceTrajectoryCard() {
+  const priceData = PRESALE_STAGES.map((stage, index) => ({
+    stage: `Stage ${stage.stage}`,
+    price: stage.price,
+    label: stage.name,
+    cap: stage.cap,
+    isCurrent: index === 0,
+  }));
+
+  const listingPrice = 0.02;
+  const maxPrice = listingPrice * 1.1;
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <TrendingUp className="w-5 h-5 text-primary" />
+          Price Trajectory
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="relative h-32">
+          <div className="absolute inset-0 flex items-end justify-between gap-2">
+            {priceData.map((data, index) => {
+              const heightPercent = (data.price / maxPrice) * 100;
+              return (
+                <div key={data.stage} className="flex-1 flex flex-col items-center gap-1">
+                  <span className="text-xs font-mono text-muted-foreground">
+                    ${data.price}
+                  </span>
+                  <div 
+                    className={`w-full rounded-t-md transition-all ${
+                      data.isCurrent 
+                        ? "bg-primary ring-2 ring-primary/30" 
+                        : "bg-muted"
+                    }`}
+                    style={{ height: `${heightPercent}%`, minHeight: "20px" }}
+                  />
+                  <span className={`text-xs ${data.isCurrent ? "text-primary font-medium" : "text-muted-foreground"}`}>
+                    {data.label}
+                  </span>
+                </div>
+              );
+            })}
+            <div className="flex-1 flex flex-col items-center gap-1">
+              <span className="text-xs font-mono text-green-500 font-semibold">
+                ${listingPrice}
+              </span>
+              <div 
+                className="w-full rounded-t-md bg-green-500"
+                style={{ height: `${(listingPrice / maxPrice) * 100}%`, minHeight: "20px" }}
+              />
+              <span className="text-xs text-green-500 font-medium">
+                Listing
+              </span>
+            </div>
+          </div>
+        </div>
+        
+        <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+          <div className="flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Stage 1 Upside</span>
+            <span className="text-lg font-bold text-green-500">+300%</span>
+          </div>
+          <p className="text-xs text-muted-foreground mt-1">
+            Buy at $0.005, listing at $0.02
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function ShieldBridgeCard() {
+  const [fromChain, setFromChain] = useState(114);
+  const [toChain, setToChain] = useState(84532);
+  const [bridgeAmount, setBridgeAmount] = useState("");
+  const { toast } = useToast();
+
+  const fromChainData = SUPPORTED_CHAINS.find(c => c.id === fromChain);
+  const toChainData = SUPPORTED_CHAINS.find(c => c.id === toChain);
+
+  const estimatedFee = bridgeAmount ? (parseFloat(bridgeAmount) * 0.001).toFixed(4) : "0.0000";
+
+  const handleBridge = () => {
+    if (!bridgeAmount || parseFloat(bridgeAmount) <= 0) {
+      toast({
+        title: "Enter Amount",
+        description: "Please enter an amount to bridge.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    toast({
+      title: "Bridge Initiated",
+      description: `Bridging ${bridgeAmount} SHIELD from ${fromChainData?.name} to ${toChainData?.name}.`,
+    });
+  };
+
+  const handleSwapChains = () => {
+    const temp = fromChain;
+    setFromChain(toChain);
+    setToChain(temp);
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-lg">
+          <ArrowRight className="w-5 h-5 text-primary" />
+          Bridge SHIELD
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <p className="text-sm text-muted-foreground">
+          Transfer SHIELD tokens between chains using LayerZero.
+        </p>
+
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <div className="flex-1 p-3 rounded-lg border border-border bg-muted/30">
+              <div className="text-xs text-muted-foreground mb-1">From</div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{fromChainData?.icon}</span>
+                <span className="font-medium">{fromChainData?.name}</span>
+              </div>
+            </div>
+            <button 
+              onClick={handleSwapChains}
+              className="p-2 rounded-lg border border-border hover-elevate"
+              data-testid="button-swap-chains"
+            >
+              <ArrowRight className="w-4 h-4 rotate-180" />
+            </button>
+            <div className="flex-1 p-3 rounded-lg border border-border bg-muted/30">
+              <div className="text-xs text-muted-foreground mb-1">To</div>
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{toChainData?.icon}</span>
+                <span className="font-medium">{toChainData?.name}</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm text-muted-foreground">Amount</label>
+            <div className="relative">
+              <input
+                type="number"
+                value={bridgeAmount}
+                onChange={(e) => setBridgeAmount(e.target.value)}
+                placeholder="0.00"
+                min="0"
+                className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-mono"
+                data-testid="input-bridge-amount"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">
+                SHIELD
+              </span>
+            </div>
+          </div>
+
+          <div className="p-3 rounded-lg bg-muted/50 space-y-2 text-sm">
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Bridge Fee</span>
+              <span className="font-mono">{estimatedFee} SHIELD</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-muted-foreground">Est. Time</span>
+              <span>~2-5 minutes</span>
+            </div>
+          </div>
+
+          <Button 
+            onClick={handleBridge}
+            className="w-full"
+            variant="outline"
+            disabled={!bridgeAmount || parseFloat(bridgeAmount) <= 0}
+            data-testid="button-bridge-shield"
+          >
+            Bridge SHIELD
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 function TokenomicsCard() {
   const allocations = [
     { name: "Presale", percentage: 20, color: "bg-primary" },
@@ -265,16 +453,83 @@ function ChainSelector({
   );
 }
 
+const PAYMENT_TOKENS: Record<number, { symbol: string; name: string; decimals: number; native: boolean }[]> = {
+  114: [ // Flare/Coston2
+    { symbol: "FLR", name: "Flare", decimals: 18, native: true },
+    { symbol: "FXRP", name: "FAssets XRP", decimals: 6, native: false },
+    { symbol: "USDC.e", name: "USDC (Bridged)", decimals: 6, native: false },
+    { symbol: "WFLR", name: "Wrapped FLR", decimals: 18, native: false },
+  ],
+  84532: [ // Base Sepolia
+    { symbol: "ETH", name: "Ethereum", decimals: 18, native: true },
+    { symbol: "USDC", name: "USD Coin", decimals: 6, native: false },
+    { symbol: "WETH", name: "Wrapped ETH", decimals: 18, native: false },
+  ],
+  421614: [ // Arbitrum Sepolia
+    { symbol: "ETH", name: "Ethereum", decimals: 18, native: true },
+    { symbol: "USDC", name: "USD Coin", decimals: 6, native: false },
+    { symbol: "ARB", name: "Arbitrum", decimals: 18, native: false },
+  ],
+  11155111: [ // Sepolia
+    { symbol: "ETH", name: "Ethereum", decimals: 18, native: true },
+    { symbol: "USDC", name: "USD Coin", decimals: 6, native: false },
+    { symbol: "WETH", name: "Wrapped ETH", decimals: 18, native: false },
+  ],
+};
+
+const MOCK_BALANCES: Record<string, string> = {
+  FLR: "1,234.56",
+  FXRP: "5,000.00",
+  "USDC.e": "500.00",
+  WFLR: "0.00",
+  ETH: "0.25",
+  USDC: "100.00",
+  WETH: "0.00",
+  ARB: "50.00",
+};
+
+const MOCK_PRICES: Record<string, number> = {
+  FLR: 0.015,
+  FXRP: 2.15,
+  "USDC.e": 1.00,
+  WFLR: 0.015,
+  ETH: 3200,
+  USDC: 1.00,
+  WETH: 3200,
+  ARB: 0.85,
+};
+
 function PurchaseCard({ selectedChain }: { selectedChain: number }) {
   const [amount, setAmount] = useState("");
+  const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState("");
+  const [showTokenSelector, setShowTokenSelector] = useState(false);
   const { toast } = useToast();
   const { isConnected } = useWallet();
 
+  const availableTokens = PAYMENT_TOKENS[selectedChain] || PAYMENT_TOKENS[114];
+  
+  useEffect(() => {
+    if (availableTokens.length > 0) {
+      setSelectedToken(availableTokens[0].symbol);
+    }
+  }, [selectedChain]);
+
   const currentStage = PRESALE_STAGES[0];
-  const shieldAmount = amount ? (parseFloat(amount) / currentStage.price).toFixed(0) : "0";
-  const bonusAmount = amount ? (parseFloat(shieldAmount) * currentStage.bonus / 100).toFixed(0) : "0";
+  const tokenPrice = selectedToken ? MOCK_PRICES[selectedToken] || 1 : 1;
+  const tokenAmount = amount ? parseFloat(amount) : 0;
+  const usdValue = tokenAmount * tokenPrice;
+  const shieldAmount = usdValue > 0 ? (usdValue / currentStage.price).toFixed(0) : "0";
+  const bonusAmount = shieldAmount ? (parseFloat(shieldAmount) * currentStage.bonus / 100).toFixed(0) : "0";
   const totalAmount = parseInt(shieldAmount) + parseInt(bonusAmount);
+
+  const currentBalance = selectedToken ? MOCK_BALANCES[selectedToken] || "0.00" : "0.00";
+  const selectedTokenData = availableTokens.find(t => t.symbol === selectedToken);
+
+  const handleMaxClick = () => {
+    const balance = parseFloat(currentBalance.replace(/,/g, ''));
+    setAmount(balance.toString());
+  };
 
   const handlePurchase = () => {
     if (!isConnected) {
@@ -286,10 +541,19 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
       return;
     }
 
-    if (!amount || parseFloat(amount) < 10) {
+    if (!amount || parseFloat(amount) <= 0) {
+      toast({
+        title: "Enter Amount",
+        description: "Please enter an amount to purchase.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (usdValue < 10) {
       toast({
         title: "Minimum Purchase",
-        description: "Minimum purchase amount is $10 USD.",
+        description: "Minimum purchase amount is $10 USD equivalent.",
         variant: "destructive",
       });
       return;
@@ -297,7 +561,7 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
 
     toast({
       title: "Purchase Initiated",
-      description: `Processing purchase of ${totalAmount.toLocaleString()} SHIELD tokens.`,
+      description: `Processing purchase of ${totalAmount.toLocaleString()} SHIELD with ${amount} ${selectedToken}.`,
     });
   };
 
@@ -316,23 +580,84 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="space-y-2">
-          <label className="text-sm text-muted-foreground">Amount (USD)</label>
-          <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
-            <input
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              placeholder="100"
-              min="10"
-              className="w-full pl-7 pr-4 py-3 rounded-lg border border-border bg-background focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors"
-              data-testid="input-presale-amount"
-            />
+          <div className="flex items-center justify-between">
+            <label className="text-sm text-muted-foreground">Pay With</label>
+            <span className="text-xs text-muted-foreground">
+              Balance: <span className="font-mono">{currentBalance}</span> {selectedToken}
+            </span>
           </div>
-          <div className="flex justify-between text-xs text-muted-foreground">
-            <span>Min: $10</span>
-            <span>Max: $50,000 (KYC)</span>
+          
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input
+                type="number"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                className="w-full px-4 py-3 rounded-lg border border-border bg-background focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-colors font-mono text-lg"
+                data-testid="input-presale-amount"
+              />
+            </div>
+            <button
+              onClick={() => setShowTokenSelector(!showTokenSelector)}
+              className="flex items-center gap-2 px-4 py-3 rounded-lg border border-border bg-background hover-elevate min-w-[120px]"
+              data-testid="button-token-selector"
+            >
+              <span className="font-medium">{selectedToken}</span>
+              <ArrowRight className="w-4 h-4 rotate-90" />
+            </button>
           </div>
+
+          <div className="flex justify-between text-xs">
+            <button 
+              onClick={handleMaxClick}
+              className="text-primary hover:underline"
+              data-testid="button-max-amount"
+            >
+              Use Max
+            </button>
+            <span className="text-muted-foreground">
+              ≈ ${usdValue.toFixed(2)} USD
+            </span>
+          </div>
+          
+          {showTokenSelector && (
+            <div className="mt-2 p-2 rounded-lg border border-border bg-card space-y-1">
+              {availableTokens.map((token) => (
+                <button
+                  key={token.symbol}
+                  onClick={() => {
+                    setSelectedToken(token.symbol);
+                    setShowTokenSelector(false);
+                  }}
+                  className={`w-full flex items-center justify-between p-2 rounded-md transition-colors ${
+                    selectedToken === token.symbol 
+                      ? "bg-primary/10 text-primary" 
+                      : "hover-elevate"
+                  }`}
+                  data-testid={`button-select-token-${token.symbol.toLowerCase()}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-bold">
+                      {token.symbol.charAt(0)}
+                    </div>
+                    <div className="text-left">
+                      <div className="font-medium text-sm">{token.symbol}</div>
+                      <div className="text-xs text-muted-foreground">{token.name}</div>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-mono text-sm">{MOCK_BALANCES[token.symbol] || "0.00"}</div>
+                    <div className="text-xs text-muted-foreground">
+                      ${((parseFloat(MOCK_BALANCES[token.symbol]?.replace(/,/g, '') || '0')) * (MOCK_PRICES[token.symbol] || 0)).toFixed(2)}
+                    </div>
+                  </div>
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         <div className="space-y-2">
@@ -348,6 +673,14 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
         </div>
 
         <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">You Pay</span>
+            <span className="font-mono">{amount || "0"} {selectedToken}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">USD Value</span>
+            <span className="font-mono">${usdValue.toFixed(2)}</span>
+          </div>
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Base SHIELD</span>
             <span className="font-mono">{parseInt(shieldAmount).toLocaleString()}</span>
@@ -368,10 +701,11 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
           onClick={handlePurchase}
           className="w-full"
           size="lg"
+          disabled={!amount || usdValue < 10}
           data-testid="button-buy-shield"
         >
           <Zap className="w-4 h-4 mr-2" />
-          Buy SHIELD
+          {usdValue < 10 && amount ? `Min. $10 USD (current: $${usdValue.toFixed(2)})` : "Buy SHIELD"}
         </Button>
 
         <div className="text-center text-xs text-muted-foreground">
@@ -537,16 +871,79 @@ export default function Presale() {
       {!isConnected ? (
         <ConnectWalletEmptyState />
       ) : (
-        <div className="grid md:grid-cols-2 gap-6">
-          <div className="space-y-6">
-            <PurchaseCard selectedChain={selectedChain} />
-            <ReferralCard />
-          </div>
-          <div className="space-y-6">
-            <VestingInfoCard />
-            <TokenomicsCard />
-          </div>
-        </div>
+        <Tabs defaultValue="buy" className="w-full">
+          <TabsList className="w-full mb-6">
+            <TabsTrigger value="buy" className="flex-1" data-testid="tab-buy">
+              Buy SHIELD
+            </TabsTrigger>
+            <TabsTrigger value="bridge" className="flex-1" data-testid="tab-bridge">
+              Bridge SHIELD
+            </TabsTrigger>
+            <TabsTrigger value="info" className="flex-1" data-testid="tab-info">
+              Token Info
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="buy">
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="space-y-6">
+                <PurchaseCard selectedChain={selectedChain} />
+                <ReferralCard />
+              </div>
+              <div className="space-y-6">
+                <PriceTrajectoryCard />
+                <VestingInfoCard />
+              </div>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="bridge">
+            <div className="grid md:grid-cols-2 gap-6">
+              <ShieldBridgeCard />
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Shield className="w-5 h-5 text-primary" />
+                    Your SHIELD Balances
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {SUPPORTED_CHAINS.map((chain) => (
+                    <div 
+                      key={chain.id}
+                      className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{chain.icon}</span>
+                        <span className="font-medium">{chain.name}</span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-mono font-semibold">0.00</div>
+                        <div className="text-xs text-muted-foreground">SHIELD</div>
+                      </div>
+                    </div>
+                  ))}
+                  <div className="pt-3 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Total SHIELD</span>
+                      <span className="text-xl font-bold font-mono">0.00</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="info">
+            <div className="grid md:grid-cols-2 gap-6">
+              <TokenomicsCard />
+              <div className="space-y-6">
+                <PriceTrajectoryCard />
+                <VestingInfoCard />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
       )}
 
       <Card className="bg-muted/30">
