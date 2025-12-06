@@ -18,13 +18,17 @@ import {
   Copy,
   CheckCircle2,
   AlertCircle,
-  Zap
+  Zap,
+  Loader2
 } from "lucide-react";
 import { useWallet } from "@/lib/walletContext";
 import { useNetwork } from "@/lib/networkContext";
 import { useToast } from "@/hooks/use-toast";
 import ConnectWalletEmptyState from "@/components/ConnectWalletEmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAccount, useBalance, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
+import { formatUnits, parseUnits, encodeAbiParameters, keccak256, toBytes, Address } from "viem";
+import { PRESALE_ADDRESSES, SHIELD_PRESALE_ABI, ERC20_ABI, TOKEN_ADDRESSES } from "@/lib/presaleContracts";
 
 const PRESALE_STAGES = [
   { stage: 1, price: 0.005, bonus: 5, cap: 250000, name: "Early Bird" },
@@ -477,24 +481,8 @@ const PAYMENT_TOKENS: Record<number, { symbol: string; name: string; decimals: n
   ],
 };
 
-// TODO: Replace with real contract integration after deployment
-// These hooks will call the deployed ShieldPresale contracts
-// - Use wagmi useReadContract for on-chain data
-// - Use TanStack Query for API data (presale stats, user purchases)
-// - Connect to deployed presale contracts on each chain
-const MOCK_BALANCES: Record<string, string> = {
-  FLR: "1,234.56",
-  FXRP: "5,000.00",
-  "USDC.e": "500.00",
-  WFLR: "0.00",
-  ETH: "0.10",
-  USDC: "100.00",
-  WETH: "0.00",
-  ARB: "50.00",
-};
-
-// TODO: Replace with CoinGecko/DeFiLlama price feeds
-const MOCK_PRICES: Record<string, number> = {
+// Token prices - fetched from API or use defaults for stablecoins
+const DEFAULT_PRICES: Record<string, number> = {
   FLR: 0.015,
   FXRP: 2.15,
   "USDC.e": 1.00,
@@ -505,13 +493,94 @@ const MOCK_PRICES: Record<string, number> = {
   ARB: 0.85,
 };
 
+function useTokenPrices() {
+  return useQuery({
+    queryKey: ["/api/prices"],
+    queryFn: async () => {
+      const symbols = "FLR,FXRP,USDC,ETH,WETH,ARB,WFLR";
+      const response = await fetch(`/api/prices?symbols=${symbols}`);
+      const data = await response.json();
+      if (data.success && data.prices) {
+        return {
+          ...data.prices,
+          "USDC.e": 1.00,
+          USDC: 1.00,
+        };
+      }
+      return DEFAULT_PRICES;
+    },
+    staleTime: 60000,
+    refetchInterval: 60000,
+  });
+}
+
+function useTokenBalance(chainId: number, tokenSymbol: string, address: string | undefined) {
+  const tokenAddress = TOKEN_ADDRESSES[chainId]?.[tokenSymbol];
+  const isNative = tokenAddress === "0x0000000000000000000000000000000000000000";
+  
+  const { data: nativeBalance } = useBalance({
+    address: address as Address | undefined,
+    chainId,
+    query: { enabled: !!address && isNative },
+  });
+
+  const { data: tokenBalance } = useReadContract({
+    address: tokenAddress as Address,
+    abi: ERC20_ABI,
+    functionName: "balanceOf",
+    args: address ? [address as Address] : undefined,
+    chainId,
+    query: { enabled: !!address && !isNative && !!tokenAddress && tokenAddress !== "0x0000000000000000000000000000000000000000" },
+  });
+
+  if (!address) return "0.00";
+  
+  if (isNative && nativeBalance) {
+    return formatUnits(nativeBalance.value, 18);
+  }
+  
+  if (!isNative && tokenBalance !== undefined) {
+    const decimals = tokenSymbol === "FXRP" || tokenSymbol.includes("USDC") ? 6 : 18;
+    return formatUnits(tokenBalance as bigint, decimals);
+  }
+
+  return "0.00";
+}
+
+function TokenBalanceDisplay({ chainId, symbol, address, price }: { 
+  chainId: number; 
+  symbol: string; 
+  address: string | undefined;
+  price: number;
+}) {
+  const balance = useTokenBalance(chainId, symbol, address);
+  const balanceNum = parseFloat(balance);
+  const usdValue = balanceNum * price;
+
+  return (
+    <div className="text-right">
+      <div className="font-mono text-sm">
+        {balanceNum.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 4 })}
+      </div>
+      <div className="text-xs text-muted-foreground">
+        ${usdValue.toFixed(2)}
+      </div>
+    </div>
+  );
+}
+
 function PurchaseCard({ selectedChain }: { selectedChain: number }) {
   const [amount, setAmount] = useState("");
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState("");
   const [showTokenSelector, setShowTokenSelector] = useState(false);
   const { toast } = useToast();
-  const { isConnected } = useWallet();
+  const { isConnected, evmAddress } = useWallet();
+  const { address } = useAccount();
+  const userAddress = evmAddress || address;
+  
+  const { data: pricesData } = useTokenPrices();
+  const prices = (pricesData as Record<string, number>) || DEFAULT_PRICES;
 
   const availableTokens = PAYMENT_TOKENS[selectedChain] || PAYMENT_TOKENS[114];
   
@@ -521,24 +590,50 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
     }
   }, [selectedChain]);
 
+  const currentBalance = useTokenBalance(selectedChain, selectedToken || "", userAddress);
+  
+  const presaleAddress = PRESALE_ADDRESSES[selectedChain as keyof typeof PRESALE_ADDRESSES]?.presale;
+  const paymentTokenAddress = PRESALE_ADDRESSES[selectedChain as keyof typeof PRESALE_ADDRESSES]?.paymentToken;
+  
+  const { writeContract, data: txHash, isPending: isWritePending } = useWriteContract();
+  const { isLoading: isTxPending, isSuccess: isTxSuccess } = useWaitForTransactionReceipt({
+    hash: txHash,
+  });
+
   const currentStage = PRESALE_STAGES[0];
-  const tokenPrice = selectedToken ? MOCK_PRICES[selectedToken] || 1 : 1;
+  const tokenPrice = selectedToken ? (prices[selectedToken] || DEFAULT_PRICES[selectedToken] || 1) : 1;
   const tokenAmount = amount ? parseFloat(amount) : 0;
   const usdValue = tokenAmount * tokenPrice;
   const shieldAmount = usdValue > 0 ? (usdValue / currentStage.price).toFixed(0) : "0";
   const bonusAmount = shieldAmount ? (parseFloat(shieldAmount) * currentStage.bonus / 100).toFixed(0) : "0";
   const totalAmount = parseInt(shieldAmount) + parseInt(bonusAmount);
 
-  const currentBalance = selectedToken ? MOCK_BALANCES[selectedToken] || "0.00" : "0.00";
+  const formattedBalance = parseFloat(currentBalance).toLocaleString(undefined, { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 6 
+  });
   const selectedTokenData = availableTokens.find(t => t.symbol === selectedToken);
 
+  useEffect(() => {
+    if (isTxSuccess) {
+      toast({
+        title: "Purchase Successful!",
+        description: `Successfully purchased ${totalAmount.toLocaleString()} SHIELD tokens.`,
+      });
+      setAmount("");
+    }
+  }, [isTxSuccess]);
+
   const handleMaxClick = () => {
-    const balance = parseFloat(currentBalance.replace(/,/g, ''));
-    setAmount(balance.toString());
+    const balance = parseFloat(currentBalance);
+    if (balance > 0) {
+      const maxAmount = selectedTokenData?.native ? Math.max(0, balance - 0.01) : balance;
+      setAmount(maxAmount.toString());
+    }
   };
 
-  const handlePurchase = () => {
-    if (!isConnected) {
+  const handlePurchase = async () => {
+    if (!isConnected || !userAddress) {
       toast({
         title: "Wallet Required",
         description: "Please connect your wallet to participate in the presale.",
@@ -565,11 +660,42 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
       return;
     }
 
-    toast({
-      title: "Purchase Initiated",
-      description: `Processing purchase of ${totalAmount.toLocaleString()} SHIELD with ${amount} ${selectedToken}.`,
-    });
+    if (!presaleAddress || presaleAddress === "0x0000000000000000000000000000000000000000") {
+      toast({
+        title: "Not Available",
+        description: "Presale is not yet deployed on this chain.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const usdAmountInDecimals = parseUnits(usdValue.toFixed(6), 6);
+      const referralBytes = referralCode 
+        ? keccak256(toBytes(referralCode)) 
+        : "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`;
+
+      writeContract({
+        address: presaleAddress as Address,
+        abi: SHIELD_PRESALE_ABI,
+        functionName: "buy",
+        args: [usdAmountInDecimals, referralBytes, [], []],
+      });
+
+      toast({
+        title: "Transaction Submitted",
+        description: `Processing purchase of ${totalAmount.toLocaleString()} SHIELD...`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "Transaction Failed",
+        description: error.message || "Failed to submit transaction",
+        variant: "destructive",
+      });
+    }
   };
+
+  const isPending = isWritePending || isTxPending;
 
   return (
     <Card className="border-primary/30">
@@ -589,7 +715,7 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
           <div className="flex items-center justify-between">
             <label className="text-sm text-muted-foreground">Pay With</label>
             <span className="text-xs text-muted-foreground">
-              Balance: <span className="font-mono">{currentBalance}</span> {selectedToken}
+              Balance: <span className="font-mono">{formattedBalance}</span> {selectedToken}
             </span>
           </div>
           
@@ -654,12 +780,12 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
                       <div className="text-xs text-muted-foreground">{token.name}</div>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <div className="font-mono text-sm">{MOCK_BALANCES[token.symbol] || "0.00"}</div>
-                    <div className="text-xs text-muted-foreground">
-                      ${((parseFloat(MOCK_BALANCES[token.symbol]?.replace(/,/g, '') || '0')) * (MOCK_PRICES[token.symbol] || 0)).toFixed(2)}
-                    </div>
-                  </div>
+                  <TokenBalanceDisplay 
+                    chainId={selectedChain} 
+                    symbol={token.symbol} 
+                    address={userAddress}
+                    price={prices[token.symbol] || DEFAULT_PRICES[token.symbol] || 0}
+                  />
                 </button>
               ))}
             </div>
@@ -707,11 +833,20 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
           onClick={handlePurchase}
           className="w-full"
           size="lg"
-          disabled={!amount || usdValue < 10}
+          disabled={!amount || usdValue < 10 || isPending}
           data-testid="button-buy-shield"
         >
-          <Zap className="w-4 h-4 mr-2" />
-          {usdValue < 10 && amount ? `Min. $10 USD (current: $${usdValue.toFixed(2)})` : "Buy SHIELD"}
+          {isPending ? (
+            <>
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <Zap className="w-4 h-4 mr-2" />
+              {usdValue < 10 && amount ? `Min. $10 USD (current: $${usdValue.toFixed(2)})` : "Buy SHIELD"}
+            </>
+          )}
         </Button>
 
         <div className="text-center text-xs text-muted-foreground">
