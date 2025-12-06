@@ -436,13 +436,19 @@ function ChainSelector({
   selectedChain: number; 
   onSelect: (chainId: number) => void;
 }) {
+  const handleChainClick = (chainId: number) => {
+    console.log("Chain selected:", chainId);
+    onSelect(chainId);
+  };
+
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
       {SUPPORTED_CHAINS.map((chain) => (
         <button
+          type="button"
           key={chain.id}
-          onClick={() => onSelect(chain.id)}
-          className={`flex items-center gap-2 p-3 rounded-lg border transition-all ${
+          onClick={() => handleChainClick(chain.id)}
+          className={`flex items-center gap-2 p-3 rounded-lg border transition-all cursor-pointer ${
             selectedChain === chain.id
               ? "border-primary bg-primary/10 ring-2 ring-primary/20"
               : "border-border hover-elevate"
@@ -918,21 +924,66 @@ function ReferralCard() {
   );
 }
 
+function usePresaleStats(chainId: number) {
+  const presaleAddress = PRESALE_ADDRESSES[chainId as keyof typeof PRESALE_ADDRESSES]?.presale;
+  
+  const { data: totalRaised } = useReadContract({
+    address: presaleAddress as Address,
+    abi: SHIELD_PRESALE_ABI,
+    functionName: "totalRaised",
+    chainId,
+    query: { enabled: !!presaleAddress && presaleAddress !== "0x0000000000000000000000000000000000000000" },
+  });
+
+  const { data: totalParticipants } = useReadContract({
+    address: presaleAddress as Address,
+    abi: SHIELD_PRESALE_ABI,
+    functionName: "totalParticipants",
+    chainId,
+    query: { enabled: !!presaleAddress && presaleAddress !== "0x0000000000000000000000000000000000000000" },
+  });
+
+  const { data: currentStage } = useReadContract({
+    address: presaleAddress as Address,
+    abi: SHIELD_PRESALE_ABI,
+    functionName: "currentStage",
+    chainId,
+    query: { enabled: !!presaleAddress && presaleAddress !== "0x0000000000000000000000000000000000000000" },
+  });
+
+  const { data: isActive } = useReadContract({
+    address: presaleAddress as Address,
+    abi: SHIELD_PRESALE_ABI,
+    functionName: "isActive",
+    chainId,
+    query: { enabled: !!presaleAddress && presaleAddress !== "0x0000000000000000000000000000000000000000" },
+  });
+
+  const raised = totalRaised ? Number(formatUnits(totalRaised as bigint, 6)) : 0;
+  const participants = totalParticipants ? Number(totalParticipants) : 0;
+  const stage = currentStage ? Number(currentStage) + 1 : 1;
+  const stageData = PRESALE_STAGES[stage - 1] || PRESALE_STAGES[0];
+  const progress = stageData.cap > 0 ? (raised / stageData.cap) * 100 : 0;
+
+  return {
+    totalRaised: raised,
+    totalParticipants: participants,
+    currentStage: stage,
+    stageProgress: Math.min(progress, 100),
+    softCapReached: raised >= 25000,
+    hardCapReached: raised >= 200000,
+    endTime: Date.now() + 14 * 24 * 60 * 60 * 1000, // 14 days from now
+    isActive: isActive ?? true,
+    isLoading: !presaleAddress || presaleAddress === "0x0000000000000000000000000000000000000000",
+  };
+}
+
 export default function Presale() {
   const [selectedChain, setSelectedChain] = useState(114);
   const { isConnected } = useWallet();
   const { toast } = useToast();
 
-  const presaleStats: PresaleStats = {
-    totalRaised: 45000,
-    totalParticipants: 127,
-    currentStage: 1,
-    stageProgress: 18,
-    softCapReached: false,
-    hardCapReached: false,
-    endTime: Date.now() + 14 * 24 * 60 * 60 * 1000,
-    isActive: true,
-  };
+  const presaleStats = usePresaleStats(selectedChain);
 
   const currentStageData = PRESALE_STAGES[presaleStats.currentStage - 1];
 
