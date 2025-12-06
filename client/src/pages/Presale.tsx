@@ -28,7 +28,7 @@ import ConnectWalletEmptyState from "@/components/ConnectWalletEmptyState";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAccount, useBalance, useReadContract, useWriteContract, useWaitForTransactionReceipt } from "wagmi";
 import { formatUnits, parseUnits, encodeAbiParameters, keccak256, toBytes, Address } from "viem";
-import { PRESALE_ADDRESSES, SHIELD_PRESALE_ABI, ERC20_ABI, TOKEN_ADDRESSES } from "@/lib/presaleContracts";
+import { PRESALE_ADDRESSES, SHIELD_PRESALE_ABI, ERC20_ABI, MOCK_ERC20_ABI } from "@/lib/presaleContracts";
 
 const PRESALE_STAGES = [
   { stage: 1, price: 0.005, bonus: 5, cap: 250000, name: "Early Bird" },
@@ -463,27 +463,18 @@ function ChainSelector({
   );
 }
 
-const PAYMENT_TOKENS: Record<number, { symbol: string; name: string; decimals: number; native: boolean }[]> = {
-  114: [ // Flare/Coston2
-    { symbol: "FLR", name: "Flare", decimals: 18, native: true },
-    { symbol: "FXRP", name: "FAssets XRP", decimals: 6, native: false },
-    { symbol: "USDC.e", name: "USDC (Bridged)", decimals: 6, native: false },
-    { symbol: "WFLR", name: "Wrapped FLR", decimals: 18, native: false },
+const PAYMENT_TOKENS: Record<number, { symbol: string; name: string; decimals: number; native: boolean; address: string }[]> = {
+  114: [ // Flare/Coston2 - Only Mock USDC (contract's payment token)
+    { symbol: "USDC.e", name: "Mock USDC (Testnet)", decimals: 6, native: false, address: "0x4Ba749c96F6B0c9AddF3a339eb7E79A5f92C7C39" },
   ],
-  84532: [ // Base Sepolia
-    { symbol: "ETH", name: "Ethereum", decimals: 18, native: true },
-    { symbol: "USDC", name: "USD Coin", decimals: 6, native: false },
-    { symbol: "WETH", name: "Wrapped ETH", decimals: 18, native: false },
+  84532: [ // Base Sepolia - Circle's testnet USDC
+    { symbol: "USDC", name: "USD Coin", decimals: 6, native: false, address: "0x036CbD53842c5426634e7929541eC2318f3dCF7e" },
   ],
-  421614: [ // Arbitrum Sepolia
-    { symbol: "ETH", name: "Ethereum", decimals: 18, native: true },
-    { symbol: "USDC", name: "USD Coin", decimals: 6, native: false },
-    { symbol: "ARB", name: "Arbitrum", decimals: 18, native: false },
+  421614: [ // Arbitrum Sepolia - Circle's testnet USDC
+    { symbol: "USDC", name: "USD Coin", decimals: 6, native: false, address: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d" },
   ],
-  11155111: [ // Sepolia
-    { symbol: "ETH", name: "Ethereum", decimals: 18, native: true },
-    { symbol: "USDC", name: "USD Coin", decimals: 6, native: false },
-    { symbol: "WETH", name: "Wrapped ETH", decimals: 18, native: false },
+  11155111: [ // Sepolia - Circle's testnet USDC
+    { symbol: "USDC", name: "USD Coin", decimals: 6, native: false, address: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238" },
   ],
 };
 
@@ -521,8 +512,11 @@ function useTokenPrices() {
 }
 
 function useTokenBalance(chainId: number, tokenSymbol: string, address: string | undefined) {
-  const tokenAddress = TOKEN_ADDRESSES[chainId]?.[tokenSymbol];
-  const isNative = tokenAddress === "0x0000000000000000000000000000000000000000";
+  const availableTokens = PAYMENT_TOKENS[chainId] || [];
+  const tokenData = availableTokens.find(t => t.symbol === tokenSymbol);
+  const tokenAddress = tokenData?.address || "0x0000000000000000000000000000000000000000";
+  const decimals = tokenData?.decimals || 6;
+  const isNative = tokenData?.native || false;
   
   const { data: nativeBalance } = useBalance({
     address: address as Address | undefined,
@@ -546,11 +540,70 @@ function useTokenBalance(chainId: number, tokenSymbol: string, address: string |
   }
   
   if (!isNative && tokenBalance !== undefined) {
-    const decimals = tokenSymbol === "FXRP" || tokenSymbol.includes("USDC") ? 6 : 18;
     return formatUnits(tokenBalance as bigint, decimals);
   }
 
   return "0.00";
+}
+
+function MintTestUSDCButton({ 
+  userAddress, 
+  tokenAddress,
+  onSuccess 
+}: { 
+  userAddress: string | undefined;
+  tokenAddress: string;
+  onSuccess?: () => void;
+}) {
+  const { writeContract, data: txHash, isPending } = useWriteContract();
+  const { isSuccess } = useWaitForTransactionReceipt({ hash: txHash });
+  const { toast } = useToast();
+
+  useEffect(() => {
+    if (isSuccess) {
+      toast({
+        title: "Test USDC Minted!",
+        description: "100 Mock USDC has been added to your wallet.",
+      });
+      onSuccess?.();
+    }
+  }, [isSuccess]);
+
+  const handleMint = () => {
+    if (!userAddress) return;
+    
+    const mintAmount = parseUnits("100", 6);
+    
+    writeContract({
+      address: tokenAddress as Address,
+      abi: MOCK_ERC20_ABI,
+      functionName: "mint",
+      args: [userAddress as Address, mintAmount],
+      chainId: 114,
+    });
+
+    toast({
+      title: "Minting Test USDC",
+      description: "Please confirm the transaction in your wallet.",
+    });
+  };
+
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={handleMint}
+      disabled={isPending || !userAddress}
+      className="h-6 text-xs px-2"
+      data-testid="button-mint-test-usdc"
+    >
+      {isPending ? (
+        <Loader2 className="w-3 h-3 animate-spin" />
+      ) : (
+        "Get Test USDC"
+      )}
+    </Button>
+  );
 }
 
 function TokenBalanceDisplay({ chainId, symbol, address, price }: { 
@@ -580,6 +633,7 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
   const [selectedToken, setSelectedToken] = useState<string | null>(null);
   const [referralCode, setReferralCode] = useState("");
   const [showTokenSelector, setShowTokenSelector] = useState(false);
+  const [isApproving, setIsApproving] = useState(false);
   const { toast } = useToast();
   const { isConnected, evmAddress } = useWallet();
   const { address } = useAccount();
@@ -588,7 +642,7 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
   const { data: pricesData } = useTokenPrices();
   const prices = (pricesData as Record<string, number>) || DEFAULT_PRICES;
 
-  const availableTokens = PAYMENT_TOKENS[selectedChain] || PAYMENT_TOKENS[114];
+  const availableTokens = PAYMENT_TOKENS[selectedChain] || [];
   
   useEffect(() => {
     if (availableTokens.length > 0) {
@@ -599,7 +653,8 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
   const currentBalance = useTokenBalance(selectedChain, selectedToken || "", userAddress);
   
   const presaleAddress = PRESALE_ADDRESSES[selectedChain as keyof typeof PRESALE_ADDRESSES]?.presale;
-  const paymentTokenAddress = PRESALE_ADDRESSES[selectedChain as keyof typeof PRESALE_ADDRESSES]?.paymentToken;
+  const selectedTokenData = availableTokens.find(t => t.symbol === selectedToken);
+  const paymentTokenAddress = selectedTokenData?.address || "0x0000000000000000000000000000000000000000";
   
   const { writeContract, data: txHash, isPending: isWritePending } = useWriteContract();
   const { isLoading: isTxPending, isSuccess: isTxSuccess } = useWaitForTransactionReceipt({
@@ -614,11 +669,38 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
   const bonusAmount = shieldAmount ? (parseFloat(shieldAmount) * currentStage.bonus / 100).toFixed(0) : "0";
   const totalAmount = parseInt(shieldAmount) + parseInt(bonusAmount);
 
+  const usdAmountInDecimals = useMemo(() => {
+    try {
+      return usdValue > 0 ? parseUnits(usdValue.toFixed(6), 6) : BigInt(0);
+    } catch {
+      return BigInt(0);
+    }
+  }, [usdValue]);
+
+  const { data: allowance, refetch: refetchAllowance } = useReadContract({
+    address: paymentTokenAddress as Address,
+    abi: ERC20_ABI,
+    functionName: "allowance",
+    args: userAddress && presaleAddress ? [userAddress as Address, presaleAddress as Address] : undefined,
+    chainId: selectedChain,
+    query: { 
+      enabled: !!userAddress && !!presaleAddress && presaleAddress !== "0x0000000000000000000000000000000000000000" && paymentTokenAddress !== "0x0000000000000000000000000000000000000000",
+    },
+  });
+
+  const needsApproval = useMemo(() => {
+    if (!allowance || !usdAmountInDecimals) return false;
+    return (allowance as bigint) < usdAmountInDecimals;
+  }, [allowance, usdAmountInDecimals]);
+
   const formattedBalance = parseFloat(currentBalance).toLocaleString(undefined, { 
     minimumFractionDigits: 2, 
     maximumFractionDigits: 6 
   });
-  const selectedTokenData = availableTokens.find(t => t.symbol === selectedToken);
+
+  useEffect(() => {
+    refetchAllowance();
+  }, [selectedChain, paymentTokenAddress, userAddress]);
 
   useEffect(() => {
     if (isTxSuccess) {
@@ -627,14 +709,51 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
         description: `Successfully purchased ${totalAmount.toLocaleString()} SHIELD tokens.`,
       });
       setAmount("");
+      refetchAllowance();
     }
   }, [isTxSuccess]);
 
   const handleMaxClick = () => {
     const balance = parseFloat(currentBalance);
     if (balance > 0) {
-      const maxAmount = selectedTokenData?.native ? Math.max(0, balance - 0.01) : balance;
-      setAmount(maxAmount.toString());
+      setAmount(balance.toString());
+    }
+  };
+
+  const handleApprove = async () => {
+    if (!presaleAddress || presaleAddress === "0x0000000000000000000000000000000000000000") {
+      toast({
+        title: "Not Available",
+        description: "Presale is not yet deployed on this chain.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsApproving(true);
+    try {
+      const maxApproval = parseUnits("1000000", 6);
+      
+      writeContract({
+        address: paymentTokenAddress as Address,
+        abi: ERC20_ABI,
+        functionName: "approve",
+        args: [presaleAddress as Address, maxApproval],
+        chainId: selectedChain,
+      });
+
+      toast({
+        title: "Approval Submitted",
+        description: "Please confirm the approval transaction in your wallet.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Approval Failed",
+        description: error.message || "Failed to submit approval",
+        variant: "destructive",
+      });
+    } finally {
+      setIsApproving(false);
     }
   };
 
@@ -675,8 +794,16 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
       return;
     }
 
+    if (needsApproval) {
+      toast({
+        title: "Approval Required",
+        description: "Please approve the presale contract to spend your tokens first.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
-      const usdAmountInDecimals = parseUnits(usdValue.toFixed(6), 6);
       const referralBytes = referralCode 
         ? keccak256(toBytes(referralCode)) 
         : "0x0000000000000000000000000000000000000000000000000000000000000000" as `0x${string}`;
@@ -686,6 +813,7 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
         abi: SHIELD_PRESALE_ABI,
         functionName: "buy",
         args: [usdAmountInDecimals, referralBytes, [], []],
+        chainId: selectedChain,
       });
 
       toast({
@@ -701,7 +829,7 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
     }
   };
 
-  const isPending = isWritePending || isTxPending;
+  const isPending = isWritePending || isTxPending || isApproving;
 
   return (
     <Card className="border-primary/30">
@@ -720,9 +848,20 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-sm text-muted-foreground">Pay With</label>
-            <span className="text-xs text-muted-foreground">
-              Balance: <span className="font-mono">{formattedBalance}</span> {selectedToken}
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-muted-foreground">
+                Balance: <span className="font-mono">{formattedBalance}</span> {selectedToken}
+              </span>
+              {selectedChain === 114 && (
+                <MintTestUSDCButton 
+                  userAddress={userAddress} 
+                  tokenAddress={paymentTokenAddress}
+                  onSuccess={() => {
+                    refetchAllowance();
+                  }}
+                />
+              )}
+            </div>
           </div>
           
           <div className="flex gap-2">
@@ -835,25 +974,47 @@ function PurchaseCard({ selectedChain }: { selectedChain: number }) {
           </div>
         </div>
 
-        <Button 
-          onClick={handlePurchase}
-          className="w-full"
-          size="lg"
-          disabled={!amount || usdValue < 10 || isPending}
-          data-testid="button-buy-shield"
-        >
-          {isPending ? (
-            <>
-              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            <>
-              <Zap className="w-4 h-4 mr-2" />
-              {usdValue < 10 && amount ? `Min. $10 USD (current: $${usdValue.toFixed(2)})` : "Buy SHIELD"}
-            </>
-          )}
-        </Button>
+        {needsApproval && usdValue >= 10 ? (
+          <Button 
+            onClick={handleApprove}
+            className="w-full"
+            size="lg"
+            disabled={!amount || usdValue < 10 || isPending}
+            data-testid="button-approve-token"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Approving...
+              </>
+            ) : (
+              <>
+                <Lock className="w-4 h-4 mr-2" />
+                Approve USDC
+              </>
+            )}
+          </Button>
+        ) : (
+          <Button 
+            onClick={handlePurchase}
+            className="w-full"
+            size="lg"
+            disabled={!amount || usdValue < 10 || isPending}
+            data-testid="button-buy-shield"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <Zap className="w-4 h-4 mr-2" />
+                {usdValue < 10 && amount ? `Min. $10 USD (current: $${usdValue.toFixed(2)})` : "Buy SHIELD"}
+              </>
+            )}
+          </Button>
+        )}
 
         <div className="text-center text-xs text-muted-foreground">
           By purchasing, you agree to the{" "}

@@ -138,6 +138,19 @@ export const ERC20_ABI = [
   },
 ] as const;
 
+export const MOCK_ERC20_ABI = [
+  {
+    inputs: [
+      { type: "address", name: "to" },
+      { type: "uint256", name: "amount" },
+    ],
+    name: "mint",
+    outputs: [],
+    stateMutability: "nonpayable",
+    type: "function",
+  },
+] as const;
+
 export const TOKEN_ADDRESSES: Record<number, Record<string, string>> = {
   114: { // Coston2
     FLR: "0x0000000000000000000000000000000000000000", // Native
