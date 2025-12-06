@@ -2,11 +2,20 @@ import { HardhatUserConfig } from "hardhat/config";
 import hardhatToolboxMochaEthers from "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import "@nomicfoundation/hardhat-ethers";
 
-// Environment variables are already loaded by the application
 const config: HardhatUserConfig = {
   plugins: [hardhatToolboxMochaEthers],
   solidity: {
     compilers: [
+      {
+        version: "0.8.22",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+          viaIR: true,
+        },
+      },
       {
         version: "0.8.20",
         settings: {
@@ -34,25 +43,71 @@ const config: HardhatUserConfig = {
     timeout: 40000,
   },
   networks: {
+    // ===== TESTNETS =====
     // Flare Coston2 Testnet
     coston2: {
-      type: "http" as const,
+      type: "http",
       url: process.env.FLARE_COSTON2_RPC_URL || "https://coston2-api.flare.network/ext/C/rpc",
       chainId: 114,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
-      gasPrice: 25000000000, // 25 gwei
+      gasPrice: 25000000000,
     },
+    // Base Sepolia Testnet
+    baseSepolia: {
+      type: "http",
+      url: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org",
+      chainId: 84532,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+    },
+    // Arbitrum Sepolia Testnet
+    arbitrumSepolia: {
+      type: "http",
+      url: process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc",
+      chainId: 421614,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+    },
+    // Ethereum Sepolia Testnet
+    sepolia: {
+      type: "http",
+      url: process.env.ETHEREUM_SEPOLIA_RPC_URL || "https://rpc.sepolia.org",
+      chainId: 11155111,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+    },
+    
+    // ===== MAINNETS =====
     // Flare Mainnet
     flare: {
-      type: "http" as const,
+      type: "http",
       url: process.env.FLARE_MAINNET_RPC_URL || "https://flare-api.flare.network/ext/C/rpc",
       chainId: 14,
       accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
       gasPrice: 25000000000,
     },
+    // Base Mainnet
+    base: {
+      type: "http",
+      url: process.env.BASE_MAINNET_RPC_URL || "https://mainnet.base.org",
+      chainId: 8453,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+    },
+    // Arbitrum One Mainnet
+    arbitrum: {
+      type: "http",
+      url: process.env.ARBITRUM_MAINNET_RPC_URL || "https://arb1.arbitrum.io/rpc",
+      chainId: 42161,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+    },
+    // Ethereum Mainnet
+    mainnet: {
+      type: "http",
+      url: process.env.ETHEREUM_MAINNET_RPC_URL || "https://eth.llamarpc.com",
+      chainId: 1,
+      accounts: process.env.DEPLOYER_PRIVATE_KEY ? [process.env.DEPLOYER_PRIVATE_KEY] : [],
+    },
+    
     // Local Hardhat network for testing
     hardhat: {
-      type: "edr-simulated" as const,
+      type: "edr-simulated",
       chainId: 31337,
       forking: {
         url: process.env.FLARE_MAINNET_RPC_URL || "https://flare-api.flare.network/ext/C/rpc",
@@ -68,9 +123,14 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      // Flare block explorer API key (optional for verification)
       coston2: process.env.FLARE_API_KEY || "",
       flare: process.env.FLARE_API_KEY || "",
+      baseSepolia: process.env.BASESCAN_API_KEY || "",
+      base: process.env.BASESCAN_API_KEY || "",
+      arbitrumSepolia: process.env.ARBISCAN_API_KEY || "",
+      arbitrumOne: process.env.ARBISCAN_API_KEY || "",
+      sepolia: process.env.ETHERSCAN_API_KEY || "",
+      mainnet: process.env.ETHERSCAN_API_KEY || "",
     },
     customChains: [
       {
@@ -87,6 +147,30 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://flare-explorer.flare.network/api",
           browserURL: "https://flare-explorer.flare.network",
+        },
+      },
+      {
+        network: "baseSepolia",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api",
+          browserURL: "https://sepolia.basescan.org",
+        },
+      },
+      {
+        network: "base",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
+        },
+      },
+      {
+        network: "arbitrumSepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io",
         },
       },
     ],
