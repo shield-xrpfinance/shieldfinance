@@ -54,12 +54,14 @@ Comprehensive security checklist for Shield Finance fair launch on Flare Network
   - ✅ Burnable (ERC20Burnable from OpenZeppelin)
   - ✅ No mint function (supply fixed at deployment)
   - ✅ No ownership special privileges (Ownable only for transferOwnership)
-- [x] **RevenueRouter.sol**
-  - ✅ 50/50 split verified (50% burn, 50% reserves)
-  - ✅ SafeERC20 used for all token transfers
-  - ✅ No reentrancy vulnerabilities (distribute() is not marked nonReentrant but safe)
-  - ✅ Immutable addresses (SHIELD, wFLR, router)
-  - ✅ Owner-only withdrawReserves
+- [x] **RevenueRouter.sol** *(December 2025 Security Hardening)*
+  - ✅ 50/40/10 split verified (50% burn, 40% boost, 10% reserves)
+  - ✅ SafeERC20 forceApprove() used for all token approvals
+  - ✅ Allowances cleared after each operation (prevents residual approval attacks)
+  - ✅ Configurable slippage protection (max 20%)
+  - ✅ Price tracking for slippage calculations
+  - ✅ rescueTokens() blocks FXRP extraction (operational token protection)
+  - ✅ Owner-only withdrawReserves and configuration updates
   - ⚠️  **SECURITY NOTE:** distribute() can be called by anyone (intended design)
 - [x] **MerkleDistributor.sol**
   - ✅ Immutable merkle root (prevents double-claim exploits)

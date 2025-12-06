@@ -133,7 +133,7 @@ Before using Firelight, users need FXRP on Flare.
 - Purchase on DEX: SparkDEX, BlazeSwap, Enosys
 - Receive from another wallet
 
-See `FLARE_FASSETS_INTEGRATION.md` for complete minting guide.
+See `FASSETS_GUIDE.md` for complete minting guide.
 
 ### 2. Approve FXRP Spending
 

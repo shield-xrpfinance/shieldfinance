@@ -1,61 +1,64 @@
 # Shield Finance Documentation
 
-Welcome to the Shield Finance documentation. This comprehensive guide covers our XRP liquid staking platform on Flare Network.
+Welcome to the Shield Finance documentation. This is the primary entry point for all project documentation.
 
-## Whitepaper
+**[Read the Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf)** — Complete technical documentation covering protocol architecture, yield mechanics, and SHIELD tokenomics.
 
-**[Read the Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf)** — Complete technical documentation covering the protocol architecture, yield mechanics, and SHIELD tokenomics.
+---
 
-## For External Reviewers
+## Quick Navigation
 
-Start with [REVIEWERS.md](../REVIEWERS.md) for a structured overview of the codebase and key documentation.
+| Goal | Document |
+|------|----------|
+| Understand the project | [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) |
+| Review the codebase | [REVIEWERS.md](../REVIEWERS.md) |
+| SHIELD tokenomics | [SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md) |
+| Deploy contracts | [SHIELD_DEPLOYMENT.md](protocol/SHIELD_DEPLOYMENT.md) |
+| FAssets bridge | [FASSETS_GUIDE.md](integration/FASSETS_GUIDE.md) |
+| Revenue system | [REVENUE_SYSTEM_SPEC.md](protocol/REVENUE_SYSTEM_SPEC.md) |
+| Staking boost | [STAKING_BOOST_SPEC.md](protocol/STAKING_BOOST_SPEC.md) |
+| Vault specification | [SHXRP_VAULT_SPECIFICATION.md](SHXRP_VAULT_SPECIFICATION.md) |
 
 ---
 
 ## Documentation Structure
 
-### Protocol (Token & Contracts)
-- [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) - Complete technical documentation
-- [SHIELD Tokenomics](protocol/SHIELD_TOKENOMICS.md) - Token economics, distribution, buyback & burn
-- [SHIELD Deployment](protocol/SHIELD_DEPLOYMENT.md) - Contract addresses and deployment steps
-- [Security Checklist](protocol/SHIELD_SECURITY_CHECKLIST.md) - Pre-deployment security review
+### Protocol (`/protocol`)
+Core smart contract and tokenomics documentation.
+- [SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md) - Token economics, revenue split (50/40/10)
+- [SHIELD_DEPLOYMENT.md](protocol/SHIELD_DEPLOYMENT.md) - Contract deployment steps
+- [STAKING_BOOST_SPEC.md](protocol/STAKING_BOOST_SPEC.md) - APY boost mechanics
+- [REVENUE_SYSTEM_SPEC.md](protocol/REVENUE_SYSTEM_SPEC.md) - BuybackBurn & RevenueRouter
+- [SHIELD_SECURITY_CHECKLIST.md](protocol/SHIELD_SECURITY_CHECKLIST.md) - Pre-audit checklist
 
-### Integration (External Services)
-- [FAssets Integration](integration/FASSETS_INTEGRATION_GUIDE.md) - XRP → FXRP bridging
-- [Firelight Integration](integration/FIRELIGHT_INTEGRATION.md) - Yield generation strategies
-- [Flare FAssets](integration/FLARE_FASSETS_INTEGRATION.md) - Flare-specific details
-- [LP Locking Guide](integration/LP_LOCKING_GUIDE.md) - Liquidity pool management
+### Integration (`/integration`)
+External service integration guides.
+- [FASSETS_GUIDE.md](integration/FASSETS_GUIDE.md) - XRP → FXRP bridging (canonical)
+- [FIRELIGHT_INTEGRATION.md](integration/FIRELIGHT_INTEGRATION.md) - Yield strategies
+- [LP_LOCKING_GUIDE.md](integration/LP_LOCKING_GUIDE.md) - Liquidity management
 
-### Platform (Application Architecture)
-- [Smart Accounts Spec](platform/SMART_ACCOUNTS_SPEC.md) - ERC-4337 specification
-- [Swap Feature](platform/swap.md) - Multi-asset token swapping
-- [Wallet Integration](platform/wallet-integration.md) - Wallet connection guide
-- [Transaction Signing](platform/transaction-signing.md) - Signing flows
-- [Xaman Integration](platform/xaman-integration.md) - XRPL wallet details
+### Platform (`/platform`)
+Application architecture and wallet integration.
+- [SMART_ACCOUNTS_SPEC.md](platform/SMART_ACCOUNTS_SPEC.md) - ERC-4337 specification
+- [wallet-integration.md](platform/wallet-integration.md) - Wallet connection
+- [xaman-integration.md](platform/xaman-integration.md) - XRPL wallet
+- [swap.md](platform/swap.md) - Multi-asset swap feature
 
-### API Reference
-- [API Documentation](api/README.md) - Backend API endpoints
+### API (`/api`)
+- [README.md](api/README.md) - API endpoint reference
 
----
-
-## Quick Links
-
-- [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf)
-- [Live Application](https://shyield.finance)
-- [Main README](../README.md)
-- [Technical Architecture](../replit.md)
-- [Design Guidelines](../design_guidelines.md)
+### Legal (`/legal`)
+- [Privacy Policy](legal/privacy-policy.md) | [Terms of Service](legal/terms-of-service.md) | [Cookie Policy](legal/cookie-policy.md)
 
 ---
 
-## Legal
+## Key Resources
 
-- [Privacy Policy](legal/privacy-policy.md) - How we handle your data
-- [Terms of Service](legal/terms-of-service.md) - Rules of using the protocol
-- [Cookie Policy](legal/cookie-policy.md) - Our minimal cookie approach
+- **Live App:** [shyield.finance](https://shyield.finance)
+- **Technical Overview:** [replit.md](../replit.md)
+- **Design System:** [design_guidelines.md](../design_guidelines.md)
+- **Full Index:** [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md)
 
 ---
 
-## Complete Documentation Index
-
-See [DOCUMENTATION_INDEX.md](DOCUMENTATION_INDEX.md) for the full documentation guide.
+*Last Updated: December 2025*

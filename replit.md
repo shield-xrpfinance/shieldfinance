@@ -1,11 +1,19 @@
-# XRP Liquid Staking Protocol Dashboard
+# Shield Finance - XRP Liquid Staking Protocol
+
+> **Project Runbook** - Technical overview for developers and agents working on this codebase.
+> For complete documentation, see [docs/README.md](docs/README.md).
 
 ## Overview
-This project is a full-stack DeFi application providing a dashboard for XRP liquid staking. It enables users to manage cryptocurrency vaults, deposit assets, track positions, monitor real-time APY, and withdraw funds. The platform integrates smart contracts on Flare Network for its $SHIELD governance token and shXRP liquid staking vault, with FAssets protocol for cross-chain XRP bridging to Flare. The vision is to enhance DeFi accessibility and efficiency on the XRP Ledger, capitalizing on the growing liquid staking market. It features a dual wallet architecture providing tailored experiences for XRPL (Xaman/XUMM) and EVM (Reown AppKit/MetaMask) users, showing XRP or FXRP vaults respectively. The project also has ambitions for future integration of Real World Assets (RWA) and tokenized securities.
+
+Full-stack DeFi dashboard for XRP liquid staking on Flare Network. Users deposit XRP/FXRP, receive shXRP tokens, and earn yield. Stake SHIELD governance tokens for APY boost.
+
+**Live App:** [shyield.finance](https://shyield.finance)
 
 ## User Preferences
-Preferred communication style: Simple, everyday language.
-Design preference: Modern, clean list-based layouts over grid cards for better space utilization.
+
+- **Communication:** Simple, everyday language
+- **Design:** Modern, clean list-based layouts (not grid cards)
+- **Data:** NO mock data anywhere in the app
 
 ## System Architecture
 
@@ -105,3 +113,22 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 
 ### RWA & Tokenized Securities (Future Integration)
 - **RWA.xyz Integration**: Planned for real-world asset data feeds.
+
+---
+
+## Documentation Links
+
+| Topic | Document |
+|-------|----------|
+| Complete index | [docs/README.md](docs/README.md) |
+| Tokenomics (50/40/10 split) | [docs/protocol/SHIELD_TOKENOMICS.md](docs/protocol/SHIELD_TOKENOMICS.md) |
+| Revenue system | [docs/protocol/REVENUE_SYSTEM_SPEC.md](docs/protocol/REVENUE_SYSTEM_SPEC.md) |
+| Vault specification | [docs/SHXRP_VAULT_SPECIFICATION.md](docs/SHXRP_VAULT_SPECIFICATION.md) |
+| Staking boost | [docs/protocol/STAKING_BOOST_SPEC.md](docs/protocol/STAKING_BOOST_SPEC.md) |
+| Contract deployment | [docs/protocol/SHIELD_DEPLOYMENT.md](docs/protocol/SHIELD_DEPLOYMENT.md) |
+| FAssets bridge | [docs/integration/FASSETS_GUIDE.md](docs/integration/FASSETS_GUIDE.md) |
+| Design system | [design_guidelines.md](design_guidelines.md) |
+
+---
+
+*Last Updated: December 2025*

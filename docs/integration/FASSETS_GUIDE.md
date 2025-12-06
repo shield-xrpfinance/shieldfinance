@@ -1,7 +1,9 @@
-# Flare FAssets Integration Guide
+# FAssets Integration Guide
 
-**Last Updated:** December 3, 2025  
+**Last Updated:** December 6, 2025  
 **FAssets Version:** v1.2 (Mainnet - September 2025)
+
+> **Canonical Guide:** This is the single authoritative FAssets integration guide for the Shield Finance protocol. For implementation code, see `server/services/BridgeService.ts`.
 
 ## Overview
 

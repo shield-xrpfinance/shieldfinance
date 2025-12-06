@@ -19,21 +19,21 @@ $SHIELD is designed with a **deflationary tokenomics model** that creates consta
 │                                                                 │
 │   Users Deposit     Platform Earns     Revenue Split            │
 │   ───────────────►  ───────────────►  ───────────────►          │
-│   XRP/FXRP            Yield Fees        50% / 50%               │
+│   XRP/FXRP            Yield Fees        50/40/10                │
 │                                                                 │
-│         ┌───────────────────┴───────────────────┐               │
-│         │                                       │               │
-│         ▼                                       ▼               │
-│   ┌───────────┐                         ┌─────────────┐         │
-│   │  BUYBACK  │                         │  PROTOCOL   │         │
-│   │  & BURN   │                         │  RESERVES   │         │
-│   └─────┬─────┘                         └─────────────┘         │
-│         │                                                       │
-│         ▼                                                       │
+│         ┌────────────────┬────────────────┬──────────┐          │
+│         │                │                │          │          │
+│         ▼                ▼                ▼          │          │
+│   ┌───────────┐    ┌───────────┐   ┌──────────┐      │          │
+│   │  BUYBACK  │    │  STAKER   │   │ PROTOCOL │      │          │
+│   │  & BURN   │    │   BOOST   │   │ RESERVES │      │          │
+│   │   (50%)   │    │   (40%)   │   │   (10%)  │      │          │
+│   └─────┬─────┘    └─────┬─────┘   └──────────┘      │          │
+│         │                │                           │          │
+│         ▼                ▼                           │          │
 │   ┌───────────────────────────────────────────────────┐         │
-│   │                                                   │         │
-│   │   wFLR ──► SparkDEX ──► $SHIELD ──► 🔥 BURNED    │         │
-│   │                                                   │         │
+│   │  FXRP ──► SparkDEX ──► $SHIELD ──► 🔥 BURNED     │         │
+│   │  FXRP ──► StakingBoost ──► Pro-rata to stakers   │         │
 │   └───────────────────────────────────────────────────┘         │
 │                                                                 │
 │   Supply Decreases  ──►  Scarcity Increases  ──►  Value Up      │
@@ -50,11 +50,12 @@ $SHIELD is designed with a **deflationary tokenomics model** that creates consta
    A small performance fee (0.2%) is collected from the yield generated.
 
 3. **Revenue is Split**  
-   - **50%** goes to the Buyback & Burn contract
-   - **50%** goes to Protocol Reserves (for development, security audits, partnerships)
+   - **50%** goes to the Buyback & Burn contract (FXRP swapped to SHIELD, then burned)
+   - **40%** goes to StakingBoost (FXRP distributed pro-rata to SHIELD stakers)
+   - **10%** goes to Protocol Reserves (for development, security audits, partnerships)
 
 4. **Automatic Market Buy**  
-   The Buyback contract uses accumulated wFLR (Wrapped Flare) to purchase $SHIELD tokens on SparkDEX.
+   The RevenueRouter swaps accumulated FXRP to $SHIELD on SparkDEX V3.
 
 5. **Permanent Burn**  
    Purchased $SHIELD tokens are **permanently burned** - sent to address `0x000...dead` where they can never be recovered or used again.
@@ -173,13 +174,13 @@ Boost APY = Base APY + (Annual Protocol Revenue → FXRP) × (Your Locked SHIELD
 ┌──────────────────────────────────────────────────────────────────────────┐
 │                         Boost Distribution Flow                           │
 │                                                                           │
-│  Vault Fees (wFLR)                                                        │
+│  Vault Fees (FXRP)                                                        │
 │       │                                                                   │
 │       ▼                                                                   │
 │  RevenueRouter.distribute()                                               │
 │       │                                                                   │
-│       ├── 50% → Buy SHIELD → Burn (deflationary)                         │
-│       ├── 40% → Swap to FXRP → StakingBoost.distributeBoost()            │
+│       ├── 50% → FXRP → SHIELD (SparkDEX) → Burn (deflationary)           │
+│       ├── 40% → FXRP → StakingBoost.distributeBoost() (direct FXRP)      │
 │       └── 10% → Protocol reserves                                         │
 │                      │                                                    │
 │                      ▼                                                    │
@@ -266,7 +267,7 @@ All $SHIELD tokenomics contracts are:
 | Contract | Purpose | Security Features |
 |----------|---------|-------------------|
 | **ShieldToken** | ERC-20 token with burn capability | Fixed supply, no mint function |
-| **RevenueRouter** | Splits fees 50/50 | Immutable split ratio |
+| **RevenueRouter** | Splits FXRP fees 50/40/10 | Owner-configurable allocations |
 | **BuybackBurn** | Swaps wFLR → SHIELD → burn | Permissionless, anyone can trigger |
 | **StakingBoost** | Stake for APY boost | Time-locked withdrawals |
 
@@ -304,8 +305,8 @@ A: SparkDEX V3 on Flare Network. The smart contract swaps wFLR to $SHIELD using 
 **Q: What happens if there's no liquidity?**  
 A: The buyback transaction would fail. However, with locked liquidity and trading volume, this is extremely unlikely. The contract accepts any swap rate to ensure burns always execute.
 
-**Q: Can the team change the 50/50 split?**  
-A: No. The RevenueRouter contract has immutable parameters set at deployment. The split cannot be changed.
+**Q: Can the team change the 50/40/10 split?**  
+A: Yes. The RevenueRouter has configurable allocations (up to 80% each, max 100% total) for burn/boost. Any changes are transparent on-chain.
 
 ---
 
@@ -332,5 +333,5 @@ As Shield Finance grows, the flywheel accelerates: more users → more fees → 
 
 ---
 
-*Last Updated: November 2025*  
-*Document Version: 1.0*
+*Last Updated: December 2025*  
+*Document Version: 2.0*

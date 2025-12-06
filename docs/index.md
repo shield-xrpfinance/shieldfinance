@@ -45,7 +45,7 @@ features:
   <div class="feature">
     <h3>Integration</h3>
     <ul>
-      <li><a href="/integration/FASSETS_INTEGRATION_GUIDE">FAssets Guide</a></li>
+      <li><a href="/integration/FASSETS_GUIDE">FAssets Guide</a></li>
       <li><a href="/integration/FIRELIGHT_INTEGRATION">Firelight</a></li>
     </ul>
   </div>

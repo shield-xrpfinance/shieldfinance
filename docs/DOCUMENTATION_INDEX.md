@@ -18,7 +18,7 @@ Complete guide to all documentation files in the Shield Finance XRP Liquid Staki
 | Review the project | [REVIEWERS.md](../REVIEWERS.md) |
 | Understand tokenomics | [docs/protocol/SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md) |
 | Deploy contracts | [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md) |
-| Understand FAssets bridge | [docs/integration/FASSETS_INTEGRATION_GUIDE.md](integration/FASSETS_INTEGRATION_GUIDE.md) |
+| Understand FAssets bridge | [docs/integration/FASSETS_GUIDE.md](integration/FASSETS_GUIDE.md) |
 | Build UI components | [design_guidelines.md](../design_guidelines.md) |
 
 ---
@@ -38,9 +38,8 @@ docs/
 │   └── REVENUE_SYSTEM_SPEC.md    # BuybackBurn & RevenueRouter
 │
 ├── integration/        # External service integrations
-│   ├── FASSETS_INTEGRATION_GUIDE.md  # XRP → FXRP bridging
+│   ├── FASSETS_GUIDE.md              # XRP → FXRP bridging (canonical)
 │   ├── FIRELIGHT_INTEGRATION.md      # Yield generation + testnet simulation
-│   ├── FLARE_FASSETS_INTEGRATION.md  # Flare-specific details
 │   └── LP_LOCKING_GUIDE.md           # Liquidity pool locking
 │
 ├── partners/           # Partner-facing documentation
@@ -143,13 +142,14 @@ docs/
 
 ## Integration Documentation
 
-### [FASSETS_INTEGRATION_GUIDE.md](integration/FASSETS_INTEGRATION_GUIDE.md)
-**Purpose**: XRP → FXRP bridging via FAssets protocol  
+### [FASSETS_GUIDE.md](integration/FASSETS_GUIDE.md)
+**Purpose**: XRP → FXRP bridging via FAssets protocol (canonical guide)  
 **Contents**:
 - FAssets protocol overview
-- Collateral reservation flow
-- FDC proof generation
-- FXRP minting process
+- Contract addresses (mainnet + testnet)
+- Collateral reservation and minting flow
+- FDC proof generation and redemption
+- Integration best practices
 
 ### [FIRELIGHT_INTEGRATION.md](integration/FIRELIGHT_INTEGRATION.md)
 **Purpose**: Yield generation strategy integration  
@@ -175,12 +175,6 @@ docs/
 - Testnet validation results
 - Mainnet deployment plan
 
-### [FLARE_FASSETS_INTEGRATION.md](integration/FLARE_FASSETS_INTEGRATION.md)
-**Purpose**: Flare-specific FAssets implementation details  
-**Contents**:
-- Flare Data Connector (FDC)
-- Attestation submission
-- Cross-chain verification
 
 ### [LP_LOCKING_GUIDE.md](integration/LP_LOCKING_GUIDE.md)
 **Purpose**: Liquidity pool token locking  
@@ -289,7 +283,7 @@ docs/
 3. [SMART_ACCOUNTS.md](../SMART_ACCOUNTS.md) - ERC-4337 implementation
 
 ### For Integration Engineers
-1. [docs/integration/FASSETS_INTEGRATION_GUIDE.md](integration/FASSETS_INTEGRATION_GUIDE.md) - Bridge integration
+1. [docs/integration/FASSETS_GUIDE.md](integration/FASSETS_GUIDE.md) - Bridge integration
 2. [docs/integration/FIRELIGHT_INTEGRATION.md](integration/FIRELIGHT_INTEGRATION.md) - Yield strategies
 3. [replit.md](../replit.md) - System architecture
 
