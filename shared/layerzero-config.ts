@@ -202,3 +202,51 @@ export const RATE_LIMITS = {
 export type ChainName = keyof typeof LAYERZERO_ENDPOINTS;
 export type MainnetChain = "flare" | "base" | "arbitrum" | "ethereum";
 export type TestnetChain = "coston2" | "baseSepolia" | "arbitrumSepolia" | "sepolia";
+
+// Simplified exports for deployment scripts
+export const LZ_EID = {
+  testnets: {
+    coston2: LAYERZERO_ENDPOINTS.coston2.endpointId,
+    baseSepolia: LAYERZERO_ENDPOINTS.baseSepolia.endpointId,
+    arbitrumSepolia: LAYERZERO_ENDPOINTS.arbitrumSepolia.endpointId,
+    sepolia: LAYERZERO_ENDPOINTS.sepolia.endpointId,
+  },
+  mainnets: {
+    flare: LAYERZERO_ENDPOINTS.flare.endpointId,
+    base: LAYERZERO_ENDPOINTS.base.endpointId,
+    arbitrum: LAYERZERO_ENDPOINTS.arbitrum.endpointId,
+    mainnet: LAYERZERO_ENDPOINTS.ethereum.endpointId,
+  },
+} as const;
+
+// Payment tokens (USDC) per chain
+export const PAYMENT_TOKENS = {
+  testnets: {
+    coston2: "0x4BA749C96F6B0c9adDf3a339eB7E79A5f92C7C39", // Mock USDC on Coston2
+    baseSepolia: "0x036CbD53842c5426634e7929541eC2318f3dCF7e", // USDC on Base Sepolia
+    arbitrumSepolia: "0x75faf114eafb1BDbe2F0316DF893fd58CE46AA4d", // USDC on Arbitrum Sepolia
+    sepolia: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238", // USDC on Sepolia
+  },
+  mainnets: {
+    flare: "0xFbDa5F676cB37624f28265A144A48B0d6e87d3b6", // USDC on Flare
+    base: "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913", // USDC on Base
+    arbitrum: "0xaf88d065e77c8cC2239327C5EDb3A432268e5831", // USDC on Arbitrum
+    mainnet: "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", // USDC on Ethereum
+  },
+} as const;
+
+// Wrapped native tokens
+export const WRAPPED_NATIVE = {
+  testnets: {
+    coston2: DEX_ROUTERS.testnet.coston2.wflr,
+    baseSepolia: DEX_ROUTERS.testnet.baseSepolia.weth,
+    arbitrumSepolia: DEX_ROUTERS.testnet.arbitrumSepolia.weth,
+    sepolia: DEX_ROUTERS.testnet.sepolia.weth,
+  },
+  mainnets: {
+    flare: DEX_ROUTERS.mainnet.flare.wflr,
+    base: DEX_ROUTERS.mainnet.base.weth,
+    arbitrum: DEX_ROUTERS.mainnet.arbitrum.weth,
+    mainnet: DEX_ROUTERS.mainnet.ethereum.weth,
+  },
+} as const;
