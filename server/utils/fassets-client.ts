@@ -213,6 +213,27 @@ export class FAssetsClient {
     
     console.log(`  maxMintingFeeBIPS (converted): ${maxMintingFeeBIPS} (type: ${typeof maxMintingFeeBIPS})`);
     
+    // Check sender balance before attempting reservation
+    const signer = this.config.flareClient.getContractSigner();
+    const signerAddress = await signer.getAddress();
+    const provider = signer.provider;
+    if (!provider) {
+      throw new Error('Provider not available');
+    }
+    const balance = await provider.getBalance(signerAddress);
+    console.log(`  Sender address: ${signerAddress}`);
+    console.log(`  Sender balance: ${ethers.formatEther(balance)} FLR`);
+    
+    // Check if we have enough funds
+    if (balance < collateralReservationFee) {
+      throw new Error(
+        `Insufficient FLR balance for collateral reservation fee. ` +
+        `Required: ${ethers.formatEther(collateralReservationFee)} FLR, ` +
+        `Available: ${ethers.formatEther(balance)} FLR. ` +
+        `Please fund the Smart Account at ${signerAddress}`
+      );
+    }
+    
     // Try to simulate the transaction first to get better error messages
     try {
       await assetManager.reserveCollateral.staticCall(
@@ -230,7 +251,30 @@ export class FAssetsClient {
       if (staticError.data) {
         console.error('  Data:', staticError.data);
       }
-      throw new Error(`Contract will reject transaction: ${staticError.message}`);
+      
+      // Provide more context for "missing revert data" errors
+      if (staticError.message?.includes('missing revert data')) {
+        // Check agent status again
+        const currentAgentInfo = await assetManager.getAgentInfo(agent.vaultAddress);
+        const agentStatus = Number(currentAgentInfo.status);
+        console.error(`  Agent status: ${agentStatus} (0=normal, others=unavailable)`);
+        
+        if (agentStatus !== 0) {
+          throw new Error(
+            `FAssets agent is not available for minting (status: ${agentStatus}). ` +
+            `Please try again later or wait for agent recovery.`
+          );
+        }
+        
+        // Generic error for other cases
+        throw new Error(
+          `FAssets collateral reservation failed. The FAssets testnet agent may be ` +
+          `temporarily unavailable or out of capacity. Please try again in a few minutes. ` +
+          `If the issue persists, the Flare FAssets testnet may be experiencing issues.`
+        );
+      }
+      
+      throw new Error(`Collateral reservation failed: ${staticError.message}`);
     }
     
     const tx = await assetManager.reserveCollateral(
@@ -243,16 +287,15 @@ export class FAssetsClient {
     
     console.log(`✅ Transaction sent: ${tx.hash}`);
     const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Transaction failed - no receipt returned');
+    }
     console.log(`✅ Collateral reserved: ${receipt.hash}`);
     
     // For ERC-4337 transactions, fetch the full receipt from provider to get all logs
     // The tx.wait() receipt might not include logs from nested contract calls
-    const signer = this.config.flareClient.getContractSigner();
-    const provider = signer.provider;
-    if (!provider) {
-      throw new Error('Provider not available for fetching transaction receipt');
-    }
-    const fullReceipt = await provider.getTransactionReceipt(receipt.hash);
+    // (reusing signer/provider from earlier balance check)
+    const fullReceipt = await provider.getTransactionReceipt(receipt!.hash);
     if (!fullReceipt) {
       throw new Error(`Failed to fetch transaction receipt for ${receipt.hash}`);
     }
@@ -682,6 +725,9 @@ export class FAssetsClient {
     } as any);
     
     const receipt = await tx.wait();
+    if (!receipt) {
+      throw new Error('Transaction failed - no receipt returned');
+    }
     
     // Fetch full receipt for ERC-4337 transactions
     const provider = signer.provider;
