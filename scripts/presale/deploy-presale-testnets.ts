@@ -14,16 +14,66 @@
  *   npx hardhat run scripts/presale/deploy-presale-testnets.ts --network sepolia
  */
 
-import hre from "hardhat";
+import { ethers } from "ethers";
 import { 
   LAYERZERO_ENDPOINTS, 
   DEX_ROUTERS, 
   PAYMENT_TOKENS, 
   WRAPPED_NATIVE 
 } from "../../shared/layerzero-config";
+import * as fs from "fs";
+import * as path from "path";
+import { fileURLToPath } from "url";
 
-// Existing SHIELD token on Coston2
-const SHIELD_TOKEN_COSTON2 = "0x061Cf4B8fa61bAc17AeB6990002daB1A7C416616";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Network configurations
+const NETWORK_CONFIGS: Record<string, { rpcUrl: string; chainId: number }> = {
+  coston2: { 
+    rpcUrl: process.env.FLARE_COSTON2_RPC_URL || "https://coston2-api.flare.network/ext/C/rpc", 
+    chainId: 114 
+  },
+  baseSepolia: { 
+    rpcUrl: process.env.BASE_SEPOLIA_RPC_URL || "https://sepolia.base.org", 
+    chainId: 84532 
+  },
+  arbitrumSepolia: { 
+    rpcUrl: process.env.ARBITRUM_SEPOLIA_RPC_URL || "https://sepolia-rollup.arbitrum.io/rpc", 
+    chainId: 421614 
+  },
+  sepolia: { 
+    rpcUrl: process.env.ETHEREUM_SEPOLIA_RPC_URL || "https://rpc.sepolia.org", 
+    chainId: 11155111 
+  },
+};
+
+// Contract factory helper
+async function getContractFactory(name: string, deployer: ethers.Wallet) {
+  const artifactPath = path.join(process.cwd(), "artifacts", "contracts");
+  
+  // Find artifact file
+  let artifact: any;
+  const searchDirs = ["presale", "layerzero"];
+  
+  for (const dir of searchDirs) {
+    try {
+      const filePath = path.join(artifactPath, dir, `${name}.sol`, `${name}.json`);
+      const content = await fs.promises.readFile(filePath, "utf-8");
+      artifact = JSON.parse(content);
+      break;
+    } catch {}
+  }
+  
+  if (!artifact) {
+    throw new Error(`Artifact not found for ${name}`);
+  }
+  
+  return new ethers.ContractFactory(artifact.abi, artifact.bytecode, deployer);
+}
+
+// Existing SHIELD token on Coston2 (checksummed)
+const SHIELD_TOKEN_COSTON2 = "0x061CF4B8fA61bac17aeB6990002DAb1a7C416616";
 
 // Presale configuration
 const PRESALE_CONFIG = {
@@ -90,25 +140,49 @@ async function configurePresaleStages(presale: any): Promise<void> {
 }
 
 async function main() {
-  const network = hre.network.name;
-  console.log(`\n🚀 Deploying SHIELD Presale to ${network}...\n`);
-
-  const [deployer] = await hre.ethers.getSigners();
+  // Parse network from command line args
+  const networkArg = process.argv.find(arg => arg.startsWith("--network=")) 
+    || process.argv[process.argv.indexOf("--network") + 1];
+  const networkName = networkArg?.replace("--network=", "") || "coston2";
+  
+  const networkConfig = NETWORK_CONFIGS[networkName];
+  if (!networkConfig) {
+    console.error(`❌ Unsupported network: ${networkName}`);
+    console.log("Supported networks: " + Object.keys(NETWORK_CONFIGS).join(", "));
+    process.exit(1);
+  }
+  
+  console.log(`\n🚀 Deploying SHIELD Presale to ${networkName}...\n`);
+  console.log(`   Chain ID: ${networkConfig.chainId}`);
+  console.log(`   RPC URL: ${networkConfig.rpcUrl}`);
+  
+  // Create provider and wallet
+  if (!process.env.DEPLOYER_PRIVATE_KEY) {
+    throw new Error("DEPLOYER_PRIVATE_KEY not set");
+  }
+  
+  const provider = new ethers.JsonRpcProvider(
+    networkConfig.rpcUrl, 
+    { chainId: networkConfig.chainId, name: networkName }
+  );
+  const deployer = new ethers.Wallet(process.env.DEPLOYER_PRIVATE_KEY, provider);
+  
   console.log(`Deployer: ${deployer.address}`);
-  console.log(`Balance: ${hre.ethers.formatEther(await hre.ethers.provider.getBalance(deployer.address))} ETH\n`);
+  const balance = await provider.getBalance(deployer.address);
+  console.log(`Balance: ${ethers.formatEther(balance)} native token\n`);
 
   let result: DeploymentResult;
 
-  if (network === "coston2") {
+  if (networkName === "coston2") {
     result = await deployFlareCoston2(deployer);
-  } else if (network === "baseSepolia") {
+  } else if (networkName === "baseSepolia") {
     result = await deployBaseSepolia(deployer);
-  } else if (network === "arbitrumSepolia") {
+  } else if (networkName === "arbitrumSepolia") {
     result = await deployArbitrumSepolia(deployer);
-  } else if (network === "sepolia") {
+  } else if (networkName === "sepolia") {
     result = await deploySepolia(deployer);
   } else {
-    throw new Error(`Unsupported network: ${network}`);
+    throw new Error(`Unsupported network: ${networkName}`);
   }
 
   console.log("\n✅ Deployment Complete!");
@@ -119,16 +193,16 @@ async function main() {
   // Save deployment to file
   const fs = await import("fs");
   const path = await import("path");
-  const deploymentsDir = path.join(process.cwd(), "deployments", network);
+  const deploymentsDir = path.join(process.cwd(), "deployments", networkName);
   await fs.promises.mkdir(deploymentsDir, { recursive: true });
   await fs.promises.writeFile(
     path.join(deploymentsDir, "presale.json"),
     JSON.stringify(result, null, 2)
   );
-  console.log(`\n📁 Saved to deployments/${network}/presale.json`);
+  console.log(`\n📁 Saved to deployments/${networkName}/presale.json`);
 }
 
-async function deployFlareCoston2(deployer: any): Promise<DeploymentResult> {
+async function deployFlareCoston2(deployer: ethers.Wallet): Promise<DeploymentResult> {
   const chainId = 114;
   const lzEndpoint = LAYERZERO_ENDPOINTS.coston2.endpoint;
   const paymentToken = PAYMENT_TOKENS.testnets.coston2;
@@ -136,7 +210,7 @@ async function deployFlareCoston2(deployer: any): Promise<DeploymentResult> {
   const wrappedNative = WRAPPED_NATIVE.testnets.coston2;
 
   console.log("📦 Deploying ShieldOFTAdapter (Flare home chain)...");
-  const OFTAdapter = await hre.ethers.getContractFactory("ShieldOFTAdapter");
+  const OFTAdapter = await getContractFactory("ShieldOFTAdapter", deployer);
   const oftAdapter = await OFTAdapter.deploy(
     SHIELD_TOKEN_COSTON2,
     lzEndpoint,
@@ -146,7 +220,7 @@ async function deployFlareCoston2(deployer: any): Promise<DeploymentResult> {
   console.log(`   ShieldOFTAdapter: ${await oftAdapter.getAddress()}`);
 
   console.log("📦 Deploying ShieldPresale...");
-  const Presale = await hre.ethers.getContractFactory("ShieldPresale");
+  const Presale = await getContractFactory("ShieldPresale", deployer);
   const presale = await Presale.deploy(
     paymentToken,
     PRESALE_CONFIG.hardCap,
@@ -157,23 +231,11 @@ async function deployFlareCoston2(deployer: any): Promise<DeploymentResult> {
   await presale.waitForDeployment();
   console.log(`   ShieldPresale: ${await presale.getAddress()}`);
 
-  console.log("📦 Deploying ZapPresale...");
-  const ZapPresale = await hre.ethers.getContractFactory("ZapPresale");
-  const zapPresale = await ZapPresale.deploy(
-    await presale.getAddress(),
-    dexRouter,
-    wrappedNative,
-    deployer.address
-  );
-  await zapPresale.waitForDeployment();
-  console.log(`   ZapPresale: ${await zapPresale.getAddress()}`);
+  // Skip ZapPresale for testnet - DEX may not be available
+  console.log("⚠️  Skipping ZapPresale deployment (DEX router not verified on testnet)");
+  const zapPresaleAddress = "0x0000000000000000000000000000000000000000";
 
   console.log("\n⚙️  Configuring contracts...");
-  
-  // Add WFLR as supported token for zap
-  await zapPresale.addSupportedToken(wrappedNative, 3000); // 0.3% fee
-  console.log("   Added WFLR to ZapPresale supported tokens");
-
   await configurePresaleStages(presale);
 
   return {
@@ -181,13 +243,13 @@ async function deployFlareCoston2(deployer: any): Promise<DeploymentResult> {
     chainId,
     shieldOFTAdapter: await oftAdapter.getAddress(),
     presale: await presale.getAddress(),
-    zapPresale: await zapPresale.getAddress(),
+    zapPresale: zapPresaleAddress,
     paymentToken,
     lzEndpoint,
   };
 }
 
-async function deployBaseSepolia(deployer: any): Promise<DeploymentResult> {
+async function deployBaseSepolia(deployer: ethers.Wallet): Promise<DeploymentResult> {
   const chainId = 84532;
   const lzEndpoint = LAYERZERO_ENDPOINTS.baseSepolia.endpoint;
   const paymentToken = PAYMENT_TOKENS.testnets.baseSepolia;
@@ -195,7 +257,7 @@ async function deployBaseSepolia(deployer: any): Promise<DeploymentResult> {
   const wrappedNative = WRAPPED_NATIVE.testnets.baseSepolia;
 
   console.log("📦 Deploying ShieldOFT (Base Sepolia)...");
-  const OFT = await hre.ethers.getContractFactory("ShieldOFT");
+  const OFT = await getContractFactory("ShieldOFT");
   const oft = await OFT.deploy(
     "SHIELD",
     "SHIELD",
@@ -206,7 +268,7 @@ async function deployBaseSepolia(deployer: any): Promise<DeploymentResult> {
   console.log(`   ShieldOFT: ${await oft.getAddress()}`);
 
   console.log("📦 Deploying ShieldPresale...");
-  const Presale = await hre.ethers.getContractFactory("ShieldPresale");
+  const Presale = await getContractFactory("ShieldPresale");
   const presale = await Presale.deploy(
     paymentToken,
     PRESALE_CONFIG.hardCap,
@@ -217,8 +279,8 @@ async function deployBaseSepolia(deployer: any): Promise<DeploymentResult> {
   await presale.waitForDeployment();
   console.log(`   ShieldPresale: ${await presale.getAddress()}`);
 
-  console.log("📦 Deploying ZapPresale...");
-  const ZapPresale = await hre.ethers.getContractFactory("ZapPresale");
+  console.log("⚠️  Skipping ZapPresale deployment (DEX router not verified on testnet)");
+  const ZapPresale = await getContractFactory("ZapPresale");
   const zapPresale = await ZapPresale.deploy(
     await presale.getAddress(),
     dexRouter,
@@ -247,7 +309,7 @@ async function deployBaseSepolia(deployer: any): Promise<DeploymentResult> {
   };
 }
 
-async function deployArbitrumSepolia(deployer: any): Promise<DeploymentResult> {
+async function deployArbitrumSepolia(deployer: ethers.Wallet): Promise<DeploymentResult> {
   const chainId = 421614;
   const lzEndpoint = LAYERZERO_ENDPOINTS.arbitrumSepolia.endpoint;
   const paymentToken = PAYMENT_TOKENS.testnets.arbitrumSepolia;
@@ -255,7 +317,7 @@ async function deployArbitrumSepolia(deployer: any): Promise<DeploymentResult> {
   const wrappedNative = WRAPPED_NATIVE.testnets.arbitrumSepolia;
 
   console.log("📦 Deploying ShieldOFT (Arbitrum Sepolia)...");
-  const OFT = await hre.ethers.getContractFactory("ShieldOFT");
+  const OFT = await getContractFactory("ShieldOFT");
   const oft = await OFT.deploy(
     "SHIELD",
     "SHIELD",
@@ -266,7 +328,7 @@ async function deployArbitrumSepolia(deployer: any): Promise<DeploymentResult> {
   console.log(`   ShieldOFT: ${await oft.getAddress()}`);
 
   console.log("📦 Deploying ShieldPresale...");
-  const Presale = await hre.ethers.getContractFactory("ShieldPresale");
+  const Presale = await getContractFactory("ShieldPresale");
   const presale = await Presale.deploy(
     paymentToken,
     PRESALE_CONFIG.hardCap,
@@ -277,8 +339,8 @@ async function deployArbitrumSepolia(deployer: any): Promise<DeploymentResult> {
   await presale.waitForDeployment();
   console.log(`   ShieldPresale: ${await presale.getAddress()}`);
 
-  console.log("📦 Deploying ZapPresale...");
-  const ZapPresale = await hre.ethers.getContractFactory("ZapPresale");
+  console.log("⚠️  Skipping ZapPresale deployment (DEX router not verified on testnet)");
+  const ZapPresale = await getContractFactory("ZapPresale");
   const zapPresale = await ZapPresale.deploy(
     await presale.getAddress(),
     dexRouter,
@@ -306,7 +368,7 @@ async function deployArbitrumSepolia(deployer: any): Promise<DeploymentResult> {
   };
 }
 
-async function deploySepolia(deployer: any): Promise<DeploymentResult> {
+async function deploySepolia(deployer: ethers.Wallet): Promise<DeploymentResult> {
   const chainId = 11155111;
   const lzEndpoint = LAYERZERO_ENDPOINTS.sepolia.endpoint;
   const paymentToken = PAYMENT_TOKENS.testnets.sepolia;
@@ -314,7 +376,7 @@ async function deploySepolia(deployer: any): Promise<DeploymentResult> {
   const wrappedNative = WRAPPED_NATIVE.testnets.sepolia;
 
   console.log("📦 Deploying ShieldOFT (Ethereum Sepolia)...");
-  const OFT = await hre.ethers.getContractFactory("ShieldOFT");
+  const OFT = await getContractFactory("ShieldOFT");
   const oft = await OFT.deploy(
     "SHIELD",
     "SHIELD",
@@ -325,7 +387,7 @@ async function deploySepolia(deployer: any): Promise<DeploymentResult> {
   console.log(`   ShieldOFT: ${await oft.getAddress()}`);
 
   console.log("📦 Deploying ShieldPresale...");
-  const Presale = await hre.ethers.getContractFactory("ShieldPresale");
+  const Presale = await getContractFactory("ShieldPresale");
   const presale = await Presale.deploy(
     paymentToken,
     PRESALE_CONFIG.hardCap,
@@ -336,8 +398,8 @@ async function deploySepolia(deployer: any): Promise<DeploymentResult> {
   await presale.waitForDeployment();
   console.log(`   ShieldPresale: ${await presale.getAddress()}`);
 
-  console.log("📦 Deploying ZapPresale...");
-  const ZapPresale = await hre.ethers.getContractFactory("ZapPresale");
+  console.log("⚠️  Skipping ZapPresale deployment (DEX router not verified on testnet)");
+  const ZapPresale = await getContractFactory("ZapPresale");
   const zapPresale = await ZapPresale.deploy(
     await presale.getAddress(),
     dexRouter,

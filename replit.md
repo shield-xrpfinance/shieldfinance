@@ -53,12 +53,17 @@ Design preference: Modern, clean list-based layouts over grid cards for better s
 - **LayerZero v2 OFT Standard**: SHIELD is an Omnichain Fungible Token supporting cross-chain transfers between Flare (home chain), Base, Arbitrum, and Ethereum.
 - **OFT Architecture**: ShieldOFTAdapter on Flare (locks/unlocks tokens), ShieldOFT on other chains (mints/burns).
 - **Presale Contracts**: ShieldPresale.sol with 4 stages ($0.005-$0.02), vesting (20% TGE, 80% over 6 months), Merkle tree allowlist, KYC tiers.
-- **ZapPresale**: Enables any-token purchases via DEX swaps (SparkDEX on Flare, Uniswap V3 on others).
+- **ZapPresale**: Enables any-token purchases via DEX swaps (SparkDEX on Flare, Uniswap V3 on others). Skipped on testnets due to unverified DEX routers.
 - **Deployment Scripts**: `scripts/presale/deploy-presale-testnets.ts` deploys to Coston2, Base Sepolia, Arbitrum Sepolia, Sepolia.
 - **Peer Wiring**: `scripts/presale/wire-layerzero-peers.ts` connects OFT contracts across chains with fail-fast validation.
-- **Frontend**: Presale page at `/app/presale` with countdown timer, price trajectory, multi-token selector, bridge UI, referral system.
+- **Frontend**: Presale page at `/app/presale` with countdown timer, price trajectory, multi-token selector, bridge UI, referral system (hidden from sidebar navigation).
 - **Referral System**: 5% bonus for both referrer and referee.
 - **KYC Tiers**: $1K limit without KYC, $50K with KYC verification.
+- **Coston2 Testnet Deployment (Dec 2025)**:
+  - ShieldOFTAdapter: `0x3E4A8f72c319ae72444316c87048104C0f79535A`
+  - ShieldPresale: `0x72a81115F2af91e5766707ea4A8e499D269c15a0`
+  - Payment Token (Mock USDC): `0x4Ba749c96F6B0c9AddF3a339eb7E79A5f92C7C39`
+  - 4 presale stages configured (4M, 5M, 5M, 6M SHIELD) with allowlist disabled for testing.
 
 ## External Dependencies
 
