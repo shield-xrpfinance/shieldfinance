@@ -754,8 +754,10 @@ Solution:
 |----------|-------|--------|
 | HIGH | 0 | ✅ None |
 | MEDIUM | 8 | ⚠️ Acceptable (see analysis below) |
-| LOW | 41 | ℹ️ Informational |
-| OPTIMIZATION | 5 | ℹ️ Minor gas improvements |
+| LOW | 39 | ℹ️ Informational |
+| OPTIMIZATION | 0 | ✅ All fixed |
+
+**Total Findings:** 52 (reduced from 57 after optimization fixes)
 
 ### 16.2 MEDIUM Findings Analysis
 
@@ -817,7 +819,7 @@ function donateOnBehalf(address user, uint256 fxrpAmount) external nonReentrant 
 
 | Finding | Location | Status |
 |---------|----------|--------|
-| Cache array length | Multiple loops | Consider for gas optimization in future |
+| Cache array length | Multiple loops | ✅ FIXED - Added `len` caching |
 | High cyclomatic complexity | `_withdrawFromStrategies()` | Complex but well-tested |
 
 ### 16.5 Compiler Warnings
@@ -826,7 +828,7 @@ function donateOnBehalf(address user, uint256 fxrpAmount) external nonReentrant 
 ```
 contracts/ShXRPVault.sol:614 - boostBps shadows declaration at line 644
 ```
-**Status:** Cosmetic, different scopes. No functional impact.
+**Status:** ✅ FIXED - Renamed to `userBoostBps` to eliminate shadowing.
 
 **Warning 2: Contract Size**
 ```
@@ -840,6 +842,8 @@ Contract code size is 35969 bytes (exceeds 24576 limit)
 |-------|-----|--------|
 | `unused-return` on `approve()` | Replaced with `SafeERC20.forceApprove()` | Dec 2025 |
 | ERC-4626 pause compliance | Added `maxWithdraw()`/`maxRedeem()` overrides returning 0 when paused | Dec 2025 |
+| Variable shadowing | Renamed `boostBps` to `userBoostBps` in `_withdraw()` | Dec 2025 |
+| Cache array length | Added `len` caching in 5 loops using `strategyList.length` | Dec 2025 |
 
 ### 16.7 Auditor Notes
 

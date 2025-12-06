@@ -368,7 +368,8 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         uint256 total = IERC20(asset()).balanceOf(address(this));
         
         // Add value from all active strategies
-        for (uint256 i = 0; i < strategyList.length; i++) {
+        uint256 len = strategyList.length;
+        for (uint256 i = 0; i < len; i++) {
             address strategyAddr = strategyList[i];
             StrategyInfo storage strategyInfo = strategies[strategyAddr];
             
@@ -611,9 +612,9 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
             
             // AFTER standard withdrawal, apply SHIELD staking boost bonus
             // Use owner parameter (not msg.sender) to query boost
-            uint256 boostBps = stakingBoost.getBoost(owner);
-            if (boostBps > 0) {
-                uint256 boostBonus = (assets * boostBps) / 10000;
+            uint256 userBoostBps = stakingBoost.getBoost(owner);
+            if (userBoostBps > 0) {
+                uint256 boostBonus = (assets * userBoostBps) / 10000;
                 if (boostBonus > 0) {
                     fxrp.safeTransfer(receiver, boostBonus);
                 }
@@ -690,10 +691,11 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     function _withdrawFromStrategies(uint256 amount) internal returns (uint256) {
         // Calculate total deployed across active/paused strategies
         uint256 totalDeployed = 0;
-        address[] memory eligibleStrategies = new address[](strategyList.length);
+        uint256 strategyLen = strategyList.length;
+        address[] memory eligibleStrategies = new address[](strategyLen);
         uint256 eligibleCount = 0;
         
-        for (uint256 i = 0; i < strategyList.length; i++) {
+        for (uint256 i = 0; i < strategyLen; i++) {
             address strategy = strategyList[i];
             StrategyInfo storage info = strategies[strategy];
             
@@ -1580,7 +1582,8 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
      */
     function getTotalDeployed() public view returns (uint256) {
         uint256 total = 0;
-        for (uint256 i = 0; i < strategyList.length; i++) {
+        uint256 len = strategyList.length;
+        for (uint256 i = 0; i < len; i++) {
             total += strategies[strategyList[i]].totalDeployed;
         }
         return total;
@@ -1614,7 +1617,8 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
     function getActiveStrategies() public view returns (address[] memory) {
         // First count active strategies
         uint256 activeCount = 0;
-        for (uint256 i = 0; i < strategyList.length; i++) {
+        uint256 len = strategyList.length;
+        for (uint256 i = 0; i < len; i++) {
             if (strategies[strategyList[i]].status == StrategyStatus.Active) {
                 activeCount++;
             }
@@ -1623,7 +1627,7 @@ contract ShXRPVault is ERC4626, Ownable, ReentrancyGuard, Pausable {
         // Create array of active strategies
         address[] memory activeList = new address[](activeCount);
         uint256 index = 0;
-        for (uint256 i = 0; i < strategyList.length; i++) {
+        for (uint256 i = 0; i < len; i++) {
             if (strategies[strategyList[i]].status == StrategyStatus.Active) {
                 activeList[index] = strategyList[i];
                 index++;
