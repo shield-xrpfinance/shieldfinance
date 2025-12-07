@@ -308,12 +308,20 @@ export default function Landing() {
               <circle r="20" fill="none" stroke="#38BDF8" strokeWidth="1" opacity="0.5" className="animate-sonar delay-2000" />
 
               {/* Technical Rings */}
-              <circle r="65" fill="none" stroke="white" strokeOpacity="0.1" strokeWidth="1" strokeDasharray="10 20" className="animate-spin" style={{animationDuration: '12s'}} />
-              <circle r="45" fill="none" stroke="#38BDF8" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="4 6" className="animate-spin" style={{animationDuration: '15s', animationDirection: 'reverse'}} />
+              <circle r="65" fill="none" stroke="white" strokeOpacity="0.1" strokeWidth="1" strokeDasharray="10 20" className="animate-spin-slow" />
+              <circle r="45" fill="none" stroke="#38BDF8" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="4 6" className="animate-spin-slow-reverse" />
+
+              {/* Crosshair Markers */}
+              <g className="animate-spin-slow" style={{animationDuration: '20s'}}>
+                <path d="M -80 0 L -70 0" stroke="white" strokeOpacity="0.2" />
+                <path d="M 80 0 L 70 0" stroke="white" strokeOpacity="0.2" />
+                <path d="M 0 -80 L 0 -70" stroke="white" strokeOpacity="0.2" />
+                <path d="M 0 80 L 0 70" stroke="white" strokeOpacity="0.2" />
+              </g>
 
               {/* Core */}
               <circle r="8" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="2" />
-              <circle r="4" fill="#38BDF8" className="animate-pulse" />
+              <circle r="4" fill="#38BDF8" className="animate-pulse-fast" />
             </g>
           </svg>
 
@@ -327,7 +335,41 @@ export default function Landing() {
             <span className="text-xs font-mono text-primary tracking-widest mb-1 opacity-80">XRPFI NATIVE</span>
             <div className="h-[1px] w-12 bg-gradient-to-r from-primary to-transparent" />
           </div>
+
+          {/* Extra Data Decoration */}
+          <div className="absolute top-[50%] right-[15%] hidden lg:flex flex-col gap-1">
+            <div className="flex gap-1">
+              <div className="w-1 h-1 bg-white/20" />
+              <div className="w-1 h-1 bg-white/20" />
+              <div className="w-1 h-1 bg-primary animate-pulse" />
+            </div>
+          </div>
         </div>
+
+        {/* Infinite Marquee Section */}
+        <section className="w-[95%] z-20 pb-8 absolute bottom-0 left-1/2 -translate-x-1/2" data-testid="section-marquee">
+          <div className="flex flex-col lg:flex-row overflow-hidden opacity-50 w-full pt-6 gap-6 items-center justify-between">
+            <div className="flex-1 overflow-hidden mask-gradient-fade w-full relative">
+              <div className="flex animate-marquee w-max gap-32 items-center">
+                {/* Original Set */}
+                <img src={flareLogo} alt="Flare" className="h-7 w-auto monotone-logo" />
+                <img src={xrpLogo} alt="XRP" className="h-7 w-auto monotone-logo" />
+                <img src={xamanLogo} alt="Xaman" className="h-7 w-auto monotone-logo" />
+                <img src={shieldTokenLogo} alt="Shield" className="h-7 w-auto monotone-logo" />
+                {/* Duplicate Set for Seamless Loop */}
+                <img src={flareLogo} alt="Flare" className="h-7 w-auto monotone-logo" />
+                <img src={xrpLogo} alt="XRP" className="h-7 w-auto monotone-logo" />
+                <img src={xamanLogo} alt="Xaman" className="h-7 w-auto monotone-logo" />
+                <img src={shieldTokenLogo} alt="Shield" className="h-7 w-auto monotone-logo" />
+                {/* Third Set for Full Coverage */}
+                <img src={flareLogo} alt="Flare" className="h-7 w-auto monotone-logo" />
+                <img src={xrpLogo} alt="XRP" className="h-7 w-auto monotone-logo" />
+                <img src={xamanLogo} alt="Xaman" className="h-7 w-auto monotone-logo" />
+                <img src={shieldTokenLogo} alt="Shield" className="h-7 w-auto monotone-logo" />
+              </div>
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* Partner Logos Section */}
@@ -431,6 +473,239 @@ export default function Landing() {
                 Community-driven protocol upgrades. SHIELD token holders vote on key protocol decisions.
               </p>
             </div>
+          </div>
+        </div>
+      </section>
+
+      {/* System Capabilities Section */}
+      <section className="relative z-10 py-24 border-t border-white/5" data-testid="section-capabilities">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl lg:text-5xl font-serif italic text-primary text-glow mb-4" data-testid="heading-capabilities">
+              Protocol Capabilities
+            </h2>
+            <p className="text-lg text-white/60 max-w-2xl mx-auto">
+              Advanced infrastructure powering the next generation of XRP staking
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Capability Card 1: Automated Execution */}
+            <div className="glass-card rounded-2xl overflow-hidden" data-testid="card-capability-1">
+              <div className="p-6 border-b border-white/5">
+                <h3 className="text-lg font-semibold text-white mb-2">Automated Execution</h3>
+                <p className="text-sm text-white/50">Smart contracts execute seamlessly</p>
+              </div>
+              <div className="bg-black/40 p-4 font-mono text-xs">
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  <span className="text-white/60">Protocol Active</span>
+                </div>
+                <div className="space-y-2 text-white/40">
+                  <div className="flex justify-between">
+                    <span>{">"} deposit.execute()</span>
+                    <span className="text-green-400">success</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{">"} yield.compound()</span>
+                    <span className="text-green-400">success</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>{">"} rewards.distribute()</span>
+                    <span className="text-primary animate-pulse">pending...</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Capability Card 2: Smart Liquidity */}
+            <div className="glass-card rounded-2xl overflow-hidden" data-testid="card-capability-2">
+              <div className="p-6 border-b border-white/5">
+                <h3 className="text-lg font-semibold text-white mb-2">Smart Liquidity</h3>
+                <p className="text-sm text-white/50">Optimized yield strategies</p>
+              </div>
+              <div className="bg-black/40 p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-primary" />
+                    <span className="text-xs text-white/60">Firelight Strategy</span>
+                  </div>
+                  <span className="text-xs text-green-400">50%</span>
+                </div>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-purple-400" />
+                    <span className="text-xs text-white/60">Kinetic Strategy</span>
+                  </div>
+                  <span className="text-xs text-green-400">40%</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-3 h-3 rounded-full bg-white/30" />
+                    <span className="text-xs text-white/60">Buffer Reserve</span>
+                  </div>
+                  <span className="text-xs text-white/40">10%</span>
+                </div>
+                <div className="mt-4 h-2 bg-white/10 rounded-full overflow-hidden">
+                  <div className="h-full flex">
+                    <div className="bg-primary w-1/2" />
+                    <div className="bg-purple-400 w-2/5" />
+                    <div className="bg-white/30 w-[10%]" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Capability Card 3: Multi-Sig Governance */}
+            <div className="glass-card rounded-2xl overflow-hidden" data-testid="card-capability-3">
+              <div className="p-6 border-b border-white/5">
+                <h3 className="text-lg font-semibold text-white mb-2">DAO Governance</h3>
+                <p className="text-sm text-white/50">Community-driven decisions</p>
+              </div>
+              <div className="bg-black/40 p-4">
+                <div className="flex -space-x-2 mb-4">
+                  <div className="w-8 h-8 rounded-full bg-primary/30 border-2 border-[#030303] flex items-center justify-center">
+                    <Users className="h-3 w-3 text-primary" />
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-purple-400/30 border-2 border-[#030303] flex items-center justify-center">
+                    <Users className="h-3 w-3 text-purple-400" />
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-green-400/30 border-2 border-[#030303] flex items-center justify-center">
+                    <Users className="h-3 w-3 text-green-400" />
+                  </div>
+                  <div className="w-8 h-8 rounded-full bg-white/10 border-2 border-[#030303] flex items-center justify-center text-xs text-white/60">
+                    +42
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-white/60">SIP-001: Fee Reduction</span>
+                    <span className="text-green-400">Passed</span>
+                  </div>
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-white/60">SIP-002: New Strategy</span>
+                    <span className="text-primary">Voting</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Testimonial Section */}
+      <section className="relative z-10 py-24 border-t border-white/5" data-testid="section-testimonial">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="grid lg:grid-cols-2 gap-16 items-center">
+            <div>
+              <h2 className="text-4xl lg:text-6xl font-serif italic text-primary text-glow mb-6 leading-tight" data-testid="heading-testimonial">
+                Built for the<br />
+                <span className="text-white opacity-90">DeFi Economy</span>
+              </h2>
+              <p className="text-lg text-white/60 max-w-lg">
+                Shield Finance bridges the gap between XRP liquidity and DeFi opportunities, enabling seamless participation in the decentralized economy.
+              </p>
+            </div>
+            <div className="glass-card rounded-2xl p-8" data-testid="card-testimonial">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
+                  <span className="text-2xl font-bold text-white">XF</span>
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">LIVE</span>
+                    <span className="text-white font-semibold">XRPFi Enthusiast</span>
+                  </div>
+                  <p className="text-sm text-white/50">Early Adopter · Flare Network</p>
+                </div>
+              </div>
+              <blockquote className="text-xl text-white/80 italic leading-relaxed mb-6">
+                "Finally, a way to earn yield on my XRP without giving up liquidity. The gasless deposits and shXRP tokens make DeFi accessible."
+              </blockquote>
+              <div className="flex items-center gap-8 pt-4 border-t border-white/10">
+                <div>
+                  <div className="text-2xl font-bold text-primary">$124K</div>
+                  <div className="text-xs text-white/50">Portfolio Value</div>
+                </div>
+                <div>
+                  <div className="text-2xl font-bold text-green-400">+12.4%</div>
+                  <div className="text-xs text-white/50">30d Returns</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Yield Infrastructure Section */}
+      <section className="relative z-10 py-24 border-t border-white/5" data-testid="section-yield">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            <div>
+              <h2 className="text-4xl lg:text-5xl font-serif italic text-primary text-glow mb-6" data-testid="heading-yield">
+                Stake & Earn<br />
+                <span className="text-white opacity-90">Yield Instantly</span>
+              </h2>
+              <p className="text-lg text-white/60 mb-8">
+                Multi-strategy vault architecture optimizes returns across multiple DeFi protocols while maintaining security and liquidity.
+              </p>
+              <Link href="/app">
+                <button className="shiny-cta" data-testid="button-yield-start">
+                  <span>Start Earning</span>
+                </button>
+              </Link>
+            </div>
+            <div className="glass-card rounded-2xl overflow-hidden" data-testid="card-yield-preview">
+              <div className="p-4 border-b border-white/5 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <img src={xrpLogo} alt="XRP" className="h-8 w-8" />
+                  <div>
+                    <div className="font-semibold text-white">shXRP / XRP</div>
+                    <div className="text-xs text-white/50">Liquid Staking Token</div>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-bold text-green-400">1.0234</div>
+                  <div className="text-xs text-white/50">Exchange Rate</div>
+                </div>
+              </div>
+              <div className="p-4 bg-black/40">
+                <div className="grid grid-cols-3 gap-4 text-center">
+                  <div>
+                    <div className="text-lg font-bold text-white">{metrics.apy}</div>
+                    <div className="text-xs text-white/50">Current APY</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-white">{metrics.tvl}</div>
+                    <div className="text-xs text-white/50">Total Staked</div>
+                  </div>
+                  <div>
+                    <div className="text-lg font-bold text-white">{metrics.stakers}</div>
+                    <div className="text-xs text-white/50">Stakers</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* CTA Banner */}
+      <section className="relative z-10 py-16" data-testid="section-cta-banner">
+        <div className="max-w-4xl mx-auto px-6 lg:px-12">
+          <div className="glass-card rounded-2xl p-8 lg:p-12 text-center">
+            <h3 className="text-2xl lg:text-3xl font-serif italic text-white mb-4">
+              Uncertain about your staking strategy?
+            </h3>
+            <p className="text-white/60 mb-8 max-w-xl mx-auto">
+              Our multi-strategy vault automatically allocates your assets across optimized yield opportunities.
+            </p>
+            <Link href="/app">
+              <button className="gradient-border-btn hover:bg-white/10 hover:text-white transition-all flex text-sm font-medium text-slate-300 py-3 px-6 gap-2 items-center group mx-auto" data-testid="button-cta-banner">
+                <span className="tracking-tight">Explore Vaults</span>
+                <ArrowRight className="h-4 w-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
+              </button>
+            </Link>
           </div>
         </div>
       </section>
