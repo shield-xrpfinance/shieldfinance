@@ -731,3 +731,54 @@ w3m-all-wallets-widget {
   position: relative;
   z-index: 2;
 }
+
+/* Pulsing Radial Dot Grid Background */
+.pulsing-dots {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.pulsing-dots::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 10%;
+  width: 800px;
+  height: 800px;
+  transform: translate(0, -50%);
+  background-image: radial-gradient(circle, #38BDF8 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 70%);
+  -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 70%);
+  opacity: 0.3;
+  animation: pulse-dots 4s ease-in-out infinite;
+}
+
+.pulsing-dots::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 10%;
+  width: 800px;
+  height: 800px;
+  transform: translate(0, -50%);
+  background-image: radial-gradient(circle, #38BDF8 1.5px, transparent 1.5px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(circle at center, black 0%, transparent 50%);
+  -webkit-mask-image: radial-gradient(circle at center, black 0%, transparent 50%);
+  opacity: 0.2;
+  animation: pulse-dots 4s ease-in-out infinite 2s;
+}
+
+@keyframes pulse-dots {
+  0%, 100% {
+    transform: translate(0, -50%) scale(0.8);
+    opacity: 0.15;
+  }
+  50% {
+    transform: translate(0, -50%) scale(1.15);
+    opacity: 0.35;
+  }
+}
