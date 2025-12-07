@@ -1,299 +1,238 @@
-# Design Guidelines: XRP Liquid Staking Protocol Dashboard
+# Design Guidelines: Shield Finance - XRP Liquid Staking Protocol
 
 ## Design Approach
-**System:** Material Design + DeFi Protocol Patterns (Aave, Curve, Uniswap) with Framer Template Blue Aesthetic
-**Rationale:** Utility-focused dashboard requiring clarity, trust, and efficient information display. Material Design provides robust data visualization principles while DeFi patterns establish user familiarity with crypto protocols.
+**System:** Aura Financial Dark Mode Aesthetic + Modern DeFi Protocol Patterns
+**Rationale:** Premium, futuristic dark theme with sky blue accents that conveys trust, security, and sophistication. Inspired by high-end fintech landing pages with glass morphism, subtle animations, and serif headline typography.
 
-## Color Palette (Framer Template Blue)
+## Color Palette (Aura Financial Sky Blue)
 
-**Current Brand Identity:** Electric Blue (#0066FF) accent with modern gray backgrounds - standard DeFi aesthetic matching the Framer template design system.
+**Brand Identity:** Sky Blue (#38BDF8) accent with near-black backgrounds - premium DeFi aesthetic with glowing text effects and animated elements.
 
-### Dark Mode (Default)
-- **Background Primary:** #0F0F12 (240° 11% 7%) - Deep charcoal base
-- **Background Secondary:** #1A1A1D (240° 6% 11%) - Elevated surfaces
-- **Card Background:** #131316 (240° 9% 8%) - Card surfaces
+### Dark Mode (Primary Theme)
+- **Background Primary:** #030303 (0° 0% 2%) - Near-black base
+- **Background Panel:** #0F110E (80° 7% 6%) - Elevated surfaces/cards
+- **Card Background:** rgba(255, 255, 255, 0.1) with backdrop blur - Glass morphism
 - **Text Primary:** #FFFFFF (0° 0% 100%) - High contrast headlines
-- **Text Secondary:** #A0A0A0 (0° 0% 63%) - Supporting text
-- **Text Muted:** #6B6B6B (0° 0% 42%) - De-emphasized text
-- **Border:** #2A2A2D (240° 6% 17%) - Component borders
-- **Accent Primary:** #0066FF (217° 100% 50%) - Electric blue for CTAs, links
-- **Accent Hover:** #3388FF (217° 100% 60%) - Hover state for accents
-- **Success:** #00D4B4 (171° 100% 42%) - Success states, positive indicators
+- **Text Secondary:** rgba(255, 255, 255, 0.7) - Supporting text
+- **Text Muted:** rgba(255, 255, 255, 0.4) - De-emphasized text
+- **Border:** rgba(255, 255, 255, 0.1) - Subtle glass borders
+- **Accent Primary:** #38BDF8 (199° 89% 60%) - Sky blue for CTAs, links, glowing elements
+- **Accent Secondary:** #0EA5E9 (199° 89% 48%) - Deeper sky blue for gradients
+- **Success:** #00D4B4 (171° 100% 42%) - Success states
 - **Warning:** #FFB020 (41° 100% 56%) - Warning states
-- **Error:** #FF4444 (0° 100% 63%) - Error states, destructive actions
+- **Error:** #FF4444 (0° 100% 63%) - Error states
 
 ### Light Mode
 - **Background:** #F8F9FA (210° 17% 98%) - Soft off-white base
-- **Background Secondary:** #FFFFFF (0° 0% 100%) - Pure white surfaces
-- **Card Background:** #FFFFFF (0° 0% 100%) - Card surfaces
+- **Card Background:** #FFFFFF (0° 0% 100%) - Pure white surfaces
 - **Text Primary:** #0F0F12 (240° 11% 7%) - Dark headlines
 - **Text Secondary:** #555555 (0° 0% 33%) - Supporting text
-- **Text Muted:** #888888 (0° 0% 53%) - De-emphasized text
-- **Border:** #E4E4E7 (240° 7% 90%) - Component borders
-- **Accent Primary:** #0066FF (217° 100% 50%) - Electric blue (same as dark)
-- **Accent Hover:** #0055CC (217° 100% 40%) - Darker hover for light backgrounds
-- **Success:** #00B894 (166° 100% 36%) - Success states
-- **Warning:** #FF9900 (36° 100% 50%) - Warning states
-- **Error:** #FF3333 (0° 100% 60%) - Error states
+- **Accent Primary:** #38BDF8 (199° 89% 60%) - Sky blue (consistent)
+- **Note:** Light mode is secondary; the landing page is designed for dark mode experience
 
 ### WCAG AA Compliance
 All key contrast ratios verified for accessibility:
-- **Primary Button (White on #0066FF):** 6.2:1 ✓ Passes AA for all text sizes
-- **Dark Mode Text (#FFFFFF on #0F0F12):** 19.4:1 ✓ Excellent contrast
-- **Dark Mode Muted (#A0A0A0 on #0F0F12):** 8.0:1 ✓ Passes AA comfortably
-- **Light Mode Text (#0F0F12 on #F8F9FA):** 18.9:1 ✓ Excellent contrast
-- **Light Mode Muted (#888888 on #F8F9FA):** 4.6:1 ✓ Passes AA for normal text
-
-## Core Layout System
-
-**Container Structure:**
-- Main dashboard: Full-width layout with `max-w-7xl` centered container
-- Dashboard grid: 12-column grid system for flexible component placement
-- Sidebar navigation: Fixed 280px width on desktop, collapsible drawer on mobile
-
-**Spacing Primitives:**
-Use Tailwind units of **2, 4, 6, 8, 12, 16** for consistent rhythm
-- Component padding: `p-6` for cards, `p-8` for major sections
-- Component gaps: `gap-6` for grid layouts
-- Section spacing: `py-12` between major dashboard sections
-- Inline spacing: `space-x-4` for button groups, `space-y-2` for form fields
-
-## Color Usage Rules
-
-**CRITICAL: Text on Dark Backgrounds vs Light Backgrounds**
-
-The platform uses dark hero sections (`bg-shield-dark` - 240° 6% 11%) for branded areas like Analytics revenue sections. These remain dark in BOTH light and dark themes, requiring careful text color selection.
-
-**Rule 1: Always-Dark Surfaces (Hero Sections with bg-shield-dark)**
-Use ONLY light text colors designed for dark backgrounds:
-- Headlines/Large Numbers: `text-shield-foreground` (0° 0% 100% - pure white)
-- Labels/Supporting Text: `text-muted-foreground-light` (0° 0% 70% - medium-light gray)
-- NEVER use `text-foreground` or `text-primary-foreground` on dark backgrounds
-
-**Rule 2: Theme-Adaptive Surfaces (Cards, Regular Content)**
-Use theme-aware colors that automatically adapt:
-- Card Titles: `text-foreground` (dark in light mode, light in dark mode)
-- Secondary Text: `text-muted-foreground` (medium contrast, adapts to theme)
-- Meta Information: `text-muted-foreground`
-
-**Rule 3: Accent Colors**
-- Primary actions (buttons, links): Use `bg-primary` (#0066FF electric blue)
-- Success states: `text-green-500` or chart-2 color (#00D4B4 / #00B894)
-- Warning states: `text-warning` (#FFB020 / #FF9900)
-- Error states: `text-destructive` (#FF4444 / #FF3333)
-
-**Implementation Examples:**
-
-✅ CORRECT - Hero section on dark background:
-```tsx
-<Card className="bg-shield-dark">
-  <div className="text-muted-foreground-light">Total Revenue</div>
-  <div className="text-shield-foreground">$1.2M</div>
-</Card>
-```
-
-❌ INCORRECT - Would create invisible text in light mode:
-```tsx
-<Card className="bg-shield-dark">
-  <div className="text-primary-foreground">Total Revenue</div> {/* Dark text on dark bg! */}
-</Card>
-```
-
-✅ CORRECT - Breakdown cards with theme-adaptive backgrounds:
-```tsx
-<Card>
-  <CardTitle className="text-foreground">Fees Collected</CardTitle>
-  <div className="text-muted-foreground">Updated 2h ago</div>
-</Card>
-```
-
-**Quick Reference:**
-| Surface Type | Background | Headline Text | Label/Meta Text |
-|--------------|-----------|---------------|-----------------|
-| Hero Section | `bg-shield-dark` | `text-shield-foreground` | `text-muted-foreground-light` |
-| Regular Cards | `bg-card` | `text-foreground` | `text-muted-foreground` |
-| Modal Dark Areas | `bg-shield-dark` | `text-shield-foreground` | `text-muted-foreground-light` |
-| Primary Buttons | `bg-primary` | `text-primary-foreground` | N/A |
+- **Primary Text (#FFFFFF on #030303):** 21:1 ✓ Maximum contrast
+- **Secondary Text (rgba(255,255,255,0.7) on #030303):** 12.6:1 ✓ Excellent contrast
+- **Accent Text (#38BDF8 on #030303):** 9.8:1 ✓ Passes AA comfortably
 
 ## Typography Hierarchy
 
 **Font Families:**
-- Primary: Inter (via Google Fonts CDN) - modern, clean, excellent for data
-- Monospace: JetBrains Mono - for addresses, transaction hashes, numerical data
+- **Sans-serif:** Inter (Google Fonts) - Modern, clean UI text
+- **Serif:** Newsreader (Google Fonts) - Elegant italic headlines for hero sections
+- **Monospace:** JetBrains Mono - Status indicators, addresses, numerical data
 
-**Type Scale:**
-- Hero numbers (TVL, APY): `text-5xl font-bold tracking-tight`
-- Section headings: `text-2xl font-semibold`
-- Card titles: `text-lg font-medium`
-- Body text: `text-base font-normal`
-- Data labels: `text-sm font-medium uppercase tracking-wide`
-- Numerical data: `text-lg font-mono tabular-nums`
-- Small meta: `text-xs`
+**Type Scale - Landing Page:**
+- Hero headline: `text-5xl lg:text-7xl font-serif italic tracking-tight text-glow`
+- Section headings: `text-4xl lg:text-5xl font-serif italic text-primary text-glow`
+- Card titles: `text-xl font-semibold text-white`
+- Body text: `text-lg lg:text-2xl font-light text-white/70 leading-relaxed`
+- Data labels: `text-xs font-mono tracking-[0.2em] text-white/40 uppercase`
+- Numerical data (stats): `text-2xl lg:text-3xl font-bold text-primary`
+- Small meta: `text-xs text-white/50`
 
-## Component Library
+## Visual Effects & Utilities
 
-### Navigation
-**Top Bar:**
-- Fixed header with wallet connection status, network indicator, user balance
-- Height: `h-16`
-- Contains: Logo (left), navigation links (center), wallet connect button (right)
-- Wallet button shows truncated address when connected with identicon/avatar
+### Text Glow Effect
+Use for primary headlines to create a luminous effect:
+```css
+.text-glow {
+  text-shadow: 0 0 25px rgba(56, 189, 248, 0.4);
+}
+```
+Apply: `className="text-primary text-glow"`
 
-**Sidebar Navigation:**
-- Dashboard, Vaults, Portfolio, Transactions, Analytics sections
-- Active state with subtle indicator bar and typography weight change
-- Icons from Heroicons (outline for inactive, solid for active)
+### Grid Background
+Subtle grid pattern for the page background:
+```css
+.grid-bg {
+  background-size: 100px 200px;
+  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
+  mask-image: radial-gradient(circle at center, black 40%, transparent 100%);
+}
+```
 
-### Dashboard Overview Cards
+### Radial Glow
+Atmospheric lighting effect:
+```css
+.radial-glow {
+  background: radial-gradient(circle at 70% 50%, rgba(56, 189, 248, 0.25) 0%, rgba(5, 5, 5, 0) 60%);
+}
+```
 
-**Stats Grid:**
-- 4-column grid on desktop (`grid-cols-4`), 2-column tablet, 1-column mobile
-- Each stat card contains:
-  - Large numerical value with monospace font
-  - Label above value
-  - Percentage change indicator with up/down arrow
-  - Subtle trend sparkline visualization (optional micro-chart)
+### Glass Card
+Modern glass morphism for cards:
+```css
+.glass-card {
+  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+```
 
-### Vault Display (Modern List Layout)
+### Shiny CTA Button
+Animated border gradient button for primary CTAs:
+- Spinning conic gradient border animation
+- Near-black fill with glowing hover state
+- Pill-shaped (`rounded-full`)
+- Apply: `className="shiny-cta"`
 
-**Design Philosophy:** List-based layout maximizes horizontal space and creates clear visual hierarchy. Active vaults get prominence, coming soon vaults are minimized.
+### Gradient Border Button
+Secondary button with subtle gradient border:
+- Dark semi-transparent fill
+- Subtle gradient border using mask technique
+- Apply: `className="gradient-border-btn"`
 
-**Active Vaults Section:**
-- Full-width list items (not grid cards)
-- Horizontal layout with metrics in a row
-- Large typography for vault names (`text-2xl font-semibold`)
-- Inline metrics display: APY → TVL → Liquidity → Depositors
-- Prominent deposit CTA positioned on the right
-- Spacing: `p-8` internal padding, `rounded-2xl` corners
-- Hover effect: subtle elevation and border glow
-- Modern card treatment with clean borders
+### Monotone Logo Filter
+Grayscale partner logos that brighten on hover:
+```css
+.monotone-logo {
+  filter: grayscale(100%) brightness(150%) contrast(0.5);
+  opacity: 0.5;
+}
+.monotone-logo:hover {
+  opacity: 1;
+  filter: grayscale(100%) brightness(200%);
+}
+```
 
-**Coming Soon Vaults Section:**
-- Collapsible accordion (collapsed by default)
-- Section header: "X Vaults Coming Soon" with expand/collapse icon
-- When expanded: compact list items with minimal spacing
-- Visual dimming: 75% opacity to deprioritize
-- No deposit buttons, clear "Coming Soon" badge
-- Spacing: `p-4` internal padding for compact feel
+## Navigation
 
-**Metric Display:**
-- Horizontal row layout with consistent spacing (`gap-8`)
-- Each metric: Label above value pattern
-- Labels: `text-xs uppercase tracking-wide text-muted-foreground`
-- Values: `text-2xl font-semibold tabular-nums`
-- APY gets accent color treatment for emphasis
+### Floating Pill Navigation
+- Fixed position, centered horizontally at `top-6`
+- Pill-shaped container with `rounded-full`
+- Glass effect with `nav-pill` class (gradient background + shadow)
+- Ring border: `ring-white/10 ring-1`
+- Backdrop blur: `backdrop-blur-xl`
+- Contains: Logo, nav links, CTA button
+- Mobile: Hamburger menu with expandable dropdown
 
-**Responsive Behavior:**
-- Desktop: Full horizontal layout with all metrics visible
-- Tablet: Metrics wrap to 2 rows
-- Mobile: Stacks vertically with key metrics prioritized
+### Navigation Links
+- Desktop: Horizontal row of links
+- Style: `text-xs font-medium text-white/50 hover:text-white transition-colors`
+- Spacing: `gap-6` between links
 
-### Deposit/Withdrawal Interface
+## Section Structure
 
-**Modal Layout:**
-- Centered modal, `max-w-lg` width
-- Two-step flow visualization at top (Step indicator: 1. Amount → 2. Confirm)
+### Hero Section
+- Full viewport height: `min-h-screen`
+- Two-column layout on desktop: Copy left, visualization right
+- Status badge with pinging indicator
+- Large serif italic headline with text-glow on accent portion
+- Descriptive paragraph in light weight
+- CTA row with shiny-cta and gradient-border-btn
+- Stats grid at bottom with glass-card styling
 
-**Form Structure:**
-- Large input field for XRP amount with max-width button
-- Available balance display above input
-- Vault selection dropdown (if multiple vaults)
-- APY and projected earnings preview
-- Gas fee estimate
-- Primary action button at bottom with loading states
+### Feature Sections
+- Section heading: Serif italic with text-glow
+- Centered header with max-width description
+- Grid of glass-card feature cards
+- Card structure: Icon container, title, description
+- Hover effect: `hover:scale-[1.02] transition-all`
 
-### Portfolio View
+### Partner/Logo Section
+- Centered text heading in mono uppercase
+- Flex row of monotone logos
+- Border-top separator
 
-**Table Layout:**
-- Full-width responsive table with sticky header
-- Columns: Vault Name | Deposited Amount | Current Value | Accrued Rewards | APY | Actions
-- Mobile: Converts to card stack with key info highlighted
-- Row hover state reveals quick actions (withdraw, claim)
+## Spacing System
 
-**Summary Header:**
-- Total portfolio value (large, prominent)
-- Total rewards earned
-- Average APY across positions
-- Quick action buttons: "Deposit More" | "Claim All Rewards"
+**Container:** `max-w-7xl mx-auto px-6 lg:px-12`
 
-### Charts & Data Visualization
+**Section Spacing:**
+- Vertical padding: `py-24`
+- Border separator: `border-t border-white/5`
 
-**APY Trend Chart:**
-- Line chart showing historical APY per vault
-- Height: `h-64` on desktop, `h-48` mobile
-- Time range selector: 7D | 30D | 90D | All
-- Use recharts library for interactive charts
+**Component Spacing:**
+- Card padding: `p-8` for feature cards
+- Stats card padding: `p-4`
+- Button gap: `gap-6` for CTA rows
+- Feature grid gap: `gap-6`
 
-**TVL Growth Chart:**
-- Area chart with gradient fill
-- Same height and time range controls as APY chart
-- Tooltips on hover with precise values
+## Animations
 
-### Transaction History
+### Scroll-triggered Fade
+Elements fade in and slide up on scroll visibility:
+```css
+.animate-fade-in-up {
+  animation: fade-in-up 0.6s ease-out forwards;
+}
+```
 
-**List View:**
-- Chronological list with infinite scroll
-- Each transaction shows:
-  - Action badge (Deposit/Withdraw/Claim)
-  - Amount with XRP icon
-  - Timestamp (relative: "2 hours ago")
-  - Transaction hash (truncated, copyable)
-  - Status badge (Confirmed/Pending)
-  - Vault name
+### Status Indicator Ping
+Pulsing dot for "live" status:
+```html
+<span class="relative flex h-2 w-2">
+  <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+  <span class="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+</span>
+```
 
-## Micro-interactions
+### Beam Animation
+SVG path animation for connecting lines in hero visualization
 
-**Purposeful Animations Only:**
-- Number counting animation for large stats (on initial load)
-- Subtle scale on card hover (`hover:scale-[1.02]`)
-- Smooth transitions for modal entry/exit
-- Loading skeleton states for data fetching
-- Transaction confirmation pulse effect
+### Sonar Animation
+Expanding circle waves from central node
 
-**No Animations:**
-- No scroll-triggered animations
-- No decorative background animations
-- No auto-playing carousels
-
-## Images
-
-**No Hero Image:** This is a dashboard application focused on data and functionality.
-
-**Icon Usage:**
-- Heroicons CDN for all interface icons
-- XRP logo/icon next to amounts and balances
-- Risk level icons (shield for low, warning triangle for high)
-- Network status indicators (green dot for connected)
-
-**Trust Elements:**
-- Security badge/audit certification in footer
-- Protocol partner logos (if applicable) in subtle footer section
+### Spin Animations
+- `animate-spin` with custom duration for rotating rings
+- Reverse direction option for visual interest
 
 ## Responsive Behavior
 
 **Desktop (1024px+):**
-- Sidebar visible, full grid layouts
-- Charts side-by-side where applicable
-- 3-4 column vault grids
+- Two-column hero layout
+- 3-column feature grid
+- Floating pill nav with full links
 
 **Tablet (768px-1023px):**
-- Collapsible sidebar
-- 2-column layouts
-- Stacked charts
+- 2-column feature grid
+- Condensed navigation
 
 **Mobile (<768px):**
-- Bottom navigation bar replaces sidebar
-- Single column, card-based layouts
-- Simplified table to card transformations
-- Sticky CTA buttons for key actions
+- Single column layouts
+- Hamburger menu navigation
+- Stacked CTA buttons
+- Reduced hero visualization size
 
-## Accessibility
+## Implementation Notes
 
-- All form inputs have visible labels
-- Focus indicators on all interactive elements
-- ARIA labels for icon-only buttons
-- Keyboard navigation for all dashboard functions
-- High contrast text-to-background ratios (WCAG AA minimum)
-- Transaction confirmations with clear success/error messaging
+### CSS Classes Location
+All custom CSS utilities are defined in `client/src/index.css`:
+- Text effects: `.text-glow`, `.text-glow-strong`
+- Backgrounds: `.grid-bg`, `.radial-glow`
+- Buttons: `.shiny-cta`, `.gradient-border-btn`
+- Cards: `.glass-card`
+- Logos: `.monotone-logo`
+- Animations: `.animate-fade-in-up`, `.animate-beam`, `.animate-sonar`
 
-**Design Principle:** Trust through clarity. Every element serves the user's need to understand their positions, make informed decisions, and execute transactions confidently.
+### Tailwind Configuration
+Custom colors and animations in `tailwind.config.ts`:
+- Brand colors: `primary`, `brand.sky`, `brand.dark`, `brand.panel`
+- Font families: `font-sans`, `font-serif`
+- Custom animations: `spin-slow`, `spin-slow-reverse`, `pulse-fast`
+
+### Key Design Principle
+**Trust through elegance.** The dark theme with sky blue accents creates a premium, professional appearance that inspires confidence. Glass morphism and subtle animations add depth without distraction. Serif headlines provide sophistication while maintaining readability.
