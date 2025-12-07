@@ -227,8 +227,14 @@ export default function Landing() {
         </div>
       )}
 
-      {/* Pulsing Radial Dot Background */}
-      <div className="pulsing-dots z-0" />
+      {/* Pulsing Radial Dot Background - Full Page Sonar Effect */}
+      <div className="pulsing-dots">
+        <div className="pulsing-dots-grid" />
+        <div className="pulsing-dots-wave" />
+        <div className="pulsing-dots-wave" />
+        <div className="pulsing-dots-wave" />
+        <div className="pulsing-dots-wave" />
+      </div>
 
       {/* Hero Section */}
       <main className="container lg:px-12 min-h-screen flex flex-col lg:flex-row z-10 mx-auto px-6 relative items-center">
