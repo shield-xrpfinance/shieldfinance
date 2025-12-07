@@ -310,7 +310,7 @@ export default function Landing() {
               <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-5 w-auto" data-testid="img-layerzero-inline" />
             </div>
             <span className="text-xs text-white font-mono uppercase tracking-wide" data-testid="text-trusted-by">
-              [ <span className="text-primary">✓</span> ] TRUSTED BY INDUSTRY LEADERS
+              [ <span className="text-primary">✓</span> ] Built with Leading Technologies
             </span>
           </div>
         </div>
@@ -382,30 +382,6 @@ export default function Landing() {
           </div>
         </div>
 
-        {/* Infinite Marquee Section */}
-        <section className="w-[95%] z-20 pb-8 absolute bottom-0" data-testid="section-marquee">
-          <div className="flex flex-col lg:flex-row overflow-hidden opacity-50 w-full pt-6 gap-6 items-center justify-between">
-            <div className="flex-1 overflow-hidden mask-gradient-fade w-full relative">
-              <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-32 items-center">
-                {/* Original Set */}
-                <img src={flareLogo} alt="Flare" className="h-7 w-auto monotone-logo" />
-                <img src={xrpLogo} alt="XRP" className="h-7 w-auto monotone-logo" />
-                <img src={xamanLogo} alt="Xaman" className="h-7 w-auto monotone-logo" />
-                <img src={shieldTokenLogo} alt="Shield" className="h-7 w-auto monotone-logo" />
-                {/* Duplicate Set for Seamless Loop */}
-                <img src={flareLogo} alt="Flare" className="h-7 w-auto monotone-logo" />
-                <img src={xrpLogo} alt="XRP" className="h-7 w-auto monotone-logo" />
-                <img src={xamanLogo} alt="Xaman" className="h-7 w-auto monotone-logo" />
-                <img src={shieldTokenLogo} alt="Shield" className="h-7 w-auto monotone-logo" />
-                {/* Third Set for Full Coverage */}
-                <img src={flareLogo} alt="Flare" className="h-7 w-auto monotone-logo" />
-                <img src={xrpLogo} alt="XRP" className="h-7 w-auto monotone-logo" />
-                <img src={xamanLogo} alt="Xaman" className="h-7 w-auto monotone-logo" />
-                <img src={shieldTokenLogo} alt="Shield" className="h-7 w-auto monotone-logo" />
-              </div>
-            </div>
-          </div>
-        </section>
       </main>
 
       {/* Features Section - Aura-Style with Terminal UI */}
