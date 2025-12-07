@@ -30,6 +30,8 @@ import shieldTokenLogo from "@assets/shield_logo_1763760253079.png";
 import flareHorizontalLogo from "@assets/flare-horizontal-white.svg";
 import xrplHorizontalLogo from "@assets/xrpl-horizontal-white.svg";
 import xamanHorizontalLogo from "@assets/xaman-horizontal-white.svg";
+import bifrostHorizontalLogo from "@assets/bifrost-horizontal-white.svg";
+import layerzeroHorizontalLogo from "@assets/layerzero-horizontal-white.svg";
 
 export default function Landing() {
   const shieldLogo = useShieldLogo();
@@ -295,12 +297,19 @@ export default function Landing() {
             </a>
           </div>
 
-          {/* Partner Logos - Inline Below CTAs */}
-          <div className="flex flex-wrap items-center gap-6 mt-10 opacity-70" data-testid="inline-partner-logos">
-            <span className="text-xs text-white/40 font-mono uppercase tracking-wider">Powered by</span>
-            <img src={flareHorizontalLogo} alt="Flare" className="h-5 w-auto" data-testid="img-flare-inline" />
-            <img src={xrplHorizontalLogo} alt="XRPL" className="h-5 w-auto" data-testid="img-xrpl-inline" />
-            <img src={xamanHorizontalLogo} alt="Xaman" className="h-5 w-auto" data-testid="img-xaman-inline" />
+          {/* Partner Logos - Aura Template Style */}
+          <div className="flex flex-wrap items-center justify-between gap-6 mt-16 w-full max-w-xl opacity-60" data-testid="inline-partner-logos">
+            <div className="flex flex-wrap items-center gap-8">
+              <img src={flareHorizontalLogo} alt="Flare" className="h-5 w-auto" data-testid="img-flare-inline" />
+              <img src={xrplHorizontalLogo} alt="XRPL" className="h-5 w-auto" data-testid="img-xrpl-inline" />
+              <img src={xamanHorizontalLogo} alt="Xaman" className="h-5 w-auto" data-testid="img-xaman-inline" />
+              <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-5 w-auto" data-testid="img-bifrost-inline" />
+              <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-5 w-auto" data-testid="img-layerzero-inline" />
+            </div>
+            <span className="text-xs text-white/40 font-mono uppercase tracking-wider flex items-center gap-2" data-testid="text-trusted-by">
+              <CheckCircle2 className="h-3 w-3" />
+              Trusted by Industry Leaders
+            </span>
           </div>
         </div>
 
