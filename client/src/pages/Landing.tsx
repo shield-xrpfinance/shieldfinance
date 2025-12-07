@@ -109,7 +109,7 @@ export default function Landing() {
     if (!(window as any).UnicornStudio) {
       (window as any).UnicornStudio = { isInitialized: false };
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.29/dist/unicornStudio.umd.js';
+      script.src = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.5.2/dist/unicornStudio.umd.js';
       script.onload = () => {
         if (!(window as any).UnicornStudio.isInitialized) {
           (window as any).UnicornStudio.init();
@@ -240,10 +240,8 @@ export default function Landing() {
       )}
 
       {/* UnicornStudio Animated Background */}
-      <div className="fixed top-0 w-full h-screen -z-10" style={{maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)'}}>
-        <div className="absolute top-0 w-full h-full -z-10">
-          <div data-us-project="4ayjq1ymSRJ9Ah3nsX1c" className="absolute w-full h-full left-0 top-0 -z-10"></div>
-        </div>
+      <div className="fixed top-0 left-0 w-full h-screen -z-10 flex items-center justify-center overflow-hidden" style={{maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)'}}>
+        <div data-us-project="4ayjq1ymSRJ9Ah3nsX1c" style={{width: '1440px', height: '900px'}}></div>
       </div>
 
       {/* Hero Section */}
