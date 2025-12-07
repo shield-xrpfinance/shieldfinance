@@ -290,13 +290,7 @@ export default function Landing() {
             {/* Secondary Button with Gradient Border */}
             <a href="https://faucet.shyield.finance/" target="_blank" rel="noopener noreferrer">
               <button 
-                className="hover:bg-white/10 hover:text-white transition-all flex text-sm font-medium text-slate-300 bg-white/5 rounded-full py-3 px-6 gap-2 items-center group" 
-                style={{
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',
-                  position: 'relative' as const,
-                  '--border-gradient': 'linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.15))',
-                  '--border-radius-before': '9999px'
-                } as React.CSSProperties}
+                className="gradient-border-btn hover:bg-white/10 hover:text-white transition-all flex text-sm font-medium text-slate-300 py-3 px-6 gap-2 items-center group"
                 data-testid="button-hero-faucet"
               >
                 <Droplets className="h-4 w-4" />
