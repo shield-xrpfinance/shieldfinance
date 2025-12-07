@@ -50,6 +50,16 @@ export default function Landing() {
     }
   };
 
+  // Spotlight card mouse tracking
+  const handleSpotlightMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = e.currentTarget;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    card.style.setProperty('--mouse-x', `${x}px`);
+    card.style.setProperty('--mouse-y', `${y}px`);
+  };
+
   useEffect(() => {
     document.title = "Shield Finance - XRP Liquid Staking Protocol | Security Audited & Live on Testnet";
     
@@ -348,6 +358,15 @@ export default function Landing() {
 
         {/* Infinite Marquee Section */}
         <section className="w-[95%] z-20 pb-8 absolute bottom-0 left-1/2 -translate-x-1/2" data-testid="section-marquee">
+          {/* Trust Badge */}
+          <div className="flex items-center justify-center gap-2 mb-4" data-testid="badge-trusted">
+            <span className="font-mono text-xs tracking-widest text-white/40 flex items-center gap-2">
+              <span className="text-primary">[</span>
+              <CheckCircle2 className="h-3 w-3 text-primary" />
+              <span className="text-primary">]</span>
+              <span className="uppercase">Trusted by Industry Leaders</span>
+            </span>
+          </div>
           <div className="flex flex-col lg:flex-row overflow-hidden opacity-50 w-full pt-6 gap-6 items-center justify-between">
             <div className="flex-1 overflow-hidden mask-gradient-fade w-full relative">
               <div className="flex animate-marquee w-max gap-32 items-center">
@@ -409,67 +428,67 @@ export default function Landing() {
 
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
             {/* Feature Card 1 */}
-            <div className="glass-card rounded-2xl p-8 hover:scale-[1.02] transition-all" data-testid="card-feature-gasless">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-gasless">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
                 <Zap className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">100% Gasless Deposits</h3>
-              <p className="text-white/60 leading-relaxed">
+              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">100% Gasless Deposits</h3>
+              <p className="text-white/60 leading-relaxed relative z-10">
                 Deposit XRP without paying gas fees. Our smart contracts handle all transaction costs for seamless onboarding.
               </p>
             </div>
 
             {/* Feature Card 2 */}
-            <div className="glass-card rounded-2xl p-8 hover:scale-[1.02] transition-all" data-testid="card-feature-liquidity">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-liquidity">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
                 <RefreshCw className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Maintain Liquidity</h3>
-              <p className="text-white/60 leading-relaxed">
+              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">Maintain Liquidity</h3>
+              <p className="text-white/60 leading-relaxed relative z-10">
                 Receive shXRP tokens representing your staked position. Trade, transfer, or use as collateral while earning rewards.
               </p>
             </div>
 
             {/* Feature Card 3 */}
-            <div className="glass-card rounded-2xl p-8 hover:scale-[1.02] transition-all" data-testid="card-feature-security">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-security">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
                 <Shield className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Security Audited</h3>
-              <p className="text-white/60 leading-relaxed">
+              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">Security Audited</h3>
+              <p className="text-white/60 leading-relaxed relative z-10">
                 Smart contracts audited by leading security firms. Automated recovery systems protect your assets.
               </p>
             </div>
 
             {/* Feature Card 4 */}
-            <div className="glass-card rounded-2xl p-8 hover:scale-[1.02] transition-all" data-testid="card-feature-xaman">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-xaman">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
                 <Wallet className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Xaman xApp Integration</h3>
-              <p className="text-white/60 leading-relaxed">
+              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">Xaman xApp Integration</h3>
+              <p className="text-white/60 leading-relaxed relative z-10">
                 Native integration with Xaman wallet. Stake directly from your mobile device with secure signing.
               </p>
             </div>
 
             {/* Feature Card 5 */}
-            <div className="glass-card rounded-2xl p-8 hover:scale-[1.02] transition-all" data-testid="card-feature-dual-wallet">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-dual-wallet">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
                 <Globe className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Dual Wallet Support</h3>
-              <p className="text-white/60 leading-relaxed">
+              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">Dual Wallet Support</h3>
+              <p className="text-white/60 leading-relaxed relative z-10">
                 Connect with both XRPL and EVM wallets. Bridge seamlessly between ecosystems with FAssets technology.
               </p>
             </div>
 
             {/* Feature Card 6 */}
-            <div className="glass-card rounded-2xl p-8 hover:scale-[1.02] transition-all" data-testid="card-feature-governance">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6">
+            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-governance">
+              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
                 <Eye className="h-6 w-6 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Transparent Governance</h3>
-              <p className="text-white/60 leading-relaxed">
+              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">Transparent Governance</h3>
+              <p className="text-white/60 leading-relaxed relative z-10">
                 Community-driven protocol upgrades. SHIELD token holders vote on key protocol decisions.
               </p>
             </div>
@@ -480,23 +499,43 @@ export default function Landing() {
       {/* System Capabilities Section */}
       <section className="relative z-10 py-24 border-t border-white/5" data-testid="section-capabilities">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-serif italic text-primary text-glow mb-4" data-testid="heading-capabilities">
+          {/* Vertical Beam Header */}
+          <div className="flex flex-col items-center mb-16">
+            {/* Badge with ping dot */}
+            <div className="flex items-center gap-2 mb-6" data-testid="badge-capabilities">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
+              </span>
+              <span className="text-xs font-mono tracking-[0.2em] text-white/40 uppercase">Core Infrastructure</span>
+            </div>
+            
+            {/* Vertical Beam SVG */}
+            <div className="relative h-16 w-px mb-6">
+              <div className="absolute inset-0 bg-gradient-to-b from-primary via-primary/50 to-transparent" />
+              <svg className="absolute -top-1 left-1/2 -translate-x-1/2 w-3 h-3" viewBox="0 0 12 12">
+                <circle cx="6" cy="6" r="3" fill="#38BDF8" className="animate-pulse-fast" />
+                <circle cx="6" cy="6" r="5" fill="none" stroke="#38BDF8" strokeWidth="1" opacity="0.5" />
+              </svg>
+              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1 h-1 bg-primary/30 rounded-full" />
+            </div>
+            
+            <h2 className="text-4xl lg:text-5xl font-serif italic text-primary text-glow mb-4 text-center" data-testid="heading-capabilities">
               Protocol Capabilities
             </h2>
-            <p className="text-lg text-white/60 max-w-2xl mx-auto">
+            <p className="text-lg text-white/60 max-w-2xl mx-auto text-center">
               Advanced infrastructure powering the next generation of XRP staking
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6">
             {/* Capability Card 1: Automated Execution */}
-            <div className="glass-card rounded-2xl overflow-hidden" data-testid="card-capability-1">
-              <div className="p-6 border-b border-white/5">
+            <div className="glass-card spotlight-card rounded-2xl" onMouseMove={handleSpotlightMove} data-testid="card-capability-1">
+              <div className="p-6 border-b border-white/5 relative z-10">
                 <h3 className="text-lg font-semibold text-white mb-2">Automated Execution</h3>
                 <p className="text-sm text-white/50">Smart contracts execute seamlessly</p>
               </div>
-              <div className="bg-black/40 p-4 font-mono text-xs">
+              <div className="bg-black/40 p-4 font-mono text-xs relative z-10">
                 <div className="flex items-center gap-2 mb-3">
                   <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
                   <span className="text-white/60">Protocol Active</span>
@@ -519,12 +558,12 @@ export default function Landing() {
             </div>
 
             {/* Capability Card 2: Smart Liquidity */}
-            <div className="glass-card rounded-2xl overflow-hidden" data-testid="card-capability-2">
-              <div className="p-6 border-b border-white/5">
+            <div className="glass-card spotlight-card rounded-2xl" onMouseMove={handleSpotlightMove} data-testid="card-capability-2">
+              <div className="p-6 border-b border-white/5 relative z-10">
                 <h3 className="text-lg font-semibold text-white mb-2">Smart Liquidity</h3>
                 <p className="text-sm text-white/50">Optimized yield strategies</p>
               </div>
-              <div className="bg-black/40 p-4">
+              <div className="bg-black/40 p-4 relative z-10">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-primary" />
@@ -557,12 +596,12 @@ export default function Landing() {
             </div>
 
             {/* Capability Card 3: Multi-Sig Governance */}
-            <div className="glass-card rounded-2xl overflow-hidden" data-testid="card-capability-3">
-              <div className="p-6 border-b border-white/5">
+            <div className="glass-card spotlight-card rounded-2xl" onMouseMove={handleSpotlightMove} data-testid="card-capability-3">
+              <div className="p-6 border-b border-white/5 relative z-10">
                 <h3 className="text-lg font-semibold text-white mb-2">DAO Governance</h3>
                 <p className="text-sm text-white/50">Community-driven decisions</p>
               </div>
-              <div className="bg-black/40 p-4">
+              <div className="bg-black/40 p-4 relative z-10">
                 <div className="flex -space-x-2 mb-4">
                   <div className="w-8 h-8 rounded-full bg-primary/30 border-2 border-[#030303] flex items-center justify-center">
                     <Users className="h-3 w-3 text-primary" />

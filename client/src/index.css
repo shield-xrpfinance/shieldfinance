@@ -674,3 +674,60 @@ w3m-all-wallets-widget {
   transition: opacity 800ms cubic-bezier(0.25, 1, 0.5, 1);
   animation: breathe 4.5s linear infinite;
 }
+
+/* Spotlight Card Effect - Flashlight following cursor */
+.spotlight-card {
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+  position: relative;
+}
+
+.spotlight-card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    600px circle at var(--mouse-x) var(--mouse-y),
+    rgba(56, 189, 248, 0.12),
+    transparent 40%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+}
+
+.spotlight-card:hover::before {
+  opacity: 1;
+}
+
+/* Inner glow border effect */
+.spotlight-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    400px circle at var(--mouse-x) var(--mouse-y),
+    rgba(56, 189, 248, 0.25),
+    transparent 40%
+  );
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+  z-index: 0;
+  border-radius: inherit;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  padding: 1px;
+}
+
+.spotlight-card:hover::after {
+  opacity: 1;
+}
+
+/* Ensure spotlight card content stays above the overlay */
+.spotlight-card > * {
+  position: relative;
+  z-index: 2;
+}
