@@ -128,8 +128,8 @@ export default function Landing() {
       {/* Radial Glow Background */}
       <div className="fixed inset-0 radial-glow pointer-events-none z-0" />
 
-      {/* Floating Pill Navigation */}
-      <nav className="fixed left-1/2 -translate-x-1/2 flex w-full lg:w-fit max-w-[90vw] z-50 rounded-full ring-white/10 ring-1 py-1.5 pr-1.5 pl-4 top-6 nav-pill backdrop-blur-xl items-center justify-between" data-testid="nav-header">
+      {/* Floating Pill Navigation - Aura Style */}
+      <nav className="fixed left-1/2 -translate-x-1/2 flex w-full lg:w-fit max-w-[90vw] z-50 rounded-full ring-white/10 ring-1 py-1.5 pr-1.5 pl-4 top-6 backdrop-blur-xl items-center justify-between transition-all duration-300 hover:border-white/20 hover:shadow-primary/5 bg-gradient-to-br from-white/10 to-white/0 shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)]" data-testid="nav-header">
         {/* Logo Area */}
         <div className="flex gap-2.5 items-center mr-8">
           <img src={shieldLogo} alt="Shield Finance" className="h-6 w-6" data-testid="img-logo" />
@@ -239,9 +239,18 @@ export default function Landing() {
         </div>
       )}
 
-      {/* UnicornStudio Animated Background */}
-      <div className="fixed top-0 left-0 w-full h-screen -z-10 flex items-center justify-center overflow-hidden" style={{maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)'}}>
-        <div data-us-project="4ayjq1ymSRJ9Ah3nsX1c" style={{width: '1440px', height: '900px'}}></div>
+      {/* UnicornStudio Animated Background - Aura Structure */}
+      <div 
+        className="fixed top-0 w-full h-screen -z-10" 
+        data-alpha-mask="80" 
+        style={{maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)'}}
+      >
+        <div className="absolute top-0 w-full h-full -z-10">
+          <div 
+            data-us-project="4ayjq1ymSRJ9Ah3nsX1c" 
+            className="absolute w-full h-full left-0 top-0 -z-10"
+          />
+        </div>
       </div>
 
       {/* Hero Section */}
@@ -940,6 +949,142 @@ export default function Landing() {
         </div>
       </section>
 
+      {/* Built for the Hybrid Economy Section - Aura Style */}
+      <section className="overflow-hidden flex flex-col px-6 md:px-8 lg:px-12 z-10 bg-[#030303]/80 w-full border-white/5 border-t pt-32 pb-32 relative backdrop-blur-xl items-center" data-testid="section-hybrid-economy">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_200px] [mask-image:radial-gradient(ellipse_at_top,black_40%,transparent_100%)] pointer-events-none" />
+
+        <div className="max-w-7xl w-full relative z-10">
+          <div className="flex flex-col gap-8 mb-24 max-w-5xl">
+            <span className="text-xs font-mono text-white/40 uppercase tracking-[0.2em] font-medium pl-1 flex items-center gap-3">
+              <span className="w-1 h-1 bg-primary rounded-full shadow-[0_0_10px_rgba(56,189,248,0.8)]" />
+              Built for the Hybrid Economy
+            </span>
+
+            <h2 className="text-4xl md:text-5xl lg:text-7xl font-serif font-medium tracking-tight text-white leading-[1.1]">
+              The modern investor doesn't fit in a single market —
+              <span className="text-white/50"> they stake, they hedge, they compound smart.</span> This protocol was made for them.
+            </h2>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-end">
+            <div className="lg:col-span-4 relative group">
+              <div className="relative w-full aspect-[3.5/4] rounded-[24px] overflow-hidden border border-white/10 bg-white/[0.02]">
+                <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent flex items-center justify-center">
+                  <Globe className="w-24 h-24 text-primary/40 group-hover:text-primary/60 transition-colors" />
+                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-transparent to-transparent opacity-80" />
+                <div className="absolute top-5 left-5 right-5 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
+                  <div className="flex gap-1.5">
+                    <div className="w-1 h-1 bg-white/40 rounded-full" />
+                    <div className="w-1 h-1 bg-white/40 rounded-full" />
+                  </div>
+                  <div className="px-2 py-0.5 rounded border border-white/10 bg-black/20 backdrop-blur-md">
+                    <span className="text-[9px] font-mono text-primary tracking-wider">LIVE</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="lg:col-span-8 flex flex-col justify-end h-full relative">
+              <blockquote className="mb-12 relative">
+                <svg className="absolute -top-6 -left-8 w-6 h-6 text-white/10" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M14.017 21L14.017 18C14.017 16.8954 14.9124 16 16.017 16H19.017C19.5693 16 20.017 15.5523 20.017 15V9C20.017 8.44772 19.5693 8 19.017 8H15.017C14.4647 8 14.017 8.44772 14.017 9V11C14.017 11.5523 13.5693 12 13.017 12H12.017V5H22.017V15C22.017 18.3137 19.3307 21 16.017 21H14.017ZM5.0166 21L5.0166 18C5.0166 16.8954 5.91203 16 7.0166 16H10.0166C10.5689 16 11.0166 15.5523 11.0166 15V9C11.0166 8.44772 10.5689 8 10.0166 8H6.0166C5.46432 8 5.0166 8.44772 5.0166 9V11C5.0166 11.5523 4.56889 12 4.0166 12H3.0166V5H13.0166V15C13.0166 18.3137 10.3303 21 7.0166 21H5.0166Z" />
+                </svg>
+                <p className="text-xl md:text-2xl lg:text-3xl text-white/80 font-light leading-relaxed tracking-tight">
+                  "I used to track my positions in one terminal, my yield in another, and my risk nowhere. Shield keeps it simple — I see the full liquidity picture without the cognitive load."
+                </p>
+              </blockquote>
+
+              <div className="mb-12 flex items-center gap-4">
+                <div className="h-px w-8 bg-primary/30" />
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 border-t border-white/5 pt-8">
+                <div className="inline-flex items-center gap-3 px-4 py-2.5 rounded-full border border-white/10 bg-white/[0.02] hover:bg-white/[0.04] transition-colors group cursor-default">
+                  <span className="text-[10px] md:text-xs text-white/50 font-mono uppercase tracking-wide group-hover:text-white/70 transition-colors">
+                    Protocol TVL Growing <span className="text-primary">24/7</span>
+                  </span>
+                  <Zap className="h-3 w-3 text-primary" />
+                </div>
+
+                <Link href="/app">
+                  <button className="shiny-cta group !px-7 !py-3" data-testid="button-hybrid-cta">
+                    <span className="text-sm font-medium">Start Staking</span>
+                  </button>
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Exchange Infrastructure Section - Aura Style */}
+      <section className="lg:px-12 flex flex-col overflow-hidden z-10 bg-[#030303]/50 w-full border-white/5 border-t px-6 py-32 relative backdrop-blur-xl items-center" data-testid="section-exchange">
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_200px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)] opacity-70 pointer-events-none" />
+
+        <div className="max-w-7xl w-full relative z-10">
+          <div className="flex flex-col lg:flex-row justify-between lg:items-end gap-12 mb-20">
+            <div className="flex flex-col gap-6 max-w-3xl">
+              <div className="flex items-center gap-4">
+                <span className="flex items-center justify-center w-8 h-8 rounded-full border border-white/10 bg-white/5 text-xs font-mono text-white/50">03</span>
+                <span className="text-xs font-mono text-primary/90 uppercase tracking-[0.2em]">Yield Infrastructure</span>
+              </div>
+              <h2 className="text-4xl md:text-5xl lg:text-6xl font-serif font-medium tracking-tight text-white leading-[1.1]">
+                Stake & Earn
+                <span className="text-white/40 italic"> Multi-Strategy Yield.</span>
+              </h2>
+            </div>
+
+            <div className="max-w-sm pb-2">
+              <p className="text-white/50 text-sm leading-relaxed font-light">
+                Direct access to optimized staking strategies. Convert XRP to shXRP with zero slippage and instant settlement.
+              </p>
+            </div>
+          </div>
+
+          <div className="w-full rounded-[24px] border border-white/10 bg-[#080808] overflow-hidden flex flex-col lg:flex-row relative group">
+            <div className="lg:w-1/2 p-8 md:p-12 lg:p-16 flex flex-col justify-center items-start z-10 relative bg-[#080808]">
+              <h3 className="text-3xl md:text-4xl font-serif font-medium text-white mb-6 tracking-tight">
+                Stake, Earn & Compound Automatically.
+              </h3>
+              <p className="text-white/60 mb-10 leading-relaxed font-light max-w-md text-base">
+                Initialize your staking position and earn rewards across multiple yield strategies. One interface for all your XRPFi needs.
+              </p>
+
+              <div className="flex flex-wrap gap-4 w-full sm:w-auto">
+                <Link href="/app">
+                  <button className="px-8 py-3.5 bg-primary text-[#030303] font-semibold text-sm rounded-full hover:bg-primary/90 transition-colors flex items-center justify-center gap-2 min-w-[140px]" data-testid="button-exchange-start">
+                    Get Started
+                  </button>
+                </Link>
+                <a href="https://docs.shyield.finance" target="_blank" rel="noopener noreferrer">
+                  <button className="px-8 py-3.5 border border-white/10 text-white font-medium text-sm rounded-full hover:bg-white/5 transition-colors flex items-center justify-center gap-2 min-w-[140px]" data-testid="button-exchange-docs">
+                    View Docs
+                  </button>
+                </a>
+              </div>
+            </div>
+
+            <div className="lg:w-1/2 bg-[#050505] relative min-h-[400px] border-t lg:border-t-0 lg:border-l border-white/5 overflow-hidden flex items-center justify-center">
+              <div className="absolute inset-0 opacity-[0.03]" style={{backgroundImage: 'linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)', backgroundSize: '48px 96px'}} />
+              
+              <div className="relative flex flex-col items-center justify-center gap-6">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-2xl bg-primary/10 border border-primary/30 flex items-center justify-center">
+                    <Wallet className="w-10 h-10 text-primary" />
+                  </div>
+                  <div className="absolute -inset-4 rounded-3xl border border-primary/10 animate-pulse" />
+                </div>
+                <div className="flex items-center gap-3">
+                  <RefreshCw className="w-5 h-5 text-primary/60 animate-spin" style={{animationDuration: '4s'}} />
+                  <span className="text-sm text-white/50 font-mono">Auto-compounding</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Security Section */}
       <section ref={securityAnimation.ref} id="security" className="relative z-10 py-24 border-t border-white/5" data-testid="section-security">
         <div className={`max-w-7xl mx-auto px-6 lg:px-12 ${securityAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
@@ -1024,31 +1169,95 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="relative z-10 py-12 border-t border-white/5" data-testid="footer">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+      {/* Footer - Aura Style */}
+      <footer className="relative z-10 px-6 md:px-8 lg:px-12 py-20 border-t border-white/5 bg-[#030303]" data-testid="footer">
+        <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8 relative z-10">
+          <div className="lg:col-span-3 flex flex-col gap-8">
             <div className="flex items-center gap-3">
-              <img src={shieldLogo} alt="Shield Finance" className="h-8 w-8" />
-              <span className="font-medium text-white">Shield Finance</span>
+              <div className="relative flex items-center justify-center w-10 h-10 bg-white/5 rounded-xl border border-white/10 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
+                <img src={shieldLogo} alt="Shield Finance" className="h-6 w-6" />
+              </div>
+              <span className="font-serif font-medium text-2xl tracking-tight text-white">Shield</span>
             </div>
-            <div className="flex flex-wrap justify-center gap-6">
-              <a href="https://docs.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-sm text-white/50 hover:text-white transition-colors" data-testid="link-footer-docs">
-                Docs
+            <p className="text-white/40 text-sm leading-relaxed max-w-[280px] font-light">
+              Engineering the future of XRP liquid staking. Secure, scalable, and instant.
+            </p>
+            <div className="flex gap-5 mt-4">
+              <a href="https://x.com/shieldfinance_" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-white transition-colors" data-testid="link-footer-twitter">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="m17.687 3.063l-4.996 5.711l-4.32-5.711H2.112l7.477 9.776l-7.086 8.099h3.034l5.469-6.25l4.78 6.25h6.102l-7.794-10.304l6.625-7.571zm-1.064 16.06L5.654 4.782h1.803l10.846 14.34z" />
+                </svg>
               </a>
-              <a href="https://blog.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-sm text-white/50 hover:text-white transition-colors" data-testid="link-footer-blog">
-                Blog
+              <a href="https://discord.gg/Vzs3KbzU" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-white transition-colors" data-testid="link-footer-discord">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19.303 5.337A17.3 17.3 0 0 0 14.963 4c-.191.329-.403.775-.552 1.125a16.6 16.6 0 0 0-4.808 0C9.454 4.775 9.23 4.329 9.05 4a17 17 0 0 0-4.342 1.337C1.961 9.391 1.218 13.35 1.59 17.255a17.7 17.7 0 0 0 5.318 2.664a13 13 0 0 0 1.136-1.836c-.627-.234-1.22-.52-1.794-.86c.149-.106.297-.223.435-.34c3.46 1.582 7.207 1.582 10.624 0c.149.117.287.234.435.34c-.573.34-1.167.626-1.793.86a13 13 0 0 0 1.135 1.836a17.6 17.6 0 0 0 5.318-2.664c.457-4.52-.722-8.448-3.1-11.918M8.52 14.846c-1.04 0-1.889-.945-1.889-2.101s.828-2.102 1.89-2.102c1.05 0 1.91.945 1.888 2.102c0 1.156-.838 2.1-1.889 2.1m6.974 0c-1.04 0-1.89-.945-1.89-2.101s.828-2.102 1.89-2.102c1.05 0 1.91.945 1.889 2.102c0 1.156-.828 2.1-1.89 2.1" />
+                </svg>
               </a>
-              <a href="https://vote.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-sm text-white/50 hover:text-white transition-colors" data-testid="link-footer-governance">
-                Governance
-              </a>
-              <a href="https://discord.gg/Vzs3KbzU" target="_blank" rel="noopener noreferrer" className="text-sm text-white/50 hover:text-white transition-colors" data-testid="link-footer-discord">
-                Discord
+              <a href="https://github.com/Shield-Finance" target="_blank" rel="noopener noreferrer" className="text-white/30 hover:text-white transition-colors" data-testid="link-footer-github">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12.001 2c-5.525 0-10 4.475-10 10a9.99 9.99 0 0 0 6.837 9.488c.5.087.688-.213.688-.476c0-.237-.013-1.024-.013-1.862c-2.512.463-3.162-.612-3.362-1.175c-.113-.288-.6-1.175-1.025-1.413c-.35-.187-.85-.65-.013-.662c.788-.013 1.35.725 1.538 1.025c.9 1.512 2.337 1.087 2.912.825c.088-.65.35-1.087.638-1.337c-2.225-.25-4.55-1.113-4.55-4.938c0-1.088.387-1.987 1.025-2.687c-.1-.25-.45-1.275.1-2.65c0 0 .837-.263 2.75 1.024a9.3 9.3 0 0 1 2.5-.337c.85 0 1.7.112 2.5.337c1.913-1.3 2.75-1.024 2.75-1.024c.55 1.375.2 2.4.1 2.65c.637.7 1.025 1.587 1.025 2.687c0 3.838-2.337 4.688-4.562 4.938c.362.312.675.912.675 1.85c0 1.337-.013 2.412-.013 2.75c0 .262.188.574.688.474A10.02 10.02 0 0 0 22 12c0-5.525-4.475-10-10-10" />
+                </svg>
               </a>
             </div>
-            <div className="text-sm text-white/30">
-              © 2024 Shield Finance. All rights reserved.
-            </div>
+          </div>
+
+          <div className="lg:col-span-2 flex flex-col gap-6 pt-2">
+            <h4 className="text-white font-medium text-sm tracking-wide">Protocol</h4>
+            <ul className="flex flex-col gap-3.5">
+              <li><a href="https://docs.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-docs">Documentation</a></li>
+              <li><a href="https://blog.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-blog">Blog</a></li>
+              <li><a href="https://vote.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-governance">Governance</a></li>
+              <li>
+                <a href="#" className="flex items-center gap-2 text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-status">
+                  System Status
+                  <span className="relative flex h-1.5 w-1.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500" />
+                  </span>
+                </a>
+              </li>
+            </ul>
+          </div>
+
+          <div className="lg:col-span-2 flex flex-col gap-6 pt-2">
+            <h4 className="text-white font-medium text-sm tracking-wide">Resources</h4>
+            <ul className="flex flex-col gap-3.5">
+              <li><a href="https://faucet.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-faucet">Testnet Faucet</a></li>
+              <li><a href="https://docs.shyield.finance/security" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-security">Security</a></li>
+              <li><a href="https://docs.shyield.finance/contracts" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-contracts">Contracts</a></li>
+              <li><a href="https://docs.shyield.finance/tokenomics" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-tokenomics">Tokenomics</a></li>
+            </ul>
+          </div>
+
+          <div className="lg:col-span-5 flex flex-col sm:flex-row lg:flex-row gap-4 lg:gap-4 mt-8 lg:mt-0">
+            <a href="https://docs.shyield.finance" target="_blank" rel="noopener noreferrer" className="flex-1 group relative p-7 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 transition-all duration-300 flex flex-col justify-between h-36 lg:h-40 overflow-hidden" data-testid="card-footer-docs">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex justify-between items-start relative z-10">
+                <span className="text-white font-medium text-sm tracking-wide">Read Docs</span>
+                <ExternalLink className="h-4 w-4 text-white/20 group-hover:text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-300" />
+              </div>
+              <div className="relative z-10 flex items-end justify-between">
+                <FileText className="text-primary/60 w-8 h-8 group-hover:scale-110 transition-transform duration-300" />
+              </div>
+            </a>
+
+            <a href="https://discord.gg/Vzs3KbzU" target="_blank" rel="noopener noreferrer" className="flex-1 group relative p-7 rounded-2xl border border-white/10 bg-white/[0.02] hover:bg-white/[0.05] hover:border-white/20 transition-all duration-300 flex flex-col justify-between h-36 lg:h-40 overflow-hidden" data-testid="card-footer-community">
+              <div className="absolute inset-0 bg-gradient-to-br from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+              <div className="flex justify-between items-start relative z-10">
+                <span className="text-white font-medium text-sm tracking-wide">Join Community</span>
+                <ExternalLink className="h-4 w-4 text-white/20 group-hover:text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all duration-300" />
+              </div>
+              <div className="relative z-10 flex items-end justify-between">
+                <Users className="text-primary/60 w-8 h-8 group-hover:scale-110 transition-transform duration-300" />
+              </div>
+            </a>
+          </div>
+        </div>
+
+        <div className="w-full max-w-7xl mx-auto mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
+          <span className="text-white/20 text-xs font-mono tracking-wide">© 2024 Shield Finance. All rights reserved.</span>
+          <div className="flex items-center gap-8">
+            <span className="text-white/20 text-xs font-mono border-l border-white/10 pl-8">Built on Flare Network</span>
           </div>
         </div>
       </footer>
