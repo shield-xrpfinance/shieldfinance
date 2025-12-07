@@ -22,7 +22,6 @@ import {
   Globe
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
-import { useAnalyticsMetrics } from "@/hooks/useAnalyticsMetrics";
 import { useShieldLogo } from "@/components/ShieldLogo";
 import flareLogo from "@assets/flr.svg";
 import xrpLogo from "@assets/xrp.148c3b50_1762588566535.png";
@@ -37,7 +36,6 @@ export default function Landing() {
   const howItWorksAnimation = useScrollAnimation();
   const securityAnimation = useScrollAnimation();
   const ctaAnimation = useScrollAnimation();
-  const metrics = useAnalyticsMetrics();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const handleMobileNavClick = (href: string) => {
@@ -105,6 +103,20 @@ export default function Landing() {
       meta.setAttribute('property', 'og:type');
       meta.content = 'website';
       document.head.appendChild(meta);
+    }
+
+    // Initialize UnicornStudio for animated background
+    if (!(window as any).UnicornStudio) {
+      (window as any).UnicornStudio = { isInitialized: false };
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.4.29/dist/unicornStudio.umd.js';
+      script.onload = () => {
+        if (!(window as any).UnicornStudio.isInitialized) {
+          (window as any).UnicornStudio.init();
+          (window as any).UnicornStudio.isInitialized = true;
+        }
+      };
+      (document.head || document.body).appendChild(script);
     }
   }, []);
 
@@ -227,16 +239,15 @@ export default function Landing() {
         </div>
       )}
 
-      {/* Gentle Water Ripple Background */}
-      <div className="pulsing-dots">
-        <div className="pulsing-dots-grid" />
-        <div className="pulsing-dots-wave" />
-        <div className="pulsing-dots-wave" />
-        <div className="pulsing-dots-wave" />
+      {/* UnicornStudio Animated Background */}
+      <div className="fixed top-0 w-full h-screen -z-10" style={{maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)'}}>
+        <div className="absolute top-0 w-full h-full -z-10">
+          <div data-us-project="YOUR_UNICORNSTUDIO_PROJECT_ID" className="absolute w-full h-full left-0 top-0 -z-10"></div>
+        </div>
       </div>
 
       {/* Hero Section */}
-      <main className="container lg:px-12 min-h-screen flex flex-col lg:flex-row z-10 mx-auto px-6 relative items-center">
+      <main className="container lg:px-12 lg:pt-0 min-h-[1100px] flex flex-col lg:flex-row z-10 mx-auto pt-0 px-6 relative items-center">
         {/* Left Column: Copy */}
         <div ref={heroAnimation.ref} className={`lg:w-1/2 flex flex-col w-full pt-32 lg:pt-0 pb-20 lg:pb-0 justify-center ${heroAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           {/* Status Badge */}
@@ -273,27 +284,6 @@ export default function Landing() {
                 <ArrowRight className="h-4 w-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
               </button>
             </a>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-16" data-testid="stats-container">
-            <p className="text-xs text-white/40 mb-4" data-testid="text-testnet-disclaimer">
-              {metrics.isLoading ? "Loading metrics..." : "* Testnet demo metrics - Mainnet launch coming soon"}
-            </p>
-            <div className="grid grid-cols-3 gap-4">
-              <div className={`glass-card rounded-xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-tvl">
-                <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-tvl">{metrics.tvl}</div>
-                <div className="text-xs lg:text-sm text-white/50" data-testid="label-tvl">TVL</div>
-              </div>
-              <div className={`glass-card rounded-xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-apy">
-                <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-apy">{metrics.apy}</div>
-                <div className="text-xs lg:text-sm text-white/50" data-testid="label-apy">APY</div>
-              </div>
-              <div className={`glass-card rounded-xl p-4 transition-all hover:scale-105 ${metrics.isLoading ? 'opacity-60' : ''}`} data-testid="stat-stakers">
-                <div className="text-2xl lg:text-3xl font-bold text-primary mb-1" data-testid="value-stakers">{metrics.stakers}</div>
-                <div className="text-xs lg:text-sm text-white/50" data-testid="label-stakers">Stakers</div>
-              </div>
-            </div>
           </div>
         </div>
 
@@ -365,19 +355,10 @@ export default function Landing() {
         </div>
 
         {/* Infinite Marquee Section */}
-        <section className="w-[95%] z-20 pb-8 absolute bottom-0 left-1/2 -translate-x-1/2" data-testid="section-marquee">
-          {/* Trust Badge */}
-          <div className="flex items-center justify-center gap-2 mb-4" data-testid="badge-trusted">
-            <span className="font-mono text-xs tracking-widest text-white/40 flex items-center gap-2">
-              <span className="text-primary">[</span>
-              <CheckCircle2 className="h-3 w-3 text-primary" />
-              <span className="text-primary">]</span>
-              <span className="uppercase">Trusted by Industry Leaders</span>
-            </span>
-          </div>
+        <section className="w-[95%] z-20 pb-8 absolute bottom-0" data-testid="section-marquee">
           <div className="flex flex-col lg:flex-row overflow-hidden opacity-50 w-full pt-6 gap-6 items-center justify-between">
             <div className="flex-1 overflow-hidden mask-gradient-fade w-full relative">
-              <div className="flex animate-marquee w-max gap-32 items-center">
+              <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-32 items-center">
                 {/* Original Set */}
                 <img src={flareLogo} alt="Flare" className="h-7 w-auto monotone-logo" />
                 <img src={xrpLogo} alt="XRP" className="h-7 w-auto monotone-logo" />
