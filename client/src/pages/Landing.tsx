@@ -289,7 +289,16 @@ export default function Landing() {
 
             {/* Secondary Button with Gradient Border */}
             <a href="https://faucet.shyield.finance/" target="_blank" rel="noopener noreferrer">
-              <button className="gradient-border-btn hover:bg-white/10 hover:text-white transition-all flex text-sm font-medium text-slate-300 py-3 px-6 gap-2 items-center group" data-testid="button-hero-faucet">
+              <button 
+                className="hover:bg-white/10 hover:text-white transition-all flex text-sm font-medium text-slate-300 bg-white/5 rounded-full py-3 px-6 gap-2 items-center group" 
+                style={{
+                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05)',
+                  position: 'relative' as const,
+                  '--border-gradient': 'linear-gradient(180deg, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.15))',
+                  '--border-radius-before': '9999px'
+                } as React.CSSProperties}
+                data-testid="button-hero-faucet"
+              >
                 <Droplets className="h-4 w-4" />
                 <span className="tracking-tight">Get Test Tokens</span>
                 <ArrowRight className="h-4 w-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
@@ -306,9 +315,8 @@ export default function Landing() {
               <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-5 w-auto" data-testid="img-bifrost-inline" />
               <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-5 w-auto" data-testid="img-layerzero-inline" />
             </div>
-            <span className="text-xs text-white/40 font-mono uppercase tracking-wider flex items-center gap-2" data-testid="text-trusted-by">
-              <CheckCircle2 className="h-3 w-3" />
-              Trusted by Industry Leaders
+            <span className="text-xs text-white font-mono uppercase tracking-wide" data-testid="text-trusted-by">
+              [ <span className="text-primary">✓</span> ] TRUSTED BY INDUSTRY LEADERS
             </span>
           </div>
         </div>
