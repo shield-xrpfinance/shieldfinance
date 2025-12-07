@@ -403,84 +403,239 @@ export default function Landing() {
         </div>
       </section>
 
-      {/* Features Section */}
-      <section ref={featuresAnimation.ref} id="features" className="relative z-10 py-24 border-t border-white/5" data-testid="section-features">
+      {/* Features Section - Aura-Style with Terminal UI */}
+      <section ref={featuresAnimation.ref} id="features" className="relative z-10 py-32 border-t border-white/5 bg-black/50 backdrop-blur-3xl" data-testid="section-features">
+        {/* Clean Background Line */}
+        <div className="absolute top-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
+        
         <div className={`max-w-7xl mx-auto px-6 lg:px-12 ${featuresAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-          <div className="text-center mb-16">
-            <h2 className="text-4xl lg:text-5xl font-serif italic text-primary text-glow mb-4" data-testid="heading-features">
-              Why Shield Finance?
+          {/* Section Header with Vertical Beam */}
+          <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-24 relative">
+            {/* Vertical Beam Animation */}
+            <div className="absolute -top-32 left-1/2 -translate-x-1/2 h-48 w-6 overflow-hidden flex justify-center">
+              <svg className="h-full w-full" viewBox="0 0 6 192" fill="none">
+                <path d="M3 0V192" stroke="url(#header-beam)" strokeWidth="1.5" strokeLinecap="round" className="beam-line animate-beam opacity-70" />
+                <defs>
+                  <linearGradient id="header-beam" x1="3" y1="0" x2="3" y2="192" gradientUnits="userSpaceOnUse">
+                    <stop stopColor="#38BDF8" stopOpacity="0" />
+                    <stop offset="0.5" stopColor="#38BDF8" />
+                    <stop offset="1" stopColor="#38BDF8" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </div>
+
+            <div className="flex items-center gap-3 mb-8 px-4 py-1.5 rounded-full border border-white/10 bg-white/5 backdrop-blur-sm">
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-primary" />
+              </span>
+              <span className="text-xs font-mono text-primary uppercase tracking-[0.2em] font-medium">System Capabilities</span>
+            </div>
+
+            <h2 className="text-5xl md:text-6xl lg:text-7xl font-serif italic tracking-tight text-primary text-glow mb-8" data-testid="heading-features">
+              Liquid staking <span className="text-white/60">made effortless.</span>
             </h2>
-            <p className="text-lg text-white/60 max-w-2xl mx-auto">
-              Advanced liquid staking infrastructure designed for the XRP ecosystem
+
+            <p className="text-xl text-white/60 leading-relaxed max-w-2xl font-light tracking-tight">
+              Streamline your XRP yield with automated protocols designed to simplify, secure, and enhance your staking experience.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Feature Card 1 */}
-            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-gasless">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
-                <Zap className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">100% Gasless Deposits</h3>
-              <p className="text-white/60 leading-relaxed relative z-10">
+          {/* Feature Cards Grid - 3 Large Cards with Terminal UI */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+            {/* Card 1: Gasless Deposits - Terminal/Chat UI */}
+            <div className="spotlight-card group relative flex flex-col p-10 rounded-[32px] border border-white/10 bg-white/[0.02] overflow-hidden transition-all duration-500" onMouseMove={handleSpotlightMove} data-testid="card-feature-gasless">
+              {/* Spotlight Background */}
+              <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{background: 'radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.06), transparent 40%)'}} />
+              {/* Spotlight Border */}
+              <div className="pointer-events-none absolute inset-0 rounded-[32px] border border-primary/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{maskImage: 'radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), black, transparent)', WebkitMaskImage: 'radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), black, transparent)'}} />
+
+              <h3 className="text-2xl font-semibold tracking-tight text-white mb-4 relative z-10">Gasless Deposits</h3>
+              <p className="text-base text-white/50 leading-relaxed mb-12 relative z-10 font-light">
                 Deposit XRP without paying gas fees. Our smart contracts handle all transaction costs for seamless onboarding.
               </p>
+
+              {/* Visual: Terminal/Chat UI */}
+              <div className="relative z-10 mt-auto w-full h-72 rounded-2xl border border-white/10 bg-[#0A0A0A] overflow-hidden flex flex-col shadow-2xl">
+                {/* Header */}
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/5">
+                  <div className="flex items-center gap-2 opacity-50">
+                    <div className="w-2 h-2 rounded-full bg-white/40" />
+                    <div className="w-2 h-2 rounded-full bg-white/40" />
+                  </div>
+                  <span className="text-xs text-white/30 font-mono">SHIELD_OS v1.0</span>
+                </div>
+                {/* Body */}
+                <div className="p-6 flex flex-col gap-5 relative h-full">
+                  {/* User Message */}
+                  <div className="self-end max-w-[90%] bg-white/10 backdrop-blur-sm rounded-2xl rounded-tr-sm p-4 border border-white/5">
+                    <p className="text-xs text-white/90 font-light leading-relaxed">
+                      Deposit <span className="text-primary font-medium">1,000 XRP</span> to vault.
+                      No gas fees required.
+                    </p>
+                  </div>
+
+                  {/* System Message */}
+                  <div className="self-start max-w-[90%] bg-white/[0.03] backdrop-blur-md rounded-2xl rounded-tl-sm p-5 border border-white/10 relative overflow-hidden group-hover:border-primary/20 transition-colors duration-500">
+                    <div className="flex items-center gap-2 mb-3 text-primary font-mono text-[10px] uppercase tracking-wider">
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Shield Protocol
+                    </div>
+                    <p className="mb-4 text-xs text-white/80 font-light">Bridge initiated. FAssets minting in progress.</p>
+
+                    {/* Progress Bar */}
+                    <div className="w-full bg-black/40 rounded-full h-1.5 mb-2 overflow-hidden">
+                      <div className="bg-primary h-full w-[85%] animate-pulse" />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-primary/60 font-mono">
+                      <span>EXECUTING</span>
+                      <span>1,000 XRP</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Feature Card 2 */}
-            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-liquidity">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
-                <RefreshCw className="h-6 w-6 text-primary" />
+            {/* Card 2: Smart Liquidity - Orbit Visualization (Center, Elevated) */}
+            <div className="spotlight-card relative flex flex-col p-[1px] rounded-[32px] overflow-hidden lg:-mt-8 lg:mb-8 z-20 group" onMouseMove={handleSpotlightMove} data-testid="card-feature-liquidity">
+              <div className="absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-transparent rounded-[32px]" />
+              <div className="absolute inset-0 bg-[#050505] rounded-[31px] m-[1px] overflow-hidden">
+                <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-0" style={{background: 'radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.06), transparent 40%)'}} />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">Maintain Liquidity</h3>
-              <p className="text-white/60 leading-relaxed relative z-10">
-                Receive shXRP tokens representing your staked position. Trade, transfer, or use as collateral while earning rewards.
-              </p>
+              <div className="pointer-events-none absolute inset-0 rounded-[32px] border border-primary/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500 z-50" style={{maskImage: 'radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), black, transparent)', WebkitMaskImage: 'radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), black, transparent)'}} />
+
+              <div className="relative z-10 flex flex-col h-full p-10 group">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-primary/20 blur-md rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                    <Zap className="h-6 w-6 text-primary relative z-10" />
+                  </div>
+                  <h3 className="text-2xl font-semibold tracking-tight text-white group-hover:text-white transition-colors">Smart Liquidity</h3>
+                </div>
+                <p className="text-base text-white/50 leading-relaxed mb-12 font-light group-hover:text-white/70 transition-colors">
+                  Receive shXRP tokens for your staked position. Trade, transfer, or use as collateral while earning rewards.
+                </p>
+
+                {/* Visual: Orbit & Sonar Visualization */}
+                <div className="mt-auto relative w-full h-80 flex items-center justify-center">
+                  {/* Sonar Rings */}
+                  <div className="absolute w-64 h-64 border border-primary/5 rounded-full animate-ping opacity-10" style={{animationDuration: '4s'}} />
+                  <div className="absolute w-52 h-52 border border-white/5 rounded-full animate-ping opacity-20" style={{animationDuration: '3s', animationDelay: '0.7s'}} />
+
+                  {/* Outer Rotating Ring */}
+                  <div className="absolute w-48 h-48 border border-white/5 rounded-full animate-spin" style={{animationDuration: '40s'}}>
+                    <div className="absolute top-1/2 -right-1 w-2 h-2 bg-white/10 rounded-full" />
+                    <div className="absolute top-1/2 -left-1 w-2 h-2 bg-white/10 rounded-full" />
+                  </div>
+
+                  {/* Middle Rotating Ring */}
+                  <div className="absolute w-44 h-44 border border-white/10 rounded-full animate-spin" style={{animationDuration: '30s'}} />
+
+                  {/* Inner Dashed Ring */}
+                  <div className="absolute w-32 h-32 border border-white/5 rounded-full border-dashed animate-spin" style={{animationDuration: '20s', animationDirection: 'reverse'}} />
+
+                  {/* Active Glow Ring */}
+                  <div className="absolute w-28 h-28 border border-primary/20 rounded-full animate-spin opacity-0 group-hover:opacity-100 transition-opacity duration-700" style={{animationDuration: '15s'}}>
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-primary -mt-[3px] rounded-full shadow-[0_0_10px_rgba(56,189,248,1)]" />
+                  </div>
+
+                  {/* Orbiting Elements */}
+                  <div className="absolute w-44 h-44 animate-spin" style={{animationDuration: '30s'}}>
+                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#050505] p-2.5 rounded-full border border-white/10 group-hover:border-primary/30 group-hover:shadow-[0_0_20px_rgba(56,189,248,0.1)] transition-all duration-500">
+                      <RefreshCw className="h-4 w-4 text-white/40 group-hover:text-primary transition-colors" />
+                    </div>
+                    <div className="absolute bottom-0 right-1/2 translate-x-1/2 translate-y-1/2 bg-[#050505] p-2.5 rounded-full border border-white/10 group-hover:border-primary/30 group-hover:shadow-[0_0_20px_rgba(56,189,248,0.1)] transition-all duration-500">
+                      <Wallet className="h-4 w-4 text-white/40 group-hover:text-primary transition-colors" />
+                    </div>
+                  </div>
+
+                  {/* Central Hub */}
+                  <div className="z-10 flex group-hover:border-primary/40 transition-colors duration-500 bg-[#0F110E] w-20 h-20 border-white/10 border rounded-2xl relative items-center justify-center overflow-hidden shadow-2xl">
+                    <Shield className="h-8 w-8 text-white relative z-20 group-hover:text-primary transition-colors duration-500" />
+                    <div className="animate-pulse bg-gradient-to-tr from-transparent via-primary/10 to-transparent absolute inset-0 z-10" />
+                    <div className="absolute inset-0 opacity-20 z-0" style={{backgroundImage: 'radial-gradient(#fff 0.5px, transparent 0.5px)', backgroundSize: '12px 12px'}} />
+                  </div>
+
+                  {/* Status Label */}
+                  <div className="absolute bottom-4 flex flex-col items-center">
+                    <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/5 group-hover:border-primary/20 transition-colors">
+                      <span className="relative flex h-1.5 w-1.5">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                        <span className="relative inline-flex rounded-full h-full w-full bg-green-400" />
+                      </span>
+                      <span className="text-[10px] font-mono text-white/40 uppercase tracking-wider">Yield Active</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Feature Card 3 */}
-            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-security">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
-                <Shield className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">Security Audited</h3>
-              <p className="text-white/60 leading-relaxed relative z-10">
+            {/* Card 3: Security & Governance */}
+            <div className="spotlight-card group relative flex flex-col p-10 rounded-[32px] border border-white/10 bg-white/[0.02] overflow-hidden transition-all duration-500" onMouseMove={handleSpotlightMove} data-testid="card-feature-security">
+              {/* Spotlight Background */}
+              <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{background: 'radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.06), transparent 40%)'}} />
+              {/* Spotlight Border */}
+              <div className="pointer-events-none absolute inset-0 rounded-[32px] border border-primary/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{maskImage: 'radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), black, transparent)', WebkitMaskImage: 'radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), black, transparent)'}} />
+
+              <h3 className="text-2xl font-semibold tracking-tight text-white mb-4 relative z-10">Security Audited</h3>
+              <p className="text-base text-white/50 leading-relaxed mb-12 relative z-10 font-light">
                 Smart contracts audited by leading security firms. Automated recovery systems protect your assets.
               </p>
+
+              {/* Visual: Security/Governance Terminal */}
+              <div className="relative z-10 mt-auto w-full h-72 rounded-2xl border border-white/10 bg-[#0A0A0A] overflow-hidden flex flex-col shadow-2xl">
+                {/* Header */}
+                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/5">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    <span className="text-xs text-white/60 font-mono">Security Status</span>
+                  </div>
+                  <Lock className="h-4 w-4 text-green-400" />
+                </div>
+                {/* Body */}
+                <div className="p-5 flex flex-col gap-4 h-full">
+                  {/* Audit Status */}
+                  <div className="flex items-center justify-between p-3 rounded-xl bg-green-500/10 border border-green-500/20">
+                    <div className="flex items-center gap-3">
+                      <CheckCircle2 className="h-4 w-4 text-green-400" />
+                      <span className="text-xs text-white/80">Contract Audit</span>
+                    </div>
+                    <span className="text-xs text-green-400 font-mono">PASSED</span>
+                  </div>
+
+                  {/* Security Metrics */}
+                  <div className="space-y-3 flex-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-white/50">Slither Analysis</span>
+                      <span className="text-green-400 font-mono">0 findings</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-white/50">Test Coverage</span>
+                      <span className="text-primary font-mono">150+ tests</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-white/50">Recovery System</span>
+                      <span className="text-green-400 font-mono">Active</span>
+                    </div>
+                  </div>
+
+                  {/* Governance Status */}
+                  <div className="pt-3 border-t border-white/5">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Users className="h-3 w-3 text-primary" />
+                      <span className="text-[10px] text-white/40 uppercase tracking-wider font-mono">Active Proposals</span>
+                    </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-white/60">SIP-003: Strategy Update</span>
+                      <span className="text-primary animate-pulse">Voting</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Feature Card 4 */}
-            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-xaman">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
-                <Wallet className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">Xaman xApp Integration</h3>
-              <p className="text-white/60 leading-relaxed relative z-10">
-                Native integration with Xaman wallet. Stake directly from your mobile device with secure signing.
-              </p>
-            </div>
-
-            {/* Feature Card 5 */}
-            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-dual-wallet">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
-                <Globe className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">Dual Wallet Support</h3>
-              <p className="text-white/60 leading-relaxed relative z-10">
-                Connect with both XRPL and EVM wallets. Bridge seamlessly between ecosystems with FAssets technology.
-              </p>
-            </div>
-
-            {/* Feature Card 6 */}
-            <div className="glass-card spotlight-card rounded-2xl p-8 hover:scale-[1.02] transition-all" onMouseMove={handleSpotlightMove} data-testid="card-feature-governance">
-              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center mb-6 relative z-10">
-                <Eye className="h-6 w-6 text-primary" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3 relative z-10">Transparent Governance</h3>
-              <p className="text-white/60 leading-relaxed relative z-10">
-                Community-driven protocol upgrades. SHIELD token holders vote on key protocol decisions.
-              </p>
-            </div>
           </div>
         </div>
       </section>
