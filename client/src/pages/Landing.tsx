@@ -227,10 +227,9 @@ export default function Landing() {
         </div>
       )}
 
-      {/* Pulsing Radial Dot Background - Full Page Sonar Effect */}
+      {/* Gentle Water Ripple Background */}
       <div className="pulsing-dots">
         <div className="pulsing-dots-grid" />
-        <div className="pulsing-dots-wave" />
         <div className="pulsing-dots-wave" />
         <div className="pulsing-dots-wave" />
         <div className="pulsing-dots-wave" />

@@ -732,7 +732,7 @@ w3m-all-wallets-widget {
   z-index: 2;
 }
 
-/* Pulsing Radial Dot Grid Background - Full Page Sonar Effect */
+/* Gentle Water Ripple Background - Pebble in Pool Effect */
 .pulsing-dots {
   position: fixed;
   inset: 0;
@@ -741,58 +741,60 @@ w3m-all-wallets-widget {
   z-index: 1;
 }
 
-/* Base dot grid layer covering full viewport */
+/* Static dot grid layer covering full viewport */
 .pulsing-dots-grid {
   position: absolute;
   top: 50%;
-  right: -20%;
-  width: 150vmax;
-  height: 150vmax;
+  right: -10%;
+  width: 120vmax;
+  height: 120vmax;
   transform: translate(0, -50%);
-  background-image: radial-gradient(circle, #38BDF8 1.2px, transparent 1.2px);
-  background-size: 20px 20px;
-  mask-image: radial-gradient(circle at center, black 0%, black 30%, transparent 70%);
-  -webkit-mask-image: radial-gradient(circle at center, black 0%, black 30%, transparent 70%);
-  opacity: 0.25;
+  background-image: radial-gradient(circle, #38BDF8 1px, transparent 1px);
+  background-size: 24px 24px;
+  mask-image: radial-gradient(circle at center, black 0%, black 20%, transparent 60%);
+  -webkit-mask-image: radial-gradient(circle at center, black 0%, black 20%, transparent 60%);
+  opacity: 0.18;
 }
 
-/* Sonar wave rings emanating from center */
+/* Gentle water ripple rings - calm and subtle */
 .pulsing-dots-wave {
   position: absolute;
   top: 50%;
-  right: 15%;
-  width: 50px;
-  height: 50px;
-  transform: translate(50%, -50%);
+  right: 20%;
+  width: 100px;
+  height: 100px;
+  transform: translate(50%, -50%) scale(0.3);
   border-radius: 50%;
-  border: 1px solid #38BDF8;
+  border: 1px solid rgba(56, 189, 248, 0.15);
   opacity: 0;
-  animation: sonar-dots 4s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation: water-ripple 12s ease-out infinite;
 }
 
 .pulsing-dots-wave:nth-child(2) {
-  animation-delay: 1s;
+  animation-delay: 4s;
 }
 
 .pulsing-dots-wave:nth-child(3) {
-  animation-delay: 2s;
+  animation-delay: 8s;
 }
 
-.pulsing-dots-wave:nth-child(4) {
-  animation-delay: 3s;
-}
-
-@keyframes sonar-dots {
+@keyframes water-ripple {
   0% {
-    width: 50px;
-    height: 50px;
-    opacity: 0.6;
+    transform: translate(50%, -50%) scale(0.3);
+    opacity: 0;
     border-width: 2px;
+    border-color: rgba(56, 189, 248, 0.2);
+  }
+  5% {
+    opacity: 0.15;
+  }
+  50% {
+    opacity: 0.08;
   }
   100% {
-    width: 180vmax;
-    height: 180vmax;
+    transform: translate(50%, -50%) scale(12);
     opacity: 0;
     border-width: 1px;
+    border-color: rgba(56, 189, 248, 0.05);
   }
 }
