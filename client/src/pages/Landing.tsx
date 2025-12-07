@@ -5,8 +5,8 @@ import {
   ArrowRight, 
   Shield,
   Lock, 
-  Zap, 
-  CheckCircle2, 
+  Zap,
+  CheckCircle2,
   Users,
   Droplets,
   Menu,
@@ -242,7 +242,7 @@ export default function Landing() {
       {/* UnicornStudio Animated Background */}
       <div className="fixed top-0 w-full h-screen -z-10" style={{maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)'}}>
         <div className="absolute top-0 w-full h-full -z-10">
-          <div data-us-project="YOUR_UNICORNSTUDIO_PROJECT_ID" className="absolute w-full h-full left-0 top-0 -z-10"></div>
+          <div data-us-project="4ayjq1ymSRJ9Ah3nsX1c" className="absolute w-full h-full left-0 top-0 -z-10"></div>
         </div>
       </div>
 
@@ -700,15 +700,15 @@ export default function Landing() {
               <div className="p-4 bg-black/40">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <div className="text-lg font-bold text-white">{metrics.apy}</div>
+                    <div className="text-lg font-bold text-white">8.2%</div>
                     <div className="text-xs text-white/50">Current APY</div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-white">{metrics.tvl}</div>
+                    <div className="text-lg font-bold text-white">$1.2M</div>
                     <div className="text-xs text-white/50">Total Staked</div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-white">{metrics.stakers}</div>
+                    <div className="text-lg font-bold text-white">847</div>
                     <div className="text-xs text-white/50">Stakers</div>
                   </div>
                 </div>
