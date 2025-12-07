@@ -27,11 +27,13 @@ import flareLogo from "@assets/flr.svg";
 import xrpLogo from "@assets/xrp.148c3b50_1762588566535.png";
 import xamanLogo from "@assets/xaman-wallet-icon.svg";
 import shieldTokenLogo from "@assets/shield_logo_1763760253079.png";
+import flareHorizontalLogo from "@assets/flare-horizontal-white.svg";
+import xrplHorizontalLogo from "@assets/xrpl-horizontal-white.svg";
+import xamanHorizontalLogo from "@assets/xaman-horizontal-white.svg";
 
 export default function Landing() {
   const shieldLogo = useShieldLogo();
   const heroAnimation = useScrollAnimation();
-  const partnersAnimation = useScrollAnimation();
   const featuresAnimation = useScrollAnimation();
   const howItWorksAnimation = useScrollAnimation();
   const securityAnimation = useScrollAnimation();
@@ -292,6 +294,14 @@ export default function Landing() {
               </button>
             </a>
           </div>
+
+          {/* Partner Logos - Inline Below CTAs */}
+          <div className="flex flex-wrap items-center gap-6 mt-10 opacity-70" data-testid="inline-partner-logos">
+            <span className="text-xs text-white/40 font-mono uppercase tracking-wider">Powered by</span>
+            <img src={flareHorizontalLogo} alt="Flare" className="h-5 w-auto" data-testid="img-flare-inline" />
+            <img src={xrplHorizontalLogo} alt="XRPL" className="h-5 w-auto" data-testid="img-xrpl-inline" />
+            <img src={xamanHorizontalLogo} alt="Xaman" className="h-5 w-auto" data-testid="img-xaman-inline" />
+          </div>
         </div>
 
         {/* Right Column: Abstract UI Visualization */}
@@ -386,29 +396,6 @@ export default function Landing() {
           </div>
         </section>
       </main>
-
-      {/* Partner Logos Section */}
-      <section ref={partnersAnimation.ref} className="relative z-10 py-16 border-t border-white/5" data-testid="section-partners">
-        <div className={`max-w-7xl mx-auto px-6 lg:px-12 ${partnersAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
-          <p className="text-center text-xs font-mono tracking-[0.2em] text-white/40 uppercase mb-8" data-testid="text-partners-heading">
-            Built on leading blockchain infrastructure
-          </p>
-          <div className="flex flex-wrap justify-center items-center gap-8 md:gap-16">
-            <div className="group" data-testid="partner-flare">
-              <img src={flareLogo} alt="Flare Network" className="h-8 w-auto monotone-logo" data-testid="img-flare-logo" />
-            </div>
-            <div className="group" data-testid="partner-xrpl">
-              <img src={xrpLogo} alt="XRP Ledger" className="h-8 w-auto monotone-logo" data-testid="img-xrpl-logo" />
-            </div>
-            <div className="group" data-testid="partner-xaman">
-              <img src={xamanLogo} alt="Xaman" className="h-8 w-auto monotone-logo" data-testid="img-xaman-logo" />
-            </div>
-            <div className="group" data-testid="partner-shield">
-              <img src={shieldTokenLogo} alt="Shield Token" className="h-8 w-auto monotone-logo" data-testid="img-shield-logo" />
-            </div>
-          </div>
-        </div>
-      </section>
 
       {/* Features Section - Aura-Style with Terminal UI */}
       <section ref={featuresAnimation.ref} id="features" className="relative z-10 py-32 border-t border-white/5 bg-black/50 backdrop-blur-3xl" data-testid="section-features">
