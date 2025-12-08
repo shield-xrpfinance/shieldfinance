@@ -27,12 +27,12 @@ interface ServiceStatus {
 
 interface SelfHealingStatus {
   initialized: boolean;
-  flareRpc?: { healthy: boolean; endpoints: number };
-  xrplPool?: { healthy: boolean; connections: number };
-  circuitBreakers: Record<string, { state: string; failures: number }>;
-  featureFlags: Record<string, { enabled: boolean }>;
-  reconciliation: { running: boolean };
-  cacheStats: { entries: number; queueSize: number };
+  flareRpc?: { healthy: boolean; endpoints: number } | null;
+  xrplPool?: { healthy: boolean; connections: number } | null;
+  circuitBreakers?: Record<string, { state: string; failures: number }>;
+  featureFlags?: Record<string, { enabled: boolean }>;
+  reconciliation?: { running: boolean };
+  cacheStats?: { entries: number; queueSize: number };
 }
 
 interface SystemHealthResponse {
@@ -337,7 +337,7 @@ export default function Status() {
             </CardContent>
           </Card>
 
-          {data?.selfHealing?.initialized && (
+          {data?.selfHealing?.initialized && (data.selfHealing.flareRpc || data.selfHealing.xrplPool || data.selfHealing.cacheStats || data.selfHealing.reconciliation) && (
             <Card className="glass-card border-white/10" data-testid="card-infrastructure">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
@@ -378,7 +378,7 @@ export default function Status() {
             </Card>
           )}
 
-          {data?.selfHealing?.circuitBreakers && Object.keys(data.selfHealing.circuitBreakers).length > 0 && (
+          {data?.selfHealing?.initialized && data?.selfHealing?.circuitBreakers && Object.keys(data.selfHealing.circuitBreakers).length > 0 && (
             <Card className="glass-card border-white/10" data-testid="card-circuit-breakers">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
@@ -399,7 +399,7 @@ export default function Status() {
             </Card>
           )}
 
-          {data?.selfHealing?.featureFlags && Object.keys(data.selfHealing.featureFlags).length > 0 && (
+          {data?.selfHealing?.initialized && data?.selfHealing?.featureFlags && Object.keys(data.selfHealing.featureFlags).length > 0 && (
             <Card className="glass-card border-white/10" data-testid="card-feature-flags">
               <CardHeader>
                 <CardTitle className="text-white flex items-center gap-2">
