@@ -1199,7 +1199,7 @@ export default function Landing() {
               <li><a href="https://faucet.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-faucet">Testnet Faucet</a></li>
               <li><a href="https://docs.shyield.finance/security" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-security">Security</a></li>
               <li><a href="https://docs.shyield.finance/contracts" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-contracts">Contracts</a></li>
-              <li><a href="https://docs.shyield.finance/tokenomics" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-tokenomics">Tokenomics</a></li>
+              <li><a href="https://docs.shyield.finance/protocol/shield_tokenomics" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-tokenomics">Tokenomics</a></li>
             </ul>
           </div>
 
