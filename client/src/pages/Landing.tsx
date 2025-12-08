@@ -99,36 +99,35 @@ export default function Landing() {
   // Initialize Unicorn Studio animation after component mounts - deferred for performance
   useEffect(() => {
     const initUnicornStudio = () => {
-      if (typeof window !== 'undefined' && (window as any).UnicornStudio) {
-        (window as any).UnicornStudio.init();
-        return true;
+      try {
+        const studio = (window as any).UnicornStudio;
+        if (typeof studio?.init === 'function' && !studio.isInitialized) {
+          studio.init();
+          studio.isInitialized = true;
+          return true;
+        }
+      } catch (e) {
+        // Silently fail - UnicornStudio is non-critical
       }
       return false;
     };
 
     // Defer initialization until browser is idle for better initial load performance
-    // But also retry to ensure script loads properly
     let retryTimer: ReturnType<typeof setTimeout>;
     
     if ('requestIdleCallback' in window) {
       const idleId = (window as any).requestIdleCallback(() => {
         if (!initUnicornStudio()) {
-          // Retry if script hasn't loaded yet
-          retryTimer = setTimeout(initUnicornStudio, 1500);
+          retryTimer = setTimeout(initUnicornStudio, 2000);
         }
-      }, { timeout: 2000 });
+      }, { timeout: 3000 });
       return () => {
         (window as any).cancelIdleCallback(idleId);
         clearTimeout(retryTimer);
       };
     } else {
-      // Fallback: delay initialization for slower devices
-      const timer = setTimeout(initUnicornStudio, 1000);
-      retryTimer = setTimeout(initUnicornStudio, 2500);
-      return () => {
-        clearTimeout(timer);
-        clearTimeout(retryTimer);
-      };
+      const timer = setTimeout(initUnicornStudio, 1500);
+      return () => clearTimeout(timer);
     }
   }, []);
 
