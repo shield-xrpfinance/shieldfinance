@@ -164,10 +164,8 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#030303] text-white overflow-x-hidden selection:bg-primary selection:text-black relative">
-
       {/* Full-width blur backdrop for navigation - only visible when scrolled */}
       <div className={`fixed top-0 left-0 w-full h-20 z-40 backdrop-blur-xl bg-gradient-to-b from-black/50 to-transparent pointer-events-none transition-opacity duration-300 ${isScrolled ? 'opacity-100' : 'opacity-0'}`} />
-
       {/* Floating Pill Navigation - Aura Style */}
       <nav className="fixed left-1/2 -translate-x-1/2 flex w-full lg:w-fit max-w-[90vw] z-50 rounded-full ring-white/10 ring-1 py-1.5 pr-1.5 pl-4 top-6 items-center justify-between transition-all duration-300 hover:border-white/20 hover:shadow-primary/5 bg-gradient-to-br from-white/10 to-white/0 shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)]" data-testid="nav-header">
         {/* Logo Area */}
@@ -201,7 +199,6 @@ export default function Landing() {
           </button>
         </Link>
       </nav>
-
       {/* Mobile Navigation Menu */}
       {mobileMenuOpen && (
         <div className="fixed top-20 left-1/2 -translate-x-1/2 w-[90vw] max-w-md z-50 rounded-2xl glass-card p-4" data-testid="mobile-menu">
@@ -278,7 +275,6 @@ export default function Landing() {
           </nav>
         </div>
       )}
-
       {/* UnicornStudio Animated Background - Aura Structure */}
       <div 
         className="fixed top-0 w-full h-screen -z-10" 
@@ -289,10 +285,8 @@ export default function Landing() {
           <div className="absolute w-full h-full left-0 top-0 -z-10 bg-gradient-to-br from-primary/10 via-transparent to-purple-500/5" />
         </div>
       </div>
-
       {/* Grid Background - Aura Style */}
       <div className="fixed inset-0 grid-bg pointer-events-none z-0" />
-
       {/* Unicorn Studio Background Animation */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <div 
@@ -301,7 +295,6 @@ export default function Landing() {
           style={{ minWidth: '100vw', minHeight: '100vh' }}
         />
       </div>
-
       {/* Hero Section */}
       <main className="container lg:px-12 lg:pt-0 min-h-[1100px] flex flex-col lg:flex-row z-10 mx-auto pt-0 px-6 relative items-center">
         {/* Left Column: Copy */}
@@ -442,7 +435,6 @@ export default function Landing() {
         </div>
 
       </main>
-
       {/* Features Section - Aura-Style with Terminal UI */}
       <section ref={featuresAnimation.ref} id="features" className="group relative z-10 py-32 border-t border-white/5 bg-black/50 backdrop-blur-3xl overflow-hidden" data-testid="section-features">
         {/* Clean Background Line */}
@@ -679,9 +671,8 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* System Capabilities Section */}
-      <section className="relative z-10 py-24 border-t border-white/5" data-testid="section-capabilities">
+      <section className="relative z-10 py-24 border-t border-white/5 bg-[#0000008f]" data-testid="section-capabilities">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           {/* Vertical Beam Header */}
           <div className="flex flex-col items-center mb-16">
@@ -815,7 +806,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Testimonial Section */}
       <section className="group relative z-10 py-24 border-t border-white/5 overflow-hidden" data-testid="section-testimonial">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
@@ -866,7 +856,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Yield Infrastructure Section */}
       <section className="relative z-10 py-24 border-t border-white/5" data-testid="section-yield">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
@@ -956,7 +945,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* CTA Banner */}
       <section className="relative z-10 py-16" data-testid="section-cta-banner">
         <div className="max-w-4xl mx-auto px-6 lg:px-12">
@@ -976,7 +964,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* How It Works Section */}
       <section ref={howItWorksAnimation.ref} id="how-it-works" className="relative z-10 py-24 border-t border-white/5" data-testid="section-how-it-works">
         <div className={`max-w-7xl mx-auto px-6 lg:px-12 ${howItWorksAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
@@ -1025,7 +1012,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Built for the Hybrid Economy Section - Aura Style */}
       <section className="overflow-hidden flex flex-col px-6 md:px-8 lg:px-12 z-10 bg-[#030303]/80 w-full border-white/5 border-t pt-32 pb-32 relative backdrop-blur-xl items-center" data-testid="section-hybrid-economy">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_200px] [mask-image:radial-gradient(ellipse_at_top,black_40%,transparent_100%)] pointer-events-none" />
@@ -1097,7 +1083,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Exchange Infrastructure Section - Aura Style */}
       <section className="lg:px-12 flex flex-col overflow-hidden z-10 bg-[#030303]/50 w-full border-white/5 border-t px-6 py-32 relative backdrop-blur-xl items-center" data-testid="section-exchange">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_200px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)] opacity-70 pointer-events-none" />
@@ -1164,7 +1149,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Security Section */}
       <section ref={securityAnimation.ref} id="security" className="group relative z-10 py-24 border-t border-white/5 overflow-hidden" data-testid="section-security">
         <div className={`max-w-7xl mx-auto px-6 lg:px-12 relative z-10 ${securityAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
@@ -1222,7 +1206,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Final CTA Section */}
       <section ref={ctaAnimation.ref} className="relative z-10 py-24 border-t border-white/5" data-testid="section-cta">
         <div className={`max-w-4xl mx-auto px-6 lg:px-12 text-center ${ctaAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
@@ -1248,7 +1231,6 @@ export default function Landing() {
           </div>
         </div>
       </section>
-
       {/* Footer - Aura Style */}
       <footer className="relative z-10 px-6 md:px-8 lg:px-12 py-20 border-t border-white/5 bg-[#030303]" data-testid="footer">
         <div className="w-full max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-12 lg:gap-8 relative z-10">
