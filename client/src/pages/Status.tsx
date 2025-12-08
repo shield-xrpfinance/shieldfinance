@@ -260,10 +260,8 @@ export default function Status() {
     : 0;
 
   return (
-    <div className="min-h-screen bg-[#030303] grid-bg">
-      <div className="radial-glow fixed inset-0 pointer-events-none" />
-      
-      <div className="max-w-4xl mx-auto px-4 py-8 relative z-10">
+    <div className="min-h-screen bg-[#030303]">
+      <div className="max-w-4xl mx-auto px-4 py-8">
         <div className="mb-8">
           <Link href="/">
             <Button variant="ghost" size="sm" className="text-white/60 hover:text-white mb-4" data-testid="button-back-home">
