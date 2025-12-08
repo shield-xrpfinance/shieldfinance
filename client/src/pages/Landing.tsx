@@ -807,7 +807,7 @@ export default function Landing() {
         </div>
       </section>
       {/* Testimonial Section */}
-      <section className="group relative z-10 py-24 border-t border-white/5 overflow-hidden" data-testid="section-testimonial">
+      <section className="group relative z-10 py-24 border-t border-white/5 overflow-hidden bg-[#0000008f]" data-testid="section-testimonial">
         <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
