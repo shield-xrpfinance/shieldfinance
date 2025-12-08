@@ -1,4 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
+import http from "http";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { storage } from "./storage";
@@ -18,6 +19,34 @@ import { readinessRegistry } from "./services/ReadinessRegistry";
 import { startDiscordBot } from "./discord-bot";
 
 const app = express();
+
+// CRITICAL: Add health endpoints IMMEDIATELY before ANY other setup
+// This ensures deployment health checks pass as fast as possible
+app.get("/health", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+app.get("/healthz", (_req, res) => {
+  res.status(200).json({ status: "ok" });
+});
+
+// Create HTTP server immediately and start listening
+const server = http.createServer(app);
+const port = parseInt(process.env.PORT || '5000', 10);
+
+// Start listening IMMEDIATELY - before any service initialization
+server.listen({ port, host: "0.0.0.0" }, () => {
+  console.log(`\n========================================`);
+  console.log(`🚀 HTTP SERVER LISTENING ON PORT ${port}`);
+  console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`   Time: ${new Date().toISOString()}`);
+  console.log(`   Health check: /health available immediately`);
+  console.log(`========================================\n`);
+  
+  // NOW initialize everything else in the background
+  initializeApp().catch((error) => {
+    console.error("❌ App initialization error:", error);
+  });
+});
 
 // Module-level references to services (assigned when initialized)
 let realBridgeService: BridgeService | null = null;
@@ -806,13 +835,13 @@ async function initializeFlareClientWithRetry(config: {
   throw new Error(`FlareClient initialization failed after ${maxRetries} attempts: ${lastError?.message}`);
 }
 
-(async () => {
+async function initializeApp() {
   // Step 1: Initialize storage (required, fast)
   await storage.initializeVaults();
   readinessRegistry.setReady('storage');
   console.log("✅ Storage initialized");
   
-  // Step 2: Start HTTP server immediately (before service initialization)
+  // Step 2: Setup routes and middleware (server is already listening)
   // Create proxies that will forward to real services once initialized
   const bridgeServiceProxy = new Proxy({} as BridgeService, {
     get(target, prop) {
@@ -893,7 +922,8 @@ async function initializeFlareClientWithRetry(config: {
     }
   });
   
-  const server = await registerRoutes(app, bridgeServiceProxy, flareClientProxy, metricsServiceProxy, alertingServiceProxy, onChainMonitorProxy);
+  // Pass existing server to registerRoutes (server is already listening)
+  await registerRoutes(app, bridgeServiceProxy, flareClientProxy, metricsServiceProxy, alertingServiceProxy, onChainMonitorProxy, server);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
@@ -903,25 +933,14 @@ async function initializeFlareClientWithRetry(config: {
     throw err;
   });
 
-  // Setup Vite before starting server
+  // Setup Vite/static serving (server is already listening)
   if (app.get("env") === "development") {
     await setupVite(app, server);
   } else {
     serveStatic(app);
   }
-
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-  }, () => {
-    // Use console.log directly for maximum visibility in deployment logs
-    console.log(`\n========================================`);
-    console.log(`🚀 HTTP SERVER LISTENING ON PORT ${port}`);
-    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-    console.log(`   Time: ${new Date().toISOString()}`);
-    console.log(`========================================\n`);
-  });
+  
+  console.log("✅ Routes and middleware registered");
 
   // Graceful shutdown handling for Cloud Run and containerized deployments
   // Cloud Run sends SIGTERM before terminating instances
@@ -1013,4 +1032,4 @@ async function initializeFlareClientWithRetry(config: {
     console.error("❌ Service initialization error:", error);
     // Don't crash server, services will be marked as failed in readiness registry
   });
-})();
+}

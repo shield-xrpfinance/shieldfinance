@@ -209,7 +209,8 @@ export async function registerRoutes(
   flareClient?: FlareClient,
   metricsService?: MetricsService,
   alertingService?: AlertingService,
-  onChainMonitorService?: OnChainMonitorService
+  onChainMonitorService?: OnChainMonitorService,
+  existingServer?: Server
 ): Promise<Server> {
   // Initialize VaultDataService for live on-chain data
   let vaultDataService: VaultDataService | undefined;
@@ -8725,6 +8726,7 @@ export async function registerRoutes(
   // Then run every 24 hours
   setInterval(runStakingDailyRewards, STAKING_REWARDS_INTERVAL);
 
-  const httpServer = createServer(app);
+  // Use existing server if provided (for fast startup), otherwise create one
+  const httpServer = existingServer || createServer(app);
   return httpServer;
 }
