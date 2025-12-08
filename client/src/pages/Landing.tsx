@@ -1296,7 +1296,7 @@ export default function Landing() {
         </div>
 
         <div className="w-full max-w-7xl mx-auto mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
-          <span className="text-white/20 text-xs font-mono tracking-wide">© 2024 Shield Finance. All rights reserved.</span>
+          <span className="text-white/20 text-xs font-mono tracking-wide">© 2025 Shield Finance. All rights reserved.</span>
           <div className="flex items-center gap-8">
             <span className="text-white/20 text-xs font-mono border-l border-white/10 pl-8">Built on Flare Network</span>
           </div>
