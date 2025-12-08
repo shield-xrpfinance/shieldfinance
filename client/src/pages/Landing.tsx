@@ -32,6 +32,7 @@ import xamanHorizontalLogo from "@assets/xaman-horizontal-white.svg";
 import bifrostHorizontalLogo from "@assets/bifrost-horizontal-white.svg";
 import layerzeroHorizontalLogo from "@assets/layerzero-horizontal-white.svg";
 import founderPhoto from "@assets/Founder_Profile_pic_1765161729767.jpg";
+import ramiAvatar from "@assets/Rami_Avatar_Shield_Finance_Profile_Pic_1765163589082.jpg";
 export default function Landing() {
   const shieldLogo = useShieldLogo();
   const heroAnimation = useScrollAnimation();
@@ -783,28 +784,30 @@ export default function Landing() {
             </div>
             <div className="glass-card rounded-2xl p-8" data-testid="card-testimonial">
               <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
-                  <span className="text-2xl font-bold text-white">XF</span>
-                </div>
+                <img 
+                  src={ramiAvatar} 
+                  alt="Rami - Shield Finance Community" 
+                  className="w-16 h-16 rounded-full object-cover border-2 border-primary/30"
+                />
                 <div>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">LIVE</span>
-                    <span className="text-white font-semibold">XRPFi Enthusiast</span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">TESTNET</span>
+                    <span className="text-white font-semibold">Rami</span>
                   </div>
-                  <p className="text-sm text-white/50">Early Adopter · Flare Network</p>
+                  <p className="text-sm text-white/50">Community Member · Coston2 Tester</p>
                 </div>
               </div>
               <blockquote className="text-xl text-white/80 italic leading-relaxed mb-6">
-                "Finally, a way to earn yield on my XRP without giving up liquidity. The gasless deposits and shXRP tokens make DeFi accessible."
+                "Finally, a way to earn yield on my XRP without giving up liquidity. The gasless deposits and shXRP tokens make DeFi accessible to everyone."
               </blockquote>
-              <div className="flex items-center gap-8 pt-4 border-t border-white/10">
-                <div>
-                  <div className="text-2xl font-bold text-primary">$124K</div>
-                  <div className="text-xs text-white/50">Portfolio Value</div>
+              <div className="flex items-center gap-6 pt-4 border-t border-white/10">
+                <div className="flex items-center gap-2">
+                  <Zap className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-white/60">Zero Gas Fees</span>
                 </div>
-                <div>
-                  <div className="text-2xl font-bold text-green-400">+12.4%</div>
-                  <div className="text-xs text-white/50">30d Returns</div>
+                <div className="flex items-center gap-2">
+                  <Shield className="w-4 h-4 text-primary" />
+                  <span className="text-sm text-white/60">Audited Contracts</span>
                 </div>
               </div>
             </div>
