@@ -1150,7 +1150,7 @@ export default function Landing() {
         </div>
       </section>
       {/* Security Section */}
-      <section ref={securityAnimation.ref} id="security" className="group relative z-10 py-24 border-t border-white/5 overflow-hidden" data-testid="section-security">
+      <section ref={securityAnimation.ref} id="security" className="group relative z-10 py-24 border-t border-white/5 overflow-hidden bg-[#0000008f]" data-testid="section-security">
         <div className={`max-w-7xl mx-auto px-6 lg:px-12 relative z-10 ${securityAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
