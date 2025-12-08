@@ -1324,14 +1324,14 @@ export default function Landing() {
         <div className="w-full max-w-7xl mx-auto mt-20 pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 relative z-10">
           <span className="text-white/20 text-xs font-mono tracking-wide">© 2025 Shield Finance. All rights reserved.</span>
           <div className="flex items-center gap-8">
-            <span className="text-white/20 text-xs font-mono border-l border-white/10 pl-8 flex items-center gap-2">
+            <a href="https://flare.network/" target="_blank" rel="noopener noreferrer" className="text-white/20 text-xs font-mono border-l border-white/10 pl-8 flex items-center gap-2 hover:text-white/40 transition-colors" data-testid="link-flare-network">
               Built on
               <svg width="30" height="30" viewBox="0 0 170 169" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M127.015 64.6782C127.047 64.0188 126.521 63.4668 125.86 63.4668H42.3565C3.34594 63.4668 0.244787 97.7478 0.01556 104.629C-0.00642065 105.282 0.517347 105.823 1.17111 105.823H84.7126C123.071 105.823 126.678 71.5996 127.015 64.6789V64.6782Z" fill="currentColor"/>
                 <path d="M42.3567 0C5.7828 0 0.742956 34.0712 0.0917008 41.112C0.028899 41.7902 0.562087 42.3755 1.24286 42.3755H127.088C164.499 42.3755 168.86 8.26974 169.361 1.29435C169.409 0.625506 168.879 0.0571497 168.208 0.0565216L42.3567 0Z" fill="currentColor"/>
                 <path d="M21.1975 169C32.9046 169 42.395 159.51 42.395 147.803C42.395 136.096 32.9046 126.605 21.1975 126.605C9.49044 126.605 0 136.096 0 147.803C0 159.51 9.49044 169 21.1975 169Z" fill="currentColor"/>
               </svg>
-            </span>
+            </a>
           </div>
         </div>
       </footer>
