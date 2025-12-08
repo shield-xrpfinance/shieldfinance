@@ -1613,16 +1613,14 @@ export default function Landing() {
                   <FileText className="h-4 w-4" />
                   <span className="text-xs">OpenZeppelin Security Standards</span>
                 </div>
-                <a 
-                  href="https://github.com/shield-xrpfinance/shieldfinance/tree/main/contracts" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
+                <Link 
+                  href="/app/security"
                   className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
-                  data-testid="link-view-contracts"
+                  data-testid="link-view-security"
                 >
-                  <span>View Contracts</span>
-                  <ExternalLink className="h-3 w-3" />
-                </a>
+                  <span>View Security</span>
+                  <ArrowRight className="h-3 w-3" />
+                </Link>
               </div>
             </div>
           </div>
