@@ -109,19 +109,6 @@ export default function Landing() {
       document.head.appendChild(meta);
     }
 
-    // Initialize UnicornStudio for animated background
-    if (!(window as any).UnicornStudio) {
-      (window as any).UnicornStudio = { isInitialized: false };
-      const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/gh/hiunicornstudio/unicornstudio.js@v1.5.2/dist/unicornStudio.umd.js';
-      script.onload = () => {
-        if (!(window as any).UnicornStudio.isInitialized) {
-          (window as any).UnicornStudio.init();
-          (window as any).UnicornStudio.isInitialized = true;
-        }
-      };
-      (document.head || document.body).appendChild(script);
-    }
   }, []);
 
   return (
@@ -245,10 +232,7 @@ export default function Landing() {
         style={{maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)'}}
       >
         <div className="absolute top-0 w-full h-full -z-10">
-          <div 
-            data-us-project="4ayjq1ymSRJ9Ah3nsX1c" 
-            className="absolute w-full h-full left-0 top-0 -z-10"
-          />
+          <div className="absolute w-full h-full left-0 top-0 -z-10 bg-gradient-to-br from-primary/10 via-transparent to-purple-500/5" />
         </div>
       </div>
 
