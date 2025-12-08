@@ -138,89 +138,87 @@ export default function Landing() {
     return `$${num.toFixed(0)}`;
   };
 
-  // Animated counter hook for stats
-  const useAnimatedCounter = (targetValue: number, duration: number = 2000, startOnVisible: boolean = true) => {
-    const [count, setCount] = useState(0);
-    const [hasStarted, setHasStarted] = useState(false);
-    const counterRef = useRef<HTMLSpanElement>(null);
-    
-    useEffect(() => {
-      if (!startOnVisible || hasStarted) return;
-      
-      const observer = new IntersectionObserver(
-        (entries) => {
-          if (entries[0].isIntersecting && !hasStarted) {
-            setHasStarted(true);
-          }
-        },
-        { threshold: 0.3 }
-      );
-      
-      if (counterRef.current) {
-        observer.observe(counterRef.current);
-      }
-      
-      return () => observer.disconnect();
-    }, [hasStarted, startOnVisible]);
-    
-    useEffect(() => {
-      if (!hasStarted || targetValue === 0) return;
-      
-      const startTime = Date.now();
-      const startValue = 0;
-      
-      const animate = () => {
-        const elapsed = Date.now() - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        
-        // Ease out cubic for smooth deceleration
-        const easeOut = 1 - Math.pow(1 - progress, 3);
-        const currentValue = startValue + (targetValue - startValue) * easeOut;
-        
-        setCount(currentValue);
-        
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        } else {
-          setCount(targetValue);
-        }
-      };
-      
-      requestAnimationFrame(animate);
-    }, [hasStarted, targetValue, duration]);
-    
-    return { count, counterRef };
-  };
-
   // Dynamic demo stats that fluctuate slightly every 3 minutes
   const [demoStats, setDemoStats] = useState({
-    tvl: 2500000 + Math.random() * 100000, // ~$2.5M with small variance
-    apy: 6.2 + Math.random() * 0.3,        // ~6.2-6.5% APY
-    stakers: 1234 + Math.floor(Math.random() * 20), // ~1,234 stakers
+    tvl: 2500000,
+    apy: 6.2,
+    stakers: 1234,
   });
 
+  // Animated display values
+  const [displayStats, setDisplayStats] = useState({
+    tvl: 0,
+    apy: 0,
+    stakers: 0,
+  });
+
+  // Track if animation has started
+  const [animationStarted, setAnimationStarted] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
+
+  // Observe when stats section becomes visible
   useEffect(() => {
-    // Update demo stats every 3 minutes with slight variations
+    if (animationStarted) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setAnimationStarted(true);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    
+    if (statsRef.current) {
+      observer.observe(statsRef.current);
+    }
+    
+    return () => observer.disconnect();
+  }, [animationStarted]);
+
+  // Animate counters when visible
+  useEffect(() => {
+    if (!animationStarted) return;
+    
+    const duration = 2000;
+    const startTime = Date.now();
+    const targets = demoStats;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease out cubic for smooth deceleration
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      
+      setDisplayStats({
+        tvl: targets.tvl * easeOut,
+        apy: targets.apy * easeOut,
+        stakers: targets.stakers * easeOut,
+      });
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setDisplayStats(targets);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  }, [animationStarted, demoStats]);
+
+  // Update demo stats every 3 minutes with slight variations
+  useEffect(() => {
     const interval = setInterval(() => {
       setDemoStats(prev => ({
-        tvl: prev.tvl + (Math.random() - 0.3) * 50000, // Slight upward trend
-        apy: 6.0 + Math.random() * 0.5, // Between 6.0-6.5%
-        stakers: Math.max(1200, prev.stakers + Math.floor(Math.random() * 5) - 1), // Slowly growing
+        tvl: prev.tvl + (Math.random() - 0.3) * 50000,
+        apy: 6.0 + Math.random() * 0.5,
+        stakers: Math.max(1200, prev.stakers + Math.floor(Math.random() * 5) - 1),
       }));
-    }, 180000); // 3 minutes
+    }, 180000);
 
     return () => clearInterval(interval);
   }, []);
-
-  // Use demo stats for display
-  const tvlValue = demoStats.tvl;
-  const apyValue = demoStats.apy;
-  const stakerCount = demoStats.stakers;
-
-  // Animated counters
-  const { count: animatedTvl, counterRef: tvlRef } = useAnimatedCounter(tvlValue, 2000);
-  const { count: animatedApy, counterRef: apyRef } = useAnimatedCounter(apyValue, 1500);
-  const { count: animatedStakers, counterRef: stakersRef } = useAnimatedCounter(stakerCount, 1800);
 
   // Format animated TVL
   const formatAnimatedTvl = useCallback((value: number): string => {
@@ -584,7 +582,7 @@ export default function Landing() {
       {/* Stats Bar Section */}
       <section className="relative z-10 py-8 bg-[#030303]/90 border-t border-b border-white/5" data-testid="section-stats-bar">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
-          <div className="glass-card rounded-2xl p-6 lg:p-8">
+          <div ref={statsRef} className="glass-card rounded-2xl p-6 lg:p-8">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-12">
               {/* TVL */}
               <div className="flex flex-col items-center text-center md:border-r md:border-white/10">
@@ -592,13 +590,9 @@ export default function Landing() {
                   <CircleDollarSign className="h-5 w-5 text-primary" />
                   <span className="text-xs font-mono text-white/40 uppercase tracking-wider">Total Value Locked</span>
                 </div>
-                {isLoadingStats ? (
-                  <Skeleton className="h-10 w-32 bg-white/10" />
-                ) : (
-                  <span ref={tvlRef} className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-tvl">
-                    {formatAnimatedTvl(animatedTvl)}
-                  </span>
-                )}
+                <span className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-tvl">
+                  {formatAnimatedTvl(displayStats.tvl)}
+                </span>
               </div>
               
               {/* XRP Vault APY */}
@@ -607,13 +601,9 @@ export default function Landing() {
                   <TrendingUp className="h-5 w-5 text-primary" />
                   <span className="text-xs font-mono text-white/40 uppercase tracking-wider">XRP Vault APY</span>
                 </div>
-                {isLoadingStats ? (
-                  <Skeleton className="h-10 w-24 bg-white/10" />
-                ) : (
-                  <span ref={apyRef} className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-apy">
-                    {animatedApy.toFixed(1)}%
-                  </span>
-                )}
+                <span className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-apy">
+                  {displayStats.apy.toFixed(1)}%
+                </span>
               </div>
               
               {/* Total Stakers */}
@@ -622,13 +612,9 @@ export default function Landing() {
                   <Users className="h-5 w-5 text-primary" />
                   <span className="text-xs font-mono text-white/40 uppercase tracking-wider">Total Stakers</span>
                 </div>
-                {isLoadingStats ? (
-                  <Skeleton className="h-10 w-28 bg-white/10" />
-                ) : (
-                  <span ref={stakersRef} className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-stakers">
-                    {Math.round(animatedStakers).toLocaleString()}
-                  </span>
-                )}
+                <span className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-stakers">
+                  {Math.round(displayStats.stakers).toLocaleString()}
+                </span>
               </div>
             </div>
           </div>
