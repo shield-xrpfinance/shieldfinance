@@ -618,6 +618,51 @@ w3m-all-wallets-widget {
   animation: pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
+/* Gauge Needle Sweep Animation - oscillates between base and boosted APY */
+@keyframes needle-sweep {
+  0%, 100% {
+    transform: rotate(-90deg);
+  }
+  50% {
+    transform: rotate(45deg);
+  }
+}
+
+.animate-needle-sweep {
+  animation: needle-sweep 3s ease-in-out infinite;
+  transform-origin: center center;
+}
+
+/* Gauge Glow Pulse */
+@keyframes gauge-glow {
+  0%, 100% {
+    filter: drop-shadow(0 0 4px rgba(56, 189, 248, 0.4));
+  }
+  50% {
+    filter: drop-shadow(0 0 12px rgba(56, 189, 248, 0.8));
+  }
+}
+
+.animate-gauge-glow {
+  animation: gauge-glow 3s ease-in-out infinite;
+}
+
+/* Float Up Animation for stacking tokens */
+@keyframes float-up {
+  0%, 100% {
+    transform: translateY(0);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translateY(-8px);
+    opacity: 1;
+  }
+}
+
+.animate-float-up {
+  animation: float-up 2s ease-in-out infinite;
+}
+
 /* Performance-Optimized Ping Animation (lighter than animate-ping) */
 @keyframes ping-light {
   0% {

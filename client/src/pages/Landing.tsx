@@ -753,77 +753,92 @@ export default function Landing() {
                       <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.3" />
                       <stop offset="100%" stopColor="#38BDF8" stopOpacity="1" />
                     </linearGradient>
+                    <filter id="gauge-glow-filter" x="-50%" y="-50%" width="200%" height="200%">
+                      <feGaussianBlur stdDeviation="3" result="blur" />
+                      <feMerge>
+                        <feMergeNode in="blur" />
+                        <feMergeNode in="SourceGraphic" />
+                      </feMerge>
+                    </filter>
                   </defs>
                   
-                  {/* Gauge Container */}
+                  {/* Gauge Container - centered */}
                   <g transform="translate(150, 130)">
-                    {/* Background Arc */}
+                    {/* Background Arc - full semicircle */}
                     <path 
                       d="M -80 0 A 80 80 0 0 1 80 0" 
                       fill="none" 
                       stroke="white" 
                       strokeOpacity="0.1" 
-                      strokeWidth="12" 
+                      strokeWidth="14" 
                       strokeLinecap="round"
                     />
                     
-                    {/* Base APY Arc (5%) */}
-                    <path 
-                      d="M -80 0 A 80 80 0 0 1 -40 -69" 
-                      fill="none" 
-                      stroke="#38BDF8" 
-                      strokeOpacity="0.4" 
-                      strokeWidth="12" 
-                      strokeLinecap="round"
-                    />
-                    
-                    {/* Boosted APY Arc (animated) */}
-                    <path 
-                      d="M -40 -69 A 80 80 0 0 1 80 0" 
-                      fill="none" 
-                      stroke="url(#gauge-gradient)" 
-                      strokeWidth="12" 
-                      strokeLinecap="round"
-                      className="animate-pulse"
-                      style={{animationDuration: '2s'}}
-                    />
-                    
-                    {/* Gauge Needle */}
-                    <g className="animate-spin-slow" style={{animationDuration: '4s', transformOrigin: 'center'}}>
-                      <line x1="0" y1="0" x2="55" y2="-55" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" />
-                      <circle r="8" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="2" />
-                      <circle r="3" fill="#38BDF8" />
+                    {/* Tick marks around the gauge */}
+                    <g opacity="0.4">
+                      <line x1="-80" y1="0" x2="-70" y2="0" stroke="white" strokeWidth="2" />
+                      <line x1="-69" y1="-40" x2="-61" y2="-35" stroke="white" strokeWidth="2" />
+                      <line x1="-40" y1="-69" x2="-35" y2="-61" stroke="white" strokeWidth="2" />
+                      <line x1="0" y1="-80" x2="0" y2="-70" stroke="white" strokeWidth="2" />
+                      <line x1="40" y1="-69" x2="35" y2="-61" stroke="white" strokeWidth="2" />
+                      <line x1="69" y1="-40" x2="61" y2="-35" stroke="white" strokeWidth="2" />
+                      <line x1="80" y1="0" x2="70" y2="0" stroke="white" strokeWidth="2" />
                     </g>
                     
+                    {/* Filled APY Arc with glow */}
+                    <path 
+                      d="M -80 0 A 80 80 0 0 1 80 0" 
+                      fill="none" 
+                      stroke="url(#gauge-gradient)" 
+                      strokeWidth="14" 
+                      strokeLinecap="round"
+                      filter="url(#gauge-glow-filter)"
+                      className="animate-gauge-glow"
+                    />
+                    
+                    {/* Gauge Needle - sweeps between base and boosted APY */}
+                    <g className="animate-needle-sweep">
+                      <line x1="0" y1="0" x2="0" y2="-60" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
+                      <polygon points="-4,0 4,0 0,-55" fill="#fff" />
+                    </g>
+                    
+                    {/* Center hub */}
+                    <circle r="12" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="2" />
+                    <circle r="5" fill="#38BDF8" />
+                    
                     {/* APY Labels */}
-                    <text x="-85" y="20" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.5">5%</text>
-                    <text x="85" y="20" textAnchor="middle" fill="#38BDF8" fontSize="9" fontFamily="monospace" fontWeight="bold">10%</text>
+                    <text x="-92" y="8" textAnchor="middle" fill="#fff" fontSize="10" fontFamily="monospace" opacity="0.5">1x</text>
+                    <text x="0" y="-92" textAnchor="middle" fill="#fff" fontSize="10" fontFamily="monospace" opacity="0.7">1.5x</text>
+                    <text x="92" y="8" textAnchor="middle" fill="#38BDF8" fontSize="10" fontFamily="monospace" fontWeight="bold">2x</text>
                     
                     {/* Center Display */}
-                    <text x="0" y="5" textAnchor="middle" fill="#38BDF8" fontSize="24" fontFamily="monospace" fontWeight="bold">2x</text>
-                    <text x="0" y="20" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.6">BOOST</text>
+                    <text x="0" y="50" textAnchor="middle" fill="#38BDF8" fontSize="28" fontFamily="monospace" fontWeight="bold">BOOST</text>
+                    <text x="0" y="68" textAnchor="middle" fill="#fff" fontSize="10" fontFamily="monospace" opacity="0.6">Stake SHIELD for higher APY</text>
                   </g>
                   
-                  {/* SHIELD Token Stack Animation */}
-                  <g transform="translate(50, 160)">
-                    <rect x="-15" y="-8" width="30" height="16" rx="4" fill="#0A0A0A" stroke="#38BDF8" strokeOpacity="0.5" strokeWidth="1" />
-                    <text x="0" y="4" textAnchor="middle" fill="#38BDF8" fontSize="6" fontFamily="monospace">SHIELD</text>
+                  {/* SHIELD Token Stack Animation - left side */}
+                  <g transform="translate(45, 180)">
+                    <g className="animate-float-up" style={{animationDelay: '0s'}}>
+                      <rect x="-20" y="-10" width="40" height="20" rx="6" fill="#0A0A0A" stroke="#38BDF8" strokeOpacity="0.4" strokeWidth="1" />
+                      <text x="0" y="5" textAnchor="middle" fill="#38BDF8" fontSize="8" fontFamily="monospace" opacity="0.6">SHIELD</text>
+                    </g>
                   </g>
-                  <g transform="translate(50, 145)" className="animate-pulse" style={{animationDuration: '1.5s'}}>
-                    <rect x="-15" y="-8" width="30" height="16" rx="4" fill="#0A0A0A" stroke="#38BDF8" strokeOpacity="0.7" strokeWidth="1" />
-                    <text x="0" y="4" textAnchor="middle" fill="#38BDF8" fontSize="6" fontFamily="monospace">SHIELD</text>
+                  <g transform="translate(45, 158)">
+                    <g className="animate-float-up" style={{animationDelay: '0.3s'}}>
+                      <rect x="-20" y="-10" width="40" height="20" rx="6" fill="#0A0A0A" stroke="#38BDF8" strokeOpacity="0.6" strokeWidth="1" />
+                      <text x="0" y="5" textAnchor="middle" fill="#38BDF8" fontSize="8" fontFamily="monospace" opacity="0.8">SHIELD</text>
+                    </g>
                   </g>
-                  <g transform="translate(50, 130)" className="animate-pulse" style={{animationDuration: '2s'}}>
-                    <rect x="-15" y="-8" width="30" height="16" rx="4" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="1" />
-                    <text x="0" y="4" textAnchor="middle" fill="#38BDF8" fontSize="6" fontFamily="monospace">SHIELD</text>
+                  <g transform="translate(45, 136)">
+                    <g className="animate-float-up" style={{animationDelay: '0.6s'}}>
+                      <rect x="-20" y="-10" width="40" height="20" rx="6" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="1.5" />
+                      <text x="0" y="5" textAnchor="middle" fill="#38BDF8" fontSize="8" fontFamily="monospace" fontWeight="bold">SHIELD</text>
+                    </g>
                   </g>
                   
-                  {/* Staking Arrow */}
-                  <path d="M 50 115 L 50 95" fill="none" stroke="#38BDF8" strokeWidth="1" strokeOpacity="0.5" markerEnd="url(#arrowhead)" />
-                  <text x="50" y="88" textAnchor="middle" fill="#38BDF8" fontSize="7" fontFamily="monospace" opacity="0.7">STAKE</text>
-                  
-                  {/* Connecting Beam to Gauge */}
-                  <path d="M 65 140 Q 100 110, 100 90" fill="none" stroke="#38BDF8" strokeWidth="1" strokeOpacity="0.3" className="beam-line animate-beam" />
+                  {/* Arrow pointing from stack to gauge */}
+                  <path d="M 70 150 C 90 130, 100 110, 110 100" fill="none" stroke="#38BDF8" strokeWidth="1.5" strokeOpacity="0.5" strokeDasharray="4 4" />
+                  <polygon points="112,95 105,100 110,105" fill="#38BDF8" opacity="0.5" />
                 </svg>
               </div>
             </div>
