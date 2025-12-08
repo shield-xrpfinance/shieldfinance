@@ -476,14 +476,14 @@ export default function Brand() {
               </div>
               <div className="glass-card rounded-xl overflow-hidden" data-testid="card-asset-favicon">
                 <div className="h-32 bg-[#030303] flex items-center justify-center border-b border-white/10">
-                  <img src="/favicon.png" alt="Favicon" className="h-12 w-12 object-contain" />
+                  <img src="/shield-logo.png" alt="Favicon" className="h-12 w-12 object-contain" />
                 </div>
                 <div className="p-4">
                   <p className="text-sm font-medium text-white mb-1">Favicon</p>
                   <p className="text-xs text-white/50 mb-3">Browser icon</p>
                   <a 
-                    href="/favicon.png" 
-                    download 
+                    href="/shield-logo.png" 
+                    download="shield-favicon.png"
                     className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium transition-colors"
                     data-testid="button-download-favicon"
                   >
