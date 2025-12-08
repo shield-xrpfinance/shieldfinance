@@ -904,7 +904,12 @@ async function initializeFlareClientWithRetry(config: {
     host: "0.0.0.0",
     reusePort: true,
   }, () => {
-    log(`✅ HTTP server listening on port ${port}`);
+    // Use console.log directly for maximum visibility in deployment logs
+    console.log(`\n========================================`);
+    console.log(`🚀 HTTP SERVER LISTENING ON PORT ${port}`);
+    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`   Time: ${new Date().toISOString()}`);
+    console.log(`========================================\n`);
   });
   
   // Start Discord bot in the same process as the Express server
