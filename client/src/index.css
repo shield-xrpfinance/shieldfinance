@@ -701,10 +701,6 @@ w3m-all-wallets-widget {
   animation: ping-light 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
 }
 
-/* GPU hints for stroke-based animations */
-.animate-beam {
-  will-change: stroke-dashoffset;
-}
 
 /* GPU layer isolation for fixed backgrounds */
 .gpu-layer {
