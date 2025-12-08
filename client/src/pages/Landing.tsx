@@ -857,7 +857,7 @@ export default function Landing() {
         </div>
       </section>
       {/* Yield Infrastructure Section */}
-      <section className="relative z-10 py-24 border-t border-white/5" data-testid="section-yield">
+      <section className="relative z-10 py-24 border-t border-white/5 bg-[#0000008f]" data-testid="section-yield">
         <div className="max-w-7xl mx-auto px-6 lg:px-12">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             <div>
