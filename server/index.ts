@@ -33,6 +33,17 @@ app.get("/healthz", (_req, res) => {
 const server = http.createServer(app);
 const port = parseInt(process.env.PORT || '5000', 10);
 
+// Handle port already in use error gracefully
+server.on('error', (error: NodeJS.ErrnoException) => {
+  if (error.code === 'EADDRINUSE') {
+    console.error(`\n❌ Port ${port} is already in use.`);
+    console.error(`   This may happen in Autoscale deployment with multiple instances.`);
+    console.error(`   Ensure only one [[ports]] entry exists in .replit configuration.`);
+    process.exit(1);
+  }
+  throw error;
+});
+
 // Start listening IMMEDIATELY - before any service initialization
 server.listen({ port, host: "0.0.0.0" }, () => {
   console.log(`\n========================================`);
@@ -40,6 +51,7 @@ server.listen({ port, host: "0.0.0.0" }, () => {
   console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`   Time: ${new Date().toISOString()}`);
   console.log(`   Health check: /health available immediately`);
+  console.log(`   Instance ID: ${process.env.REPL_ID || 'local'}`);
   console.log(`========================================\n`);
   
   // NOW initialize everything else in the background
