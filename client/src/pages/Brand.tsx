@@ -433,12 +433,93 @@ export default function Brand() {
             Background textures and visual elements that define the Shield Finance aesthetic. Our imagery emphasizes security, technology, and innovation.
           </p>
 
+          {/* Downloadable Assets */}
+          <div className="mb-12">
+            <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-primary"></span>
+              Downloadable Assets
+            </h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="glass-card rounded-xl overflow-hidden" data-testid="card-asset-logo">
+                <div className="h-32 bg-[#030303] flex items-center justify-center border-b border-white/10">
+                  <img src="/shield-logo.png" alt="Shield Logo" className="h-16 w-16 object-contain" />
+                </div>
+                <div className="p-4">
+                  <p className="text-sm font-medium text-white mb-1">Shield Logo</p>
+                  <p className="text-xs text-white/50 mb-3">Primary symbol mark</p>
+                  <a 
+                    href="/shield-logo.png" 
+                    download 
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium transition-colors"
+                    data-testid="button-download-shield-logo"
+                  >
+                    <Download className="h-3 w-3" /> PNG
+                  </a>
+                </div>
+              </div>
+              <div className="glass-card rounded-xl overflow-hidden" data-testid="card-asset-logo-text">
+                <div className="h-32 bg-[#030303] flex items-center justify-center border-b border-white/10">
+                  <img src="/logo.png" alt="Shield Finance Logo" className="h-12 object-contain" />
+                </div>
+                <div className="p-4">
+                  <p className="text-sm font-medium text-white mb-1">Full Logo</p>
+                  <p className="text-xs text-white/50 mb-3">With wordmark</p>
+                  <a 
+                    href="/logo.png" 
+                    download 
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium transition-colors"
+                    data-testid="button-download-full-logo"
+                  >
+                    <Download className="h-3 w-3" /> PNG
+                  </a>
+                </div>
+              </div>
+              <div className="glass-card rounded-xl overflow-hidden" data-testid="card-asset-favicon">
+                <div className="h-32 bg-[#030303] flex items-center justify-center border-b border-white/10">
+                  <img src="/favicon.ico" alt="Favicon" className="h-12 w-12 object-contain" />
+                </div>
+                <div className="p-4">
+                  <p className="text-sm font-medium text-white mb-1">Favicon</p>
+                  <p className="text-xs text-white/50 mb-3">Browser icon</p>
+                  <a 
+                    href="/favicon.ico" 
+                    download 
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium transition-colors"
+                    data-testid="button-download-favicon"
+                  >
+                    <Download className="h-3 w-3" /> ICO
+                  </a>
+                </div>
+              </div>
+              <div className="glass-card rounded-xl overflow-hidden" data-testid="card-asset-social">
+                <div className="h-32 bg-[#030303] flex items-center justify-center border-b border-white/10 overflow-hidden">
+                  <img src="/social-share-image.jpg" alt="Social Share" className="h-full w-full object-cover" />
+                </div>
+                <div className="p-4">
+                  <p className="text-sm font-medium text-white mb-1">OG Image</p>
+                  <p className="text-xs text-white/50 mb-3">1200 × 630px</p>
+                  <a 
+                    href="/social-share-image.jpg" 
+                    download 
+                    className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/10 hover:bg-white/20 rounded-lg text-xs font-medium transition-colors"
+                    data-testid="button-download-og-image"
+                  >
+                    <Download className="h-3 w-3" /> JPG
+                  </a>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Background Textures */}
           <div className="mb-12">
             <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-primary"></span>
               Background Textures
             </h3>
+            <p className="text-white/50 text-sm mb-6">
+              These textures are implemented via CSS. Below are visual examples of the patterns used throughout the Shield Finance interface.
+            </p>
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div className="glass-card rounded-xl overflow-hidden" data-testid="card-texture-grid">
                 <div className="h-48 bg-[#030303] grid-bg"></div>
@@ -464,37 +545,46 @@ export default function Brand() {
             </div>
           </div>
 
-          {/* Social Share */}
+          {/* Documents */}
           <div>
             <h3 className="text-xl font-semibold text-white mb-6 flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-primary"></span>
-              Social Media Assets
+              Documents
             </h3>
-            <div className="glass-card rounded-2xl p-8" data-testid="card-social-assets">
-              <div className="grid md:grid-cols-2 gap-8 items-center">
-                <div>
-                  <img 
-                    src="/social-share-image.jpg" 
-                    alt="Shield Finance Social Share" 
-                    className="rounded-xl border border-white/10 w-full"
-                    data-testid="img-social-share"
-                  />
+            <div className="grid md:grid-cols-2 gap-6">
+              <div className="glass-card rounded-xl p-6 flex items-center gap-4" data-testid="card-doc-whitepaper">
+                <div className="h-12 w-12 rounded-lg bg-primary/20 flex items-center justify-center shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
                 </div>
-                <div>
-                  <h4 className="text-lg font-semibold text-white mb-2">Open Graph Image</h4>
-                  <p className="text-white/60 text-sm mb-4">
-                    Use this image for social media sharing and link previews. Optimized for Twitter, LinkedIn, and Facebook.
-                  </p>
-                  <p className="text-xs text-white/40 mb-4">Dimensions: 1200 × 630px</p>
-                  <a 
-                    href="/social-share-image.jpg" 
-                    download 
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
-                    data-testid="button-download-social"
-                  >
-                    <Download className="h-4 w-4" /> Download
-                  </a>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white mb-1">Whitepaper</p>
+                  <p className="text-xs text-white/50">Protocol documentation & technical specs</p>
                 </div>
+                <a 
+                  href="/whitepaper.pdf" 
+                  download 
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors shrink-0"
+                  data-testid="button-download-whitepaper"
+                >
+                  <Download className="h-4 w-4" /> PDF
+                </a>
+              </div>
+              <div className="glass-card rounded-xl p-6 flex items-center gap-4" data-testid="card-doc-audit">
+                <div className="h-12 w-12 rounded-lg bg-green-500/20 flex items-center justify-center shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-green-400"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-white mb-1">Security Audit</p>
+                  <p className="text-xs text-white/50">Smart contract security assessment</p>
+                </div>
+                <a 
+                  href="/shield-finance-audit.pdf" 
+                  download 
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors shrink-0"
+                  data-testid="button-download-audit"
+                >
+                  <Download className="h-4 w-4" /> PDF
+                </a>
               </div>
             </div>
           </div>
