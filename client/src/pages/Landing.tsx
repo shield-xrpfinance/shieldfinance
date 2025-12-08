@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
@@ -137,6 +137,88 @@ export default function Landing() {
     if (num >= 1000) return `$${(num / 1000).toFixed(1)}K`;
     return `$${num.toFixed(0)}`;
   };
+
+  // Animated counter hook for stats
+  const useAnimatedCounter = (targetValue: number, duration: number = 2000, startOnVisible: boolean = true) => {
+    const [count, setCount] = useState(0);
+    const [hasStarted, setHasStarted] = useState(false);
+    const counterRef = useRef<HTMLSpanElement>(null);
+    
+    useEffect(() => {
+      if (!startOnVisible || hasStarted) return;
+      
+      const observer = new IntersectionObserver(
+        (entries) => {
+          if (entries[0].isIntersecting && !hasStarted) {
+            setHasStarted(true);
+          }
+        },
+        { threshold: 0.3 }
+      );
+      
+      if (counterRef.current) {
+        observer.observe(counterRef.current);
+      }
+      
+      return () => observer.disconnect();
+    }, [hasStarted, startOnVisible]);
+    
+    useEffect(() => {
+      if (!hasStarted || targetValue === 0) return;
+      
+      const startTime = Date.now();
+      const startValue = 0;
+      
+      const animate = () => {
+        const elapsed = Date.now() - startTime;
+        const progress = Math.min(elapsed / duration, 1);
+        
+        // Ease out cubic for smooth deceleration
+        const easeOut = 1 - Math.pow(1 - progress, 3);
+        const currentValue = startValue + (targetValue - startValue) * easeOut;
+        
+        setCount(currentValue);
+        
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        } else {
+          setCount(targetValue);
+        }
+      };
+      
+      requestAnimationFrame(animate);
+    }, [hasStarted, targetValue, duration]);
+    
+    return { count, counterRef };
+  };
+
+  // Parse stats values for animation
+  const tvlValue = useMemo(() => {
+    if (!vaultStats?.tvl) return 0;
+    return parseFloat(vaultStats.tvl);
+  }, [vaultStats?.tvl]);
+  
+  const apyValue = useMemo(() => {
+    if (!vaultStats?.apy) return 0;
+    return parseFloat(vaultStats.apy);
+  }, [vaultStats?.apy]);
+  
+  const stakerCount = useMemo(() => {
+    return vaultStats?.stakerCount || 0;
+  }, [vaultStats?.stakerCount]);
+
+  // Animated counters
+  const { count: animatedTvl, counterRef: tvlRef } = useAnimatedCounter(tvlValue, 2000);
+  const { count: animatedApy, counterRef: apyRef } = useAnimatedCounter(apyValue, 1500);
+  const { count: animatedStakers, counterRef: stakersRef } = useAnimatedCounter(stakerCount, 1800);
+
+  // Format animated TVL
+  const formatAnimatedTvl = useCallback((value: number): string => {
+    if (value === 0) return "$0";
+    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
+    if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
+    return `$${Math.round(value).toLocaleString()}`;
+  }, []);
 
   const handleMobileNavClick = (href: string) => {
     setMobileMenuOpen(false);
@@ -503,8 +585,8 @@ export default function Landing() {
                 {isLoadingStats ? (
                   <Skeleton className="h-10 w-32 bg-white/10" />
                 ) : (
-                  <span className="text-3xl lg:text-4xl font-bold text-primary text-glow" data-testid="stat-tvl">
-                    {vaultStats?.tvl ? formatTvl(vaultStats.tvl) : "$0"}
+                  <span ref={tvlRef} className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-tvl">
+                    {formatAnimatedTvl(animatedTvl)}
                   </span>
                 )}
               </div>
@@ -518,8 +600,8 @@ export default function Landing() {
                 {isLoadingStats ? (
                   <Skeleton className="h-10 w-24 bg-white/10" />
                 ) : (
-                  <span className="text-3xl lg:text-4xl font-bold text-primary text-glow" data-testid="stat-apy">
-                    {vaultStats?.apy ? `${parseFloat(vaultStats.apy).toFixed(1)}%` : "0.0%"}
+                  <span ref={apyRef} className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-apy">
+                    {animatedApy.toFixed(1)}%
                   </span>
                 )}
               </div>
@@ -533,8 +615,8 @@ export default function Landing() {
                 {isLoadingStats ? (
                   <Skeleton className="h-10 w-28 bg-white/10" />
                 ) : (
-                  <span className="text-3xl lg:text-4xl font-bold text-primary text-glow" data-testid="stat-stakers">
-                    {vaultStats?.stakerCount ? vaultStats.stakerCount.toLocaleString() : "0"}
+                  <span ref={stakersRef} className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-stakers">
+                    {Math.round(animatedStakers).toLocaleString()}
                   </span>
                 )}
               </div>
