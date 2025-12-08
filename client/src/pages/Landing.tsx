@@ -300,18 +300,27 @@ export default function Landing() {
             </a>
           </div>
 
-          {/* Partner Logos - Aura Template Style */}
-          <div className="flex flex-wrap items-center justify-between gap-6 mt-16 w-full max-w-xl opacity-60" data-testid="inline-partner-logos">
-            <div className="flex flex-wrap items-center gap-8">
-              <img src={flareHorizontalLogo} alt="Flare" className="h-5 w-auto" data-testid="img-flare-inline" />
-              <img src={xrplHorizontalLogo} alt="XRPL" className="h-5 w-auto" data-testid="img-xrpl-inline" />
-              <img src={xamanHorizontalLogo} alt="Xaman" className="h-5 w-auto" data-testid="img-xaman-inline" />
-              <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-5 w-auto" data-testid="img-bifrost-inline" />
-              <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-5 w-auto" data-testid="img-layerzero-inline" />
-            </div>
-            <span className="text-xs text-white font-mono uppercase tracking-wide" data-testid="text-trusted-by">
+          {/* Partner Logos - Aura Template Style with Marquee */}
+          <div className="flex flex-col gap-4 mt-16 w-full max-w-xl" data-testid="inline-partner-logos">
+            <span className="text-xs text-white/60 font-mono uppercase tracking-wide" data-testid="text-trusted-by">
               [ <span className="text-primary">✓</span> ] Built with Leading Technologies
             </span>
+            <div className="overflow-hidden mask-gradient-fade w-full relative opacity-50">
+              <div className="flex animate-marquee hover:[animation-play-state:paused] w-max gap-x-16 items-center">
+                {/* Original Set */}
+                <img src={flareHorizontalLogo} alt="Flare" className="h-5 w-auto" data-testid="img-flare-inline" />
+                <img src={xrplHorizontalLogo} alt="XRPL" className="h-5 w-auto" data-testid="img-xrpl-inline" />
+                <img src={xamanHorizontalLogo} alt="Xaman" className="h-5 w-auto" data-testid="img-xaman-inline" />
+                <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-5 w-auto" data-testid="img-bifrost-inline" />
+                <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-5 w-auto" data-testid="img-layerzero-inline" />
+                {/* Duplicate Set for Seamless Loop */}
+                <img src={flareHorizontalLogo} alt="Flare" className="h-5 w-auto" />
+                <img src={xrplHorizontalLogo} alt="XRPL" className="h-5 w-auto" />
+                <img src={xamanHorizontalLogo} alt="Xaman" className="h-5 w-auto" />
+                <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-5 w-auto" />
+                <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-5 w-auto" />
+              </div>
+            </div>
           </div>
         </div>
 
