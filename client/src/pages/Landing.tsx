@@ -863,7 +863,45 @@ export default function Landing() {
                       parseFloat(vaultStats?.exchangeRate || "1.0000").toFixed(4)
                     )}
                   </div>
-                  <div className="text-xs text-white/50">Exchange Rate</div>
+                  <div 
+                    className={`text-xs flex items-center justify-end gap-1 ${
+                      (() => {
+                        const rate = parseFloat(vaultStats?.exchangeRate || "1.0000");
+                        const yieldPct = ((rate - 1.0) * 100);
+                        if (yieldPct > 0) return "text-green-400/80";
+                        if (yieldPct < 0) return "text-amber-400/80";
+                        return "text-white/50";
+                      })()
+                    }`} 
+                    data-testid="text-yield-indicator"
+                  >
+                    {isLoadingStats ? (
+                      <span className="inline-block w-20 h-3 bg-white/10 rounded animate-pulse" />
+                    ) : (
+                      (() => {
+                        const rate = parseFloat(vaultStats?.exchangeRate || "1.0000");
+                        const yieldPct = ((rate - 1.0) * 100);
+                        if (yieldPct > 0) {
+                          return (
+                            <>
+                              <span>↑</span>
+                              <span>+{yieldPct.toFixed(2)}% yield</span>
+                            </>
+                          );
+                        } else if (yieldPct < 0) {
+                          return (
+                            <>
+                              <span>↓</span>
+                              <span>{yieldPct.toFixed(2)}% yield</span>
+                            </>
+                          );
+                        } else {
+                          return <span>Earning yield</span>;
+                        }
+                      })()
+                    )}
+                  </div>
+                  <div className="text-xs text-white/50 mt-1">Exchange Rate · Redeemable anytime</div>
                 </div>
               </div>
               <div className="p-4 bg-black/40">
