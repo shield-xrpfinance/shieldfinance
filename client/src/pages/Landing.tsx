@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { 
@@ -33,6 +34,15 @@ import bifrostHorizontalLogo from "@assets/bifrost-horizontal-white.svg";
 import layerzeroHorizontalLogo from "@assets/layerzero-horizontal-white.svg";
 import founderPhoto from "@assets/Founder_Profile_pic_1765161729767.jpg";
 import ramiAvatar from "@assets/Rami_Avatar_Shield_Finance_Profile_Pic_1765163589082.jpg";
+interface VaultStats {
+  exchangeRate: string;
+  apy: string;
+  tvl: string;
+  stakerCount: number;
+  isLive: boolean;
+  timestamp: string;
+}
+
 export default function Landing() {
   const shieldLogo = useShieldLogo();
   const heroAnimation = useScrollAnimation();
@@ -41,6 +51,20 @@ export default function Landing() {
   const securityAnimation = useScrollAnimation();
   const ctaAnimation = useScrollAnimation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const { data: vaultStats, isLoading: isLoadingStats } = useQuery<VaultStats>({
+    queryKey: ['/api/public/vault-stats'],
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
+
+  const formatTvl = (tvl: string): string => {
+    const num = parseFloat(tvl);
+    if (isNaN(num) || num === 0) return "$0";
+    if (num >= 1000000) return `$${(num / 1000000).toFixed(1)}M`;
+    if (num >= 1000) return `$${(num / 1000).toFixed(1)}K`;
+    return `$${num.toFixed(0)}`;
+  };
 
   const handleMobileNavClick = (href: string) => {
     setMobileMenuOpen(false);
@@ -832,22 +856,46 @@ export default function Landing() {
                   </div>
                 </div>
                 <div className="text-right">
-                  <div className="text-xl font-bold text-green-400">1.0234</div>
+                  <div className="text-xl font-bold text-green-400" data-testid="text-exchange-rate">
+                    {isLoadingStats ? (
+                      <span className="inline-block w-16 h-6 bg-white/10 rounded animate-pulse" />
+                    ) : (
+                      parseFloat(vaultStats?.exchangeRate || "1.0000").toFixed(4)
+                    )}
+                  </div>
                   <div className="text-xs text-white/50">Exchange Rate</div>
                 </div>
               </div>
               <div className="p-4 bg-black/40">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div>
-                    <div className="text-lg font-bold text-white">8.2%</div>
+                    <div className="text-lg font-bold text-white" data-testid="text-current-apy">
+                      {isLoadingStats ? (
+                        <span className="inline-block w-12 h-5 bg-white/10 rounded animate-pulse" />
+                      ) : (
+                        `${vaultStats?.apy || "0"}%`
+                      )}
+                    </div>
                     <div className="text-xs text-white/50">Current APY</div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-white">$1.2M</div>
+                    <div className="text-lg font-bold text-white" data-testid="text-total-staked">
+                      {isLoadingStats ? (
+                        <span className="inline-block w-14 h-5 bg-white/10 rounded animate-pulse" />
+                      ) : (
+                        formatTvl(vaultStats?.tvl || "0")
+                      )}
+                    </div>
                     <div className="text-xs text-white/50">Total Staked</div>
                   </div>
                   <div>
-                    <div className="text-lg font-bold text-white">847</div>
+                    <div className="text-lg font-bold text-white" data-testid="text-staker-count">
+                      {isLoadingStats ? (
+                        <span className="inline-block w-10 h-5 bg-white/10 rounded animate-pulse" />
+                      ) : (
+                        vaultStats?.stakerCount || 0
+                      )}
+                    </div>
                     <div className="text-xs text-white/50">Stakers</div>
                   </div>
                 </div>
