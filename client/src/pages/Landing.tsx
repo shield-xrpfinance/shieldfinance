@@ -1249,7 +1249,7 @@ export default function Landing() {
               <li><a href="https://blog.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-blog">Blog</a></li>
               <li><a href="https://vote.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-governance">Governance</a></li>
               <li>
-                <a href="#" className="flex items-center gap-2 text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-status">
+                <a href="/status" className="flex items-center gap-2 text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-status">
                   System Status
                   <span className="relative flex h-1.5 w-1.5">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />

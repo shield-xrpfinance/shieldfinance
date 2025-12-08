@@ -40,6 +40,7 @@ import Presale from "@/pages/Presale";
 import Terms from "@/pages/Terms";
 import Privacy from "@/pages/Privacy";
 import Brand from "@/pages/Brand";
+import Status from "@/pages/Status";
 import NotFound from "@/pages/not-found";
 
 function DashboardRouter() {
@@ -215,6 +216,7 @@ function AppContent() {
               <Route path="/terms" component={Terms} />
               <Route path="/privacy" component={Privacy} />
               <Route path="/brand" component={Brand} />
+              <Route path="/status" component={Status} />
               <Route component={NotFound} />
             </RouterSwitch>
           )}
