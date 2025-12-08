@@ -26,6 +26,12 @@ let realMetricsService: MetricsService | null = null;
 let realAlertingService: AlertingService | null = null;
 let realOnChainMonitorService: OnChainMonitorService | null = null;
 
+// Module-level references for graceful shutdown
+let realXrplListener: XRPLDepositListener | null = null;
+let realDepositWatchdog: DepositWatchdogService | null = null;
+let realWithdrawalRetry: WithdrawalRetryService | null = null;
+const activeIntervals: NodeJS.Timeout[] = [];
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown
@@ -350,6 +356,9 @@ async function initializeServices() {
     await xrplListener.start();
     readinessRegistry.setReady('xrplListener');
     
+    // Assign to module-level for graceful shutdown
+    realXrplListener = xrplListener;
+    
     // Mark bridge service as ready
     readinessRegistry.setReady('bridgeService');
 
@@ -418,7 +427,7 @@ async function initializeServices() {
           console.log(`⏰ Scheduling periodic reconciliation every ${reconcileIntervalMinutes} minute(s)`);
           let reconciliationInProgress = false;
           
-          setInterval(async () => {
+          const reconcileInterval = setInterval(async () => {
             if (reconciliationInProgress) {
               console.warn(`⏭️  [PERIODIC RECONCILIATION] Skipping - previous run still in progress`);
               return;
@@ -434,6 +443,7 @@ async function initializeServices() {
               reconciliationInProgress = false;
             }
           }, reconcileIntervalMinutes * 60 * 1000);
+          activeIntervals.push(reconcileInterval);
         }
       }
     } catch (error) {
@@ -476,6 +486,7 @@ async function initializeServices() {
         });
         
         watchdog.start();
+        realDepositWatchdog = watchdog;
         readinessRegistry.setReady('depositWatchdog');
         console.log(`✅ DepositWatchdogService started`);
       } else {
@@ -509,6 +520,7 @@ async function initializeServices() {
       });
       
       retryService.start();
+      realWithdrawalRetry = retryService;
       readinessRegistry.setReady('withdrawalRetry');
       console.log(`✅ WithdrawalRetryService started`);
     } catch (error) {
@@ -902,7 +914,6 @@ async function initializeFlareClientWithRetry(config: {
   server.listen({
     port,
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
     // Use console.log directly for maximum visibility in deployment logs
     console.log(`\n========================================`);
@@ -911,6 +922,82 @@ async function initializeFlareClientWithRetry(config: {
     console.log(`   Time: ${new Date().toISOString()}`);
     console.log(`========================================\n`);
   });
+
+  // Graceful shutdown handling for Cloud Run and containerized deployments
+  // Cloud Run sends SIGTERM before terminating instances
+  let isShuttingDown = false;
+  const gracefulShutdown = async (signal: string) => {
+    if (isShuttingDown) {
+      console.log(`⚠️  Shutdown already in progress, ignoring ${signal}`);
+      return;
+    }
+    isShuttingDown = true;
+    
+    console.log(`\n⚠️  Received ${signal}, shutting down gracefully...`);
+
+    // Force exit after 10 seconds if graceful shutdown fails
+    const forceExitTimeout = setTimeout(() => {
+      console.error('❌ Forced shutdown after timeout');
+      process.exit(1);
+    }, 10000);
+
+    try {
+      // Step 1: Clear all scheduled intervals
+      console.log(`   Clearing ${activeIntervals.length} scheduled interval(s)...`);
+      for (const interval of activeIntervals) {
+        clearInterval(interval);
+      }
+
+      // Step 2: Stop background services (they have their own internal intervals)
+      const stopPromises: Promise<void>[] = [];
+      
+      if (realDepositWatchdog) {
+        console.log('   Stopping DepositWatchdogService...');
+        stopPromises.push(Promise.resolve(realDepositWatchdog.stop()));
+      }
+      
+      if (realWithdrawalRetry) {
+        console.log('   Stopping WithdrawalRetryService...');
+        stopPromises.push(Promise.resolve(realWithdrawalRetry.stop()));
+      }
+      
+      if (realAlertingService) {
+        console.log('   Stopping AlertingService...');
+        stopPromises.push(Promise.resolve(realAlertingService.stopMonitoring()));
+      }
+      
+      if (realOnChainMonitorService) {
+        console.log('   Stopping OnChainMonitorService...');
+        stopPromises.push(Promise.resolve(realOnChainMonitorService.stop()));
+      }
+      
+      if (realXrplListener) {
+        console.log('   Stopping XRPLDepositListener...');
+        stopPromises.push(realXrplListener.stop());
+      }
+
+      // Wait for all services to stop (with 5s timeout)
+      await Promise.race([
+        Promise.allSettled(stopPromises),
+        new Promise(resolve => setTimeout(resolve, 5000))
+      ]);
+      console.log('✅ Background services stopped');
+
+      // Step 3: Close HTTP server
+      server.close(() => {
+        console.log('✅ HTTP server closed');
+        clearTimeout(forceExitTimeout);
+        process.exit(0);
+      });
+    } catch (error) {
+      console.error('❌ Error during graceful shutdown:', error);
+      clearTimeout(forceExitTimeout);
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+  process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   
   // Start Discord bot in the same process as the Express server
   // The bot handles wallet verification for Discord community members
