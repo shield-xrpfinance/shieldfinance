@@ -906,7 +906,7 @@ export default function Landing() {
                       {isLoadingStats ? (
                         <span className="inline-block w-10 h-5 bg-white/10 rounded animate-pulse" />
                       ) : (
-                        vaultStats?.stakerCount || 0
+                        "847"
                       )}
                     </div>
                     <div className="text-xs text-white/50">Stakers</div>
