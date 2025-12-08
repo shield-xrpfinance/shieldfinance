@@ -439,6 +439,75 @@ export async function registerRoutes(
     }
   });
 
+  // Public vault stats endpoint for landing page (bypasses readiness guard)
+  // Returns live on-chain data: exchange rate, APY, TVL, and staker count
+  app.get("/api/public/vault-stats", async (_req, res) => {
+    try {
+      // Default values if services aren't ready
+      let exchangeRate = "1.0000";
+      let apy = "0";
+      let tvl = "0";
+      let stakerCount = 0;
+      let isLive = false;
+
+      // Try to get live data from VaultDataService
+      if (vaultDataService && vaultDataService.isReady()) {
+        try {
+          const metrics = await vaultDataService.getOnChainMetrics();
+          if (metrics) {
+            exchangeRate = metrics.pricePerShare;
+            tvl = metrics.totalAssets;
+            isLive = true;
+          }
+          
+          // Get APY from enriched vaults
+          const apyStr = await vaultDataService.getLiveAPY();
+          if (apyStr && apyStr !== "0") {
+            apy = apyStr;
+          }
+        } catch (err) {
+          console.warn("Failed to get live vault metrics for public stats:", err);
+        }
+      }
+
+      // Get staker count from analytics service
+      try {
+        const stakers = await analyticsService.getUniqueStakers();
+        if (stakers > 0) {
+          stakerCount = stakers;
+        }
+      } catch (err) {
+        // Fallback: try to get from database
+        try {
+          const overview = await storage.getProtocolOverview();
+          stakerCount = overview.totalStakers || 0;
+        } catch {
+          // Use default 0
+        }
+      }
+
+      res.json({
+        exchangeRate,
+        apy,
+        tvl,
+        stakerCount,
+        isLive,
+        timestamp: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error("Failed to fetch public vault stats:", error);
+      // Return defaults on error so landing page still works
+      res.json({
+        exchangeRate: "1.0000",
+        apy: "0",
+        tvl: "0",
+        stakerCount: 0,
+        isLive: false,
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
+
   // Readiness guard middleware - Return 503 for /api/* routes if services not ready
   app.use("/api", (req, res, next) => {
     if (!readinessRegistry.allCriticalServicesReady()) {
