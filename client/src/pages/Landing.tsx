@@ -19,9 +19,15 @@ import {
   Sparkles,
   RefreshCw,
   Eye,
-  Wallet
+  Wallet,
+  TrendingUp,
+  Layers,
+  Coins,
+  Vault,
+  CircleDollarSign
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useShieldLogo } from "@/components/ShieldLogo";
 import flareLogo from "@assets/flr.svg";
 import xrpLogo from "@assets/xrp.148c3b50_1762588566535.png";
@@ -481,6 +487,61 @@ export default function Landing() {
         </div>
 
       </main>
+
+      {/* Stats Bar Section */}
+      <section className="relative z-10 py-8 bg-[#030303]/90 border-t border-b border-white/5" data-testid="section-stats-bar">
+        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+          <div className="glass-card rounded-2xl p-6 lg:p-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-12">
+              {/* TVL */}
+              <div className="flex flex-col items-center text-center md:border-r md:border-white/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <CircleDollarSign className="h-5 w-5 text-primary" />
+                  <span className="text-xs font-mono text-white/40 uppercase tracking-wider">Total Value Locked</span>
+                </div>
+                {isLoadingStats ? (
+                  <Skeleton className="h-10 w-32 bg-white/10" />
+                ) : (
+                  <span className="text-3xl lg:text-4xl font-bold text-primary text-glow" data-testid="stat-tvl">
+                    {vaultStats?.tvl ? formatTvl(vaultStats.tvl) : "$0"}
+                  </span>
+                )}
+              </div>
+              
+              {/* XRP Vault APY */}
+              <div className="flex flex-col items-center text-center md:border-r md:border-white/10">
+                <div className="flex items-center gap-2 mb-2">
+                  <TrendingUp className="h-5 w-5 text-primary" />
+                  <span className="text-xs font-mono text-white/40 uppercase tracking-wider">XRP Vault APY</span>
+                </div>
+                {isLoadingStats ? (
+                  <Skeleton className="h-10 w-24 bg-white/10" />
+                ) : (
+                  <span className="text-3xl lg:text-4xl font-bold text-primary text-glow" data-testid="stat-apy">
+                    {vaultStats?.apy ? `${parseFloat(vaultStats.apy).toFixed(1)}%` : "0.0%"}
+                  </span>
+                )}
+              </div>
+              
+              {/* Total Stakers */}
+              <div className="flex flex-col items-center text-center">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  <span className="text-xs font-mono text-white/40 uppercase tracking-wider">Total Stakers</span>
+                </div>
+                {isLoadingStats ? (
+                  <Skeleton className="h-10 w-28 bg-white/10" />
+                ) : (
+                  <span className="text-3xl lg:text-4xl font-bold text-primary text-glow" data-testid="stat-stakers">
+                    {vaultStats?.stakerCount ? vaultStats.stakerCount.toLocaleString() : "0"}
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Features Section - Aura-Style with Terminal UI */}
       <section ref={featuresAnimation.ref} id="features" className="group relative z-10 py-32 border-t border-white/5 bg-black/50 backdrop-blur-xl overflow-hidden" data-testid="section-features">
         {/* Clean Background Line */}
@@ -523,56 +584,77 @@ export default function Landing() {
           {/* Feature Cards Grid - 3 Large Cards with Terminal UI */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-            {/* Card 1: Gasless Deposits - Terminal/Chat UI */}
-            <div className="spotlight-card group relative flex flex-col p-10 rounded-[32px] border border-white/10 bg-white/[0.02] overflow-hidden transition-all duration-500" onMouseMove={handleSpotlightMove} data-testid="card-feature-gasless">
+            {/* Card 1: Bridge from Anywhere - Multi-Chain SVG Animation */}
+            <div className="spotlight-card group relative flex flex-col p-10 rounded-[32px] border border-white/10 bg-white/[0.02] overflow-hidden transition-all duration-500" onMouseMove={handleSpotlightMove} data-testid="card-feature-bridge">
               {/* Spotlight Background */}
               <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{background: 'radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.06), transparent 40%)'}} />
               {/* Spotlight Border */}
               <div className="pointer-events-none absolute inset-0 rounded-[32px] border border-primary/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{maskImage: 'radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), black, transparent)', WebkitMaskImage: 'radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), black, transparent)'}} />
 
-              <h3 className="text-2xl font-semibold tracking-tight text-white mb-4 relative z-10">Gasless Deposits</h3>
+              <h3 className="text-2xl font-semibold tracking-tight text-white mb-4 relative z-10">Bridge from Anywhere</h3>
               <p className="text-base text-white/50 leading-relaxed mb-12 relative z-10 font-light">
-                Deposit XRP without paying gas fees. Our smart contracts handle all transaction costs for seamless onboarding.
+                Deposit XRP from XRPL, Ethereum, Base, or Arbitrum. Our multi-chain bridge powered by LayerZero brings your assets to Flare seamlessly.
               </p>
 
-              {/* Visual: Terminal/Chat UI */}
-              <div className="relative z-10 mt-auto w-full h-72 rounded-2xl border border-white/10 bg-[#0A0A0A] overflow-hidden flex flex-col shadow-2xl">
-                {/* Header */}
-                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-                  <div className="flex items-center gap-2 opacity-50">
-                    <div className="w-2 h-2 rounded-full bg-white/40" />
-                    <div className="w-2 h-2 rounded-full bg-white/40" />
-                  </div>
-                  <span className="text-xs text-white/30 font-mono">SHIELD_OS v1.0</span>
-                </div>
-                {/* Body */}
-                <div className="p-6 flex flex-col gap-5 relative h-full">
-                  {/* User Message */}
-                  <div className="self-end max-w-[90%] bg-white/10 backdrop-blur-sm rounded-2xl rounded-tr-sm p-4 border border-white/5">
-                    <p className="text-xs text-white/90 font-light leading-relaxed">
-                      Deposit <span className="text-primary font-medium">1,000 XRP</span> to vault.
-                      No gas fees required.
-                    </p>
-                  </div>
-
-                  {/* System Message */}
-                  <div className="self-start max-w-[90%] bg-white/[0.03] backdrop-blur-md rounded-2xl rounded-tl-sm p-5 border border-white/10 relative overflow-hidden group-hover:border-primary/20 transition-colors duration-500">
-                    <div className="flex items-center gap-2 mb-3 text-primary font-mono text-[10px] uppercase tracking-wider">
-                      <Sparkles className="h-3.5 w-3.5" />
-                      Shield Protocol
-                    </div>
-                    <p className="mb-4 text-xs text-white/80 font-light">Bridge initiated. FAssets minting in progress.</p>
-
-                    {/* Progress Bar */}
-                    <div className="w-full bg-black/40 rounded-full h-1.5 mb-2 overflow-hidden">
-                      <div className="bg-primary h-full w-[85%] animate-pulse" />
-                    </div>
-                    <div className="flex justify-between text-[10px] text-primary/60 font-mono">
-                      <span>EXECUTING</span>
-                      <span>1,000 XRP</span>
-                    </div>
-                  </div>
-                </div>
+              {/* Visual: Multi-Chain Bridge SVG Animation */}
+              <div className="relative z-10 mt-auto w-full h-72 rounded-2xl border border-white/10 bg-[#0A0A0A] overflow-hidden flex items-center justify-center shadow-2xl">
+                <svg className="w-full h-full" viewBox="0 0 300 220" preserveAspectRatio="xMidYMid meet">
+                  {/* Background Grid */}
+                  <defs>
+                    <linearGradient id="beam-gradient-1" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#38BDF8" stopOpacity="0" />
+                      <stop offset="50%" stopColor="#38BDF8" stopOpacity="1" />
+                      <stop offset="100%" stopColor="#38BDF8" stopOpacity="0" />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Source Chain Nodes */}
+                  {/* XRPL */}
+                  <g transform="translate(40, 50)">
+                    <circle r="18" fill="#0A0A0A" stroke="#fff" strokeOpacity="0.2" strokeWidth="1" />
+                    <text x="0" y="4" textAnchor="middle" fill="#fff" fontSize="8" fontFamily="monospace" opacity="0.8">XRP</text>
+                    <circle r="22" fill="none" stroke="#38BDF8" strokeOpacity="0.3" strokeWidth="1" className="animate-ping-light" style={{animationDuration: '3s'}} />
+                  </g>
+                  
+                  {/* Ethereum */}
+                  <g transform="translate(40, 110)">
+                    <circle r="18" fill="#0A0A0A" stroke="#fff" strokeOpacity="0.2" strokeWidth="1" />
+                    <text x="0" y="4" textAnchor="middle" fill="#fff" fontSize="8" fontFamily="monospace" opacity="0.8">ETH</text>
+                    <circle r="22" fill="none" stroke="#38BDF8" strokeOpacity="0.3" strokeWidth="1" className="animate-ping-light" style={{animationDuration: '3.5s', animationDelay: '0.5s'}} />
+                  </g>
+                  
+                  {/* Base */}
+                  <g transform="translate(40, 170)">
+                    <circle r="18" fill="#0A0A0A" stroke="#fff" strokeOpacity="0.2" strokeWidth="1" />
+                    <text x="0" y="4" textAnchor="middle" fill="#fff" fontSize="8" fontFamily="monospace" opacity="0.8">BASE</text>
+                    <circle r="22" fill="none" stroke="#38BDF8" strokeOpacity="0.3" strokeWidth="1" className="animate-ping-light" style={{animationDuration: '4s', animationDelay: '1s'}} />
+                  </g>
+                  
+                  {/* Connecting Beam Lines */}
+                  {/* XRPL to Flare */}
+                  <path d="M 60 50 Q 130 50, 200 110" fill="none" stroke="white" strokeOpacity="0.08" strokeWidth="1" />
+                  <path d="M 60 50 Q 130 50, 200 110" fill="none" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-70" />
+                  
+                  {/* ETH to Flare */}
+                  <path d="M 60 110 L 200 110" fill="none" stroke="white" strokeOpacity="0.08" strokeWidth="1" />
+                  <path d="M 60 110 L 200 110" fill="none" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-70" style={{animationDelay: '-1s'}} />
+                  
+                  {/* Base to Flare */}
+                  <path d="M 60 170 Q 130 170, 200 110" fill="none" stroke="white" strokeOpacity="0.08" strokeWidth="1" />
+                  <path d="M 60 170 Q 130 170, 200 110" fill="none" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-70" style={{animationDelay: '-2s'}} />
+                  
+                  {/* Central Flare Node */}
+                  <g transform="translate(220, 110)">
+                    <circle r="28" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="2" />
+                    <circle r="35" fill="none" stroke="#38BDF8" strokeOpacity="0.2" strokeWidth="1" strokeDasharray="4 4" className="animate-spin-slow" />
+                    <circle r="42" fill="none" stroke="#38BDF8" strokeOpacity="0.1" strokeWidth="1" className="animate-sonar" />
+                    <text x="0" y="-4" textAnchor="middle" fill="#38BDF8" fontSize="9" fontFamily="monospace" fontWeight="bold">FLARE</text>
+                    <text x="0" y="8" textAnchor="middle" fill="#fff" fontSize="7" fontFamily="monospace" opacity="0.6">NETWORK</text>
+                  </g>
+                  
+                  {/* LayerZero Label */}
+                  <text x="130" y="205" textAnchor="middle" fill="#38BDF8" fontSize="8" fontFamily="monospace" opacity="0.6">Powered by LayerZero</text>
+                </svg>
               </div>
             </div>
 
@@ -650,67 +732,99 @@ export default function Landing() {
               </div>
             </div>
 
-            {/* Card 3: Security & Governance */}
-            <div className="spotlight-card group relative flex flex-col p-10 rounded-[32px] border border-white/10 bg-white/[0.02] overflow-hidden transition-all duration-500" onMouseMove={handleSpotlightMove} data-testid="card-feature-security">
+            {/* Card 3: Boost Your Yield - APY Gauge Visualization */}
+            <div className="spotlight-card group relative flex flex-col p-10 rounded-[32px] border border-white/10 bg-white/[0.02] overflow-hidden transition-all duration-500" onMouseMove={handleSpotlightMove} data-testid="card-feature-boost">
               {/* Spotlight Background */}
               <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{background: 'radial-gradient(600px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.06), transparent 40%)'}} />
               {/* Spotlight Border */}
               <div className="pointer-events-none absolute inset-0 rounded-[32px] border border-primary/50 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{maskImage: 'radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), black, transparent)', WebkitMaskImage: 'radial-gradient(300px circle at var(--mouse-x) var(--mouse-y), black, transparent)'}} />
 
-              <h3 className="text-2xl font-semibold tracking-tight text-white mb-4 relative z-10">Security Audited</h3>
+              <h3 className="text-2xl font-semibold tracking-tight text-white mb-4 relative z-10">Boost Your Yield</h3>
               <p className="text-base text-white/50 leading-relaxed mb-12 relative z-10 font-light">
-                Smart contracts audited by leading security firms. Automated recovery systems protect your assets.
+                Stake SHIELD tokens to multiply your vault APY. The more you stake, the higher your boost - up to 2x rewards.
               </p>
 
-              {/* Visual: Security/Governance Terminal */}
-              <div className="relative z-10 mt-auto w-full h-72 rounded-2xl border border-white/10 bg-[#0A0A0A] overflow-hidden flex flex-col shadow-2xl">
-                {/* Header */}
-                <div className="px-5 py-4 border-b border-white/5 flex items-center justify-between bg-white/5">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
-                    <span className="text-xs text-white/60 font-mono">Security Status</span>
-                  </div>
-                  <Lock className="h-4 w-4 text-green-400" />
-                </div>
-                {/* Body */}
-                <div className="p-5 flex flex-col gap-4 h-full">
-                  {/* Audit Status */}
-                  <div className="flex items-center justify-between p-3 rounded-xl bg-green-500/10 border border-green-500/20">
-                    <div className="flex items-center gap-3">
-                      <CheckCircle2 className="h-4 w-4 text-green-400" />
-                      <span className="text-xs text-white/80">Contract Audit</span>
-                    </div>
-                    <span className="text-xs text-green-400 font-mono">PASSED</span>
-                  </div>
-
-                  {/* Security Metrics */}
-                  <div className="space-y-3 flex-1">
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/50">Slither Analysis</span>
-                      <span className="text-green-400 font-mono">0 findings</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/50">Test Coverage</span>
-                      <span className="text-primary font-mono">150+ tests</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/50">Recovery System</span>
-                      <span className="text-green-400 font-mono">Active</span>
-                    </div>
-                  </div>
-
-                  {/* Governance Status */}
-                  <div className="pt-3 border-t border-white/5">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Users className="h-3 w-3 text-primary" />
-                      <span className="text-[10px] text-white/40 uppercase tracking-wider font-mono">Active Proposals</span>
-                    </div>
-                    <div className="flex items-center justify-between text-xs">
-                      <span className="text-white/60">SIP-003: Strategy Update</span>
-                      <span className="text-primary animate-pulse">Voting</span>
-                    </div>
-                  </div>
-                </div>
+              {/* Visual: APY Gauge Visualization */}
+              <div className="relative z-10 mt-auto w-full h-72 rounded-2xl border border-white/10 bg-[#0A0A0A] overflow-hidden flex items-center justify-center shadow-2xl">
+                <svg className="w-full h-full" viewBox="0 0 300 220" preserveAspectRatio="xMidYMid meet">
+                  {/* Gauge Background Arc */}
+                  <defs>
+                    <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.3" />
+                      <stop offset="100%" stopColor="#38BDF8" stopOpacity="1" />
+                    </linearGradient>
+                  </defs>
+                  
+                  {/* Gauge Container */}
+                  <g transform="translate(150, 130)">
+                    {/* Background Arc */}
+                    <path 
+                      d="M -80 0 A 80 80 0 0 1 80 0" 
+                      fill="none" 
+                      stroke="white" 
+                      strokeOpacity="0.1" 
+                      strokeWidth="12" 
+                      strokeLinecap="round"
+                    />
+                    
+                    {/* Base APY Arc (5%) */}
+                    <path 
+                      d="M -80 0 A 80 80 0 0 1 -40 -69" 
+                      fill="none" 
+                      stroke="#38BDF8" 
+                      strokeOpacity="0.4" 
+                      strokeWidth="12" 
+                      strokeLinecap="round"
+                    />
+                    
+                    {/* Boosted APY Arc (animated) */}
+                    <path 
+                      d="M -40 -69 A 80 80 0 0 1 80 0" 
+                      fill="none" 
+                      stroke="url(#gauge-gradient)" 
+                      strokeWidth="12" 
+                      strokeLinecap="round"
+                      className="animate-pulse"
+                      style={{animationDuration: '2s'}}
+                    />
+                    
+                    {/* Gauge Needle */}
+                    <g className="animate-spin-slow" style={{animationDuration: '4s', transformOrigin: 'center'}}>
+                      <line x1="0" y1="0" x2="55" y2="-55" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" />
+                      <circle r="8" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="2" />
+                      <circle r="3" fill="#38BDF8" />
+                    </g>
+                    
+                    {/* APY Labels */}
+                    <text x="-85" y="20" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.5">5%</text>
+                    <text x="85" y="20" textAnchor="middle" fill="#38BDF8" fontSize="9" fontFamily="monospace" fontWeight="bold">10%</text>
+                    
+                    {/* Center Display */}
+                    <text x="0" y="5" textAnchor="middle" fill="#38BDF8" fontSize="24" fontFamily="monospace" fontWeight="bold">2x</text>
+                    <text x="0" y="20" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.6">BOOST</text>
+                  </g>
+                  
+                  {/* SHIELD Token Stack Animation */}
+                  <g transform="translate(50, 160)">
+                    <rect x="-15" y="-8" width="30" height="16" rx="4" fill="#0A0A0A" stroke="#38BDF8" strokeOpacity="0.5" strokeWidth="1" />
+                    <text x="0" y="4" textAnchor="middle" fill="#38BDF8" fontSize="6" fontFamily="monospace">SHIELD</text>
+                  </g>
+                  <g transform="translate(50, 145)" className="animate-pulse" style={{animationDuration: '1.5s'}}>
+                    <rect x="-15" y="-8" width="30" height="16" rx="4" fill="#0A0A0A" stroke="#38BDF8" strokeOpacity="0.7" strokeWidth="1" />
+                    <text x="0" y="4" textAnchor="middle" fill="#38BDF8" fontSize="6" fontFamily="monospace">SHIELD</text>
+                  </g>
+                  <g transform="translate(50, 130)" className="animate-pulse" style={{animationDuration: '2s'}}>
+                    <rect x="-15" y="-8" width="30" height="16" rx="4" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="1" />
+                    <text x="0" y="4" textAnchor="middle" fill="#38BDF8" fontSize="6" fontFamily="monospace">SHIELD</text>
+                  </g>
+                  
+                  {/* Staking Arrow */}
+                  <path d="M 50 115 L 50 95" fill="none" stroke="#38BDF8" strokeWidth="1" strokeOpacity="0.5" markerEnd="url(#arrowhead)" />
+                  <text x="50" y="88" textAnchor="middle" fill="#38BDF8" fontSize="7" fontFamily="monospace" opacity="0.7">STAKE</text>
+                  
+                  {/* Connecting Beam to Gauge */}
+                  <path d="M 65 140 Q 100 110, 100 90" fill="none" stroke="#38BDF8" strokeWidth="1" strokeOpacity="0.3" className="beam-line animate-beam" />
+                </svg>
               </div>
             </div>
 
@@ -1011,7 +1125,7 @@ export default function Landing() {
           </div>
         </div>
       </section>
-      {/* How It Works Section */}
+      {/* How It Works Section - Animated Flow Chart */}
       <section ref={howItWorksAnimation.ref} id="how-it-works" className="relative z-10 py-24 border-t border-white/5 bg-[#0000008f]" data-testid="section-how-it-works">
         <div className={`max-w-7xl mx-auto px-6 lg:px-12 ${howItWorksAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <div className="text-center mb-16">
@@ -1019,42 +1133,191 @@ export default function Landing() {
               How It Works
             </h2>
             <p className="text-lg text-white/60 max-w-2xl mx-auto">
-              Start earning rewards in three simple steps
+              Follow the flow from XRP to yield in just a few steps
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            {/* Step 1 */}
-            <div className="text-center" data-testid="step-1">
-              <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-6">
-                <span className="text-2xl font-bold text-primary">1</span>
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Connect Wallet</h3>
-              <p className="text-white/60">
-                Link your Xaman or EVM wallet to access the Shield Finance protocol.
-              </p>
+          {/* Desktop Flow Chart - Horizontal */}
+          <div className="hidden lg:block">
+            <div className="relative w-full h-64 glass-card rounded-2xl p-8 overflow-hidden">
+              <svg className="w-full h-full" viewBox="0 0 1000 160" preserveAspectRatio="xMidYMid meet">
+                {/* Definitions */}
+                <defs>
+                  <linearGradient id="flow-beam" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#38BDF8" stopOpacity="0" />
+                    <stop offset="50%" stopColor="#38BDF8" stopOpacity="1" />
+                    <stop offset="100%" stopColor="#38BDF8" stopOpacity="0" />
+                  </linearGradient>
+                </defs>
+                
+                {/* Connection Lines */}
+                <path d="M 130 80 L 230 80" stroke="white" strokeOpacity="0.1" strokeWidth="2" />
+                <path d="M 130 80 L 230 80" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-60" />
+                
+                <path d="M 310 80 L 410 80" stroke="white" strokeOpacity="0.1" strokeWidth="2" />
+                <path d="M 310 80 L 410 80" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-60" style={{animationDelay: '-0.5s'}} />
+                
+                <path d="M 490 80 L 590 80" stroke="white" strokeOpacity="0.1" strokeWidth="2" />
+                <path d="M 490 80 L 590 80" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-60" style={{animationDelay: '-1s'}} />
+                
+                <path d="M 670 80 L 770 80" stroke="white" strokeOpacity="0.1" strokeWidth="2" />
+                <path d="M 670 80 L 770 80" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-60" style={{animationDelay: '-1.5s'}} />
+                
+                <path d="M 850 80 L 950 80" stroke="white" strokeOpacity="0.1" strokeWidth="2" />
+                <path d="M 850 80 L 950 80" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-60" style={{animationDelay: '-2s'}} />
+                
+                {/* Node 1: XRP */}
+                <g transform="translate(70, 80)">
+                  <rect x="-50" y="-35" width="100" height="70" rx="12" fill="#0A0A0A" stroke="#38BDF8" strokeOpacity="0.5" strokeWidth="1" />
+                  <circle cx="0" cy="-5" r="14" fill="#38BDF8" fillOpacity="0.2" stroke="#38BDF8" strokeWidth="1" />
+                  <text x="0" y="0" textAnchor="middle" fill="#38BDF8" fontSize="10" fontFamily="monospace" fontWeight="bold">XRP</text>
+                  <text x="0" y="25" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.7">Source</text>
+                  <circle r="55" fill="none" stroke="#38BDF8" strokeOpacity="0.2" strokeWidth="1" className="animate-sonar" />
+                </g>
+                
+                {/* Node 2: Bridge */}
+                <g transform="translate(270, 80)">
+                  <rect x="-50" y="-35" width="100" height="70" rx="12" fill="#0A0A0A" stroke="white" strokeOpacity="0.2" strokeWidth="1" />
+                  <g transform="translate(0, -5)">
+                    <path d="M -8 -4 L 0 -8 L 8 -4 L 8 4 L 0 8 L -8 4 Z" fill="none" stroke="#38BDF8" strokeWidth="1.5" />
+                    <circle r="3" fill="#38BDF8" className="animate-pulse-fast" />
+                  </g>
+                  <text x="0" y="25" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.7">Bridge</text>
+                </g>
+                
+                {/* Node 3: FXRP */}
+                <g transform="translate(450, 80)">
+                  <rect x="-50" y="-35" width="100" height="70" rx="12" fill="#0A0A0A" stroke="white" strokeOpacity="0.2" strokeWidth="1" />
+                  <circle cx="0" cy="-5" r="14" fill="#38BDF8" fillOpacity="0.1" stroke="#38BDF8" strokeOpacity="0.6" strokeWidth="1" />
+                  <text x="0" y="0" textAnchor="middle" fill="#38BDF8" fontSize="9" fontFamily="monospace" fontWeight="bold">FXRP</text>
+                  <text x="0" y="25" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.7">FAssets</text>
+                </g>
+                
+                {/* Node 4: Shield Vault */}
+                <g transform="translate(630, 80)">
+                  <rect x="-50" y="-35" width="100" height="70" rx="12" fill="#0A0A0A" stroke="#38BDF8" strokeOpacity="0.4" strokeWidth="1" />
+                  <g transform="translate(0, -5)">
+                    <rect x="-10" y="-8" width="20" height="16" rx="3" fill="none" stroke="#38BDF8" strokeWidth="1.5" />
+                    <line x1="-6" y1="0" x2="6" y2="0" stroke="#38BDF8" strokeWidth="1" />
+                  </g>
+                  <text x="0" y="25" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.7">Shield Vault</text>
+                </g>
+                
+                {/* Node 5: shXRP */}
+                <g transform="translate(810, 80)">
+                  <rect x="-50" y="-35" width="100" height="70" rx="12" fill="#0A0A0A" stroke="white" strokeOpacity="0.2" strokeWidth="1" />
+                  <circle cx="0" cy="-5" r="14" fill="#38BDF8" fillOpacity="0.15" stroke="#38BDF8" strokeOpacity="0.7" strokeWidth="1" />
+                  <text x="0" y="0" textAnchor="middle" fill="#38BDF8" fontSize="8" fontFamily="monospace" fontWeight="bold">shXRP</text>
+                  <text x="0" y="25" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.7">Receipt</text>
+                </g>
+                
+                {/* Node 6: Yield */}
+                <g transform="translate(950, 80)">
+                  <rect x="-40" y="-35" width="80" height="70" rx="12" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="2" />
+                  <g transform="translate(0, -5)">
+                    <path d="M -8 4 L 0 -8 L 8 4" fill="none" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" />
+                    <line x1="0" y1="-8" x2="0" y2="8" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" />
+                  </g>
+                  <text x="0" y="25" textAnchor="middle" fill="#38BDF8" fontSize="9" fontFamily="monospace" fontWeight="bold">YIELD</text>
+                  <circle r="45" fill="none" stroke="#38BDF8" strokeOpacity="0.3" strokeWidth="1" className="animate-ping-light" style={{animationDuration: '2s'}} />
+                </g>
+              </svg>
             </div>
+          </div>
 
-            {/* Step 2 */}
-            <div className="text-center" data-testid="step-2">
-              <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-6">
-                <span className="text-2xl font-bold text-primary">2</span>
+          {/* Mobile Flow Chart - Vertical */}
+          <div className="lg:hidden">
+            <div className="flex flex-col gap-4">
+              {/* Step 1: XRP */}
+              <div className="glass-card rounded-xl p-4 flex items-center gap-4" data-testid="step-mobile-1">
+                <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-primary font-mono">XRP</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold mb-1">Source Asset</h3>
+                  <p className="text-white/60 text-sm">Your XRP from XRPL or EVM chains</p>
+                </div>
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Stake XRP</h3>
-              <p className="text-white/60">
-                Deposit your XRP with zero gas fees. Receive shXRP tokens instantly.
-              </p>
-            </div>
-
-            {/* Step 3 */}
-            <div className="text-center" data-testid="step-3">
-              <div className="w-16 h-16 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center mx-auto mb-6">
-                <span className="text-2xl font-bold text-primary">3</span>
+              
+              {/* Arrow */}
+              <div className="flex justify-center">
+                <div className="w-px h-6 bg-gradient-to-b from-primary to-primary/30" />
               </div>
-              <h3 className="text-xl font-semibold text-white mb-3">Earn Rewards</h3>
-              <p className="text-white/60">
-                Watch your rewards accumulate. Use shXRP across DeFi while staked.
-              </p>
+              
+              {/* Step 2: Bridge */}
+              <div className="glass-card rounded-xl p-4 flex items-center gap-4" data-testid="step-mobile-2">
+                <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                  <Layers className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold mb-1">Cross-Chain Bridge</h3>
+                  <p className="text-white/60 text-sm">LayerZero powered multi-chain bridge</p>
+                </div>
+              </div>
+              
+              {/* Arrow */}
+              <div className="flex justify-center">
+                <div className="w-px h-6 bg-gradient-to-b from-primary to-primary/30" />
+              </div>
+              
+              {/* Step 3: FXRP */}
+              <div className="glass-card rounded-xl p-4 flex items-center gap-4" data-testid="step-mobile-3">
+                <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-sm font-bold text-primary font-mono">FXRP</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold mb-1">FAssets Minted</h3>
+                  <p className="text-white/60 text-sm">XRP wrapped as FAssets on Flare</p>
+                </div>
+              </div>
+              
+              {/* Arrow */}
+              <div className="flex justify-center">
+                <div className="w-px h-6 bg-gradient-to-b from-primary to-primary/30" />
+              </div>
+              
+              {/* Step 4: Shield Vault */}
+              <div className="glass-card rounded-xl p-4 flex items-center gap-4" data-testid="step-mobile-4">
+                <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0">
+                  <Vault className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold mb-1">Shield Vault</h3>
+                  <p className="text-white/60 text-sm">Deposit into multi-strategy vault</p>
+                </div>
+              </div>
+              
+              {/* Arrow */}
+              <div className="flex justify-center">
+                <div className="w-px h-6 bg-gradient-to-b from-primary to-primary/30" />
+              </div>
+              
+              {/* Step 5: shXRP */}
+              <div className="glass-card rounded-xl p-4 flex items-center gap-4" data-testid="step-mobile-5">
+                <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
+                  <span className="text-xs font-bold text-primary font-mono">shXRP</span>
+                </div>
+                <div>
+                  <h3 className="text-white font-semibold mb-1">Receipt Token</h3>
+                  <p className="text-white/60 text-sm">Liquid staking token representing your position</p>
+                </div>
+              </div>
+              
+              {/* Arrow */}
+              <div className="flex justify-center">
+                <div className="w-px h-6 bg-gradient-to-b from-primary to-primary/30" />
+              </div>
+              
+              {/* Step 6: Yield */}
+              <div className="glass-card rounded-xl p-4 flex items-center gap-4 border border-primary/30" data-testid="step-mobile-6">
+                <div className="w-14 h-14 rounded-xl bg-primary/20 border border-primary/50 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-primary font-semibold mb-1">Earn Yield</h3>
+                  <p className="text-white/60 text-sm">Auto-compounding rewards from multiple strategies</p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
