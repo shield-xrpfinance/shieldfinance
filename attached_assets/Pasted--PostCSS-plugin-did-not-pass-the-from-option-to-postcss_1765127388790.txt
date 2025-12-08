@@ -1,0 +1,107 @@
+ PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+
+node_modules/@walletconnect/universal-provider/node_modules/ox/_esm/core/Base64.js (6:27): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/@walletconnect/universal-provider/node_modules/ox/_esm/core/Base64.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+node_modules/@walletconnect/sign-client/node_modules/ox/_esm/core/Base64.js (6:27): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/@walletconnect/sign-client/node_modules/ox/_esm/core/Base64.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+node_modules/@reown/appkit-adapter-wagmi/node_modules/ox/_esm/core/Base64.js (6:27): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/@reown/appkit-adapter-wagmi/node_modules/ox/_esm/core/Base64.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+node_modules/@base-org/account/node_modules/ox/_esm/core/Address.js (6:21): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/@base-org/account/node_modules/ox/_esm/core/Address.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+node_modules/@base-org/account/node_modules/ox/_esm/core/Base64.js (6:27): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/@base-org/account/node_modules/ox/_esm/core/Base64.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+node_modules/@base-org/account/node_modules/ox/_esm/core/internal/cursor.js (2:21): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/@base-org/account/node_modules/ox/_esm/core/internal/cursor.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+node_modules/ox/_esm/core/Base64.js (6:27): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/ox/_esm/core/Base64.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+node_modules/@reown/appkit-adapter-wagmi/node_modules/@walletconnect/ethereum-provider/node_modules/ox/_esm/core/Address.js (6:21): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/@reown/appkit-adapter-wagmi/node_modules/@walletconnect/ethereum-provider/node_modules/ox/_esm/core/Address.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+node_modules/@reown/appkit-adapter-wagmi/node_modules/@walletconnect/ethereum-provider/node_modules/ox/_esm/core/internal/cursor.js (2:21): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/@reown/appkit-adapter-wagmi/node_modules/@walletconnect/ethereum-provider/node_modules/ox/_esm/core/internal/cursor.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+node_modules/@reown/appkit-adapter-wagmi/node_modules/@reown/appkit-ui/node_modules/ox/_esm/core/Address.js (6:21): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/@reown/appkit-adapter-wagmi/node_modules/@reown/appkit-ui/node_modules/ox/_esm/core/Address.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+node_modules/@reown/appkit-adapter-wagmi/node_modules/@reown/appkit-ui/node_modules/ox/_esm/core/internal/cursor.js (2:21): A comment
+
+"/*#__PURE__*/"
+
+in "node_modules/@reown/appkit-adapter-wagmi/node_modules/@reown/appkit-ui/node_modules/ox/_esm/core/internal/cursor.js" contains an annotation that Rollup cannot interpret due to the position of the comment. The comment will be removed to avoid issues.
+
+✓ 9410 modules transformed.
+
+rendering chunks...
+
+[plugin:vite:reporter] [plugin vite:reporter] 
+(!) /home/runner/workspace/node_modules/@walletconnect/universal-provider/dist/index.js is dynamically imported by /home/runner/workspace/client/src/lib/walletContext.tsx but also statically imported by /home/runner/workspace/client/src/components/ConnectWalletModal.tsx, /home/runner/workspace/node_modules/@reown/appkit-adapter-wagmi/dist/esm/src/connectors/WalletConnectConnector.js, /home/runner/workspace/node_modules/@reown/appkit-adapter-wagmi/dist/esm/src/utils/helpers.js, /home/runner/workspace/node_modules/@reown/appkit-controllers/dist/esm/src/controllers/AdapterController/ChainAdapterBlueprint.js, /home/runner/workspace/node_modules/@reown/appkit-controllers/dist/esm/src/controllers/AdapterController/WalletConnectConnector.js, /home/runner/workspace/node_modules/@reown/appkit-controllers/dist/esm/src/utils/SIWXUtil.js, /home/runner/workspace/node_modules/@reown/appkit/dist/esm/src/client/appkit-base-client.js, dynamic import will not move module into another chunk.
+
+
+computing gzip size...
+
+../dist/public/index.html                                                3.75 kB │ gzip:     1.33 kB
+
+../dist/public/assets/xaman-horizontal-white-DgfNvbUQ.svg                7.21 kB │ gzip:     3.02 kB
+
+../dist/public/assets/xaman-wallet-icon-CeTSz5wB.svg                   177.59 kB │ gzip:   134.34 kB
+../dist/public/assets/dark_purple_abstract_gradient-C8dMj6zX.png       977.78 kB
+
+../dist/public/assets/index-DxADfRhh.css                               146.80 kB │ gzip:    23.75 kB
+
+../dist/public/assets/PhCaretUp-CiCxKWwN.js                              2.02 kB │ gzip:     0.93 kB
+
+../dist/public/assets/PhArrowUpRight-BpJjRRRh.js                         2.06 kB │ gzip:     1.01 kB
+../dist/public/assets/PhArrowDown-C4hT9BVu.js                            2.10 kB │ gzip:     1.01 kB
+
+✓ built in 35.82s
+
+
+  dist/index.js  955.3kb
+
+⚡ Done in 206ms
+
+npm notice
+npm notice New major version of npm available! 10.9.2 -> 11.6.4
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.4
+npm notice To update run: npm install -g npm@11.6.4
+npm notice
+
+2025-12-07T17:06:37Z info: Pushing pid1 binary layer...
+2025-12-07T17:06:39Z info: Created pid1 binary layer
