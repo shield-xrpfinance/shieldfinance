@@ -32,8 +32,6 @@ import xrplHorizontalLogo from "@assets/xrpl-horizontal-white.svg";
 import xamanHorizontalLogo from "@assets/xaman-horizontal-white.svg";
 import bifrostHorizontalLogo from "@assets/bifrost-horizontal-white.svg";
 import layerzeroHorizontalLogo from "@assets/layerzero-horizontal-white.svg";
-import noiseTexture from "@assets/noise-texture.webp";
-
 export default function Landing() {
   const shieldLogo = useShieldLogo();
   const heroAnimation = useScrollAnimation();
@@ -127,11 +125,6 @@ export default function Landing() {
 
   return (
     <div className="min-h-screen bg-[#030303] text-white overflow-x-hidden selection:bg-primary selection:text-black relative">
-      {/* Background Grid Effect */}
-      <div className="fixed inset-0 grid-bg pointer-events-none z-0" />
-      
-      {/* Radial Glow Background */}
-      <div className="fixed inset-0 radial-glow pointer-events-none z-0" />
 
       {/* Floating Pill Navigation - Aura Style */}
       <nav className="fixed left-1/2 -translate-x-1/2 flex w-full lg:w-fit max-w-[90vw] z-50 rounded-full ring-white/10 ring-1 py-1.5 pr-1.5 pl-4 top-6 backdrop-blur-xl items-center justify-between transition-all duration-300 hover:border-white/20 hover:shadow-primary/5 bg-gradient-to-br from-white/10 to-white/0 shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)]" data-testid="nav-header">
@@ -257,6 +250,9 @@ export default function Landing() {
           />
         </div>
       </div>
+
+      {/* Grid Background - Aura Style */}
+      <div className="fixed inset-0 grid-bg pointer-events-none z-0" />
 
       {/* Hero Section */}
       <main className="container lg:px-12 lg:pt-0 min-h-[1100px] flex flex-col lg:flex-row z-10 mx-auto pt-0 px-6 relative items-center">
@@ -401,14 +397,6 @@ export default function Landing() {
 
       {/* Features Section - Aura-Style with Terminal UI */}
       <section ref={featuresAnimation.ref} id="features" className="group relative z-10 py-32 border-t border-white/5 bg-black/50 backdrop-blur-3xl overflow-hidden" data-testid="section-features">
-        {/* Noise & Glow Effects */}
-        <div 
-          className="absolute inset-0 opacity-20 mix-blend-soft-light bg-cover bg-center pointer-events-none"
-          style={{ backgroundImage: `url(${noiseTexture})` }}
-        />
-        <div className="absolute -right-40 -top-40 w-[600px] h-[600px] bg-white/20 blur-[120px] rounded-full pointer-events-none opacity-60 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000" />
-        <div className="absolute bottom-0 left-0 w-full h-full bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
-        
         {/* Clean Background Line */}
         <div className="absolute top-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         
@@ -782,14 +770,6 @@ export default function Landing() {
 
       {/* Testimonial Section */}
       <section className="group relative z-10 py-24 border-t border-white/5 overflow-hidden" data-testid="section-testimonial">
-        {/* Noise & Glow Effects */}
-        <div 
-          className="absolute inset-0 opacity-20 mix-blend-soft-light bg-cover bg-center pointer-events-none"
-          style={{ backgroundImage: `url(${noiseTexture})` }}
-        />
-        <div className="absolute -left-40 -top-40 w-[600px] h-[600px] bg-white/20 blur-[120px] rounded-full pointer-events-none opacity-60 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000" />
-        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
-        
         <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
@@ -889,13 +869,6 @@ export default function Landing() {
       <section className="relative z-10 py-16" data-testid="section-cta-banner">
         <div className="max-w-4xl mx-auto px-6 lg:px-12">
           <div className="group glass-card rounded-2xl p-8 lg:p-12 text-center relative z-10 overflow-hidden">
-            {/* Noise & Glow Effects */}
-            <div 
-              className="absolute inset-0 opacity-20 mix-blend-soft-light bg-cover bg-center pointer-events-none z-0"
-              style={{ backgroundImage: `url(${noiseTexture})` }}
-            />
-            <div className="absolute -right-40 -bottom-40 w-[600px] h-[600px] bg-white/20 blur-[120px] rounded-full pointer-events-none opacity-60 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000 z-0" />
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none z-0" />
             <h3 className="relative z-10 text-2xl lg:text-3xl font-serif italic text-white mb-4">
               Uncertain about your staking strategy?
             </h3>
@@ -1099,14 +1072,6 @@ export default function Landing() {
 
       {/* Security Section */}
       <section ref={securityAnimation.ref} id="security" className="group relative z-10 py-24 border-t border-white/5 overflow-hidden" data-testid="section-security">
-        {/* Noise & Glow Effects */}
-        <div 
-          className="absolute inset-0 opacity-20 mix-blend-soft-light bg-cover bg-center pointer-events-none"
-          style={{ backgroundImage: `url(${noiseTexture})` }}
-        />
-        <div className="absolute -right-40 -top-40 w-[600px] h-[600px] bg-white/20 blur-[120px] rounded-full pointer-events-none opacity-60 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000" />
-        <div className="absolute bottom-0 left-0 w-full h-full bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
-        
         <div className={`max-w-7xl mx-auto px-6 lg:px-12 relative z-10 ${securityAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
