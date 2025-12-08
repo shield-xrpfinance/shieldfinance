@@ -232,6 +232,11 @@ export async function registerRoutes(
     res.status(200).json({ status: "ok" });
   });
 
+  // Health endpoint alias for /healthz (commonly used by deployment systems)
+  app.get("/health", (_req, res) => {
+    res.status(200).json({ status: "ok" });
+  });
+
   // Readiness probe - Returns 200 only if all critical services are ready
   app.get("/readyz", (_req, res) => {
     const status = readinessRegistry.getStatus();

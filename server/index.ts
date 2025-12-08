@@ -999,10 +999,13 @@ async function initializeFlareClientWithRetry(config: {
   process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
   process.on('SIGINT', () => gracefulShutdown('SIGINT'));
   
-  // Start Discord bot in the same process as the Express server
+  // Start Discord bot with delay to not block deployment health checks
   // The bot handles wallet verification for Discord community members
   // It will only start if DISCORD_BOT_TOKEN and DISCORD_GUILD_ID are configured
-  startDiscordBot().catch(console.error);
+  // Delay startup by 30 seconds to ensure HTTP server is fully ready for health checks
+  setTimeout(() => {
+    startDiscordBot().catch(console.error);
+  }, 30000);
   
   // Step 3: Initialize services asynchronously in background
   // This doesn't block the HTTP server from responding to health checks
