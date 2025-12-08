@@ -13,7 +13,7 @@ When users claim tokens from the faucet, the faucet should call the Shield Finan
 
 ### POST /api/points/activity/external
 
-**Base URL (Production):** `https://app.shyield.finance`  
+**Base URL (Production):** `https://shyield.finance`  
 **Base URL (Testnet):** `https://testnet.shyield.finance` (or your deployed URL)
 
 ### Request Headers
@@ -118,7 +118,7 @@ const axios = require('axios');
 async function logFaucetClaim(walletAddress, tokenType, amount) {
   try {
     const response = await axios.post(
-      'https://app.shyield.finance/api/points/activity/external',
+      'https://shyield.finance/api/points/activity/external',
       {
         walletAddress,
         activityType: tokenType === 'SHIELD' ? 'shield_faucet' : 'flr_faucet',
@@ -175,7 +175,7 @@ const useLogFaucetClaim = () => {
       amount: string;
     }) => {
       const response = await fetch(
-        'https://app.shyield.finance/api/points/activity/external',
+        'https://shyield.finance/api/points/activity/external',
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -226,7 +226,7 @@ import requests
 def log_faucet_claim(wallet_address: str, token_type: str, amount: str) -> dict | None:
     try:
         response = requests.post(
-            'https://app.shyield.finance/api/points/activity/external',
+            'https://shyield.finance/api/points/activity/external',
             json={
                 'walletAddress': wallet_address,
                 'activityType': 'shield_faucet' if token_type == 'SHIELD' else 'flr_faucet',
@@ -251,7 +251,7 @@ def log_faucet_claim(wallet_address: str, token_type: str, amount: str) -> dict 
 
 The API endpoint has CORS enabled for the following origins:
 - `https://faucet.shyield.finance`
-- `https://app.shyield.finance`
+- `https://shyield.finance`
 - `http://localhost:*` (development)
 
 If you need additional origins whitelisted, please contact the Shield Finance team.
@@ -262,7 +262,7 @@ If you need additional origins whitelisted, please contact the Shield Finance te
 
 ```bash
 # Successful claim
-curl -X POST https://app.shyield.finance/api/points/activity/external \
+curl -X POST https://shyield.finance/api/points/activity/external \
   -H "Content-Type: application/json" \
   -d '{
     "walletAddress": "0x1234567890abcdef1234567890abcdef12345678",
@@ -277,8 +277,8 @@ curl -X POST https://app.shyield.finance/api/points/activity/external \
 ### Verify Points
 
 After logging a faucet claim, users can verify their points at:
-- **Points Dashboard:** https://app.shyield.finance/app/points
-- **Leaderboard:** https://app.shyield.finance/app/leaderboard
+- **Points Dashboard:** https://shyield.finance/app/points
+- **Leaderboard:** https://shyield.finance/app/leaderboard
 
 ## API Key Authentication (Future)
 
