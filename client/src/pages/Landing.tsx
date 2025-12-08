@@ -1139,7 +1139,7 @@ export default function Landing() {
             <p className="relative z-10 text-white/60 mb-8 max-w-xl mx-auto">
               Our multi-strategy vault automatically allocates your assets across optimized yield opportunities.
             </p>
-            <Link href="/app" className="relative z-10">
+            <Link href="/app/vaults" className="relative z-10">
               <button className="gradient-border-btn hover:bg-white/10 hover:text-white transition-all flex text-sm font-medium text-slate-300 py-3 px-6 gap-2 items-center mx-auto" data-testid="button-cta-banner">
                 <span className="tracking-tight">Explore Vaults</span>
                 <ArrowRight className="h-4 w-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
