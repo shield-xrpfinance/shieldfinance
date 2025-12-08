@@ -618,8 +618,7 @@ w3m-all-wallets-widget {
 }
 
 .animate-marquee {
-  animation: marquee 20s linear infinite !important;
-  will-change: transform;
+  animation: marquee 20s linear infinite;
 }
 
 .animate-marquee:hover {
@@ -704,20 +703,7 @@ w3m-all-wallets-widget {
 
 .animate-ping-light {
   animation: ping-light 1.5s cubic-bezier(0, 0, 0.2, 1) infinite;
-  will-change: transform, opacity;
 }
-
-/* GPU-accelerated animations - transform-based */
-.animate-spin-slow,
-.animate-spin-slow-reverse,
-.animate-sonar,
-.animate-ping-light,
-.animate-float-up,
-.animate-fade-in-up {
-  will-change: transform, opacity;
-  backface-visibility: hidden;
-}
-
 
 /* GPU hints for stroke-based animations */
 .animate-beam {
@@ -731,17 +717,15 @@ w3m-all-wallets-widget {
   backface-visibility: hidden;
 }
 
-/* Scroll-triggered animation using data attribute (no React re-renders) */
+/* Scroll-triggered animation using data attribute */
 .scroll-animate {
   opacity: 0;
   transform: translateY(20px);
   transition: opacity 0.6s ease-out, transform 0.6s ease-out;
-  will-change: transform, opacity;
 }
 
-/* When data-visible is on the same element */
+/* Visible state - works on same element, descendant, or direct child */
 .scroll-animate[data-visible="true"],
-/* When data-visible is on parent element */
 [data-visible="true"] .scroll-animate,
 [data-visible="true"] > .scroll-animate {
   opacity: 1;
