@@ -58,6 +58,23 @@ export default function Landing() {
     refetchInterval: 60000,
   });
 
+  // Initialize Unicorn Studio animation after component mounts
+  useEffect(() => {
+    const initUnicornStudio = () => {
+      if (typeof window !== 'undefined' && (window as any).UnicornStudio) {
+        (window as any).UnicornStudio.init();
+      }
+    };
+
+    // Try to initialize immediately
+    initUnicornStudio();
+
+    // Also try after a short delay in case script hasn't loaded yet
+    const timer = setTimeout(initUnicornStudio, 1000);
+
+    return () => clearTimeout(timer);
+  }, []);
+
   const formatTvl = (tvl: string): string => {
     const num = parseFloat(tvl);
     if (isNaN(num) || num === 0) return "$0";
