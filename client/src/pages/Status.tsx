@@ -42,7 +42,7 @@ interface SystemHealthResponse {
   readiness: Record<string, ServiceStatus>;
 }
 
-function StatusIcon({ status }: { status: "ready" | "error" | "initializing" | "healthy" | "degraded" }) {
+function StatusIcon({ status }: { status: "ready" | "error" | "initializing" | "healthy" | "degraded" | "idle" }) {
   switch (status) {
     case "ready":
     case "healthy":
@@ -52,6 +52,8 @@ function StatusIcon({ status }: { status: "ready" | "error" | "initializing" | "
       return <XCircle className="h-5 w-5 text-red-500" />;
     case "initializing":
       return <RefreshCw className="h-5 w-5 text-yellow-500 animate-spin" />;
+    case "idle":
+      return <Clock className="h-5 w-5 text-blue-400" />;
     default:
       return <AlertCircle className="h-5 w-5 text-gray-500" />;
   }
@@ -63,6 +65,7 @@ function StatusBadge({ status }: { status: string }) {
       case "ready":
       case "healthy":
       case "closed":
+      case "idle":
         return "default";
       case "error":
       case "degraded":
@@ -94,6 +97,8 @@ function StatusBadge({ status }: { status: string }) {
         return "Open";
       case "half-open":
         return "Recovering";
+      case "idle":
+        return "Idle";
       default:
         return status;
     }
@@ -199,6 +204,29 @@ function CircuitBreakerCard({ name, state, failures }: { name: string; state: st
         </div>
       </div>
       <StatusBadge status={state} />
+    </div>
+  );
+}
+
+function ReconciliationCard({ running }: { running: boolean }) {
+  const status = running ? "healthy" : "idle";
+  const detail = running ? "Running reconciliation cycle" : "Idle - waiting for next scheduled run";
+  
+  return (
+    <div className="flex items-center justify-between p-4 rounded-lg bg-white/5 border border-white/10" data-testid="infra-card-reconciliation-service">
+      <div className="flex items-center gap-3">
+        <div className="p-2 rounded-lg bg-white/5">
+          <RefreshCw className={`h-5 w-5 text-primary ${running ? 'animate-spin' : ''}`} />
+        </div>
+        <div>
+          <p className="font-medium text-white">Reconciliation Service</p>
+          <p className="text-xs text-white/50 mt-0.5">{detail}</p>
+        </div>
+      </div>
+      <div className="flex items-center gap-3">
+        <StatusIcon status={status} />
+        <StatusBadge status={status} />
+      </div>
     </div>
   );
 }
@@ -367,12 +395,8 @@ export default function Status() {
                     detail={`${data.selfHealing.cacheStats.entries} entries, ${data.selfHealing.cacheStats.queueSize} queued`}
                   />
                 )}
-                {data.selfHealing.reconciliation && (
-                  <InfrastructureCard 
-                    title="Reconciliation Service" 
-                    healthy={data.selfHealing.reconciliation.running}
-                    detail={data.selfHealing.reconciliation.running ? "Running" : "Stopped"}
-                  />
+                {data.selfHealing.reconciliation !== undefined && (
+                  <ReconciliationCard running={data.selfHealing.reconciliation.running} />
                 )}
               </CardContent>
             </Card>
