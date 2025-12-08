@@ -786,13 +786,13 @@ export default function Landing() {
               <div className="flex items-center gap-4 mb-6">
                 <img 
                   src={ramiAvatar} 
-                  alt="Rami - Shield Finance Community" 
+                  alt="Reyes - Shield Finance Community" 
                   className="w-16 h-16 rounded-full object-cover border-2 border-primary/30"
                 />
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">TESTNET</span>
-                    <span className="text-white font-semibold">Rami</span>
+                    <a href="https://x.com/Reyes39858414" target="_blank" rel="noopener noreferrer" className="text-white font-semibold hover:text-primary transition-colors">Reyes</a>
                   </div>
                   <p className="text-sm text-white/50">Community Member · Coston2 Tester</p>
                 </div>
