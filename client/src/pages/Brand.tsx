@@ -602,7 +602,7 @@ export default function Brand() {
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <a 
-              href="https://twitter.com/shield_finance" 
+              href="https://x.com/ShieldFinanceX" 
               target="_blank" 
               rel="noopener noreferrer"
               className="shiny-cta"
