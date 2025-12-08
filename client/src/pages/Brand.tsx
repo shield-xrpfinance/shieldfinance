@@ -577,14 +577,13 @@ export default function Brand() {
                   <p className="text-sm font-medium text-white mb-1">Security Audit</p>
                   <p className="text-xs text-white/50">Smart contract security assessment</p>
                 </div>
-                <a 
-                  href="/shield-finance-audit.pdf" 
-                  download 
+                <Link 
+                  href="/app/security"
                   className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors shrink-0"
-                  data-testid="button-download-audit"
+                  data-testid="button-view-security"
                 >
-                  <Download className="h-4 w-4" /> PDF
-                </a>
+                  View <ArrowRight className="h-4 w-4" />
+                </Link>
               </div>
             </div>
           </div>
