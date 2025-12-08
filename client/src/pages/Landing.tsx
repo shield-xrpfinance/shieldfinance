@@ -792,7 +792,12 @@ export default function Landing() {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">TESTNET</span>
-                    <a href="https://x.com/Reyes39858414" target="_blank" rel="noopener noreferrer" className="text-white font-semibold hover:text-primary transition-colors">Reyes</a>
+                    <a href="https://x.com/Reyes39858414" target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-white font-semibold hover:text-primary transition-colors group">
+                      <span>Reyes</span>
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" className="opacity-60 group-hover:opacity-100 transition-opacity">
+                        <path d="m17.687 3.063l-4.996 5.711l-4.32-5.711H2.112l7.477 9.776l-7.086 8.099h3.034l5.469-6.25l4.78 6.25h6.102l-7.794-10.304l6.625-7.571zm-1.064 16.06L5.654 4.782h1.803l10.846 14.34z" />
+                      </svg>
+                    </a>
                   </div>
                   <p className="text-sm text-white/50">Community Member · Coston2 Tester</p>
                 </div>
