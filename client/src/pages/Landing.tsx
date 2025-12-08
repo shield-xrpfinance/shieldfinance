@@ -306,20 +306,25 @@ export default function Landing() {
             <span className="text-xs text-white/60 font-mono uppercase tracking-wide" data-testid="text-trusted-by">
               [ <span className="text-primary">✓</span> ] Built with Leading Technologies
             </span>
-            <div className="overflow-hidden mask-gradient-fade w-full relative">
-              <div className="flex animate-marquee w-max gap-x-12 items-center opacity-60">
-                {/* Original Set */}
-                <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto flex-shrink-0" data-testid="img-flare-inline" />
-                <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto flex-shrink-0" data-testid="img-xrpl-inline" />
-                <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto flex-shrink-0" data-testid="img-xaman-inline" />
-                <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto flex-shrink-0" data-testid="img-bifrost-inline" />
-                <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto flex-shrink-0" data-testid="img-layerzero-inline" />
-                {/* Duplicate Set for Seamless Loop */}
-                <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto flex-shrink-0" />
-                <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto flex-shrink-0" />
-                <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto flex-shrink-0" />
-                <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto flex-shrink-0" />
-                <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto flex-shrink-0" />
+            {/* Viewport: overflow hidden with mask gradient */}
+            <div className="overflow-hidden w-full relative">
+              {/* Track: handles the mask gradient fade */}
+              <div className="mask-gradient-fade">
+                {/* Items: animated flex container */}
+                <div className="flex animate-marquee w-max gap-x-12 items-center opacity-60">
+                  {/* Original Set */}
+                  <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto flex-shrink-0" data-testid="img-flare-inline" />
+                  <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto flex-shrink-0" data-testid="img-xrpl-inline" />
+                  <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto flex-shrink-0" data-testid="img-xaman-inline" />
+                  <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto flex-shrink-0" data-testid="img-bifrost-inline" />
+                  <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto flex-shrink-0" data-testid="img-layerzero-inline" />
+                  {/* Duplicate Set for Seamless Loop */}
+                  <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto flex-shrink-0" />
+                  <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto flex-shrink-0" />
+                  <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto flex-shrink-0" />
+                  <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto flex-shrink-0" />
+                  <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto flex-shrink-0" />
+                </div>
               </div>
             </div>
           </div>
@@ -883,14 +888,14 @@ export default function Landing() {
       {/* CTA Banner */}
       <section className="relative z-10 py-16" data-testid="section-cta-banner">
         <div className="max-w-4xl mx-auto px-6 lg:px-12">
-          <div className="group glass-card rounded-2xl p-8 lg:p-12 text-center relative overflow-hidden">
+          <div className="group glass-card rounded-2xl p-8 lg:p-12 text-center relative z-10 overflow-hidden">
             {/* Noise & Glow Effects */}
             <div 
-              className="absolute inset-0 opacity-20 mix-blend-soft-light bg-cover bg-center pointer-events-none"
+              className="absolute inset-0 opacity-20 mix-blend-soft-light bg-cover bg-center pointer-events-none z-0"
               style={{ backgroundImage: `url(${noiseTexture})` }}
             />
-            <div className="absolute -right-40 -bottom-40 w-[600px] h-[600px] bg-white/20 blur-[120px] rounded-full pointer-events-none opacity-60 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000" />
-            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
+            <div className="absolute -right-40 -bottom-40 w-[600px] h-[600px] bg-white/20 blur-[120px] rounded-full pointer-events-none opacity-60 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000 z-0" />
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none z-0" />
             <h3 className="relative z-10 text-2xl lg:text-3xl font-serif italic text-white mb-4">
               Uncertain about your staking strategy?
             </h3>
