@@ -525,6 +525,13 @@ w3m-all-wallets-widget {
   animation: flow-beam 2.5s ease-in-out infinite;
 }
 
+@media (prefers-reduced-motion: reduce) {
+  .animate-flow-beam {
+    animation: none;
+    opacity: 0.6;
+  }
+}
+
 /* Sonar Wave Animation - uses transform: scale() for reliable cross-browser support */
 @keyframes sonar-wave {
   0% {
