@@ -1287,7 +1287,7 @@ export default function Landing() {
               <div className="relative flex items-center justify-center w-10 h-10 bg-white/5 rounded-xl border border-white/10 shadow-[0_0_15px_rgba(56,189,248,0.15)]">
                 <img src={shieldLogo} alt="Shield Finance" className="h-6 w-6" />
               </div>
-              <span className="font-serif font-medium text-2xl tracking-tight text-white">Shield</span>
+              <span className="font-sans font-semibold text-2xl tracking-tight text-white" style={{letterSpacing: '-0.02em'}}>Shield Finance</span>
             </div>
             <p className="text-white/40 text-sm leading-relaxed max-w-[280px] font-light">
               Engineering the future of XRP liquid staking. Secure, scalable, and instant.
