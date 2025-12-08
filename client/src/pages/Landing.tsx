@@ -18,8 +18,7 @@ import {
   Sparkles,
   RefreshCw,
   Eye,
-  Wallet,
-  Globe
+  Wallet
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { useShieldLogo } from "@/components/ShieldLogo";
@@ -32,6 +31,7 @@ import xrplHorizontalLogo from "@assets/xrpl-horizontal-white.svg";
 import xamanHorizontalLogo from "@assets/xaman-horizontal-white.svg";
 import bifrostHorizontalLogo from "@assets/bifrost-horizontal-white.svg";
 import layerzeroHorizontalLogo from "@assets/layerzero-horizontal-white.svg";
+import founderPhoto from "@assets/Founder_Profile_pic_1765161729767.jpg";
 export default function Landing() {
   const shieldLogo = useShieldLogo();
   const heroAnimation = useScrollAnimation();
@@ -954,9 +954,12 @@ export default function Landing() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-20 items-end">
             <div className="lg:col-span-4 relative group">
               <div className="relative w-full aspect-[3.5/4] rounded-[24px] overflow-hidden border border-white/10 bg-white/[0.02]">
-                <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/5 to-transparent flex items-center justify-center">
-                  <Globe className="w-24 h-24 text-primary/40 group-hover:text-primary/60 transition-colors" />
-                </div>
+                <img 
+                  src={founderPhoto} 
+                  alt="Shield Finance Founder" 
+                  className="w-full h-full object-cover object-top"
+                  data-testid="img-founder"
+                />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-transparent to-transparent opacity-80" />
                 <div className="absolute top-5 left-5 right-5 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
                   <div className="flex gap-1.5">
