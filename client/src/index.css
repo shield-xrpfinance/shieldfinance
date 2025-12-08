@@ -621,10 +621,6 @@ w3m-all-wallets-widget {
   animation: marquee 20s linear infinite;
 }
 
-.animate-marquee:hover {
-  animation-play-state: paused;
-}
-
 /* Mask Gradient Fade for Marquee */
 .mask-gradient-fade {
   mask-image: linear-gradient(to right, transparent, black 10%, black 90%, transparent);
