@@ -579,9 +579,9 @@ export default function Landing() {
 
                 {/* Visual: Orbit & Sonar Visualization */}
                 <div className="mt-auto relative w-full h-80 flex items-center justify-center">
-                  {/* Sonar Rings */}
-                  <div className="absolute w-64 h-64 border border-primary/5 rounded-full animate-ping opacity-10" style={{animationDuration: '4s'}} />
-                  <div className="absolute w-52 h-52 border border-white/5 rounded-full animate-ping opacity-20" style={{animationDuration: '3s', animationDelay: '0.7s'}} />
+                  {/* Sonar Rings - Using lighter animation for performance */}
+                  <div className="absolute w-64 h-64 border border-primary/5 rounded-full animate-ping-light opacity-10" style={{animationDuration: '4s'}} />
+                  <div className="absolute w-52 h-52 border border-white/5 rounded-full animate-ping-light opacity-20" style={{animationDuration: '3s', animationDelay: '0.7s'}} />
 
                   {/* Outer Rotating Ring */}
                   <div className="absolute w-48 h-48 border border-white/5 rounded-full animate-spin" style={{animationDuration: '40s'}}>
