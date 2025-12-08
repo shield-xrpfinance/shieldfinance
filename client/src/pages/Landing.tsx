@@ -25,7 +25,9 @@ import {
   Coins,
   Vault,
   CircleDollarSign,
-  AlertTriangle
+  AlertTriangle,
+  ChevronRight,
+  Clock
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1238,91 +1240,146 @@ export default function Landing() {
             </p>
           </div>
 
-          {/* Desktop Flow Chart - Horizontal */}
+          {/* Desktop Flow Chart - Horizontal with Glass Cards */}
           <div className="hidden lg:block">
-            <div className="relative w-full h-64 glass-card rounded-2xl p-8 overflow-hidden">
-              <svg className="w-full h-full" viewBox="0 0 1000 160" preserveAspectRatio="xMidYMid meet">
-                {/* Definitions */}
-                <defs>
-                  <linearGradient id="flow-beam" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#38BDF8" stopOpacity="0" />
-                    <stop offset="50%" stopColor="#38BDF8" stopOpacity="1" />
-                    <stop offset="100%" stopColor="#38BDF8" stopOpacity="0" />
-                  </linearGradient>
-                </defs>
-                
-                {/* Connection Lines */}
-                <path d="M 130 80 L 230 80" stroke="white" strokeOpacity="0.1" strokeWidth="2" />
-                <path d="M 130 80 L 230 80" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-60" />
-                
-                <path d="M 310 80 L 410 80" stroke="white" strokeOpacity="0.1" strokeWidth="2" />
-                <path d="M 310 80 L 410 80" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-60" style={{animationDelay: '-0.5s'}} />
-                
-                <path d="M 490 80 L 590 80" stroke="white" strokeOpacity="0.1" strokeWidth="2" />
-                <path d="M 490 80 L 590 80" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-60" style={{animationDelay: '-1s'}} />
-                
-                <path d="M 670 80 L 770 80" stroke="white" strokeOpacity="0.1" strokeWidth="2" />
-                <path d="M 670 80 L 770 80" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-60" style={{animationDelay: '-1.5s'}} />
-                
-                <path d="M 850 80 L 950 80" stroke="white" strokeOpacity="0.1" strokeWidth="2" />
-                <path d="M 850 80 L 950 80" stroke="#38BDF8" strokeWidth="2" className="beam-line animate-beam opacity-60" style={{animationDelay: '-2s'}} />
-                
-                {/* Node 1: XRP */}
-                <g transform="translate(70, 80)">
-                  <rect x="-50" y="-35" width="100" height="70" rx="12" fill="#0A0A0A" stroke="#38BDF8" strokeOpacity="0.5" strokeWidth="1" />
-                  <circle cx="0" cy="-5" r="14" fill="#38BDF8" fillOpacity="0.2" stroke="#38BDF8" strokeWidth="1" />
-                  <text x="0" y="0" textAnchor="middle" fill="#38BDF8" fontSize="10" fontFamily="monospace" fontWeight="bold">XRP</text>
-                  <text x="0" y="25" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.7">Source</text>
-                  <circle r="55" fill="none" stroke="#38BDF8" strokeOpacity="0.2" strokeWidth="1" className="animate-sonar" />
-                </g>
-                
-                {/* Node 2: Bridge */}
-                <g transform="translate(270, 80)">
-                  <rect x="-50" y="-35" width="100" height="70" rx="12" fill="#0A0A0A" stroke="white" strokeOpacity="0.2" strokeWidth="1" />
-                  <g transform="translate(0, -5)">
-                    <path d="M -8 -4 L 0 -8 L 8 -4 L 8 4 L 0 8 L -8 4 Z" fill="none" stroke="#38BDF8" strokeWidth="1.5" />
-                    <circle r="3" fill="#38BDF8" className="animate-pulse-fast" />
-                  </g>
-                  <text x="0" y="25" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.7">Bridge</text>
-                </g>
-                
-                {/* Node 3: FXRP */}
-                <g transform="translate(450, 80)">
-                  <rect x="-50" y="-35" width="100" height="70" rx="12" fill="#0A0A0A" stroke="white" strokeOpacity="0.2" strokeWidth="1" />
-                  <circle cx="0" cy="-5" r="14" fill="#38BDF8" fillOpacity="0.1" stroke="#38BDF8" strokeOpacity="0.6" strokeWidth="1" />
-                  <text x="0" y="0" textAnchor="middle" fill="#38BDF8" fontSize="9" fontFamily="monospace" fontWeight="bold">FXRP</text>
-                  <text x="0" y="25" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.7">FAssets</text>
-                </g>
-                
-                {/* Node 4: Shield Vault */}
-                <g transform="translate(630, 80)">
-                  <rect x="-50" y="-35" width="100" height="70" rx="12" fill="#0A0A0A" stroke="#38BDF8" strokeOpacity="0.4" strokeWidth="1" />
-                  <g transform="translate(0, -5)">
-                    <rect x="-10" y="-8" width="20" height="16" rx="3" fill="none" stroke="#38BDF8" strokeWidth="1.5" />
-                    <line x1="-6" y1="0" x2="6" y2="0" stroke="#38BDF8" strokeWidth="1" />
-                  </g>
-                  <text x="0" y="25" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.7">Shield Vault</text>
-                </g>
-                
-                {/* Node 5: shXRP */}
-                <g transform="translate(810, 80)">
-                  <rect x="-50" y="-35" width="100" height="70" rx="12" fill="#0A0A0A" stroke="white" strokeOpacity="0.2" strokeWidth="1" />
-                  <circle cx="0" cy="-5" r="14" fill="#38BDF8" fillOpacity="0.15" stroke="#38BDF8" strokeOpacity="0.7" strokeWidth="1" />
-                  <text x="0" y="0" textAnchor="middle" fill="#38BDF8" fontSize="8" fontFamily="monospace" fontWeight="bold">shXRP</text>
-                  <text x="0" y="25" textAnchor="middle" fill="#fff" fontSize="9" fontFamily="monospace" opacity="0.7">Receipt</text>
-                </g>
-                
-                {/* Node 6: Yield */}
-                <g transform="translate(950, 80)">
-                  <rect x="-40" y="-35" width="80" height="70" rx="12" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="2" />
-                  <g transform="translate(0, -5)">
-                    <path d="M -8 4 L 0 -8 L 8 4" fill="none" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" />
-                    <line x1="0" y1="-8" x2="0" y2="8" stroke="#38BDF8" strokeWidth="2" strokeLinecap="round" />
-                  </g>
-                  <text x="0" y="25" textAnchor="middle" fill="#38BDF8" fontSize="9" fontFamily="monospace" fontWeight="bold">YIELD</text>
-                  <circle r="45" fill="none" stroke="#38BDF8" strokeOpacity="0.3" strokeWidth="1" className="animate-ping-light" style={{animationDuration: '2s'}} />
-                </g>
-              </svg>
+            <div className="relative glass-card rounded-2xl p-8 lg:p-10 overflow-visible">
+              {/* Flow Steps Container */}
+              <div className="flex items-stretch justify-between gap-3 relative">
+                {/* Step 1: XRP Source */}
+                <div className="group flex-1 relative" data-testid="step-desktop-1">
+                  <div className="relative h-full rounded-xl bg-gradient-to-b from-primary/10 to-transparent border border-primary/30 p-5 transition-all duration-300 hover:border-primary/50 hover:bg-primary/5">
+                    {/* Step Number */}
+                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-primary/30 text-[10px] font-mono text-primary">01</div>
+                    {/* Icon */}
+                    <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <span className="text-sm font-bold text-primary font-mono">XRP</span>
+                    </div>
+                    {/* Content */}
+                    <h4 className="text-white font-semibold mb-1 text-sm">Source Asset</h4>
+                    <p className="text-white/50 text-xs leading-relaxed">Your XRP from any supported chain</p>
+                    {/* Pulse Ring */}
+                    <div className="absolute -inset-1 rounded-xl border border-primary/20 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                </div>
+
+                {/* Connector 1 */}
+                <div className="flex items-center justify-center w-12 flex-shrink-0 relative">
+                  <div className="absolute inset-y-0 left-1/2 w-px bg-white/5" />
+                  <div className="w-full h-0.5 bg-white/10 relative overflow-hidden rounded-full">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '0s'}} />
+                  </div>
+                  <ChevronRight className="absolute w-4 h-4 text-primary/60" />
+                </div>
+
+                {/* Step 2: Bridge */}
+                <div className="group flex-1 relative" data-testid="step-desktop-2">
+                  <div className="relative h-full rounded-xl bg-white/[0.02] border border-white/10 p-5 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04]">
+                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-white/20 text-[10px] font-mono text-white/50">02</div>
+                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <Layers className="w-5 h-5 text-primary" />
+                    </div>
+                    <h4 className="text-white font-semibold mb-1 text-sm">Cross-Chain Bridge</h4>
+                    <p className="text-white/50 text-xs leading-relaxed">LayerZero powered transfer</p>
+                  </div>
+                </div>
+
+                {/* Connector 2 */}
+                <div className="flex items-center justify-center w-12 flex-shrink-0 relative">
+                  <div className="w-full h-0.5 bg-white/10 relative overflow-hidden rounded-full">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '0.4s'}} />
+                  </div>
+                  <ChevronRight className="absolute w-4 h-4 text-primary/60" />
+                </div>
+
+                {/* Step 3: FXRP */}
+                <div className="group flex-1 relative" data-testid="step-desktop-3">
+                  <div className="relative h-full rounded-xl bg-white/[0.02] border border-white/10 p-5 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04]">
+                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-white/20 text-[10px] font-mono text-white/50">03</div>
+                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <span className="text-sm font-bold text-primary font-mono">FXRP</span>
+                    </div>
+                    <h4 className="text-white font-semibold mb-1 text-sm">FAssets Minted</h4>
+                    <p className="text-white/50 text-xs leading-relaxed">Wrapped XRP on Flare</p>
+                  </div>
+                </div>
+
+                {/* Connector 3 */}
+                <div className="flex items-center justify-center w-12 flex-shrink-0 relative">
+                  <div className="w-full h-0.5 bg-white/10 relative overflow-hidden rounded-full">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '0.8s'}} />
+                  </div>
+                  <ChevronRight className="absolute w-4 h-4 text-primary/60" />
+                </div>
+
+                {/* Step 4: Shield Vault */}
+                <div className="group flex-1 relative" data-testid="step-desktop-4">
+                  <div className="relative h-full rounded-xl bg-gradient-to-b from-primary/5 to-transparent border border-primary/20 p-5 transition-all duration-300 hover:border-primary/40 hover:bg-primary/5">
+                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-primary/30 text-[10px] font-mono text-primary">04</div>
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <Vault className="w-5 h-5 text-primary" />
+                    </div>
+                    <h4 className="text-white font-semibold mb-1 text-sm">Shield Vault</h4>
+                    <p className="text-white/50 text-xs leading-relaxed">Multi-strategy allocation</p>
+                  </div>
+                </div>
+
+                {/* Connector 4 */}
+                <div className="flex items-center justify-center w-12 flex-shrink-0 relative">
+                  <div className="w-full h-0.5 bg-white/10 relative overflow-hidden rounded-full">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '1.2s'}} />
+                  </div>
+                  <ChevronRight className="absolute w-4 h-4 text-primary/60" />
+                </div>
+
+                {/* Step 5: shXRP */}
+                <div className="group flex-1 relative" data-testid="step-desktop-5">
+                  <div className="relative h-full rounded-xl bg-white/[0.02] border border-white/10 p-5 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04]">
+                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-white/20 text-[10px] font-mono text-white/50">05</div>
+                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <span className="text-xs font-bold text-primary font-mono">shXRP</span>
+                    </div>
+                    <h4 className="text-white font-semibold mb-1 text-sm">Receipt Token</h4>
+                    <p className="text-white/50 text-xs leading-relaxed">Liquid staking token</p>
+                  </div>
+                </div>
+
+                {/* Connector 5 */}
+                <div className="flex items-center justify-center w-12 flex-shrink-0 relative">
+                  <div className="w-full h-0.5 bg-white/10 relative overflow-hidden rounded-full">
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '1.6s'}} />
+                  </div>
+                  <ChevronRight className="absolute w-4 h-4 text-primary/60" />
+                </div>
+
+                {/* Step 6: Yield */}
+                <div className="group flex-1 relative" data-testid="step-desktop-6">
+                  <div className="relative h-full rounded-xl bg-gradient-to-b from-primary/15 to-primary/5 border-2 border-primary/40 p-5 transition-all duration-300 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10">
+                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-primary border border-primary text-[10px] font-mono text-[#030303] font-bold">06</div>
+                    <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/50 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform relative">
+                      <TrendingUp className="w-5 h-5 text-primary" />
+                      <div className="absolute inset-0 rounded-xl border border-primary/30 animate-ping opacity-50" />
+                    </div>
+                    <h4 className="text-primary font-semibold mb-1 text-sm">Earn Yield</h4>
+                    <p className="text-white/60 text-xs leading-relaxed">Auto-compounding rewards</p>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Bottom Stats Row */}
+              <div className="flex justify-between items-center mt-8 pt-6 border-t border-white/5">
+                <div className="flex items-center gap-2 text-white/40">
+                  <Zap className="w-4 h-4 text-primary/60" />
+                  <span className="text-xs font-mono">100% Gasless Deposits</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/40">
+                  <Clock className="w-4 h-4 text-primary/60" />
+                  <span className="text-xs font-mono">Instant Settlement</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/40">
+                  <Shield className="w-4 h-4 text-primary/60" />
+                  <span className="text-xs font-mono">Non-Custodial</span>
+                </div>
+              </div>
             </div>
           </div>
 

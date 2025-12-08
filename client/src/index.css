@@ -505,6 +505,26 @@ w3m-all-wallets-widget {
   animation: beam 3s linear infinite;
 }
 
+/* Flow Beam Animation for How It Works section connectors */
+@keyframes flow-beam {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+  50.01% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+.animate-flow-beam {
+  animation: flow-beam 2.5s ease-in-out infinite;
+}
+
 /* Sonar Wave Animation - uses transform: scale() for reliable cross-browser support */
 @keyframes sonar-wave {
   0% {
