@@ -630,7 +630,6 @@ w3m-all-wallets-widget {
 
 .animate-needle-sweep {
   animation: needle-sweep 3s ease-in-out infinite;
-  transform-origin: center center;
 }
 
 /* Gauge Glow Pulse */

@@ -796,15 +796,22 @@ export default function Landing() {
                       className="animate-gauge-glow"
                     />
                     
-                    {/* Gauge Needle - sweeps between base and boosted APY */}
-                    <g className="animate-needle-sweep">
-                      <line x1="0" y1="0" x2="0" y2="-60" stroke="#fff" strokeWidth="3" strokeLinecap="round" />
-                      <polygon points="-4,0 4,0 0,-55" fill="#fff" />
-                    </g>
+                    {/* Center hub - drawn first so needle appears on top */}
+                    <circle r="14" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="2" />
                     
-                    {/* Center hub */}
-                    <circle r="12" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="2" />
-                    <circle r="5" fill="#38BDF8" />
+                    {/* Gauge Needle - sweeps between base and boosted APY */}
+                    <line 
+                      x1="0" y1="0" x2="0" y2="-55" 
+                      stroke="#fff" 
+                      strokeWidth="3" 
+                      strokeLinecap="round"
+                      className="animate-needle-sweep"
+                      style={{transformOrigin: '0px 0px'}}
+                    />
+                    
+                    {/* Center hub cap */}
+                    <circle r="8" fill="#0A0A0A" stroke="#38BDF8" strokeWidth="1.5" />
+                    <circle r="4" fill="#38BDF8" />
                     
                     {/* APY Labels */}
                     <text x="-92" y="8" textAnchor="middle" fill="#fff" fontSize="10" fontFamily="monospace" opacity="0.5">1x</text>
