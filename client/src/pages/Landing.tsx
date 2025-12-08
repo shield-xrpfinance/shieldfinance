@@ -852,6 +852,7 @@ export default function Landing() {
                   src={ramiAvatar} 
                   alt="Reyes - Shield Finance Community" 
                   className="w-16 h-16 rounded-full object-cover border-2 border-primary/30"
+                  loading="lazy"
                 />
                 <div>
                   <div className="flex items-center gap-2 mb-1">
@@ -1064,6 +1065,7 @@ export default function Landing() {
                   alt="Shield Finance Founder" 
                   className="w-full h-full object-cover object-top"
                   data-testid="img-founder"
+                  loading="lazy"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-[#030303] via-transparent to-transparent opacity-80" />
                 <div className="absolute top-5 left-5 right-5 flex justify-between items-center opacity-0 group-hover:opacity-100 transition-opacity duration-500">
