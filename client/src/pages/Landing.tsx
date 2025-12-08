@@ -1243,124 +1243,113 @@ export default function Landing() {
           {/* Desktop Flow Chart - Horizontal with Glass Cards */}
           <div className="hidden lg:block">
             <div className="relative glass-card rounded-2xl p-8 lg:p-10 overflow-visible">
-              {/* Flow Steps Container */}
-              <div className="flex items-stretch justify-between gap-3 relative">
+              {/* Flow Steps Container - 5 Step Journey */}
+              <div className="flex items-stretch justify-between gap-4 relative">
                 {/* Step 1: XRP Source */}
                 <div className="group flex-1 relative" data-testid="step-desktop-1">
                   <div className="relative h-full rounded-xl bg-gradient-to-b from-primary/10 to-transparent border border-primary/30 p-5 transition-all duration-300 hover:border-primary/50 hover:bg-primary/5">
-                    {/* Step Number */}
                     <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-primary/30 text-[10px] font-mono text-primary">01</div>
-                    {/* Icon */}
                     <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
                       <span className="text-sm font-bold text-primary font-mono">XRP</span>
                     </div>
-                    {/* Content */}
-                    <h4 className="text-white font-semibold mb-1 text-sm">Source Asset</h4>
-                    <p className="text-white/50 text-xs leading-relaxed">Your XRP from any supported chain</p>
-                    {/* Pulse Ring */}
+                    <h4 className="text-white font-semibold mb-1 text-sm">Your XRP</h4>
+                    <p className="text-white/50 text-xs leading-relaxed">From XRPL or supported chains</p>
                     <div className="absolute -inset-1 rounded-xl border border-primary/20 animate-pulse opacity-0 group-hover:opacity-100 transition-opacity" />
                   </div>
                 </div>
 
                 {/* Connector 1 */}
-                <div className="flex items-center justify-center w-12 flex-shrink-0 relative">
-                  <div className="absolute inset-y-0 left-1/2 w-px bg-white/5" />
+                <div className="flex items-center justify-center w-10 flex-shrink-0 relative">
                   <div className="w-full h-0.5 bg-white/10 relative overflow-hidden rounded-full">
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '0s'}} />
                   </div>
                   <ChevronRight className="absolute w-4 h-4 text-primary/60" />
                 </div>
 
-                {/* Step 2: Bridge */}
+                {/* Step 2: FAssets Bridge */}
                 <div className="group flex-1 relative" data-testid="step-desktop-2">
                   <div className="relative h-full rounded-xl bg-white/[0.02] border border-white/10 p-5 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04]">
                     <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-white/20 text-[10px] font-mono text-white/50">02</div>
                     <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
                       <Layers className="w-5 h-5 text-primary" />
                     </div>
-                    <h4 className="text-white font-semibold mb-1 text-sm">Cross-Chain Bridge</h4>
-                    <p className="text-white/50 text-xs leading-relaxed">LayerZero powered transfer</p>
+                    <h4 className="text-white font-semibold mb-1 text-sm">FAssets Bridge</h4>
+                    <p className="text-white/50 text-xs leading-relaxed">Wrap to FXRP on Flare</p>
                   </div>
                 </div>
 
                 {/* Connector 2 */}
-                <div className="flex items-center justify-center w-12 flex-shrink-0 relative">
+                <div className="flex items-center justify-center w-10 flex-shrink-0 relative">
                   <div className="w-full h-0.5 bg-white/10 relative overflow-hidden rounded-full">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '0.4s'}} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '0.5s'}} />
                   </div>
                   <ChevronRight className="absolute w-4 h-4 text-primary/60" />
                 </div>
 
-                {/* Step 3: FXRP */}
+                {/* Step 3: Shield Vault - Central/Larger */}
                 <div className="group flex-1 relative" data-testid="step-desktop-3">
-                  <div className="relative h-full rounded-xl bg-white/[0.02] border border-white/10 p-5 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04]">
-                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-white/20 text-[10px] font-mono text-white/50">03</div>
-                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                      <span className="text-sm font-bold text-primary font-mono">FXRP</span>
+                  <div className="relative h-full rounded-xl bg-gradient-to-b from-primary/10 to-primary/5 border border-primary/30 p-5 transition-all duration-300 hover:border-primary/50 hover:bg-primary/10">
+                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-primary/30 text-[10px] font-mono text-primary">03</div>
+                    <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/40 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <Vault className="w-5 h-5 text-primary" />
                     </div>
-                    <h4 className="text-white font-semibold mb-1 text-sm">FAssets Minted</h4>
-                    <p className="text-white/50 text-xs leading-relaxed">Wrapped XRP on Flare</p>
+                    <h4 className="text-white font-semibold mb-1 text-sm">Shield Vault</h4>
+                    <p className="text-white/50 text-xs leading-relaxed">Deposit FXRP</p>
                   </div>
                 </div>
 
                 {/* Connector 3 */}
-                <div className="flex items-center justify-center w-12 flex-shrink-0 relative">
+                <div className="flex items-center justify-center w-10 flex-shrink-0 relative">
                   <div className="w-full h-0.5 bg-white/10 relative overflow-hidden rounded-full">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '0.8s'}} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '1s'}} />
                   </div>
                   <ChevronRight className="absolute w-4 h-4 text-primary/60" />
                 </div>
 
-                {/* Step 4: Shield Vault */}
-                <div className="group flex-1 relative" data-testid="step-desktop-4">
-                  <div className="relative h-full rounded-xl bg-gradient-to-b from-primary/5 to-transparent border border-primary/20 p-5 transition-all duration-300 hover:border-primary/40 hover:bg-primary/5">
-                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-primary/30 text-[10px] font-mono text-primary">04</div>
-                    <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                      <Vault className="w-5 h-5 text-primary" />
+                {/* Step 4: Curated Strategies - HERO STEP */}
+                <div className="group flex-[1.4] relative" data-testid="step-desktop-4">
+                  <div className="relative h-full rounded-xl bg-gradient-to-b from-primary/15 to-primary/5 border-2 border-primary/40 p-5 transition-all duration-300 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10">
+                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-primary border border-primary text-[10px] font-mono text-[#030303] font-bold">04</div>
+                    <div className="absolute -top-3 right-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-primary/30 text-[9px] font-mono text-primary">KEY VALUE</div>
+                    <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/50 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform relative">
+                      <Layers className="w-5 h-5 text-primary" />
+                      <div className="absolute inset-0 rounded-xl border border-primary/30 animate-ping opacity-30" />
                     </div>
-                    <h4 className="text-white font-semibold mb-1 text-sm">Shield Vault</h4>
-                    <p className="text-white/50 text-xs leading-relaxed">Multi-strategy allocation</p>
+                    <h4 className="text-primary font-semibold mb-2 text-sm">Curated Strategies</h4>
+                    <div className="flex flex-wrap gap-1.5 mb-2">
+                      <span className="px-2 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-[9px] font-mono text-primary">Firelight 50%</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono text-white/60">Kinetic 40%</span>
+                      <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono text-white/40">Buffer 10%</span>
+                    </div>
+                    <p className="text-white/50 text-[10px] leading-relaxed">Institutional-grade managers with dynamic rebalancing</p>
                   </div>
                 </div>
 
                 {/* Connector 4 */}
-                <div className="flex items-center justify-center w-12 flex-shrink-0 relative">
+                <div className="flex items-center justify-center w-10 flex-shrink-0 relative">
                   <div className="w-full h-0.5 bg-white/10 relative overflow-hidden rounded-full">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '1.2s'}} />
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '1.5s'}} />
                   </div>
                   <ChevronRight className="absolute w-4 h-4 text-primary/60" />
                 </div>
 
-                {/* Step 5: shXRP */}
+                {/* Step 5: shXRP + Yield */}
                 <div className="group flex-1 relative" data-testid="step-desktop-5">
-                  <div className="relative h-full rounded-xl bg-white/[0.02] border border-white/10 p-5 transition-all duration-300 hover:border-white/20 hover:bg-white/[0.04]">
-                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-white/20 text-[10px] font-mono text-white/50">05</div>
-                    <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
-                      <span className="text-xs font-bold text-primary font-mono">shXRP</span>
+                  <div className="relative h-full rounded-xl bg-gradient-to-b from-green-500/10 to-transparent border border-green-500/30 p-5 transition-all duration-300 hover:border-green-500/50 hover:bg-green-500/5">
+                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-green-500/30 text-[10px] font-mono text-green-400">05</div>
+                    <div className="w-12 h-12 rounded-xl bg-green-500/20 border border-green-500/40 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform relative">
+                      <TrendingUp className="w-5 h-5 text-green-400" />
                     </div>
-                    <h4 className="text-white font-semibold mb-1 text-sm">Receipt Token</h4>
-                    <p className="text-white/50 text-xs leading-relaxed">Liquid staking token</p>
-                  </div>
-                </div>
-
-                {/* Connector 5 */}
-                <div className="flex items-center justify-center w-12 flex-shrink-0 relative">
-                  <div className="w-full h-0.5 bg-white/10 relative overflow-hidden rounded-full">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-primary to-transparent animate-flow-beam" style={{animationDelay: '1.6s'}} />
-                  </div>
-                  <ChevronRight className="absolute w-4 h-4 text-primary/60" />
-                </div>
-
-                {/* Step 6: Yield */}
-                <div className="group flex-1 relative" data-testid="step-desktop-6">
-                  <div className="relative h-full rounded-xl bg-gradient-to-b from-primary/15 to-primary/5 border-2 border-primary/40 p-5 transition-all duration-300 hover:border-primary/60 hover:shadow-lg hover:shadow-primary/10">
-                    <div className="absolute -top-3 left-4 px-2 py-0.5 rounded-full bg-primary border border-primary text-[10px] font-mono text-[#030303] font-bold">06</div>
-                    <div className="w-12 h-12 rounded-xl bg-primary/20 border border-primary/50 flex items-center justify-center mb-4 group-hover:scale-105 transition-transform relative">
-                      <TrendingUp className="w-5 h-5 text-primary" />
-                      <div className="absolute inset-0 rounded-xl border border-primary/30 animate-ping opacity-50" />
+                    <h4 className="text-green-400 font-semibold mb-1 text-sm">shXRP + Yield</h4>
+                    <p className="text-white/50 text-xs leading-relaxed">Liquid token earning strategy yield</p>
+                    <div className="mt-2 flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3 text-green-400/60" />
+                      <span className="text-[9px] text-white/50 font-mono">Auto-compounding</span>
                     </div>
-                    <h4 className="text-primary font-semibold mb-1 text-sm">Earn Yield</h4>
-                    <p className="text-white/60 text-xs leading-relaxed">Auto-compounding rewards</p>
+                    <div className="mt-1 flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-primary/50" />
+                      <span className="text-[9px] text-primary/60 font-mono">+SHIELD boost</span>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1372,28 +1361,35 @@ export default function Landing() {
                   <span className="text-xs font-mono">100% Gasless Deposits</span>
                 </div>
                 <div className="flex items-center gap-2 text-white/40">
-                  <Clock className="w-4 h-4 text-primary/60" />
-                  <span className="text-xs font-mono">Instant Settlement</span>
+                  <RefreshCw className="w-4 h-4 text-primary/60" />
+                  <span className="text-xs font-mono">Dynamic Rebalancing</span>
                 </div>
                 <div className="flex items-center gap-2 text-white/40">
                   <Shield className="w-4 h-4 text-primary/60" />
+                  <span className="text-xs font-mono">Institutional-Grade</span>
+                </div>
+                <div className="flex items-center gap-2 text-white/40">
+                  <Lock className="w-4 h-4 text-primary/60" />
                   <span className="text-xs font-mono">Non-Custodial</span>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Mobile Flow Chart - Vertical */}
+          {/* Mobile Flow Chart - Vertical - 5 Steps */}
           <div className="lg:hidden">
             <div className="flex flex-col gap-4">
               {/* Step 1: XRP */}
-              <div className="glass-card rounded-xl p-4 flex items-center gap-4" data-testid="step-mobile-1">
+              <div className="glass-card rounded-xl p-4 flex items-center gap-4 border border-primary/20" data-testid="step-mobile-1">
                 <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0">
                   <span className="text-sm font-bold text-primary font-mono">XRP</span>
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold mb-1">Source Asset</h3>
-                  <p className="text-white/60 text-sm">Your XRP from XRPL or EVM chains</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-1.5 py-0.5 rounded bg-primary/20 text-[9px] font-mono text-primary">01</span>
+                    <h3 className="text-white font-semibold">Your XRP</h3>
+                  </div>
+                  <p className="text-white/60 text-sm">From XRPL or supported chains</p>
                 </div>
               </div>
               
@@ -1402,14 +1398,17 @@ export default function Landing() {
                 <div className="w-px h-6 bg-gradient-to-b from-primary to-primary/30" />
               </div>
               
-              {/* Step 2: Bridge */}
+              {/* Step 2: FAssets Bridge */}
               <div className="glass-card rounded-xl p-4 flex items-center gap-4" data-testid="step-mobile-2">
                 <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
                   <Layers className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold mb-1">Cross-Chain Bridge</h3>
-                  <p className="text-white/60 text-sm">LayerZero powered multi-chain bridge</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-1.5 py-0.5 rounded bg-white/10 text-[9px] font-mono text-white/50">02</span>
+                    <h3 className="text-white font-semibold">FAssets Bridge</h3>
+                  </div>
+                  <p className="text-white/60 text-sm">Wrap XRP to FXRP on Flare Network</p>
                 </div>
               </div>
               
@@ -1418,30 +1417,17 @@ export default function Landing() {
                 <div className="w-px h-6 bg-gradient-to-b from-primary to-primary/30" />
               </div>
               
-              {/* Step 3: FXRP */}
-              <div className="glass-card rounded-xl p-4 flex items-center gap-4" data-testid="step-mobile-3">
-                <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-sm font-bold text-primary font-mono">FXRP</span>
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold mb-1">FAssets Minted</h3>
-                  <p className="text-white/60 text-sm">XRP wrapped as FAssets on Flare</p>
-                </div>
-              </div>
-              
-              {/* Arrow */}
-              <div className="flex justify-center">
-                <div className="w-px h-6 bg-gradient-to-b from-primary to-primary/30" />
-              </div>
-              
-              {/* Step 4: Shield Vault */}
-              <div className="glass-card rounded-xl p-4 flex items-center gap-4" data-testid="step-mobile-4">
+              {/* Step 3: Shield Vault */}
+              <div className="glass-card rounded-xl p-4 flex items-center gap-4 border border-primary/20" data-testid="step-mobile-3">
                 <div className="w-14 h-14 rounded-xl bg-primary/10 border border-primary/30 flex items-center justify-center flex-shrink-0">
                   <Vault className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-white font-semibold mb-1">Shield Vault</h3>
-                  <p className="text-white/60 text-sm">Deposit into multi-strategy vault</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-1.5 py-0.5 rounded bg-primary/20 text-[9px] font-mono text-primary">03</span>
+                    <h3 className="text-white font-semibold">Shield Vault</h3>
+                  </div>
+                  <p className="text-white/60 text-sm">Deposit FXRP into yield vault</p>
                 </div>
               </div>
               
@@ -1450,30 +1436,70 @@ export default function Landing() {
                 <div className="w-px h-6 bg-gradient-to-b from-primary to-primary/30" />
               </div>
               
-              {/* Step 5: shXRP */}
-              <div className="glass-card rounded-xl p-4 flex items-center gap-4" data-testid="step-mobile-5">
-                <div className="w-14 h-14 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-                  <span className="text-xs font-bold text-primary font-mono">shXRP</span>
-                </div>
-                <div>
-                  <h3 className="text-white font-semibold mb-1">Receipt Token</h3>
-                  <p className="text-white/60 text-sm">Liquid staking token representing your position</p>
+              {/* Step 4: Curated Strategies - HERO */}
+              <div className="glass-card rounded-xl p-4 border-2 border-primary/40 bg-gradient-to-b from-primary/10 to-transparent relative" data-testid="step-mobile-4">
+                <div className="absolute -top-2 right-4 px-2 py-0.5 rounded-full bg-[#0A0A0A] border border-primary/30 text-[8px] font-mono text-primary">KEY VALUE</div>
+                <div className="flex items-start gap-4">
+                  <div className="w-14 h-14 rounded-xl bg-primary/20 border border-primary/50 flex items-center justify-center flex-shrink-0 relative">
+                    <Layers className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="px-1.5 py-0.5 rounded bg-primary text-[9px] font-mono text-[#030303] font-bold">04</span>
+                      <h3 className="text-primary font-semibold">Curated Strategies</h3>
+                    </div>
+                    <p className="text-white/60 text-sm mb-3">Institutional-grade allocation with dynamic rebalancing</p>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-2 py-1 rounded-full bg-primary/20 border border-primary/30 text-[10px] font-mono text-primary">Firelight 50%</span>
+                      <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-white/60">Kinetic 40%</span>
+                      <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-white/40">Buffer 10%</span>
+                    </div>
+                  </div>
                 </div>
               </div>
               
               {/* Arrow */}
               <div className="flex justify-center">
-                <div className="w-px h-6 bg-gradient-to-b from-primary to-primary/30" />
+                <div className="w-px h-6 bg-gradient-to-b from-primary to-green-500/50" />
               </div>
               
-              {/* Step 6: Yield */}
-              <div className="glass-card rounded-xl p-4 flex items-center gap-4 border border-primary/30" data-testid="step-mobile-6">
-                <div className="w-14 h-14 rounded-xl bg-primary/20 border border-primary/50 flex items-center justify-center flex-shrink-0">
-                  <TrendingUp className="w-6 h-6 text-primary" />
+              {/* Step 5: shXRP + Yield */}
+              <div className="glass-card rounded-xl p-4 flex items-center gap-4 border border-green-500/30 bg-gradient-to-b from-green-500/5 to-transparent" data-testid="step-mobile-5">
+                <div className="w-14 h-14 rounded-xl bg-green-500/20 border border-green-500/40 flex items-center justify-center flex-shrink-0">
+                  <TrendingUp className="w-6 h-6 text-green-400" />
                 </div>
                 <div>
-                  <h3 className="text-primary font-semibold mb-1">Earn Yield</h3>
-                  <p className="text-white/60 text-sm">Auto-compounding rewards from multiple strategies</p>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="px-1.5 py-0.5 rounded bg-green-500/20 text-[9px] font-mono text-green-400">05</span>
+                    <h3 className="text-green-400 font-semibold">shXRP + Yield</h3>
+                  </div>
+                  <p className="text-white/60 text-sm">Liquid token earning strategy yield</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3 text-green-400/60" />
+                      <span className="text-[10px] text-white/50 font-mono">Auto-compound</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Sparkles className="w-3 h-3 text-primary/50" />
+                      <span className="text-[10px] text-primary/60 font-mono">+SHIELD boost</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Bottom value props */}
+              <div className="mt-4 flex flex-wrap justify-center gap-3">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                  <Zap className="w-3 h-3 text-primary/60" />
+                  <span className="text-[10px] font-mono text-white/50">Gasless</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                  <RefreshCw className="w-3 h-3 text-primary/60" />
+                  <span className="text-[10px] font-mono text-white/50">Dynamic</span>
+                </div>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/5 border border-white/10">
+                  <Lock className="w-3 h-3 text-primary/60" />
+                  <span className="text-[10px] font-mono text-white/50">Non-Custodial</span>
                 </div>
               </div>
             </div>
