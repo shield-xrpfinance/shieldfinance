@@ -494,23 +494,24 @@ export default function Landing() {
               [ <span className="text-primary">✓</span> ] Built with Leading Technologies
             </span>
             {/* Viewport: overflow hidden with mask gradient */}
-            <div className="overflow-hidden w-full relative">
-              {/* Track: handles the mask gradient fade */}
-              <div className="mask-gradient-fade">
-                {/* Items: animated flex container */}
-                <div className="flex animate-marquee w-max gap-x-12 items-center opacity-60">
-                  {/* Original Set */}
-                  <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto flex-shrink-0" data-testid="img-flare-inline" />
-                  <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto flex-shrink-0" data-testid="img-xrpl-inline" />
-                  <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto flex-shrink-0" data-testid="img-xaman-inline" />
-                  <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto flex-shrink-0" data-testid="img-bifrost-inline" />
-                  <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto flex-shrink-0" data-testid="img-layerzero-inline" />
-                  {/* Duplicate Set for Seamless Loop */}
-                  <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto flex-shrink-0" />
-                  <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto flex-shrink-0" />
-                  <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto flex-shrink-0" />
-                  <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto flex-shrink-0" />
-                  <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto flex-shrink-0" />
+            <div className="overflow-hidden w-full relative mask-gradient-fade">
+              {/* Track: animated flex container with two copies for seamless loop */}
+              <div className="flex animate-marquee opacity-60">
+                {/* First Set */}
+                <div className="flex gap-x-12 items-center shrink-0 pr-12">
+                  <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto" data-testid="img-flare-inline" />
+                  <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto" data-testid="img-xrpl-inline" />
+                  <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto" data-testid="img-xaman-inline" />
+                  <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto" data-testid="img-bifrost-inline" />
+                  <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto" data-testid="img-layerzero-inline" />
+                </div>
+                {/* Duplicate Set for Seamless Loop */}
+                <div className="flex gap-x-12 items-center shrink-0 pr-12">
+                  <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto" />
+                  <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto" />
+                  <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto" />
+                  <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto" />
+                  <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto" />
                 </div>
               </div>
             </div>
