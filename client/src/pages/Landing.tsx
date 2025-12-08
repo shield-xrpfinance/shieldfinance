@@ -287,8 +287,14 @@ export default function Landing() {
       </div>
       {/* Grid Background - Aura Style */}
       <div className="fixed inset-0 grid-bg pointer-events-none z-0" />
-      {/* Unicorn Studio Background Animation */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+      {/* Unicorn Studio Background Animation - Aura Style with Gradient Mask */}
+      <div 
+        className="fixed top-0 w-full h-screen z-0 pointer-events-none"
+        style={{ 
+          maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)',
+          WebkitMaskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)'
+        }}
+      >
         <div 
           data-us-project="se1doOOXCba86nWdhX3D" 
           className="w-full h-full absolute inset-0"
