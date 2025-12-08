@@ -556,7 +556,7 @@ npx hardhat run scripts/transfer-ownership.ts --network flare
 - **X (Twitter):** https://x.com/ShieldFinanceX
 - **Telegram Official:** https://t.me/ShieldFinanceOfficial
 - **Telegram Community:** https://t.me/ShieldFinanceCommunity
-- **Discord:** https://discord.gg/Vzs3KbzU
+- **Discord:** https://discord.gg/D8g8sumY
 - **Block Explorer:** https://flare-explorer.flare.network
 - **SparkDEX Docs:** https://docs.sparkdex.ai
 - **Team Finance:** https://www.team.finance

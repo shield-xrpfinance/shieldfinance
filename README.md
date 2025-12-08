@@ -682,7 +682,7 @@ Claim airdrop: [MerkleDistributor link]
 - **X (Twitter)**: https://x.com/ShieldFinanceX
 - **Telegram Official**: https://t.me/ShieldFinanceOfficial
 - **Telegram Community**: https://t.me/ShieldFinanceCommunity
-- **Discord**: https://discord.gg/Vzs3KbzU
+- **Discord**: https://discord.gg/D8g8sumY
 
 ---
 
@@ -720,7 +720,7 @@ This project is proprietary software owned by Shield Yield Vaults Ltd.
   - X (Twitter): https://x.com/ShieldFinanceX
   - Telegram Official: https://t.me/ShieldFinanceOfficial
   - Telegram Community: https://t.me/ShieldFinanceCommunity
-  - Discord: https://discord.gg/Vzs3KbzU
+  - Discord: https://discord.gg/D8g8sumY
 - **Block Explorers**:
   - Flare Coston2: https://coston2-explorer.flare.network
   - Flare Mainnet: https://flare-explorer.flare.network

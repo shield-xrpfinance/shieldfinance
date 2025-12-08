@@ -297,7 +297,7 @@ export function AppSidebar() {
                 <SiTelegram className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>
               <a 
-                href="https://discord.gg/Vzs3KbzU" 
+                href="https://discord.gg/D8g8sumY" 
                 target="_blank" 
                 rel="noopener noreferrer"
                 className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"

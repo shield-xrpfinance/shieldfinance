@@ -450,7 +450,7 @@ export default function Status() {
         <div className="mt-12 text-center text-white/40 text-sm">
           <p>Status page auto-refreshes every 30 seconds</p>
           <p className="mt-1">
-            Need help? Join our <a href="https://discord.gg/Vzs3KbzU" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Discord community</a>
+            Need help? Join our <a href="https://discord.gg/D8g8sumY" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Discord community</a>
           </p>
         </div>
       </div>
