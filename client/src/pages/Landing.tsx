@@ -1207,7 +1207,7 @@ export default function Landing() {
         </div>
       </section>
       {/* Final CTA Section */}
-      <section ref={ctaAnimation.ref} className="relative z-10 py-24 border-t border-white/5" data-testid="section-cta">
+      <section ref={ctaAnimation.ref} className="relative z-10 py-24 border-t border-white/5 bg-[#0000008f]" data-testid="section-cta">
         <div className={`max-w-4xl mx-auto px-6 lg:px-12 text-center ${ctaAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <h2 className="text-4xl lg:text-6xl font-serif italic text-primary text-glow mb-6" data-testid="heading-cta">
             Ready to start staking?
