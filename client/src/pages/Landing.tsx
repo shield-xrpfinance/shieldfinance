@@ -66,6 +66,7 @@ function throttle<T extends (...args: Parameters<T>) => void>(fn: T, delay: numb
 
 export default function Landing() {
   const shieldLogo = useShieldLogo();
+  const heroAnimation = useScrollAnimation();
   const featuresAnimation = useScrollAnimation();
   const howItWorksAnimation = useScrollAnimation();
   const securityAnimation = useScrollAnimation();
@@ -98,35 +99,36 @@ export default function Landing() {
   // Initialize Unicorn Studio animation after component mounts - deferred for performance
   useEffect(() => {
     const initUnicornStudio = () => {
-      try {
-        const studio = (window as any).UnicornStudio;
-        if (typeof studio?.init === 'function' && !studio.isInitialized) {
-          studio.init();
-          studio.isInitialized = true;
-          return true;
-        }
-      } catch (e) {
-        // Silently fail - UnicornStudio is non-critical
+      if (typeof window !== 'undefined' && (window as any).UnicornStudio) {
+        (window as any).UnicornStudio.init();
+        return true;
       }
       return false;
     };
 
     // Defer initialization until browser is idle for better initial load performance
+    // But also retry to ensure script loads properly
     let retryTimer: ReturnType<typeof setTimeout>;
     
     if ('requestIdleCallback' in window) {
       const idleId = (window as any).requestIdleCallback(() => {
         if (!initUnicornStudio()) {
-          retryTimer = setTimeout(initUnicornStudio, 2000);
+          // Retry if script hasn't loaded yet
+          retryTimer = setTimeout(initUnicornStudio, 1500);
         }
-      }, { timeout: 3000 });
+      }, { timeout: 2000 });
       return () => {
         (window as any).cancelIdleCallback(idleId);
         clearTimeout(retryTimer);
       };
     } else {
-      const timer = setTimeout(initUnicornStudio, 1500);
-      return () => clearTimeout(timer);
+      // Fallback: delay initialization for slower devices
+      const timer = setTimeout(initUnicornStudio, 1000);
+      retryTimer = setTimeout(initUnicornStudio, 2500);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(retryTimer);
+      };
     }
   }, []);
 
@@ -138,89 +140,95 @@ export default function Landing() {
     return `$${num.toFixed(0)}`;
   };
 
-  // Refs for stats counter animation (avoids React re-renders)
-  const statsRef = useRef<HTMLDivElement>(null);
-  const tvlRef = useRef<HTMLSpanElement>(null);
-  const apyRef = useRef<HTMLSpanElement>(null);
-  const stakersRef = useRef<HTMLSpanElement>(null);
-  const statsAnimatedRef = useRef(false);
-  const demoStatsRef = useRef({ tvl: 2500000, apy: 6.2, stakers: 1234 });
+  // Dynamic demo stats that fluctuate slightly every 3 minutes
+  const [demoStats, setDemoStats] = useState({
+    tvl: 2500000,
+    apy: 6.2,
+    stakers: 1234,
+  });
 
-  // Format TVL value
+  // Animated display values
+  const [displayStats, setDisplayStats] = useState({
+    tvl: 0,
+    apy: 0,
+    stakers: 0,
+  });
+
+  // Track if animation has started
+  const [animationStarted, setAnimationStarted] = useState(false);
+  const statsRef = useRef<HTMLDivElement>(null);
+
+  // Observe when stats section becomes visible
+  useEffect(() => {
+    if (animationStarted) return;
+    
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          setAnimationStarted(true);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    
+    if (statsRef.current) {
+      observer.observe(statsRef.current);
+    }
+    
+    return () => observer.disconnect();
+  }, [animationStarted]);
+
+  // Animate counters when visible
+  useEffect(() => {
+    if (!animationStarted) return;
+    
+    const duration = 2000;
+    const startTime = Date.now();
+    const targets = demoStats;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      // Ease out cubic for smooth deceleration
+      const easeOut = 1 - Math.pow(1 - progress, 3);
+      
+      setDisplayStats({
+        tvl: targets.tvl * easeOut,
+        apy: targets.apy * easeOut,
+        stakers: targets.stakers * easeOut,
+      });
+      
+      if (progress < 1) {
+        requestAnimationFrame(animate);
+      } else {
+        setDisplayStats(targets);
+      }
+    };
+    
+    requestAnimationFrame(animate);
+  }, [animationStarted, demoStats]);
+
+  // Update demo stats every 3 minutes with slight variations
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setDemoStats(prev => ({
+        tvl: prev.tvl + (Math.random() - 0.3) * 50000,
+        apy: 6.0 + Math.random() * 0.5,
+        stakers: Math.max(1200, prev.stakers + Math.floor(Math.random() * 5) - 1),
+      }));
+    }, 180000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Format animated TVL
   const formatAnimatedTvl = useCallback((value: number): string => {
     if (value === 0) return "$0";
     if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`;
     if (value >= 1000) return `$${(value / 1000).toFixed(1)}K`;
     return `$${Math.round(value).toLocaleString()}`;
   }, []);
-
-  // Stats counter animation using refs + textContent (no React re-renders)
-  useEffect(() => {
-    const statsContainer = statsRef.current;
-    if (!statsContainer) return;
-
-    const animateCounters = () => {
-      if (statsAnimatedRef.current) return;
-      statsAnimatedRef.current = true;
-
-      const duration = 2000;
-      const startTime = performance.now();
-      const targets = demoStatsRef.current;
-
-      const animate = (currentTime: number) => {
-        const elapsed = currentTime - startTime;
-        const progress = Math.min(elapsed / duration, 1);
-        const easeOut = 1 - Math.pow(1 - progress, 3);
-
-        if (tvlRef.current) {
-          tvlRef.current.textContent = formatAnimatedTvl(targets.tvl * easeOut);
-        }
-        if (apyRef.current) {
-          apyRef.current.textContent = `${(targets.apy * easeOut).toFixed(1)}%`;
-        }
-        if (stakersRef.current) {
-          stakersRef.current.textContent = Math.round(targets.stakers * easeOut).toLocaleString();
-        }
-
-        if (progress < 1) {
-          requestAnimationFrame(animate);
-        }
-      };
-
-      requestAnimationFrame(animate);
-    };
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          animateCounters();
-          observer.disconnect();
-        }
-      },
-      { threshold: 0.3 }
-    );
-
-    observer.observe(statsContainer);
-    return () => observer.disconnect();
-  }, [formatAnimatedTvl]);
-
-  // Update demo stats every 3 minutes (just updates refs, no re-render)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const prev = demoStatsRef.current;
-      demoStatsRef.current = {
-        tvl: prev.tvl + (Math.random() - 0.3) * 50000,
-        apy: 6.0 + Math.random() * 0.5,
-        stakers: Math.max(1200, prev.stakers + Math.floor(Math.random() * 5) - 1),
-      };
-      // Update displayed values directly via refs
-      if (tvlRef.current) tvlRef.current.textContent = formatAnimatedTvl(demoStatsRef.current.tvl);
-      if (apyRef.current) apyRef.current.textContent = `${demoStatsRef.current.apy.toFixed(1)}%`;
-      if (stakersRef.current) stakersRef.current.textContent = Math.round(demoStatsRef.current.stakers).toLocaleString();
-    }, 180000);
-
-    return () => clearInterval(interval);
-  }, [formatAnimatedTvl]);
 
   const handleMobileNavClick = (href: string) => {
     setMobileMenuOpen(false);
@@ -406,40 +414,28 @@ export default function Landing() {
           </nav>
         </div>
       )}
-      {/* GPU-accelerated fixed backgrounds - consolidated for performance */}
+      {/* UnicornStudio Animated Background - Aura Structure */}
       <div 
-        className="fixed top-0 w-full h-screen -z-10 gpu-layer" 
+        className="fixed top-0 w-full h-screen -z-10" 
         data-alpha-mask="80" 
-        style={{
-          maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)',
-          willChange: 'transform',
-          transform: 'translateZ(0)',
-          backfaceVisibility: 'hidden'
-        }}
+        style={{maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)'}}
       >
-        <div className="absolute top-0 w-full h-full -z-10 gpu-layer">
+        <div className="absolute top-0 w-full h-full -z-10">
           <div className="absolute w-full h-full left-0 top-0 -z-10 bg-gradient-to-br from-primary/10 via-transparent to-purple-500/5" />
         </div>
       </div>
-      {/* Grid Background - GPU accelerated */}
+      {/* Grid Background - Aura Style */}
+      <div className="fixed inset-0 grid-bg pointer-events-none z-0" />
+      {/* Unicorn Studio Background Animation - Aura Style with Gradient Mask */}
       <div 
-        className="fixed inset-0 grid-bg pointer-events-none z-0" 
-        style={{ willChange: 'transform', transform: 'translateZ(0)', backfaceVisibility: 'hidden' }}
-      />
-      {/* Unicorn Studio Background Animation - GPU accelerated */}
-      <div 
-        className="fixed top-0 w-full h-screen z-0 pointer-events-none gpu-layer"
+        className="fixed top-0 w-full h-screen z-0 pointer-events-none"
         style={{ 
           maskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)',
-          WebkitMaskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)',
-          willChange: 'transform',
-          transform: 'translateZ(0)',
-          backfaceVisibility: 'hidden'
+          WebkitMaskImage: 'linear-gradient(transparent, black 0%, black 80%, transparent)'
         }}
       >
         <div 
-          data-us-project="se1doOOXCba86nWdhX3D"
-          data-us-lazyload="true"
+          data-us-project="se1doOOXCba86nWdhX3D" 
           className="w-full h-full absolute inset-0"
           style={{ minWidth: '100vw', minHeight: '100vh' }}
         />
@@ -447,7 +443,7 @@ export default function Landing() {
       {/* Hero Section */}
       <main className="container lg:px-12 lg:pt-0 min-h-[1100px] flex flex-col lg:flex-row z-10 mx-auto pt-0 px-6 relative items-center bg-[#0000008f]">
         {/* Left Column: Copy */}
-        <div className="lg:w-1/2 flex flex-col w-full pt-32 lg:pt-0 pb-20 lg:pb-0 justify-center">
+        <div ref={heroAnimation.ref} className={`lg:w-1/2 flex flex-col w-full pt-32 lg:pt-0 pb-20 lg:pb-0 justify-center ${heroAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           {/* Status Badge */}
           <h4 className="text-xs font-mono tracking-[0.2em] text-white/40 uppercase mb-8 flex items-center gap-2" data-testid="badge-status">
             <span className="relative flex h-2 w-2">
@@ -493,24 +489,23 @@ export default function Landing() {
               [ <span className="text-primary">✓</span> ] Built with Leading Technologies
             </span>
             {/* Viewport: overflow hidden with mask gradient */}
-            <div className="overflow-hidden w-full relative mask-gradient-fade">
-              {/* Track: animated flex container with two copies for seamless loop */}
-              <div className="flex animate-marquee opacity-60">
-                {/* First Set */}
-                <div className="flex gap-x-12 items-center shrink-0 pr-12">
-                  <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto" data-testid="img-flare-inline" />
-                  <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto" data-testid="img-xrpl-inline" />
-                  <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto" data-testid="img-xaman-inline" />
-                  <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto" data-testid="img-bifrost-inline" />
-                  <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto" data-testid="img-layerzero-inline" />
-                </div>
-                {/* Duplicate Set for Seamless Loop */}
-                <div className="flex gap-x-12 items-center shrink-0 pr-12">
-                  <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto" />
-                  <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto" />
-                  <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto" />
-                  <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto" />
-                  <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto" />
+            <div className="overflow-hidden w-full relative">
+              {/* Track: handles the mask gradient fade */}
+              <div className="mask-gradient-fade">
+                {/* Items: animated flex container */}
+                <div className="flex animate-marquee w-max gap-x-12 items-center opacity-60">
+                  {/* Original Set */}
+                  <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto flex-shrink-0" data-testid="img-flare-inline" />
+                  <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto flex-shrink-0" data-testid="img-xrpl-inline" />
+                  <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto flex-shrink-0" data-testid="img-xaman-inline" />
+                  <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto flex-shrink-0" data-testid="img-bifrost-inline" />
+                  <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto flex-shrink-0" data-testid="img-layerzero-inline" />
+                  {/* Duplicate Set for Seamless Loop */}
+                  <img src={flareHorizontalLogo} alt="Flare" className="h-6 w-auto flex-shrink-0" />
+                  <img src={xrplHorizontalLogo} alt="XRPL" className="h-6 w-auto flex-shrink-0" />
+                  <img src={xamanHorizontalLogo} alt="Xaman" className="h-6 w-auto flex-shrink-0" />
+                  <img src={bifrostHorizontalLogo} alt="Bifrost" className="h-6 w-auto flex-shrink-0" />
+                  <img src={layerzeroHorizontalLogo} alt="LayerZero" className="h-6 w-auto flex-shrink-0" />
                 </div>
               </div>
             </div>
@@ -564,13 +559,13 @@ export default function Landing() {
           </svg>
 
           {/* Floating Labels */}
-          <div className="absolute top-[20%] lg:top-[25%] left-[10%] lg:left-[15%] flex flex-col items-end animate-label-pulse">
-            <span className="text-xs font-mono text-primary tracking-widest mb-1">GASLESS DEPOSITS</span>
+          <div className="absolute top-[20%] lg:top-[25%] left-[10%] lg:left-[15%] flex flex-col items-end">
+            <span className="text-xs font-mono text-primary tracking-widest mb-1 opacity-80">GASLESS DEPOSITS</span>
             <div className="h-[1px] w-12 bg-gradient-to-l from-primary to-transparent" />
           </div>
 
-          <div className="absolute bottom-[20%] lg:bottom-[25%] right-[10%] lg:right-[15%] flex flex-col items-start animate-label-pulse" style={{animationDelay: '1.5s'}}>
-            <span className="text-xs font-mono text-primary tracking-widest mb-1">XRPFI NATIVE</span>
+          <div className="absolute bottom-[20%] lg:bottom-[25%] right-[10%] lg:right-[15%] flex flex-col items-start">
+            <span className="text-xs font-mono text-primary tracking-widest mb-1 opacity-80">XRPFI NATIVE</span>
             <div className="h-[1px] w-12 bg-gradient-to-r from-primary to-transparent" />
           </div>
 
@@ -597,8 +592,8 @@ export default function Landing() {
                   <CircleDollarSign className="h-5 w-5 text-primary" />
                   <span className="text-xs font-mono text-white/40 uppercase tracking-wider">Total Value Locked</span>
                 </div>
-                <span ref={tvlRef} className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-tvl">
-                  $0
+                <span className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-tvl">
+                  {formatAnimatedTvl(displayStats.tvl)}
                 </span>
               </div>
               
@@ -608,8 +603,8 @@ export default function Landing() {
                   <TrendingUp className="h-5 w-5 text-primary" />
                   <span className="text-xs font-mono text-white/40 uppercase tracking-wider">XRP Vault APY</span>
                 </div>
-                <span ref={apyRef} className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-apy">
-                  0.0%
+                <span className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-apy">
+                  {displayStats.apy.toFixed(1)}%
                 </span>
               </div>
               
@@ -619,8 +614,8 @@ export default function Landing() {
                   <Users className="h-5 w-5 text-primary" />
                   <span className="text-xs font-mono text-white/40 uppercase tracking-wider">Total Stakers</span>
                 </div>
-                <span ref={stakersRef} className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-stakers">
-                  0
+                <span className="text-3xl lg:text-4xl font-bold text-primary text-glow tabular-nums" data-testid="stat-stakers">
+                  {Math.round(displayStats.stakers).toLocaleString()}
                 </span>
               </div>
             </div>
@@ -633,7 +628,7 @@ export default function Landing() {
         {/* Clean Background Line */}
         <div className="absolute top-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10 scroll-animate">
+        <div className={`max-w-7xl mx-auto px-6 lg:px-12 relative z-10 ${featuresAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           {/* Section Header with Vertical Beam */}
           <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-24 relative">
             {/* Vertical Beam Animation */}
@@ -1235,7 +1230,7 @@ export default function Landing() {
       </section>
       {/* How It Works Section - Animated Flow Chart */}
       <section ref={howItWorksAnimation.ref} id="how-it-works" className="relative z-10 py-24 border-t border-white/5 bg-[#0000008f]" data-testid="section-how-it-works">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 scroll-animate">
+        <div className={`max-w-7xl mx-auto px-6 lg:px-12 ${howItWorksAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-serif italic text-primary text-glow mb-4" data-testid="heading-how-it-works">
               How It Works
@@ -1651,7 +1646,7 @@ export default function Landing() {
       </section>
       {/* Security Section */}
       <section ref={securityAnimation.ref} id="security" className="group relative z-10 py-24 border-t border-white/5 overflow-hidden bg-[#0000008f]" data-testid="section-security">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10 scroll-animate">
+        <div className={`max-w-7xl mx-auto px-6 lg:px-12 relative z-10 ${securityAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="text-4xl lg:text-5xl font-serif italic text-primary text-glow mb-6" data-testid="heading-security">
@@ -1794,7 +1789,7 @@ export default function Landing() {
       </section>
       {/* Final CTA Section */}
       <section ref={ctaAnimation.ref} className="relative z-10 py-24 border-t border-white/5 bg-[#0000008f]" data-testid="section-cta">
-        <div className="max-w-4xl mx-auto px-6 lg:px-12 text-center scroll-animate">
+        <div className={`max-w-4xl mx-auto px-6 lg:px-12 text-center ${ctaAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <h2 className="text-4xl lg:text-6xl font-serif italic text-primary text-glow mb-6" data-testid="heading-cta">
             Ready to start staking?
           </h2>
