@@ -965,7 +965,7 @@ export default function Landing() {
         </div>
       </section>
       {/* How It Works Section */}
-      <section ref={howItWorksAnimation.ref} id="how-it-works" className="relative z-10 py-24 border-t border-white/5" data-testid="section-how-it-works">
+      <section ref={howItWorksAnimation.ref} id="how-it-works" className="relative z-10 py-24 border-t border-white/5 bg-[#0000008f]" data-testid="section-how-it-works">
         <div className={`max-w-7xl mx-auto px-6 lg:px-12 ${howItWorksAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <div className="text-center mb-16">
             <h2 className="text-4xl lg:text-5xl font-serif italic text-primary text-glow mb-4" data-testid="heading-how-it-works">
