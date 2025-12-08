@@ -618,7 +618,8 @@ w3m-all-wallets-widget {
 }
 
 .animate-marquee {
-  animation: marquee 20s linear infinite;
+  animation: marquee 20s linear infinite !important;
+  will-change: transform;
 }
 
 .animate-marquee:hover {
@@ -710,13 +711,13 @@ w3m-all-wallets-widget {
 .animate-spin-slow,
 .animate-spin-slow-reverse,
 .animate-sonar,
-.animate-marquee,
 .animate-ping-light,
 .animate-float-up,
 .animate-fade-in-up {
   will-change: transform, opacity;
   backface-visibility: hidden;
 }
+
 
 /* GPU hints for stroke-based animations */
 .animate-beam {
