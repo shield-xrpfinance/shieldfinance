@@ -967,7 +967,7 @@ export default function Landing() {
                     <div className="w-1 h-1 bg-white/40 rounded-full" />
                   </div>
                   <div className="px-2 py-0.5 rounded border border-white/10 bg-black/20 backdrop-blur-md">
-                    <span className="text-[9px] font-mono text-primary tracking-wider">LIVE</span>
+                    <span className="text-[9px] font-mono text-primary tracking-wider">FOUNDER</span>
                   </div>
                 </div>
               </div>
