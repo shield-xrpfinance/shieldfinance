@@ -946,7 +946,7 @@ export default function Landing() {
         </div>
       </section>
       {/* CTA Banner */}
-      <section className="relative z-10 py-16" data-testid="section-cta-banner">
+      <section className="relative z-10 py-16 bg-[#0000008f]" data-testid="section-cta-banner">
         <div className="max-w-4xl mx-auto px-6 lg:px-12">
           <div className="group glass-card rounded-2xl p-8 lg:p-12 text-center relative z-10 overflow-hidden">
             <h3 className="relative z-10 text-2xl lg:text-3xl font-serif italic text-white mb-4">
