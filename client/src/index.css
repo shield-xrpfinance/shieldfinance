@@ -505,22 +505,21 @@ w3m-all-wallets-widget {
   animation: beam 3s linear infinite;
 }
 
-/* Sonar Wave Animation */
+/* Sonar Wave Animation - uses transform: scale() for reliable cross-browser support */
 @keyframes sonar-wave {
   0% {
-    r: 10px;
+    transform: scale(1);
     opacity: 0.8;
-    stroke-width: 1px;
   }
   100% {
-    r: 80px;
+    transform: scale(4);
     opacity: 0;
-    stroke-width: 0px;
   }
 }
 
 .animate-sonar {
   animation: sonar-wave 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+  transform-origin: center;
 }
 
 /* Shimmer Effect */
@@ -636,14 +635,19 @@ w3m-all-wallets-widget {
   will-change: transform, opacity;
 }
 
-/* GPU-accelerated animations */
+/* GPU-accelerated animations - transform-based */
 .animate-spin-slow,
 .animate-spin-slow-reverse,
-.animate-beam,
 .animate-sonar,
-.animate-marquee {
-  will-change: transform;
+.animate-marquee,
+.animate-ping-light {
+  will-change: transform, opacity;
   backface-visibility: hidden;
+}
+
+/* GPU hints for stroke-based animations */
+.animate-beam {
+  will-change: stroke-dashoffset;
 }
 
 /* Reduce motion for users who prefer it */
