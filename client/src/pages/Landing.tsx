@@ -434,7 +434,8 @@ export default function Landing() {
         }}
       >
         <div 
-          data-us-project="se1doOOXCba86nWdhX3D" 
+          data-us-project="se1doOOXCba86nWdhX3D"
+          data-us-lazyload="true"
           className="w-full h-full absolute inset-0"
           style={{ minWidth: '100vw', minHeight: '100vh' }}
         />
