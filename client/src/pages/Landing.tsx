@@ -87,21 +87,40 @@ export default function Landing() {
     refetchInterval: 60000,
   });
 
-  // Initialize Unicorn Studio animation after component mounts
+  // Initialize Unicorn Studio animation after component mounts - deferred for performance
   useEffect(() => {
     const initUnicornStudio = () => {
       if (typeof window !== 'undefined' && (window as any).UnicornStudio) {
         (window as any).UnicornStudio.init();
+        return true;
       }
+      return false;
     };
 
-    // Try to initialize immediately
-    initUnicornStudio();
-
-    // Also try after a short delay in case script hasn't loaded yet
-    const timer = setTimeout(initUnicornStudio, 1000);
-
-    return () => clearTimeout(timer);
+    // Defer initialization until browser is idle for better initial load performance
+    // But also retry to ensure script loads properly
+    let retryTimer: ReturnType<typeof setTimeout>;
+    
+    if ('requestIdleCallback' in window) {
+      const idleId = (window as any).requestIdleCallback(() => {
+        if (!initUnicornStudio()) {
+          // Retry if script hasn't loaded yet
+          retryTimer = setTimeout(initUnicornStudio, 1500);
+        }
+      }, { timeout: 2000 });
+      return () => {
+        (window as any).cancelIdleCallback(idleId);
+        clearTimeout(retryTimer);
+      };
+    } else {
+      // Fallback: delay initialization for slower devices
+      const timer = setTimeout(initUnicornStudio, 1000);
+      retryTimer = setTimeout(initUnicornStudio, 2500);
+      return () => {
+        clearTimeout(timer);
+        clearTimeout(retryTimer);
+      };
+    }
   }, []);
 
   const formatTvl = (tvl: string): string => {
@@ -463,7 +482,7 @@ export default function Landing() {
 
       </main>
       {/* Features Section - Aura-Style with Terminal UI */}
-      <section ref={featuresAnimation.ref} id="features" className="group relative z-10 py-32 border-t border-white/5 bg-black/50 backdrop-blur-3xl overflow-hidden" data-testid="section-features">
+      <section ref={featuresAnimation.ref} id="features" className="group relative z-10 py-32 border-t border-white/5 bg-black/50 backdrop-blur-xl overflow-hidden" data-testid="section-features">
         {/* Clean Background Line */}
         <div className="absolute top-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         
@@ -1041,7 +1060,7 @@ export default function Landing() {
         </div>
       </section>
       {/* Built for the Hybrid Economy Section - Aura Style */}
-      <section className="overflow-hidden flex flex-col px-6 md:px-8 lg:px-12 z-10 bg-[#030303]/80 w-full border-white/5 border-t pt-32 pb-32 relative backdrop-blur-xl items-center" data-testid="section-hybrid-economy">
+      <section className="overflow-hidden flex flex-col px-6 md:px-8 lg:px-12 z-10 bg-[#030303]/80 w-full border-white/5 border-t pt-32 pb-32 relative backdrop-blur-lg items-center" data-testid="section-hybrid-economy">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_200px] [mask-image:radial-gradient(ellipse_at_top,black_40%,transparent_100%)] pointer-events-none" />
 
         <div className="max-w-7xl w-full relative z-10">
@@ -1113,7 +1132,7 @@ export default function Landing() {
         </div>
       </section>
       {/* Exchange Infrastructure Section - Aura Style */}
-      <section className="lg:px-12 flex flex-col overflow-hidden z-10 bg-[#030303]/50 w-full border-white/5 border-t px-6 py-32 relative backdrop-blur-xl items-center" data-testid="section-exchange">
+      <section className="lg:px-12 flex flex-col overflow-hidden z-10 bg-[#030303]/50 w-full border-white/5 border-t px-6 py-32 relative backdrop-blur-lg items-center" data-testid="section-exchange">
         <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[size:100px_200px] [mask-image:radial-gradient(ellipse_at_center,black_40%,transparent_100%)] opacity-70 pointer-events-none" />
 
         <div className="max-w-7xl w-full relative z-10">
