@@ -211,7 +211,7 @@ export default function Landing() {
         {/* Logo Area */}
         <div className="flex gap-2.5 items-center mr-8">
           <img src={shieldLogo} alt="Shield Finance" className="h-6 w-6" data-testid="img-logo" />
-          <span className="font-sans font-medium text-base tracking-tight text-white">Shield</span>
+          <span className="font-sans font-semibold text-base tracking-tight text-white" style={{letterSpacing: '-0.02em'}}>Shield Finance</span>
         </div>
 
         {/* Links (Hidden on small screens) */}
