@@ -24,7 +24,8 @@ import {
   Layers,
   Coins,
   Vault,
-  CircleDollarSign
+  CircleDollarSign,
+  AlertTriangle
 } from "lucide-react";
 import { useScrollAnimation } from "@/hooks/useScrollAnimation";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -1524,16 +1525,104 @@ export default function Landing() {
                 </li>
               </ul>
             </div>
-            <div className="flex justify-center">
-              <div className="relative">
-                <div className="w-64 h-64 rounded-full bg-primary/5 border border-primary/20 flex items-center justify-center">
-                  <div className="w-48 h-48 rounded-full bg-primary/10 border border-primary/30 flex items-center justify-center">
-                    <div className="w-32 h-32 rounded-full bg-primary/20 border border-primary/40 flex items-center justify-center">
-                      <Lock className="h-12 w-12 text-primary" />
-                    </div>
+            {/* Security Spotlight Card with Code References */}
+            <div className="spotlight-card group relative flex flex-col rounded-[24px] border border-white/10 bg-white/[0.02] overflow-hidden" onMouseMove={handleSpotlightMove} data-testid="card-security-code">
+              {/* Spotlight Background */}
+              <div className="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500" style={{background: 'radial-gradient(400px circle at var(--mouse-x) var(--mouse-y), rgba(255, 255, 255, 0.06), transparent 40%)'}} />
+              
+              {/* Header with Audit Badge */}
+              <div className="p-6 border-b border-white/5 relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+                    <Shield className="h-5 w-5 text-green-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-white">ShXRPVault.sol</h3>
+                    <p className="text-xs text-white/40">ERC-4626 Compliant Vault</p>
                   </div>
                 </div>
-                <div className="absolute inset-0 rounded-full animate-ping opacity-20 bg-primary" style={{animationDuration: '3s'}} />
+                <a 
+                  href="https://docs.shyield.finance/security" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 hover:bg-green-500/20 transition-colors"
+                  data-testid="link-audit-report"
+                >
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
+                  </span>
+                  <span className="text-xs font-medium text-green-400">150 Tests Passing</span>
+                </a>
+              </div>
+              
+              {/* Code Display */}
+              <div className="bg-[#0A0A0A] p-5 font-mono text-xs relative z-10 overflow-hidden">
+                {/* Line Numbers + Code */}
+                <div className="space-y-1 text-white/70">
+                  <div className="flex">
+                    <span className="w-8 text-white/20 select-none">62</span>
+                    <span><span className="text-purple-400">contract</span> <span className="text-primary">ShXRPVault</span> <span className="text-purple-400">is</span> <span className="text-yellow-300">ERC4626</span>, <span className="text-yellow-300">ReentrancyGuard</span> {"{"}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-8 text-white/20 select-none">63</span>
+                    <span className="pl-4"><span className="text-purple-400">using</span> <span className="text-yellow-300">SafeERC20</span> <span className="text-purple-400">for</span> IERC20;</span>
+                  </div>
+                  <div className="flex mt-3">
+                    <span className="w-8 text-white/20 select-none">419</span>
+                    <span className="pl-4"><span className="text-purple-400">function</span> <span className="text-primary">deposit</span>(...) <span className="text-green-400">whenNotPaused</span> {"{"}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-8 text-white/20 select-none">874</span>
+                    <span className="pl-4"><span className="text-purple-400">function</span> <span className="text-red-400">pause</span>() <span className="text-yellow-300">external</span> <span className="text-green-400">onlyOwner</span> {"{"}</span>
+                  </div>
+                  <div className="flex mt-3">
+                    <span className="w-8 text-white/20 select-none">1101</span>
+                    <span className="pl-4">fxrp.<span className="text-primary">forceApprove</span>(strategy, amount);</span>
+                  </div>
+                  <div className="flex">
+                    <span className="w-8 text-white/20 select-none">1118</span>
+                    <span className="pl-4">fxrp.<span className="text-primary">forceApprove</span>(strategy, <span className="text-yellow-300">0</span>); <span className="text-white/30">// Clear approvals</span></span>
+                  </div>
+                </div>
+                
+                {/* Security Badges Row */}
+                <div className="flex flex-wrap gap-2 mt-5 pt-4 border-t border-white/5">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-green-500/10 border border-green-500/20">
+                    <Lock className="h-3 w-3 text-green-400" />
+                    <span className="text-[10px] text-green-400 font-medium">ReentrancyGuard</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-primary/10 border border-primary/20">
+                    <Shield className="h-3 w-3 text-primary" />
+                    <span className="text-[10px] text-primary font-medium">SafeERC20</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-yellow-500/10 border border-yellow-500/20">
+                    <AlertTriangle className="h-3 w-3 text-yellow-400" />
+                    <span className="text-[10px] text-yellow-400 font-medium">Pausable</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-purple-500/10 border border-purple-500/20">
+                    <Users className="h-3 w-3 text-purple-400" />
+                    <span className="text-[10px] text-purple-400 font-medium">AccessControl</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Footer with Contract Link */}
+              <div className="p-4 border-t border-white/5 relative z-10 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-white/40">
+                  <FileText className="h-4 w-4" />
+                  <span className="text-xs">OpenZeppelin Security Standards</span>
+                </div>
+                <a 
+                  href="https://github.com/shield-xrpfinance/shieldfinance/tree/main/contracts" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1.5 text-xs text-primary hover:text-primary/80 transition-colors"
+                  data-testid="link-view-contracts"
+                >
+                  <span>View Contracts</span>
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
             </div>
           </div>
