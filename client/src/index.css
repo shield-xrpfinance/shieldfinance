@@ -592,7 +592,7 @@ w3m-all-wallets-widget {
 }
 
 .animate-marquee {
-  animation: marquee 40s linear infinite;
+  animation: marquee 20s linear infinite;
 }
 
 .animate-marquee:hover {
