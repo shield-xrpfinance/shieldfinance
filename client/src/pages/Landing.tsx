@@ -192,20 +192,30 @@ export default function Landing() {
     return { count, counterRef };
   };
 
-  // Parse stats values for animation
-  const tvlValue = useMemo(() => {
-    if (!vaultStats?.tvl) return 0;
-    return parseFloat(vaultStats.tvl);
-  }, [vaultStats?.tvl]);
-  
-  const apyValue = useMemo(() => {
-    if (!vaultStats?.apy) return 0;
-    return parseFloat(vaultStats.apy);
-  }, [vaultStats?.apy]);
-  
-  const stakerCount = useMemo(() => {
-    return vaultStats?.stakerCount || 0;
-  }, [vaultStats?.stakerCount]);
+  // Dynamic demo stats that fluctuate slightly every 3 minutes
+  const [demoStats, setDemoStats] = useState({
+    tvl: 2500000 + Math.random() * 100000, // ~$2.5M with small variance
+    apy: 6.2 + Math.random() * 0.3,        // ~6.2-6.5% APY
+    stakers: 1234 + Math.floor(Math.random() * 20), // ~1,234 stakers
+  });
+
+  useEffect(() => {
+    // Update demo stats every 3 minutes with slight variations
+    const interval = setInterval(() => {
+      setDemoStats(prev => ({
+        tvl: prev.tvl + (Math.random() - 0.3) * 50000, // Slight upward trend
+        apy: 6.0 + Math.random() * 0.5, // Between 6.0-6.5%
+        stakers: Math.max(1200, prev.stakers + Math.floor(Math.random() * 5) - 1), // Slowly growing
+      }));
+    }, 180000); // 3 minutes
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Use demo stats for display
+  const tvlValue = demoStats.tvl;
+  const apyValue = demoStats.apy;
+  const stakerCount = demoStats.stakers;
 
   // Animated counters
   const { count: animatedTvl, counterRef: tvlRef } = useAnimatedCounter(tvlValue, 2000);
