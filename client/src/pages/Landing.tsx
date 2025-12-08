@@ -32,6 +32,7 @@ import xrplHorizontalLogo from "@assets/xrpl-horizontal-white.svg";
 import xamanHorizontalLogo from "@assets/xaman-horizontal-white.svg";
 import bifrostHorizontalLogo from "@assets/bifrost-horizontal-white.svg";
 import layerzeroHorizontalLogo from "@assets/layerzero-horizontal-white.svg";
+import noiseTexture from "@assets/noise-texture.webp";
 
 export default function Landing() {
   const shieldLogo = useShieldLogo();
@@ -394,11 +395,19 @@ export default function Landing() {
       </main>
 
       {/* Features Section - Aura-Style with Terminal UI */}
-      <section ref={featuresAnimation.ref} id="features" className="relative z-10 py-32 border-t border-white/5 bg-black/50 backdrop-blur-3xl" data-testid="section-features">
+      <section ref={featuresAnimation.ref} id="features" className="group relative z-10 py-32 border-t border-white/5 bg-black/50 backdrop-blur-3xl overflow-hidden" data-testid="section-features">
+        {/* Noise & Glow Effects */}
+        <div 
+          className="absolute inset-0 opacity-20 mix-blend-soft-light bg-cover bg-center pointer-events-none"
+          style={{ backgroundImage: `url(${noiseTexture})` }}
+        />
+        <div className="absolute -right-40 -top-40 w-[600px] h-[600px] bg-white/20 blur-[120px] rounded-full pointer-events-none opacity-60 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000" />
+        <div className="absolute bottom-0 left-0 w-full h-full bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
+        
         {/* Clean Background Line */}
         <div className="absolute top-0 w-full h-px bg-gradient-to-r from-transparent via-white/10 to-transparent" />
         
-        <div className={`max-w-7xl mx-auto px-6 lg:px-12 ${featuresAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+        <div className={`max-w-7xl mx-auto px-6 lg:px-12 relative z-10 ${featuresAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           {/* Section Header with Vertical Beam */}
           <div className="flex flex-col items-center text-center max-w-3xl mx-auto mb-24 relative">
             {/* Vertical Beam Animation */}
@@ -767,8 +776,16 @@ export default function Landing() {
       </section>
 
       {/* Testimonial Section */}
-      <section className="relative z-10 py-24 border-t border-white/5" data-testid="section-testimonial">
-        <div className="max-w-7xl mx-auto px-6 lg:px-12">
+      <section className="group relative z-10 py-24 border-t border-white/5 overflow-hidden" data-testid="section-testimonial">
+        {/* Noise & Glow Effects */}
+        <div 
+          className="absolute inset-0 opacity-20 mix-blend-soft-light bg-cover bg-center pointer-events-none"
+          style={{ backgroundImage: `url(${noiseTexture})` }}
+        />
+        <div className="absolute -left-40 -top-40 w-[600px] h-[600px] bg-white/20 blur-[120px] rounded-full pointer-events-none opacity-60 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000" />
+        <div className="absolute bottom-0 right-0 w-full h-full bg-[radial-gradient(circle_at_bottom_right,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto px-6 lg:px-12 relative z-10">
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="text-4xl lg:text-6xl font-serif italic text-primary text-glow mb-6 leading-tight" data-testid="heading-testimonial">
@@ -866,15 +883,22 @@ export default function Landing() {
       {/* CTA Banner */}
       <section className="relative z-10 py-16" data-testid="section-cta-banner">
         <div className="max-w-4xl mx-auto px-6 lg:px-12">
-          <div className="glass-card rounded-2xl p-8 lg:p-12 text-center">
-            <h3 className="text-2xl lg:text-3xl font-serif italic text-white mb-4">
+          <div className="group glass-card rounded-2xl p-8 lg:p-12 text-center relative overflow-hidden">
+            {/* Noise & Glow Effects */}
+            <div 
+              className="absolute inset-0 opacity-20 mix-blend-soft-light bg-cover bg-center pointer-events-none"
+              style={{ backgroundImage: `url(${noiseTexture})` }}
+            />
+            <div className="absolute -right-40 -bottom-40 w-[600px] h-[600px] bg-white/20 blur-[120px] rounded-full pointer-events-none opacity-60 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000" />
+            <div className="absolute top-0 left-0 w-full h-full bg-[radial-gradient(circle_at_top_left,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
+            <h3 className="relative z-10 text-2xl lg:text-3xl font-serif italic text-white mb-4">
               Uncertain about your staking strategy?
             </h3>
-            <p className="text-white/60 mb-8 max-w-xl mx-auto">
+            <p className="relative z-10 text-white/60 mb-8 max-w-xl mx-auto">
               Our multi-strategy vault automatically allocates your assets across optimized yield opportunities.
             </p>
-            <Link href="/app">
-              <button className="gradient-border-btn hover:bg-white/10 hover:text-white transition-all flex text-sm font-medium text-slate-300 py-3 px-6 gap-2 items-center group mx-auto" data-testid="button-cta-banner">
+            <Link href="/app" className="relative z-10">
+              <button className="gradient-border-btn hover:bg-white/10 hover:text-white transition-all flex text-sm font-medium text-slate-300 py-3 px-6 gap-2 items-center mx-auto" data-testid="button-cta-banner">
                 <span className="tracking-tight">Explore Vaults</span>
                 <ArrowRight className="h-4 w-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
               </button>
@@ -1069,8 +1093,16 @@ export default function Landing() {
       </section>
 
       {/* Security Section */}
-      <section ref={securityAnimation.ref} id="security" className="relative z-10 py-24 border-t border-white/5" data-testid="section-security">
-        <div className={`max-w-7xl mx-auto px-6 lg:px-12 ${securityAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
+      <section ref={securityAnimation.ref} id="security" className="group relative z-10 py-24 border-t border-white/5 overflow-hidden" data-testid="section-security">
+        {/* Noise & Glow Effects */}
+        <div 
+          className="absolute inset-0 opacity-20 mix-blend-soft-light bg-cover bg-center pointer-events-none"
+          style={{ backgroundImage: `url(${noiseTexture})` }}
+        />
+        <div className="absolute -right-40 -top-40 w-[600px] h-[600px] bg-white/20 blur-[120px] rounded-full pointer-events-none opacity-60 mix-blend-overlay group-hover:scale-110 transition-transform duration-1000" />
+        <div className="absolute bottom-0 left-0 w-full h-full bg-[radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.15),transparent_60%)] pointer-events-none" />
+        
+        <div className={`max-w-7xl mx-auto px-6 lg:px-12 relative z-10 ${securityAnimation.isVisible ? 'animate-fade-in-up' : 'opacity-0'}`}>
           <div className="grid lg:grid-cols-2 gap-16 items-center">
             <div>
               <h2 className="text-4xl lg:text-5xl font-serif italic text-primary text-glow mb-6" data-testid="heading-security">
