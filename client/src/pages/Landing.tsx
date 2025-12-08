@@ -565,13 +565,13 @@ export default function Landing() {
           </svg>
 
           {/* Floating Labels */}
-          <div className="absolute top-[20%] lg:top-[25%] left-[10%] lg:left-[15%] flex flex-col items-end">
-            <span className="text-xs font-mono text-primary tracking-widest mb-1 opacity-80">GASLESS DEPOSITS</span>
+          <div className="absolute top-[20%] lg:top-[25%] left-[10%] lg:left-[15%] flex flex-col items-end animate-label-pulse">
+            <span className="text-xs font-mono text-primary tracking-widest mb-1">GASLESS DEPOSITS</span>
             <div className="h-[1px] w-12 bg-gradient-to-l from-primary to-transparent" />
           </div>
 
-          <div className="absolute bottom-[20%] lg:bottom-[25%] right-[10%] lg:right-[15%] flex flex-col items-start">
-            <span className="text-xs font-mono text-primary tracking-widest mb-1 opacity-80">XRPFI NATIVE</span>
+          <div className="absolute bottom-[20%] lg:bottom-[25%] right-[10%] lg:right-[15%] flex flex-col items-start animate-label-pulse" style={{animationDelay: '1.5s'}}>
+            <span className="text-xs font-mono text-primary tracking-widest mb-1">XRPFI NATIVE</span>
             <div className="h-[1px] w-12 bg-gradient-to-r from-primary to-transparent" />
           </div>
 

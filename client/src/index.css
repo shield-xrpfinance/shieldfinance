@@ -618,7 +618,19 @@ w3m-all-wallets-widget {
 }
 
 .animate-marquee {
-  animation: marquee 20s linear infinite;
+  display: flex;
+  width: max-content;
+  animation: marquee 15s linear infinite;
+}
+
+/* Floating label pulse animation */
+@keyframes label-pulse {
+  0%, 100% { opacity: 0.8; }
+  50% { opacity: 1; }
+}
+
+.animate-label-pulse {
+  animation: label-pulse 3s ease-in-out infinite;
 }
 
 /* Mask Gradient Fade for Marquee */
@@ -737,6 +749,7 @@ w3m-all-wallets-widget {
   .animate-pulse-fast,
   .animate-float-up,
   .animate-fade-in-up,
+  .animate-label-pulse,
   .scroll-animate {
     animation: none !important;
     transition: none !important;
