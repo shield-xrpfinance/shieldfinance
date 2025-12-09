@@ -489,6 +489,7 @@ w3m-all-wallets-widget {
 /* Beam Animation for SVG lines */
 .beam-line {
   stroke-dasharray: 80 1000;
+  stroke-dashoffset: 1000;
   stroke-linecap: round;
 }
 
@@ -497,12 +498,13 @@ w3m-all-wallets-widget {
     stroke-dashoffset: 1000;
   }
   100% {
-    stroke-dashoffset: 0;
+    stroke-dashoffset: -80;
   }
 }
 
 .animate-beam {
   animation: beam 3s linear infinite;
+  animation-play-state: running !important;
 }
 
 /* Flow Beam Animation for How It Works section connectors */
@@ -546,6 +548,7 @@ w3m-all-wallets-widget {
 
 .animate-sonar {
   animation: sonar-wave 3s cubic-bezier(0, 0, 0.2, 1) infinite;
+  animation-play-state: running;
   transform-origin: center;
 }
 
@@ -619,10 +622,18 @@ w3m-all-wallets-widget {
 
 .animate-marquee {
   animation: marquee 20s linear infinite;
+  animation-play-state: running;
 }
 
 .animate-marquee:hover {
   animation-play-state: paused;
+}
+
+/* Ensure animations run even when parent was previously hidden */
+.animate-fade-in-up .animate-marquee,
+.animate-fade-in-up .animate-beam,
+.animate-fade-in-up .animate-sonar {
+  animation-play-state: running;
 }
 
 /* Mask Gradient Fade for Marquee */
@@ -634,10 +645,12 @@ w3m-all-wallets-widget {
 /* Slow Spin Animations */
 .animate-spin-slow {
   animation: spin 12s linear infinite;
+  animation-play-state: running;
 }
 
 .animate-spin-slow-reverse {
   animation: spin 15s linear infinite reverse;
+  animation-play-state: running;
 }
 
 /* Fast Pulse Animation */
