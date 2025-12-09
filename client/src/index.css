@@ -504,7 +504,6 @@ w3m-all-wallets-widget {
 
 .animate-beam {
   animation: beam 3s linear infinite;
-  animation-play-state: running !important;
 }
 
 /* Flow Beam Animation for How It Works section connectors */
@@ -548,7 +547,6 @@ w3m-all-wallets-widget {
 
 .animate-sonar {
   animation: sonar-wave 3s cubic-bezier(0, 0, 0.2, 1) infinite;
-  animation-play-state: running;
   transform-origin: center;
 }
 
@@ -622,18 +620,10 @@ w3m-all-wallets-widget {
 
 .animate-marquee {
   animation: marquee 20s linear infinite;
-  animation-play-state: running;
 }
 
 .animate-marquee:hover {
   animation-play-state: paused;
-}
-
-/* Ensure animations run even when parent was previously hidden */
-.animate-fade-in-up .animate-marquee,
-.animate-fade-in-up .animate-beam,
-.animate-fade-in-up .animate-sonar {
-  animation-play-state: running;
 }
 
 /* Mask Gradient Fade for Marquee */
@@ -645,12 +635,10 @@ w3m-all-wallets-widget {
 /* Slow Spin Animations */
 .animate-spin-slow {
   animation: spin 12s linear infinite;
-  animation-play-state: running;
 }
 
 .animate-spin-slow-reverse {
   animation: spin 15s linear infinite reverse;
-  animation-play-state: running;
 }
 
 /* Fast Pulse Animation */
@@ -734,17 +722,18 @@ w3m-all-wallets-widget {
   will-change: stroke-dashoffset;
 }
 
-/* Reduce motion for users who prefer it */
+/* Note: Reduced motion preferences are respected for accessibility,
+   but can be overridden with .force-animations class on body */
 @media (prefers-reduced-motion: reduce) {
-  .animate-ping-light,
-  .animate-ping,
-  .animate-spin-slow,
-  .animate-spin-slow-reverse,
-  .animate-beam,
-  .animate-sonar,
-  .animate-marquee,
-  .animate-pulse,
-  .animate-pulse-fast {
+  body:not(.force-animations) .animate-ping-light,
+  body:not(.force-animations) .animate-ping,
+  body:not(.force-animations) .animate-spin-slow,
+  body:not(.force-animations) .animate-spin-slow-reverse,
+  body:not(.force-animations) .animate-beam,
+  body:not(.force-animations) .animate-sonar,
+  body:not(.force-animations) .animate-marquee,
+  body:not(.force-animations) .animate-pulse,
+  body:not(.force-animations) .animate-pulse-fast {
     animation: none !important;
   }
 }
