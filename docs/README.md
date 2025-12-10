@@ -12,6 +12,7 @@ Welcome to the Shield Finance documentation. This is the primary entry point for
 |------|----------|
 | Understand the project | [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) |
 | Review the codebase | [REVIEWERS.md](../REVIEWERS.md) |
+| Claim airdrop | [AIRDROP_CLAIM_GUIDE.md](platform/AIRDROP_CLAIM_GUIDE.md) |
 | SHIELD tokenomics | [SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md) |
 | Deploy contracts | [SHIELD_DEPLOYMENT.md](protocol/SHIELD_DEPLOYMENT.md) |
 | FAssets bridge | [FASSETS_GUIDE.md](integration/FASSETS_GUIDE.md) |
@@ -39,6 +40,7 @@ External service integration guides.
 
 ### Platform (`/platform`)
 Application architecture and wallet integration.
+- [AIRDROP_CLAIM_GUIDE.md](platform/AIRDROP_CLAIM_GUIDE.md) - Airdrop eligibility & claiming
 - [SMART_ACCOUNTS_SPEC.md](platform/SMART_ACCOUNTS_SPEC.md) - ERC-4337 specification
 - [wallet-integration.md](platform/wallet-integration.md) - Wallet connection
 - [xaman-integration.md](platform/xaman-integration.md) - XRPL wallet

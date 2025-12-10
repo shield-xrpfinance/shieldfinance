@@ -16,6 +16,7 @@ Complete guide to all documentation files in the Shield Finance XRP Liquid Staki
 |-------------------|------------|
 | Read the whitepaper | [Whitepaper (PDF)](https://shyield.finance/whitepaper.pdf) |
 | Review the project | [REVIEWERS.md](../REVIEWERS.md) |
+| Claim the airdrop | [AIRDROP_CLAIM_GUIDE.md](platform/AIRDROP_CLAIM_GUIDE.md) |
 | Understand tokenomics | [docs/protocol/SHIELD_TOKENOMICS.md](protocol/SHIELD_TOKENOMICS.md) |
 | Deploy contracts | [DEPLOYMENT_GUIDE.md](../DEPLOYMENT_GUIDE.md) |
 | Understand FAssets bridge | [docs/integration/FASSETS_GUIDE.md](integration/FASSETS_GUIDE.md) |
@@ -46,6 +47,7 @@ docs/
 │   └── FIRELIGHT_PARTNER_GUIDE.md    # Firelight team integration guide
 │
 ├── platform/           # Application architecture
+│   ├── AIRDROP_CLAIM_GUIDE.md    # Airdrop eligibility & claiming
 │   ├── SMART_ACCOUNTS_SPEC.md    # ERC-4337 specification
 │   ├── swap.md                   # Multi-asset swap feature
 │   ├── wallet-integration.md     # Wallet connection guide
@@ -186,6 +188,16 @@ docs/
 ---
 
 ## Platform Documentation
+
+### [AIRDROP_CLAIM_GUIDE.md](platform/AIRDROP_CLAIM_GUIDE.md)
+**Purpose**: Complete guide for earning testnet points and claiming SHIELD airdrop  
+**Contents**:
+- Prerequisites and wallet setup (Coston2 testnet)
+- Faucet usage (C2FLR + SHIELD tokens)
+- Points system (deposits, staking, referrals, bug reports)
+- Tier progression (Bronze → Diamond with multipliers)
+- Mainnet claiming process (Merkle-proof verification)
+- Troubleshooting common issues
 
 ### [SMART_ACCOUNTS_SPEC.md](platform/SMART_ACCOUNTS_SPEC.md)
 **Purpose**: ERC-4337 account abstraction specification  
