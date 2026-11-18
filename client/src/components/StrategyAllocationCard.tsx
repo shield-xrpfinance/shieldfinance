@@ -220,9 +220,7 @@ export default function StrategyAllocationCard({ className, walletAddress }: Str
               </TooltipTrigger>
               <TooltipContent>
                 <p>
-                  {data.firelightEnabled 
-                    ? "Firelight stXRP enabled on mainnet"
-                    : "Firelight only available on mainnet"}
+                  Planned v1 allocation (testnet only). Firelight and Kinetic are not a live mainnet allocation.
                 </p>
               </TooltipContent>
             </Tooltip>

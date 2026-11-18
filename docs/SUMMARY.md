@@ -23,6 +23,7 @@
   * [Transaction Signing](platform/transaction-signing.md)
   * [Wallet Integration](platform/wallet-integration.md)
   * [Xaman (XUMM) Integration Technical Details](platform/xaman-integration.md)
+* [Mainnet gap analysis](MAINNET_GAP_ANALYSIS.md)
 * [Protocol](protocol/README.md)
   * [Revenue System Specification](protocol/REVENUE_SYSTEM_SPEC.md)
   * [Shield Finance ($SHIELD) Deployment Guide](protocol/SHIELD_DEPLOYMENT.md)

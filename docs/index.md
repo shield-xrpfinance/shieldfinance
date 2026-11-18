@@ -28,7 +28,7 @@ features:
     details: Seamlessly bridge XRP to FXRP on Flare Network using the FAssets protocol for trustless cross-chain transfers.
   - icon: ⚡
     title: Non-Custodial
-    details: Your keys, your crypto. All smart contracts are audited and open source. We never take custody of your funds.
+    details: Testnet (Coston2) — not yet on mainnet. Prior security review (Asfalia checklist, StakingBoost and ShieldToken). Fresh independent audit of v1 planned before mainnet. See the mainnet gap analysis.
 ---
 
 ## Documentation
@@ -38,6 +38,7 @@ features:
     <h3>Protocol</h3>
     <ul>
       <li><a href="https://shyield.finance/whitepaper.pdf">Whitepaper (PDF)</a></li>
+      <li><a href="/MAINNET_GAP_ANALYSIS">Mainnet gap analysis</a></li>
       <li><a href="/protocol/SHIELD_TOKENOMICS">SHIELD Tokenomics</a></li>
       <li><a href="/protocol/STAKING_BOOST_SPEC">Staking Boost</a></li>
     </ul>

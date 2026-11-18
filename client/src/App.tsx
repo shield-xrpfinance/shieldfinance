@@ -173,13 +173,12 @@ function DashboardLayout() {
           <ReferralHandler />
           <CurrencyProvider>
             <SidebarProvider style={style as React.CSSProperties}>
-              <div className="flex h-screen w-full">
+              <div className="flex h-screen w-full pt-10 box-border">
                 <AppSidebar />
                 <div className="flex flex-col flex-1">
                   <Header onConnectWallet={() => setConnectModalOpen(true)} />
-                  <main className="flex-1 overflow-auto p-4 md:p-8 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
+                  <main className="flex-1 overflow-auto p-4 pt-12 md:p-8 md:pt-14 pb-[calc(var(--mobile-nav-height,68px)+1rem)] md:pb-8">
                     <div className="max-w-7xl mx-auto">
-                      <TestnetBanner />
                       <DashboardRouter />
                     </div>
                   </main>
@@ -218,6 +217,7 @@ function AppContent() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <GeoProvider>
+          <TestnetBanner />
           {isDashboard ? (
             <DashboardLayout />
           ) : (

@@ -322,7 +322,7 @@ export function AppSidebar() {
                 rel="noopener noreferrer"
                 className="rounded-md p-1.5 md:p-2 hover-elevate active-elevate-2 transition-colors"
                 data-testid="link-governance"
-                title="Governance Portal"
+                title="Governance (Planned)"
               >
                 <Vote className="h-3.5 w-3.5 md:h-4 md:w-4" />
               </a>

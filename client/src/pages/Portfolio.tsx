@@ -420,10 +420,12 @@ export default function Portfolio() {
       setWithdrawModalOpen(false);
 
       if (isFXRPWithdrawal) {
-        // FXRP withdrawal - show success message and navigate
+        const confirmed = data.status === "completed" && data.confirmed === true;
         toast({
-          title: "Withdrawal Successful",
-          description: `${amount} shXRP converted to FXRP and sent to your wallet!`,
+          title: confirmed ? "Withdrawal confirmed" : "Withdrawal pending",
+          description: confirmed
+            ? `${amount} shXRP was converted to FXRP after the transaction confirmed.`
+            : "This withdrawal is not complete. No Coston2 transaction has confirmed yet.",
         });
         navigate('/portfolio');
       } else {

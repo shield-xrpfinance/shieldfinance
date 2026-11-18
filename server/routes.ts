@@ -3589,53 +3589,28 @@ export async function registerRoutes(
         });
       }
 
-      // Update position: deduct shares
-      const remainingShares = (positionShares - requestedShares).toFixed(6);
-      await storage.updatePosition(positionId, {
-        amount: remainingShares,
-      });
-
-      // Create transaction record for withdrawal
-      await storage.createTransaction({
+      // Do not deduct shares and do not mark the withdrawal complete.
+      // This route does not submit a chain transaction. Status stays pending
+      // until a confirmed tx hash is stored by a later settlement step.
+      const transaction = await storage.createTransaction({
         walletAddress: position.walletAddress,
         vaultId: position.vaultId,
         positionId: position.id,
         type: "withdrawal",
         amount: shareAmount,
         rewards: "0",
-        status: "completed",
-        txHash: `fxrp-withdrawal-${Date.now()}-${Math.random().toString(36).substring(7)}`,
+        status: "pending",
         network: "testnet",
       });
 
-      // Return immediately - async transfer to user wallet happens in background
-      res.status(200).json({
+      res.status(202).json({
         success: true,
-        message: `Withdrawal initiated! ${shareAmount} shXRP will be converted to FXRP and sent to your wallet.`,
-        withdrawalId: positionId,
+        status: "pending",
+        confirmed: false,
+        message: "Withdrawal recorded as pending. It is not complete until a transaction confirms on Coston2.",
+        withdrawalId: transaction.id,
         amount: shareAmount,
-        fxrpAmount: shareAmount, // 1:1 mapping for now
       });
-
-      // Background job: Transfer FXRP from vault to user wallet (non-blocking)
-      void (async () => {
-        try {
-          console.log(`🔄 [Background] Processing FXRP withdrawal for position ${positionId}...`);
-          console.log(`   Amount: ${shareAmount} shXRP → ${shareAmount} FXRP`);
-          console.log(`   Destination: ${walletAddress}`);
-          
-          // TODO: Integrate with Firelight redemption service
-          // This is where we'd:
-          // 1. Redeem shares from vault
-          // 2. Get FXRP back from Firelight
-          // 3. Transfer FXRP to user's wallet on Flare
-          
-          console.log(`✅ [Background] FXRP withdrawal initiated for position ${positionId}`);
-        } catch (error) {
-          console.error(`❌ [Background] FXRP withdrawal failed for position ${positionId}:`, error);
-          // Position was already updated - user has control via UI
-        }
-      })();
 
     } catch (error) {
       console.error("FXRP withdrawal error:", error);

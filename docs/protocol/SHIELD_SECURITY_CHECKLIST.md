@@ -3,10 +3,13 @@
 ## Overview
 Comprehensive security checklist for Shield Finance fair launch on Flare Network mainnet. This checklist must be completed before deploying to production.
 
-**Status:** 🟢 527 Tests Passing | ✅ Security Audit Complete  
-**Last Security Review:** December 6, 2025  
-**Security Audit Status:** All HIGH/MEDIUM/LOW findings resolved  
-**Target Launch Date:** TBD
+**Status:** Testnet (Coston2) — not yet on mainnet. This checklist is not a mainnet sign-off.
+
+**Prior review:** Asfalia checklist, StakingBoost and ShieldToken only. A fresh independent audit of v1 is planned before mainnet. See [the mainnet gap analysis](../MAINNET_GAP_ANALYSIS.md).
+
+**Tests (18 Nov 2026):** Hardhat 263 passing, 12 failing, 1 pending. The older “527 passing” and “150 passing” figures are withdrawn. Solidity coverage was not measured.
+
+**Target launch:** Not scheduled. Do not treat this document as evidence that the vault is audited.
 
 > **Note:** Test counts include token launch contracts, vault system contracts, and security/adversarial test suites. December 2025 added comprehensive vault coverage.
 
@@ -15,11 +18,11 @@ Comprehensive security checklist for Shield Finance fair launch on Flare Network
 ## 1. Smart Contract Security
 
 ### 1.1 Code Audit
-- [x] **External Audit:** Smart contracts audited by reputable firm
-  - Audit report published publicly
-  - ✅ All critical/high findings resolved
-  - ✅ Medium/low findings documented with mitigation plan
-  - See [Section 1.5: Security Audit Findings](#15-security-audit-findings-resolved) for details
+- [ ] **External audit of the vault and strategies:** not done
+  - Prior review is the Asfalia checklist for StakingBoost and ShieldToken only
+  - No published report covers ShXRPVault, strategies, or withdrawals
+  - Fresh independent audit of v1 is planned before mainnet
+  - See [the mainnet gap analysis](../MAINNET_GAP_ANALYSIS.md)
 - [x] **Internal Code Review:** Team review completed
   - All contracts reviewed by 2+ developers
   - Security patterns verified (ReentrancyGuard, SafeERC20, Ownable)
@@ -28,7 +31,9 @@ Comprehensive security checklist for Shield Finance fair launch on Flare Network
   - No critical vulnerabilities found
   - Medium/low issues documented and reviewed
 
-### 1.2 Test Coverage (527 Total)
+### 1.2 Test coverage (historical notes below are not the 18 Nov 2026 run)
+
+The counts in this section are withdrawn. The 18 Nov 2026 Hardhat run was 263 passing, 12 failing, 1 pending.
 - [x] **Token Launch Contracts:** 189 tests
   - ShieldToken: 19 tests ✅
   - RevenueRouter: 38 tests ✅
@@ -79,7 +84,7 @@ Comprehensive security checklist for Shield Finance fair launch on Flare Network
   - ✅ ReentrancyGuard on claim()
   - ✅ No updateMerkleRoot() function (intentionally removed)
   - ✅ Owner withdraw requires recipient != address(0)
-- [x] **StakingBoost.sol** *(Security Audit Completed - November 28, 2025)*
+- [x] **StakingBoost.sol** *(Asfalia checklist, 28 Nov 2025 — not a vault audit)*
   - ✅ 30-day lock period enforced (LOCK_PERIOD constant)
   - ✅ ReentrancyGuard on stake(), withdraw(), claim(), claimAndWithdraw(), distributeBoost(), recoverTokens()
   - ✅ SafeERC20 for all token transfers (forceApprove pattern for USDT-like tokens)
@@ -216,7 +221,7 @@ This ensures:
 
 ### 2.2 Deployment Sequence
 - [ ] **Pre-Deployment:**
-  - All tests passing (527) ✅
+  - Test run on 18 Nov 2026 was not green (263 passing, 12 failing, 1 pending)
   - Contracts compiled with optimizer enabled (200 runs)
   - Solidity version verified: 0.8.20
   - Dependencies verified (OpenZeppelin 5.0.1)
@@ -390,7 +395,7 @@ This ensures:
 - [ ] **Code Transparency:**
   - GitHub repository public
   - All contracts open source
-  - Test suite public (527 tests documented)
+  - Test suite is in the repo. The “527 tests” figure is withdrawn.
   - Deployment scripts public
 - [ ] **Community Engagement:**
   - Discord/Telegram community established
@@ -493,8 +498,8 @@ This ensures:
 ## 8. Final Pre-Launch Checklist
 
 ### Critical Items (Must Complete)
-- [x] All 527 tests passing
-- [x] External audit completed and published (November 28, 2025)
+- [ ] All tests passing (18 Nov 2026 run: 263 passing, 12 failing, 1 pending)
+- [ ] Fresh independent audit of v1 published (the 28 Nov 2025 note is the Asfalia checklist for StakingBoost and ShieldToken only)
 - [ ] Testnet deployment successful
 - [ ] Deployer wallet funded (5 FLR)
 - [ ] Merkle tree generated and verified

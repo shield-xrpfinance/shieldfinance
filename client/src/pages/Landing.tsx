@@ -253,18 +253,18 @@ export default function Landing() {
   }, []);
 
   useEffect(() => {
-    document.title = "Shield Finance - XRP Liquid Staking Protocol | Security Audited & Live on Testnet";
+    document.title = "Shield Finance - XRP Liquid Staking Protocol | Testnet (Coston2) — not yet on mainnet";
     
     const metaDescription = document.querySelector('meta[name="description"]');
     if (metaDescription) {
       metaDescription.setAttribute(
         "content",
-        "Stake your XRP and earn rewards with Shield Finance. Security audited smart contracts, Xaman xApp integration, dual XRPL/EVM wallet support, and 100% gasless deposits. Live on Coston2 testnet."
+        "Shield Finance is a Coston2 testnet preview, not yet on mainnet. Prior security review covered StakingBoost and ShieldToken. A fresh independent audit of v1 is planned before mainnet."
       );
     } else {
       const meta = document.createElement('meta');
       meta.name = 'description';
-      meta.content = 'Stake your XRP and earn rewards with Shield Finance. Security audited smart contracts, Xaman xApp integration, dual XRPL/EVM wallet support, and 100% gasless deposits. Live on Coston2 testnet.';
+      meta.content = 'Shield Finance is a Coston2 testnet preview, not yet on mainnet. Prior security review covered StakingBoost and ShieldToken. A fresh independent audit of v1 is planned before mainnet.';
       document.head.appendChild(meta);
     }
 
@@ -302,11 +302,11 @@ export default function Landing() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white overflow-x-hidden selection:bg-primary selection:text-black relative">
+    <div className="min-h-screen bg-[#030303] text-white overflow-x-hidden selection:bg-primary selection:text-black relative pt-10">
       {/* Full-width blur backdrop for navigation - only visible when scrolled */}
       <div className={`fixed top-0 left-0 w-full h-20 z-40 backdrop-blur-xl bg-gradient-to-b from-black/50 to-transparent pointer-events-none transition-opacity duration-300 ${isScrolled ? 'opacity-100' : 'opacity-0'}`} />
       {/* Floating Pill Navigation - Aura Style */}
-      <nav className="fixed left-1/2 -translate-x-1/2 flex w-full lg:w-fit max-w-[90vw] z-50 rounded-full ring-white/10 ring-1 py-1.5 pr-1.5 pl-4 top-6 items-center justify-between transition-all duration-300 hover:border-white/20 hover:shadow-primary/5 bg-gradient-to-br from-white/10 to-white/0 shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)]" data-testid="nav-header">
+      <nav className="fixed left-1/2 -translate-x-1/2 flex w-full lg:w-fit max-w-[90vw] z-50 rounded-full ring-white/10 ring-1 py-1.5 pr-1.5 pl-4 top-14 items-center justify-between transition-all duration-300 hover:border-white/20 hover:shadow-primary/5 bg-gradient-to-br from-white/10 to-white/0 shadow-[0_2.8px_2.2px_rgba(0,_0,_0,_0.034),_0_6.7px_5.3px_rgba(0,_0,_0,_0.048),_0_12.5px_10px_rgba(0,_0,_0,_0.06),_0_22.3px_17.9px_rgba(0,_0,_0,_0.072),_0_41.8px_33.4px_rgba(0,_0,_0,_0.086),_0_100px_80px_rgba(0,_0,_0,_0.12)]" data-testid="nav-header">
         {/* Logo Area */}
         <div className="flex gap-2.5 items-center mr-8">
           <img src={shieldLogo} alt="Shield Finance" className="h-6 w-6" data-testid="img-logo" />
@@ -407,7 +407,7 @@ export default function Landing() {
             >
               <div className="flex items-center gap-3">
                 <Vote className="h-5 w-5 text-primary" />
-                <span className="font-medium">Governance</span>
+                <span className="font-medium">Governance <span className="text-xs text-amber-300">(Planned)</span></span>
               </div>
               <ExternalLink className="h-4 w-4 text-white/40" />
             </a>
@@ -450,7 +450,7 @@ export default function Landing() {
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-primary opacity-75"></span>
               <span className="relative inline-flex rounded-full h-2 w-2 bg-primary"></span>
             </span>
-            Live on Testnet
+            Testnet (Coston2) — not yet on mainnet
           </h4>
 
           <h1 className="lg:text-7xl leading-[1.1] text-primary text-glow text-5xl italic tracking-tight font-serif mb-6" data-testid="heading-hero">
@@ -674,7 +674,7 @@ export default function Landing() {
 
               <h3 className="text-2xl font-semibold tracking-tight text-white mb-4 relative z-10">Bridge from Anywhere</h3>
               <p className="text-base text-white/50 leading-relaxed mb-12 relative z-10 font-light">
-                Deposit XRP from XRPL, Ethereum, Base, or Arbitrum. Our multi-chain bridge powered by LayerZero brings your assets to Flare seamlessly.
+                Planned. A multi-chain bridge powered by LayerZero is not live. Testnet deposits use the Coston2 preview, not mainnet funds.
               </p>
 
               {/* Visual: Multi-Chain Bridge SVG Animation */}
@@ -734,7 +734,7 @@ export default function Landing() {
                   </g>
                   
                   {/* LayerZero Label */}
-                  <text x="130" y="205" textAnchor="middle" fill="#38BDF8" fontSize="8" fontFamily="monospace" opacity="0.6">Powered by LayerZero</text>
+                  <text x="130" y="205" textAnchor="middle" fill="#38BDF8" fontSize="8" fontFamily="monospace" opacity="0.6">LayerZero bridge · Planned</text>
                 </svg>
               </div>
             </div>
@@ -999,7 +999,7 @@ export default function Landing() {
             <div className="glass-card spotlight-card rounded-2xl" onMouseMove={handleSpotlightMove} data-testid="card-capability-2">
               <div className="p-6 border-b border-white/5 relative z-10">
                 <h3 className="text-lg font-semibold text-white mb-2">Smart Liquidity</h3>
-                <p className="text-sm text-white/50">Optimized yield strategies</p>
+                <p className="text-sm text-amber-200/90">Planned v1 allocation (testnet only)</p>
               </div>
               <div className="bg-black/40 p-4 relative z-10">
                 <div className="flex items-center justify-between mb-4">
@@ -1007,21 +1007,21 @@ export default function Landing() {
                     <div className="w-3 h-3 rounded-full bg-primary" />
                     <span className="text-xs text-white/60">Firelight Strategy</span>
                   </div>
-                  <span className="text-xs text-green-400">50%</span>
+                    <span className="text-xs text-white/50">50% planned</span>
                 </div>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-purple-400" />
                     <span className="text-xs text-white/60">Kinetic Strategy</span>
                   </div>
-                  <span className="text-xs text-green-400">40%</span>
+                    <span className="text-xs text-white/50">40% planned</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 rounded-full bg-white/30" />
                     <span className="text-xs text-white/60">Buffer Reserve</span>
                   </div>
-                  <span className="text-xs text-white/40">10%</span>
+                    <span className="text-xs text-white/40">10% planned</span>
                 </div>
                 <div className="mt-4 h-2 bg-white/10 rounded-full overflow-hidden">
                   <div className="h-full flex">
@@ -1036,8 +1036,8 @@ export default function Landing() {
             {/* Capability Card 3: Multi-Sig Governance */}
             <div className="glass-card spotlight-card rounded-2xl" onMouseMove={handleSpotlightMove} data-testid="card-capability-3">
               <div className="p-6 border-b border-white/5 relative z-10">
-                <h3 className="text-lg font-semibold text-white mb-2">DAO Governance</h3>
-                <p className="text-sm text-white/50">Community-driven decisions</p>
+                <h3 className="text-lg font-semibold text-white mb-2">DAO Governance <span className="text-amber-300 text-xs font-sans not-italic align-middle">Planned</span></h3>
+                <p className="text-sm text-white/50">Planned. On-chain votes are not live.</p>
               </div>
               <div className="bg-black/40 p-4 relative z-10">
                 <div className="flex -space-x-2 mb-4">
@@ -1113,7 +1113,7 @@ export default function Landing() {
                 </div>
                 <div className="flex items-center gap-2">
                   <Shield className="w-4 h-4 text-primary" />
-                  <span className="text-sm text-white/60">Audited Contracts</span>
+                  <span className="text-sm text-white/60">Prior review only</span>
                 </div>
               </div>
             </div>
@@ -1168,7 +1168,7 @@ export default function Landing() {
                       </>
                     )}
                   </div>
-                  <div className="text-xs text-white/50 mt-1">Exchange Rate · Redeemable anytime</div>
+                  <div className="text-xs text-white/50 mt-1">Illustrative preview · not live funds</div>
                 </div>
               </div>
               <div className="p-4 bg-black/40">
@@ -1181,7 +1181,7 @@ export default function Landing() {
                         `${vaultStats?.apy || "0"}%`
                       )}
                     </div>
-                    <div className="text-xs text-white/50">Current APY</div>
+                    <div className="text-xs text-white/50">Illustrative APY</div>
                   </div>
                   <div>
                     <div className="text-lg font-bold text-white" data-testid="text-total-staked">
@@ -1191,17 +1191,17 @@ export default function Landing() {
                         formatTvl(vaultStats?.tvl || "0")
                       )}
                     </div>
-                    <div className="text-xs text-white/50">Total Staked</div>
+                    <div className="text-xs text-white/50">Illustrative TVL</div>
                   </div>
                   <div>
                     <div className="text-lg font-bold text-white" data-testid="text-staker-count">
                       {isLoadingStats ? (
                         <span className="inline-block w-10 h-5 bg-white/10 rounded animate-pulse" />
                       ) : (
-                        "847"
+                        "—"
                       )}
                     </div>
-                    <div className="text-xs text-white/50">Stakers</div>
+                    <div className="text-xs text-white/50">Not a live count</div>
                   </div>
                 </div>
               </div>
@@ -1316,12 +1316,13 @@ export default function Landing() {
                       <div className="absolute inset-0 rounded-xl border border-primary/30 animate-ping opacity-30" />
                     </div>
                     <h4 className="text-primary font-semibold mb-2 text-sm">Curated Strategies</h4>
+                    <p className="text-amber-200/90 text-[10px] font-medium mb-2">Planned v1 allocation (testnet only)</p>
                     <div className="flex flex-wrap gap-1.5 mb-2">
                       <span className="px-2 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-[9px] font-mono text-primary">Firelight 50%</span>
                       <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono text-white/60">Kinetic 40%</span>
                       <span className="px-2 py-0.5 rounded-full bg-white/5 border border-white/10 text-[9px] font-mono text-white/40">Buffer 10%</span>
                     </div>
-                    <p className="text-white/50 text-[10px] leading-relaxed">Institutional-grade managers with dynamic rebalancing</p>
+                    <p className="text-white/50 text-[10px] leading-relaxed">Planned split. Not a live allocation. Testnet used MockStrategy.</p>
                   </div>
                 </div>
 
@@ -1448,7 +1449,8 @@ export default function Landing() {
                       <span className="px-1.5 py-0.5 rounded bg-primary text-[9px] font-mono text-[#030303] font-bold">04</span>
                       <h3 className="text-primary font-semibold">Curated Strategies</h3>
                     </div>
-                    <p className="text-white/60 text-sm mb-3">Institutional-grade allocation with dynamic rebalancing</p>
+                    <p className="text-amber-200/90 text-sm mb-2">Planned v1 allocation (testnet only)</p>
+                    <p className="text-white/60 text-sm mb-3">Planned split. Not a live allocation.</p>
                     <div className="flex flex-wrap gap-2">
                       <span className="px-2 py-1 rounded-full bg-primary/20 border border-primary/30 text-[10px] font-mono text-primary">Firelight 50%</span>
                       <span className="px-2 py-1 rounded-full bg-white/5 border border-white/10 text-[10px] font-mono text-white/60">Kinetic 40%</span>
@@ -1653,14 +1655,14 @@ export default function Landing() {
                 Security First
               </h2>
               <p className="text-lg text-white/60 mb-8">
-                Your assets are protected by multiple layers of security, including smart contract audits, automated recovery systems, and transparent operations.
+                Prior security review (Asfalia checklist, StakingBoost and ShieldToken). Fresh independent audit of v1 planned before mainnet. The vault is not audited for mainnet.
               </p>
               <ul className="space-y-4">
                 <li className="flex items-start gap-3">
                   <CheckCircle2 className="h-6 w-6 text-primary flex-shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-white">Audited Smart Contracts</h4>
-                    <p className="text-white/60 text-sm">Reviewed by leading blockchain security firms</p>
+                    <h4 className="font-semibold text-white">Prior security review</h4>
+                    <p className="text-white/60 text-sm">Asfalia checklist covered StakingBoost and ShieldToken only. A fresh independent audit of v1 is planned before mainnet. <a href="https://github.com/shield-xrpfinance/shieldfinance/blob/main/docs/MAINNET_GAP_ANALYSIS.md" className="text-primary hover:underline" target="_blank" rel="noopener noreferrer">Gap analysis</a></p>
                   </div>
                 </li>
                 <li className="flex items-start gap-3">
@@ -1703,17 +1705,13 @@ export default function Landing() {
                   </div>
                 </div>
                 <a 
-                  href="https://docs.shyield.finance/security" 
+                  href="https://github.com/shield-xrpfinance/shieldfinance/blob/main/docs/MAINNET_GAP_ANALYSIS.md" 
                   target="_blank" 
                   rel="noopener noreferrer"
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-green-500/10 border border-green-500/30 hover:bg-green-500/20 transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 hover:bg-amber-500/20 transition-colors"
                   data-testid="link-audit-report"
                 >
-                  <span className="relative flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-400" />
-                  </span>
-                  <span className="text-xs font-medium text-green-400">150 Tests Passing</span>
+                  <span className="text-xs font-medium text-amber-200">Tests not green · see gap analysis</span>
                 </a>
               </div>
               
@@ -1849,7 +1847,7 @@ export default function Landing() {
             <ul className="flex flex-col gap-3.5">
               <li><a href="https://docs.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-docs">Documentation</a></li>
               <li><a href="https://blog.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-blog">Blog</a></li>
-              <li><a href="https://vote.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-governance">Governance</a></li>
+              <li><a href="https://vote.shyield.finance" target="_blank" rel="noopener noreferrer" className="text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-governance">Governance (Planned)</a></li>
               <li>
                 <a href="/status" className="flex items-center gap-2 text-white/40 hover:text-primary text-sm transition-colors font-light" data-testid="link-footer-status">
                   System Status

@@ -259,7 +259,7 @@ function ShieldBridgeCard() {
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-sm text-muted-foreground">
-          Transfer SHIELD tokens between chains using LayerZero.
+          Planned. Cross-chain SHIELD transfers using LayerZero are not live.
         </p>
 
         <div className="space-y-3">

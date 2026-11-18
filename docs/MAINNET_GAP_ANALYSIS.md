@@ -259,7 +259,7 @@ Findings are from reading the contracts and from the test run. They are not the 
 
 **M-6. Custom LayerZero OFT and the tax token.** `ShieldOFT.emergencyWithdraw` and `ShieldV2Taxes.removeTokens` are owner drains. They are out of the vault's asset path only if they are never deployed and never pointed at by the frontend.
 
-**M-7. Backend withdrawal accounting is not the vault.** `POST /api/deposits/fxrp` stores shXRP shares equal to the FXRP amount ("1:1 mapping for now") and writes a completed transaction whose hash is `fxrp-deposit-${Date.now()}-…`. `POST /api/withdrawals/fxrp` reduces the database position, marks the withdrawal completed, and the background job is a TODO that logs and returns. The modal copy says a direct withdrawal usually finishes within 30 seconds. None of that is on-chain settlement.
+**M-7. Backend deposit accounting is still not the vault.** `POST /api/deposits/fxrp` stores shXRP shares equal to the FXRP amount ("1:1 mapping for now") and writes a completed transaction whose hash is `fxrp-deposit-${Date.now()}-…`. `POST /api/withdrawals/fxrp` was changed after this review so it no longer deducts shares or marks the withdrawal completed before a confirmed transaction. It now stores status `pending` and returns HTTP 202. The XRP redemption path and the deposit path still need the same standard. The modal copy that said a direct withdrawal usually finishes within 30 seconds is not on-chain settlement.
 
 ### Low
 

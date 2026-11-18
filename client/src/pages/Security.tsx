@@ -30,34 +30,44 @@ export default function SecurityPage() {
         <div className="absolute inset-0 bg-background/90 dark:bg-background/80 backdrop-blur-[2px]" />
       </div>
 
-      <div className="relative z-10 container mx-auto px-4 py-12 max-w-5xl">
+      <div className="relative z-10 container mx-auto px-4 pt-16 pb-12 max-w-5xl">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
           className="text-center mb-16 space-y-6"
         >
-          <Badge variant="outline" className="border-green-600 dark:border-green-500/50 text-green-700 dark:text-green-400 bg-green-100 dark:bg-green-900/10 px-4 py-1 text-sm uppercase tracking-wider mb-4" data-testid="badge-remediated">
-            <CheckCircle2 className="w-4 h-4 mr-2 inline-block" />
-            100% Remediated
+          <Badge variant="outline" className="border-amber-600 dark:border-amber-500/50 text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/10 px-4 py-1 text-sm uppercase tracking-wider mb-4" data-testid="badge-remediated">
+            <AlertTriangle className="w-4 h-4 mr-2 inline-block" />
+            Testnet (Coston2) — not yet on mainnet
           </Badge>
           
           <h1 className="text-5xl md:text-7xl font-bold tracking-tighter text-foreground mb-4">
-            Security First. <span className="text-primary">Always.</span>
+            Security status. <span className="text-primary">Not a mainnet audit.</span>
           </h1>
           
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-            All 12 audit findings identified and resolved. Full transparency on fixes, trade-offs, and verification.
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed" data-testid="text-security-status">
+            Prior security review (Asfalia checklist, StakingBoost and ShieldToken). Fresh independent audit of v1 planned before mainnet.{" "}
+            <a
+              href="https://github.com/shield-xrpfinance/shieldfinance/blob/main/docs/MAINNET_GAP_ANALYSIS.md"
+              className="text-primary underline"
+              target="_blank"
+              rel="noopener noreferrer"
+              data-testid="link-gap-analysis"
+            >
+              Read the mainnet gap analysis
+            </a>
+            .
           </p>
 
           <div className="mt-12 pt-8">
             <div className="flex flex-col md:flex-row justify-center items-center gap-4 md:gap-0 relative">
               <div className="hidden md:block absolute top-1/2 left-10 right-10 h-0.5 bg-border -z-10 -translate-y-1/2" />
               
-              <TimelineStep status="completed" label="Audit Completed" date="Q4 2025" />
-              <TimelineStep status="completed" label="Fixes Implemented" date="100% Done" />
-              <TimelineStep status="completed" label="Hardhat Tests" date="56 Passing" />
-              <TimelineStep status="active" label="Ready for Mainnet" date="Live Now" />
+              <TimelineStep status="completed" label="Prior review" date="Asfalia, two contracts" />
+              <TimelineStep status="pending" label="Vault audit" date="Not started" />
+              <TimelineStep status="pending" label="Test suite" date="12 failing" />
+              <TimelineStep status="pending" label="Mainnet" date="Not live" />
             </div>
           </div>
         </motion.div>
@@ -211,10 +221,10 @@ export default function SecurityPage() {
               </FindingItem>
               
               <div className="p-4 bg-card rounded-lg border-dashed border border-border flex items-center justify-center text-muted-foreground text-sm flex-wrap gap-2">
-                <span>7 additional findings resolved</span>
-                <a href="https://cdn.prod.website-files.com/62981c5a83fb0e4287b30cdd/692cb480442715f1b44e0f52_Shield%20Finance.pdf" target="_blank" rel="noopener noreferrer">
+                <span>These notes cover StakingBoost and ShieldToken only.</span>
+                <a href="https://github.com/shield-xrpfinance/shieldfinance/blob/main/docs/MAINNET_GAP_ANALYSIS.md" target="_blank" rel="noopener noreferrer">
                   <Button variant="ghost" className="text-primary h-auto p-0" data-testid="button-view-report">
-                    View Full Report <ExternalLink className="w-3 h-3 ml-1" />
+                    Gap analysis <ExternalLink className="w-3 h-3 ml-1" />
                   </Button>
                 </a>
               </div>
@@ -231,13 +241,15 @@ export default function SecurityPage() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="flex items-end gap-2">
-                    <span className="text-4xl font-bold text-foreground">56</span>
-                    <span className="text-sm text-muted-foreground mb-1">Tests Passing</span>
+                  <div className="space-y-1" data-testid="text-test-status">
+                    <p className="text-lg font-bold text-foreground">Not a green suite</p>
+                    <p className="text-sm text-muted-foreground">
+                      Hardhat on 18 Nov 2026: 263 passing, 12 failing, 1 pending. Buffer tests did not run. Solidity coverage is not measured.
+                    </p>
                   </div>
                   
                   <div className="w-full bg-secondary rounded-full h-2 overflow-hidden">
-                    <div className="bg-green-500 h-full w-full" />
+                    <div className="bg-amber-500 h-full w-2/3" />
                   </div>
 
                   <div className="space-y-3">
@@ -269,6 +281,22 @@ export default function SecurityPage() {
           </div>
         </div>
 
+        <section className="mb-16" data-testid="section-mainnet-roadmap">
+          <h2 className="text-2xl font-bold text-foreground mb-4">Roadmap to mainnet</h2>
+          <p className="text-muted-foreground mb-4">
+            None of these are live. v1 does not go to mainnet until they are in the contracts and a fresh audit is published.
+          </p>
+          <ul className="space-y-2 text-foreground">
+            <li>Enforced liquidity floor</li>
+            <li>Instant redeem up to idle</li>
+            <li>A 7-day queue with partial payouts</li>
+            <li>Claims open during pause</li>
+            <li>Safe multisig and timelock</li>
+            <li>Deposit caps</li>
+            <li>A fresh audit</li>
+          </ul>
+        </section>
+
         <motion.div 
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -298,7 +326,7 @@ export default function SecurityPage() {
         <footer className="text-center border-t border-border pt-12 pb-8">
           <p className="text-muted-foreground text-sm max-w-xl mx-auto">
             <AlertTriangle className="w-4 h-4 inline mr-2 text-yellow-600 dark:text-yellow-500/50" />
-            Audits reduce risk but never eliminate it entirely. Always do your own research (DYOR) before depositing funds into any DeFi protocol.
+            This page describes a prior review of two contracts on Coston2. It is not a mainnet audit. Do not deposit real funds.
           </p>
         </footer>
       </div>
@@ -397,25 +425,12 @@ function LinkCard({ icon, title, description, action, href }: {
   );
 }
 
-const EXTERNAL_AUDIT_URL = "https://cdn.prod.website-files.com/62981c5a83fb0e4287b30cdd/692cb480442715f1b44e0f52_Shield%20Finance.pdf";
-const FALLBACK_AUDIT_URL = "/shield-finance-audit.pdf";
+const GAP_ANALYSIS_URL = "https://github.com/shield-xrpfinance/shieldfinance/blob/main/docs/MAINNET_GAP_ANALYSIS.md";
 
 function AuditReportLink() {
-  const handleClick = async (e: React.MouseEvent) => {
-    e.preventDefault();
-    
-    try {
-      const response = await fetch(EXTERNAL_AUDIT_URL, { method: 'HEAD', mode: 'no-cors' });
-      window.open(EXTERNAL_AUDIT_URL, '_blank');
-    } catch {
-      window.open(FALLBACK_AUDIT_URL, '_blank');
-    }
-  };
-
   return (
     <a 
-      href={EXTERNAL_AUDIT_URL}
-      onClick={handleClick}
+      href={GAP_ANALYSIS_URL}
       target="_blank" 
       rel="noopener noreferrer" 
       className="group block p-6 rounded-xl bg-card border border-border hover:bg-secondary/50 hover:border-primary/30 transition-all duration-300 hover:-translate-y-1" 
@@ -424,10 +439,10 @@ function AuditReportLink() {
       <div className="mb-4 p-3 bg-secondary w-fit rounded-lg border border-border group-hover:scale-110 transition-transform">
         <Lock className="w-6 h-6 text-primary" />
       </div>
-      <h3 className="font-bold text-lg text-foreground mb-2 group-hover:text-primary transition-colors">Full Audit Report</h3>
-      <p className="text-muted-foreground text-sm mb-4">Download the complete PDF report with technical details.</p>
+      <h3 className="font-bold text-lg text-foreground mb-2 group-hover:text-primary transition-colors">Mainnet gap analysis</h3>
+      <p className="text-muted-foreground text-sm mb-4">Prior review covered StakingBoost and ShieldToken. The vault still needs a fresh audit before mainnet.</p>
       <div className="flex items-center text-sm font-medium text-muted-foreground group-hover:text-foreground">
-        Download PDF <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
+        Read the report <ChevronRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
       </div>
     </a>
   );

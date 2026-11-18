@@ -598,4 +598,4 @@ LP_LOCK_DURATION=31536000  # 365 days
 
 **Deployment Version:** 1.1.0  
 **Last Updated:** December 6, 2025  
-**Status:** Production Ready (150/150 tests passing)
+**Status:** Testnet (Coston2) — not yet on mainnet. The “150/150 tests passing” and “production ready” lines are withdrawn. See [the mainnet gap analysis](../MAINNET_GAP_ANALYSIS.md).

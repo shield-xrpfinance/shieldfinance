@@ -67,7 +67,7 @@ You acknowledge that:
 ### 4.1 Smart Contract Risk
 
 ::: danger Critical Risk Disclosure
-Smart contracts may contain bugs, vulnerabilities, or exploits. While we conduct security audits, no audit guarantees the absence of vulnerabilities. You may lose some or all of your deposited assets.
+Smart contracts may contain bugs, vulnerabilities, or exploits. Prior security review (Asfalia checklist, StakingBoost and ShieldToken). A fresh independent audit of v1 is planned before mainnet. No review guarantees the absence of vulnerabilities. The app is on Coston2 testnet and is not yet on mainnet. You may lose some or all of your deposited assets.
 :::
 
 ### 4.2 Market and Financial Risks

@@ -40,6 +40,7 @@ export default defineConfig({
             { text: 'Deployment', link: '/protocol/SHIELD_DEPLOYMENT' },
             { text: 'Staking Boost', link: '/protocol/STAKING_BOOST_SPEC' },
             { text: 'Security Checklist', link: '/protocol/SHIELD_SECURITY_CHECKLIST' },
+            { text: 'Mainnet gap analysis', link: '/MAINNET_GAP_ANALYSIS' },
           ]
         }
       ],
